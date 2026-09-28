@@ -1,0 +1,67 @@
+{
+  "page": "client_detail",
+  "walkthrough": "src/screens/pages/client_detail/walkthrough.yaml",
+  "steps": [
+    {
+      "step": "S1",
+      "passed": true,
+      "runner": "coding-agent@2026-09-28#2 (Playwright, tests/e2e/client_detail_walkthrough.spec.ts)",
+      "finished_at": "2026-09-28T05:23:10.044Z",
+      "screenshot": "evidence/walkthroughs/client_detail/client_detail-S1.png",
+      "covers": [
+        "ok"
+      ]
+    },
+    {
+      "step": "S2",
+      "passed": true,
+      "runner": "coding-agent@2026-09-28#2 (Playwright, tests/e2e/client_detail_walkthrough.spec.ts)",
+      "finished_at": "2026-09-28T05:23:10.267Z",
+      "screenshot": "evidence/walkthroughs/client_detail/client_detail-S2.png",
+      "covers": [
+        "ok"
+      ]
+    },
+    {
+      "step": "S3",
+      "passed": true,
+      "runner": "coding-agent@2026-09-28#2 (Playwright, tests/e2e/client_detail_walkthrough.spec.ts)",
+      "finished_at": "2026-09-28T05:23:10.469Z",
+      "screenshot": "evidence/walkthroughs/client_detail/client_detail-S3.png",
+      "covers": [
+        "ok"
+      ]
+    },
+    {
+      "step": "S4",
+      "passed": true,
+      "runner": "coding-agent@2026-09-28#2 (Playwright, tests/e2e/client_detail_walkthrough.spec.ts)",
+      "finished_at": "2026-09-28T05:23:17.268Z",
+      "screenshot": "evidence/walkthroughs/client_detail/client_detail-S4.png",
+      "covers": [
+        "unreachable",
+        "ok"
+      ]
+    },
+    {
+      "step": "S5",
+      "passed": true,
+      "runner": "coding-agent@2026-09-28#2 (Playwright, tests/e2e/client_detail_walkthrough.spec.ts)",
+      "finished_at": "2026-09-28T05:23:17.606Z",
+      "screenshot": "evidence/walkthroughs/client_detail/client_detail-S5.png",
+      "covers": [
+        "ok"
+      ]
+    },
+    {
+      "step": "S6",
+      "passed": true,
+      "runner": "coding-agent@2026-09-28#2 (Playwright, tests/e2e/client_detail_walkthrough.spec.ts)",
+      "finished_at": "2026-09-28T05:23:18.211Z",
+      "screenshot": "evidence/walkthroughs/client_detail/client_detail-S6.png",
+      "covers": [
+        "ok"
+      ]
+    }
+  ]
+}

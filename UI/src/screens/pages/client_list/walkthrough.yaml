@@ -1,0 +1,70 @@
+page: client_list
+precondition: >
+  Desktop đã build (npm run build trong Desktop/). Trong UI/: npm run walkthrough:app
+  build UI/dist rồi mở ứng dụng thật với thư mục dữ liệu tạm (không đụng
+  %APPDATA%), Backend.py thật chạy sau fixture tests/fixtures/switchable_backend.py
+  (bật/tắt được), và nạp dữ liệu mẫu qua POST /clients, PUT /clients/{id}/archived:
+  sáu khách tạo theo thứ tự Zoe, Đức, An, Dung, Ánh, Bảo; khách "Nguyễn Thu Hà" có
+  hai liên hệ và ghi chú; khách Hà đã lưu trữ. Với "-- --empty" thì không nạp gì.
+  Công cụ in "ĐÃ NẠP XONG dữ liệu mẫu" khi xong. Trang client_list là trang mở mặc
+  định. Bật/tắt backend: npm run walkthrough:backend -- down|up (từ UI/, ở cửa sổ
+  lệnh khác). Trước khi chạy, đặt CT_WALKTHROUGH_RUNNER là tên người chạy.
+steps:
+  - id: S1
+    setup: >
+      npm run walkthrough:app; chờ dòng "ĐÃ NẠP XONG dữ liệu mẫu".
+    action: >
+      Trên trang "Khách hàng", bấm "Tải lại".
+    expect: >
+      Nút chuyển sang "Đang tải…" và không bấm được trong lúc tải, rồi trở lại
+      "Tải lại". Nhóm "Đang hoạt động" liệt kê đúng thứ tự chữ cái tiếng Việt:
+      An, Ánh, Bảo, Dung, Đức, Nguyễn Thu Hà, Zoe. Nhóm "Đã lưu trữ" liệt kê riêng: Hà.
+      Không có thông báo lỗi nào. Vùng điều hướng bên trái có mục "Khách hàng" được
+      đánh dấu. Nút "Thêm khách hàng" (màu nhấn) nổi bật hơn nút "Tải lại".
+    covers: [ok]
+  - id: S2
+    setup: >
+      Đóng ứng dụng của S1. npm run walkthrough:app -- --empty (cơ sở dữ liệu trống).
+    action: >
+      Chờ danh sách tải xong. Bấm nút "Thêm khách hàng" nằm trong khung
+      "Chưa có khách hàng nào.".
+    expect: >
+      Trước khi bấm: trang hiện khung trống "Chưa có khách hàng nào." kèm nút
+      "Thêm khách hàng", không phải lỗi; không có khung báo lỗi đỏ, không có danh
+      sách. Sau khi bấm: trang "Thêm khách hàng" mở ra với ô "Tên hiển thị" trống.
+    covers: [ok]
+  - id: S3
+    setup: >
+      Đóng ứng dụng của S2. npm run walkthrough:app (có dữ liệu mẫu), chờ "ĐÃ NẠP XONG
+      dữ liệu mẫu", bấm "Tải lại" để danh sách hiện ra. Rồi npm run walkthrough:backend
+      -- down (backend dừng, cổng trống; ứng dụng vẫn mở).
+    action: >
+      Bấm "Tải lại". Khi khung báo lỗi hiện ra, chạy npm run walkthrough:backend -- up,
+      rồi bấm "Tải lại" lần nữa.
+    expect: >
+      Lần bấm đầu: khung báo lỗi "Không kết nối được" với câu "Không kết nối được tới
+      phần xử lý của ứng dụng. Vui lòng thử lại."; ứng dụng không đóng, nút "Tải lại"
+      vẫn bấm được. Sau khi backend chạy lại và bấm "Tải lại": khung báo lỗi biến mất,
+      danh sách hiện lại đúng như S1.
+    covers: [unreachable, ok]
+  - id: S4
+    setup: >
+      Ứng dụng có dữ liệu mẫu (như S1), danh sách đang hiện.
+    action: >
+      Bấm "Thêm khách hàng" ở đầu trang.
+    expect: >
+      Trang "Thêm khách hàng" mở ra: hàng nút "Lưu" và "Hủy" ngay dưới tiêu đề trang
+      (cùng chỗ với hàng nút của trang "Khách hàng"); dưới đó ô "Tên hiển thị" trống,
+      nhóm "Liên hệ" chưa có hàng nào, ô "Ghi chú" trống. Mục "Khách hàng" ở vùng
+      điều hướng vẫn được đánh dấu.
+    covers: [ok]
+  - id: S5
+    setup: >
+      Ứng dụng có dữ liệu mẫu (như S1), danh sách đang hiện.
+    action: >
+      Bấm vào tên "Nguyễn Thu Hà" trong nhóm "Đang hoạt động".
+    expect: >
+      Trang "Chi tiết khách hàng" của Nguyễn Thu Hà mở ra: tên, trạng thái "Đang hoạt
+      động", hai liên hệ "facebook: fb.com/thuha.art" và "email: thuha@example.com",
+      ghi chú, ngày tạo và ngày sửa lần cuối.
+    covers: [ok]

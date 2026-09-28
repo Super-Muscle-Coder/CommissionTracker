@@ -1,0 +1,7 @@
+# Backend layer development dependencies: the run-time set plus the test tools
+# (pytest, and httpx used by the tests as HTTP client). Versions are pinned.
+# Never shipped in the packaged app.
+# Install into Backend/env:  env\Scripts\python.exe -m pip install -r requirements-dev.txt
+-r requirements.txt
+pytest==9.0.2
+httpx==0.28.1

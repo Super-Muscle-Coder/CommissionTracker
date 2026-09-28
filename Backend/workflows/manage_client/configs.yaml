@@ -1,0 +1,6 @@
+# Configs of manage_client.
+#
+# No boundary value: manage_client has no input from environment_config and
+# uses no shared_values. No internal value yet. The empty mapping keeps a
+# place for the first value this workflow will need.
+{}

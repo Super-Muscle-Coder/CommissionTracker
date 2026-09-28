@@ -1,0 +1,7 @@
+# Configs of record_payment.
+#
+# No boundary value: record_payment has no input from environment_config and
+# uses no shared_values (the integer bound of clause_a_common is part of the
+# input's type and is checked by the Routers). No internal value yet. The
+# empty mapping keeps a place for the first value this workflow will need.
+{}

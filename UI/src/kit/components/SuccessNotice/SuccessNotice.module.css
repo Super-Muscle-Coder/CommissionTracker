@@ -1,0 +1,8 @@
+.notice {
+  margin: 0;
+  padding: var(--space-md);
+  color: var(--color-text-success);
+  background: var(--color-surface-success);
+  border: var(--border-width-panel) solid var(--color-border-success);
+  border-radius: var(--radius-panel);
+}

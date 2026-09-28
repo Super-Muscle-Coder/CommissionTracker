@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Commission Tracker — desktop probe</title>
+    <style>
+      body { font-family: system-ui, sans-serif; margin: 24px; }
+      dt { font-weight: 600; margin-top: 12px; }
+      dd { margin: 4px 0 0 0; font-family: ui-monospace, monospace; white-space: pre-wrap; word-break: break-all; }
+      .error { color: #b00020; }
+    </style>
+  </head>
+  <body>
+    <h1>Desktop probe (test page, not the product UI)</h1>
+    <button id="rerun" type="button">Run again</button>
+    <dl>
+      <dt>Bridge (window.commissionTracker)</dt>
+      <dd id="bridge">…</dd>
+      <dt>backendBaseUrl</dt>
+      <dd id="backend-base-url">…</dd>
+      <dt>location.origin</dt>
+      <dd id="origin">…</dd>
+      <dt>GET &lt;backendBaseUrl&gt;/clients — status</dt>
+      <dd id="status">…</dd>
+      <dt>GET &lt;backendBaseUrl&gt;/clients — body</dt>
+      <dd id="body">…</dd>
+      <dt>Errors</dt>
+      <dd id="error" class="error"></dd>
+    </dl>
+    <p id="done" hidden>done</p>
+    <script src="probe.js"></script>
+  </body>
+</html>

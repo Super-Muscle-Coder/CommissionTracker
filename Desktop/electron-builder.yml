@@ -1,0 +1,50 @@
+# Packaging of the desktop app (chặng C, .plan/desktop_plan.md D2, D5, D7, D8).
+# Run through "npm run dist", which first builds dist/ and packaging/stage/.
+
+# Fixed for good: a later installer upgrades an earlier one only while this
+# value stays the same.
+appId: com.commissiontracker.desktop
+productName: Commission Tracker
+
+directories:
+  output: release
+
+# app.asar: only the Main, its preload script, its configuration and
+# package.json. No tests and no fixtures.
+files:
+  - dist/main.js
+  - dist/preload.js
+  - configs/desktop.json
+  - package.json
+
+# resources/{python,backend,ui}, next to app.asar (D2). The Main finds them
+# through process.resourcesPath and desktop.json "packaged".
+extraResources:
+  - from: packaging/stage/python
+    to: python
+  - from: packaging/stage/backend
+    to: backend
+  - from: packaging/stage/ui
+    to: ui
+
+# The only size reduction allowed (D7): Electron locales vi and en-US.
+electronLanguages:
+  - vi
+  - en-US
+
+# No native Node module to rebuild.
+npmRebuild: false
+
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+
+nsis:
+  oneClick: true
+  perMachine: false
+  # Installing never starts the app, so it never creates data in %APPDATA%.
+  runAfterFinish: false
+  # Uninstalling keeps the user's data (%APPDATA%\CommissionTracker).
+  deleteAppDataOnUninstall: false

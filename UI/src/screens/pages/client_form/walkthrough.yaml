@@ -1,0 +1,80 @@
+page: client_form
+precondition: >
+  Desktop đã build (npm run build trong Desktop/). Trong UI/: npm run walkthrough:app
+  mở ứng dụng thật với thư mục dữ liệu tạm (không đụng %APPDATA%), Backend.py thật
+  sau fixture bật/tắt được, và nạp dữ liệu mẫu (xem precondition của client_list).
+  Chờ "ĐÃ NẠP XONG dữ liệu mẫu", bấm "Tải lại" trên trang "Khách hàng". Bật/tắt
+  backend: npm run walkthrough:backend -- down|up (từ UI/, cửa sổ lệnh khác). Các
+  bước nối tiếp nhau trong cùng một lần mở ứng dụng; mỗi bước bắt đầu ở trang
+  "Khách hàng" (bấm mục "Khách hàng" ở vùng điều hướng để về đó). Trước khi chạy,
+  đặt CT_WALKTHROUGH_RUNNER là tên người chạy.
+steps:
+  - id: S1
+    setup: null
+    action: >
+      Bấm "Thêm khách hàng". Gõ "Chi Mai" vào "Tên hiển thị". Bấm "Thêm liên hệ"; ở
+      "Kênh 1" gõ "insta" rồi chọn gợi ý "instagram"; ở "Giá trị 1" gõ "@chimai.draws".
+      Gõ "Khách quen" vào "Ghi chú". Bấm "Lưu".
+    expect: >
+      Trang "Thêm khách hàng" có hàng nút "Lưu" (nút chính, màu nhấn, đứng đầu) và
+      "Hủy" ngay dưới tiêu đề trang, phía trên ô "Tên hiển thị", như hàng nút của
+      trang "Khách hàng". Ô "Kênh 1" có danh sách gợi ý (email, facebook, instagram,
+      discord, zalo, x).
+      Nút "Lưu" chuyển "Đang lưu…" trong lúc gửi. Sau đó trang "Chi tiết khách hàng"
+      của "Chi Mai" mở ra, có thông báo xanh "Đã thêm khách hàng.", liên hệ
+      "instagram: @chimai.draws", ghi chú "Khách quen", trạng thái "Đang hoạt động".
+    covers: [ok]
+  - id: S2
+    setup: >
+      Về trang "Khách hàng".
+    action: >
+      Bấm "Thêm khách hàng". Gõ ba dấu cách vào "Tên hiển thị" (tên chỉ gồm khoảng
+      trắng). Bấm "Thêm liên hệ", gõ "zalo" vào "Kênh 1", để trống "Giá trị 1". Gõ
+      "ghi chú thử" vào "Ghi chú". Bấm "Lưu" (ở hàng nút dưới tiêu đề).
+    expect: >
+      Trang vẫn là "Thêm khách hàng". Ngay dưới hàng nút, trên các ô, có khung "Chưa
+      lưu được" với câu "Một số ô chưa đúng định dạng. Vui lòng kiểm tra lại."; ngay
+      dưới "Tên hiển thị" có lỗi "Nhập tên khách hàng."; ngay dưới "Giá trị 1" có lỗi
+      "Nhập thông tin liên hệ, hoặc bỏ hàng này.". Con trỏ nhập nằm ở ô lỗi đầu tiên,
+      "Tên hiển thị" (gõ ngay được mà không phải bấm vào ô). Những gì đã gõ còn nguyên
+      ("zalo", "ghi chú thử"). Không có khách mới nào được tạo (bấm "Hủy": danh sách
+      không đổi).
+    covers: [rejected_input]
+  - id: S3
+    setup: >
+      Về trang "Khách hàng".
+    action: >
+      Bấm "An", rồi bấm "Sửa". Đổi "Tên hiển thị" thành "An Nhiên". Bấm "Thêm liên
+      hệ", gõ "email" và "an@example.com". Bấm "Lưu".
+    expect: >
+      Trang "Sửa khách hàng" mở với tên "An"; hàng nút "Lưu", "Hủy" ngay dưới tiêu đề,
+      phía trên ô "Tên hiển thị". Sau khi lưu: trang "Chi tiết khách hàng"
+      của "An Nhiên" mở ra, có thông báo "Đã lưu thay đổi.", liên hệ "email:
+      an@example.com".
+    covers: [ok]
+  - id: S4
+    setup: >
+      Đang ở trang chi tiết của "An Nhiên" (sau S3).
+    action: >
+      Bấm "Sửa". Xóa hết "Tên hiển thị" (để trống). Bấm "Lưu".
+    expect: >
+      Trang vẫn là "Sửa khách hàng"; khung "Chưa lưu được" ngay dưới hàng nút; ngay
+      dưới "Tên hiển thị" có lỗi "Nhập tên khách hàng."; con trỏ nhập nằm ở ô lỗi đầu
+      tiên, "Tên hiển thị"; hàng liên hệ "email / an@example.com" còn nguyên. Bấm
+      "Hủy": về trang chi tiết, tên vẫn là "An Nhiên" (không có gì bị lưu).
+    covers: [rejected_input]
+  - id: S5
+    setup: >
+      Về trang "Khách hàng". Bấm "Thêm khách hàng", gõ "Dạ Thảo" vào "Tên hiển thị",
+      bấm "Thêm liên hệ", gõ "discord" và "dathao#1234". Rồi npm run walkthrough:backend
+      -- down (ứng dụng vẫn mở).
+    action: >
+      Bấm "Lưu". Khi khung báo lỗi hiện ra, chạy npm run walkthrough:backend -- up, rồi
+      bấm "Lưu" lần nữa.
+    expect: >
+      Lần đầu: khung "Không kết nối được" với câu "Không kết nối được tới phần xử lý của
+      ứng dụng. Vui lòng thử lại."; trang vẫn là "Thêm khách hàng", "Dạ Thảo",
+      "discord", "dathao#1234" còn nguyên, nút "Lưu" bấm được. Lần sau (backend đã chạy
+      lại): trang "Chi tiết khách hàng" của "Dạ Thảo" mở ra với thông báo "Đã thêm khách
+      hàng.". Trở về danh sách thì có đúng một "Dạ Thảo".
+    covers: [unreachable, ok]

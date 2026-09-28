@@ -1,0 +1,25 @@
+.inline {
+  display: flex;
+  flex-flow: row wrap;
+  align-items: flex-start;
+}
+
+.gapXs {
+  gap: var(--space-xs);
+}
+
+.gapSm {
+  gap: var(--space-sm);
+}
+
+.gapMd {
+  gap: var(--space-md);
+}
+
+.gapLg {
+  gap: var(--space-lg);
+}
+
+.gapXl {
+  gap: var(--space-xl);
+}

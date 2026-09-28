@@ -1,0 +1,138 @@
+/*
+ * Tokens of the interface layer — the only file with raw presentation values
+ * (R7). Two levels (i4-kit.md, Step I4.2):
+ *   --base-<group>-<level>  raw values; referenced only inside this file.
+ *   --<group>-<role>        role tokens; the only tokens components use.
+ * Named scales use exactly xs, sm, md, lg, xl.
+ *
+ * V1 has one theme, dark (.design/ui_decomposition.md §7.1). Role tokens are
+ * named by role, never by value, so a light theme later is one more set of
+ * values for the same role names. Every text/background pair the kit uses is
+ * checked for WCAG AA (>= 4.5:1), and every non-text pair of an interactive
+ * part (field borders, focus ring, current navigation mark) for >= 3:1, by
+ * scripts/check_contrast.mjs (npm run check).
+ */
+:root {
+  /* ---- base tokens ---------------------------------------------------- */
+  /* Neutral grays (R = G = B): the artist's colour perception must not be
+     tinted by the background. Darkest is not pure black. */
+  --base-gray-0: #ffffff;
+  --base-gray-100: #e6e6e6;
+  --base-gray-400: #a8a8a8;
+  --base-gray-500: #858585;
+  --base-gray-600: #6b6b6b;
+  --base-gray-700: #454545;
+  --base-gray-800: #363636;
+  --base-gray-850: #2d2d2d;
+  --base-gray-900: #252525;
+  --base-gray-950: #1c1c1c;
+
+  /* One accent, medium saturation, for the main action. */
+  --base-blue-300: #8fb0e8;
+  --base-blue-500: #3a66b5;
+  --base-blue-600: #325a9f;
+
+  /* Error and success, medium saturation. */
+  --base-red-300: #f09a91;
+  --base-red-400: #cc6b62;
+  --base-red-500: #b8574f;
+  --base-red-900: #3a2422;
+  --base-green-300: #8cca9f;
+  --base-green-500: #4d8c62;
+  --base-green-900: #1f3326;
+
+  --base-space-1: 4px;
+  --base-space-2: 8px;
+  --base-space-4: 16px;
+  --base-space-6: 24px;
+  --base-space-8: 32px;
+
+  --base-font-size-1: 13px;
+  --base-font-size-2: 14px;
+  --base-font-size-3: 18px;
+  --base-font-size-4: 22px;
+
+  --base-font-weight-400: 400;
+  --base-font-weight-600: 600;
+
+  --base-line-height-1: 1.25;
+  --base-line-height-2: 1.5;
+
+  --base-radius-2: 6px;
+  --base-border-width-1: 1px;
+  --base-border-width-2: 2px;
+
+  /* System fonts present on Windows with full Vietnamese diacritics; no font
+     file is embedded (the desktop layer does not serve .woff2). Group
+     font-family is added by CLAUDE.md §5. */
+  --base-font-family-sans: "Segoe UI", system-ui, sans-serif;
+
+  /* ---- role tokens ---------------------------------------------------- */
+  /* Text. */
+  --color-text: var(--base-gray-100);
+  --color-text-muted: var(--base-gray-400);
+  --color-text-danger: var(--base-red-300);
+  --color-text-success: var(--base-green-300);
+
+  /* Surfaces, three levels: the page; raised panels (header, navigation,
+     lists, cards); fields and hovered or selected items on a panel. */
+  --color-surface: var(--base-gray-950);
+  --color-surface-raised: var(--base-gray-900);
+  --color-surface-field: var(--base-gray-850);
+  --color-surface-header: var(--base-gray-900);
+  --color-surface-muted: var(--base-gray-900);
+  --color-surface-hover: var(--base-gray-850);
+  --color-surface-selected: var(--base-gray-800);
+  --color-surface-danger: var(--base-red-900);
+  --color-surface-success: var(--base-green-900);
+
+  /* Borders. --color-border and --color-border-danger are decorative (panels,
+     lists, InlineAlert) and may stay faint. The border of a field is how the
+     user finds it: its own tokens, >= 3:1 against the field and the page
+     (WCAG 2.1, 1.4.11; ui_decomposition.md §7.1), checked by check_contrast. */
+  --color-border: var(--base-gray-700);
+  --color-border-danger: var(--base-red-500);
+  --color-border-field: var(--base-gray-500);
+  --color-border-field-danger: var(--base-red-400);
+  --color-border-success: var(--base-green-500);
+  --color-border-selected: var(--base-blue-300);
+
+  /* Actions (Button): primary is the accent, secondary is neutral. */
+  --color-action: var(--base-blue-500);
+  --color-action-hover: var(--base-blue-600);
+  --color-action-text: var(--base-gray-0);
+  --color-action-secondary: var(--base-gray-800);
+  --color-action-secondary-hover: var(--base-gray-700);
+  --color-action-secondary-text: var(--base-gray-100);
+  --color-action-disabled: var(--base-gray-800);
+  --color-action-text-disabled: var(--base-gray-600);
+  --color-focus-ring: var(--base-blue-300);
+
+  --space-xs: var(--base-space-1);
+  --space-sm: var(--base-space-2);
+  --space-md: var(--base-space-4);
+  --space-lg: var(--base-space-6);
+  --space-xl: var(--base-space-8);
+
+  --font-size-sm: var(--base-font-size-1);
+  --font-size-md: var(--base-font-size-2);
+  --font-size-lg: var(--base-font-size-3);
+  --font-size-xl: var(--base-font-size-4);
+
+  --font-weight-body: var(--base-font-weight-400);
+  --font-weight-heading: var(--base-font-weight-600);
+
+  --line-height-heading: var(--base-line-height-1);
+  --line-height-body: var(--base-line-height-2);
+
+  --radius-panel: var(--base-radius-2);
+  --radius-control: var(--base-radius-2);
+  --border-width-panel: var(--base-border-width-1);
+  --border-width-focus: var(--base-border-width-2);
+  --border-width-selected: var(--base-border-width-2);
+
+  --font-family-body: var(--base-font-family-sans);
+
+  /* Native controls (scrollbars, date pickers) follow the dark theme. */
+  color-scheme: dark;
+}

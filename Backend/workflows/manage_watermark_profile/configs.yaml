@@ -1,0 +1,9 @@
+# Configs of manage_watermark_profile.
+
+# Boundary value (data_schema.yaml, clause_b_backend.manage_watermark_profile,
+# input_expected.strength_presets, from: environment_config): realizes
+# clause_a_common.shared_values.watermark_strength_presets, shared with
+# clause_c_ai_service. Must be exactly these values, in this order; this
+# layer may not change it on its own. Any other value stops the layer at
+# start-up.
+strength_presets: [subtle, balanced, robust]

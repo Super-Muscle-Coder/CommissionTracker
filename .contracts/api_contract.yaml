@@ -1,0 +1,640 @@
+# =============================================================================
+# API CONTRACT — COMMISSION TRACKER (V1)
+# =============================================================================
+# Frame: 02-contract.md (frame revision of 2026-09-24).
+# Same Clause convention as data_schema.yaml. Every name in `input` is an
+# input_expected entry of the same workflow in data_schema.yaml; every `ref`
+# is an output_guaranteed entry of the same workflow; every `code` is in
+# clause_a_common.error_codes.
+#
+# Changelog:
+#   v1.0.0 — [Toàn tệp, THÊM] Contract rewritten in the 2026-09-24 frame,
+#            replacing draft 1.0.0-draft.2 (old frame): form/address/input
+#            added to every endpoint; in-workflow calls use the in_process
+#            form instead of '/internal/...' paths; health endpoints removed
+#            (readiness is a Main-level signal); launch_services removed;
+#            reminder acknowledgement moved from reminder_ticker to the UI;
+#            native_dialogs declared as cross-cutting, with its entries.
+#   v1.0.0 — [Toàn tệp, SỬA] contract_state: draft -> approved — approved
+#            by the Project Owner on 2026-09-24. Every Clause stays OPEN;
+#            Clause C must not be locked before the watermark robustness
+#            EVIDENCE has been reviewed.
+#   v2.0.0 — [Clause B, SỬA] 500 + ERR_STORAGE_IO added to every backend
+#            endpoint that reads or writes storage, directly or through an
+#            in_process call (37 endpoints; list_currencies, list_stages,
+#            list_strengths read configuration only and are unchanged) —
+#            an unexpected storage failure had no declared label and was
+#            answered as plain text instead of error_body (found in backend
+#            session #1). Breaking change: a result was added to existing
+#            endpoints. Affected consumer today: the UI (external); in
+#            code, only manage_client exists and must add this label.
+#   v3.0.0 — [Clause A, THÊM] error_codes: ERR_OUT_OF_RANGE, for the
+#            computed-integer rule of data_schema.yaml 3.0.0.
+#   v3.0.0 — [Clause B, SỬA] 409 + ERR_OUT_OF_RANGE added to
+#            record_payment.record (a payment that would put the balance
+#            outside the integer range; nothing is written),
+#            record_payment.get_balance and view_income_report.
+#            get_income_report (a total outside the range). void_payment is
+#            not guarded on write, so that a mistaken entry can always be
+#            voided; a balance it makes unrepresentable is reported by
+#            get_balance. Breaking change: a result was added to existing
+#            endpoints. Affected code: record_payment. Found in backend
+#            session #3.
+#   v3.0.1 — [Clause A, SỬA] error_codes.ERR_OUT_OF_RANGE.meaning: "nothing
+#            was written" now applies only to an endpoint that writes (the
+#            old wording also appeared on reads such as get_balance). Wording
+#            only; found in the audit of backend session #4.
+#   v4.0.0 — [Clause A, SỬA] endpoint_forms.ipc: the renderer invokes an
+#            ipc entry through the function invoke of the renderer bridge
+#            (data_schema.yaml 6.1.0, shared_values.renderer_bridge), which
+#            the desktop preload script relays to ipcRenderer.invoke; the
+#            renderer has no direct access to ipcRenderer. The old wording
+#            ("invoked from the renderer with ipcRenderer.invoke") is
+#            impossible with contextIsolation and sandbox on, which the
+#            desktop layer requires. Breaking change: how a caller invokes
+#            an ipc entry changed. Affected code: none (no ipc entry is
+#            implemented yet). Found while drafting the plan of desktop
+#            session B1; approved by the Project Owner on 2026-09-26.
+# =============================================================================
+
+api_version: 4.0.0
+contract_state: approved
+
+# -----------------------------------------------------------------------------
+# CLAUSE A — COMMON
+# -----------------------------------------------------------------------------
+clause_a_common:
+  lock_status: open
+
+  endpoint_forms:
+    http: "HTTP/1.1 on shared_values.loopback_host, port handed over at launch. address is '<METHOD> <path>'. A path segment written {name} carries the input of that name. Remaining inputs travel as query parameters named after the input (GET; such inputs are never objects), or as a JSON body whose keys are the input names (POST, PUT). The result label is the HTTP status code; the response body is the referenced output, or error_body."
+    in_process: "A direct call to a Routers function of another workflow in the same process. address is the function name. The function takes one keyword argument per input name and returns the referenced output. A non-2xx result label is raised as an error carrying that label and error_body."
+    ipc: "An Electron IPC channel handled in the desktop main process. The renderer invokes it as invoke(address, argument) on the renderer bridge (data_schema.yaml shared_values.renderer_bridge); the desktop preload script relays the call to ipcRenderer.invoke, and the renderer has no direct access to ipcRenderer. address is the channel name. The single argument is an object whose keys are the input names. The reply is object { status: integer (the result label), body: the referenced output or error_body }."
+
+  error_codes:
+    - code: ERR_VALIDATION
+      meaning: "An input is missing, malformed, or outside its allowed values"
+    - code: ERR_NOT_FOUND
+      meaning: "A referenced record or file does not exist"
+    - code: ERR_CONFLICT
+      meaning: "The operation conflicts with the current state (e.g. archived client, voided payment, currency change after creation, output file already exists)"
+    - code: ERR_CURRENCY_MISMATCH
+      meaning: "Payment currency differs from the commission's agreed currency"
+    - code: ERR_INVALID_TRANSITION
+      meaning: "The requested stage change is not allowed from the current stage"
+    - code: ERR_UNSUPPORTED_IMAGE
+      meaning: "Image format or color mode is not supported"
+    - code: ERR_IMAGE_TOO_LARGE
+      meaning: "Image exceeds max_image_bytes or max_image_pixels"
+    - code: ERR_SERVICE_UNAVAILABLE
+      meaning: "A required layer is not ready or not reachable (e.g. the AI Service did not start, or the watermark engine is not loaded)"
+    - code: ERR_WATERMARK_SELF_CHECK_FAILED
+      meaning: "The embedded watermark could not be read back right after embedding; nothing was written or registered"
+    - code: ERR_STORAGE_IO
+      meaning: "Reading or writing a file or the database failed unexpectedly (disk full, file locked, corrupted storage…)"
+    - code: ERR_OUT_OF_RANGE
+      meaning: "A computed integer (a sum, a balance) would fall outside the integer range of data_schema.yaml clause_a_common; an endpoint that writes has written nothing"
+    - code: ERR_INCOMPATIBLE_BACKUP
+      meaning: "The archive is corrupt, not a Commission Tracker backup, or was made by a newer app_version"
+    - code: ERR_RESTORE_FAILED
+      meaning: "Restore could not be completed; the previous database was put back and the backend restarted"
+
+  error_body: "object { code: string (one of error_codes), message: string (human readable, English), details: object|null }"
+
+  cross_cutting:
+    reminder_ticker:
+      layer: clause_d_desktop
+      trigger: "On a fixed interval while the app runs (interval is the ticker's own internal setting), started by the desktop Main once the backend is ready."
+      description: "Calls send_reminder.check_due and shows one Windows toast per returned notification, building the toast text from the notification fields. Clicking a toast only brings the app window to the front. Decides nothing about what is due and acknowledges nothing."
+    native_dialogs:
+      layer: clause_d_desktop
+      trigger: "When the renderer invokes one of its entries."
+      description: "Shows the operating system's file dialogs. Presentation only: calls no workflow and keeps nothing; a chosen path reaches a workflow later as end_user input, through that workflow's own endpoint."
+      entries:
+        open_file:
+          form: ipc
+          address: "dialog:open-file"
+          called_by: [external]
+          input: { filters: "list[object { name: string, extensions: list[string] }]|null" }
+          output:
+            200: { type: "object { canceled: boolean, path: file_path|null }" }
+        save_file:
+          form: ipc
+          address: "dialog:save-file"
+          called_by: [external]
+          input: { suggested_name: "string|null", filters: "list[object { name: string, extensions: list[string] }]|null" }
+          output:
+            200: { type: "object { canceled: boolean, path: file_path|null }" }
+        pick_folder:
+          form: ipc
+          address: "dialog:pick-folder"
+          called_by: [external]
+          input: none
+          output:
+            200: { type: "object { canceled: boolean, path: file_path|null }" }
+
+# -----------------------------------------------------------------------------
+# CLAUSE B — BACKEND
+# -----------------------------------------------------------------------------
+clause_b_backend:
+  lock_status: open
+  # scaffold_backend does not appear: foundation workflow without Routers, run
+  # once by the backend Main. Readiness is signalled by the Main, not polled.
+
+  manage_client:
+    tag: "[Clause B]"
+    endpoints:
+      create_client:
+        form: http
+        address: "POST /clients"
+        called_by: [external]
+        input: [client_input]
+        output:
+          201: { ref: client_detail }
+          400: { code: ERR_VALIDATION }
+          500: { code: ERR_STORAGE_IO }
+      list_clients:
+        form: http
+        address: "GET /clients"
+        called_by: [external]
+        input: none
+        output:
+          200: { ref: client_list }
+          500: { code: ERR_STORAGE_IO }
+      get_client:
+        form: http
+        address: "GET /clients/{client_id}"
+        called_by: [external]
+        input: [client_id]
+        output:
+          200: { ref: client_detail }
+          404: { code: ERR_NOT_FOUND }
+          500: { code: ERR_STORAGE_IO }
+      edit_client:
+        form: http
+        address: "PUT /clients/{client_id}"
+        called_by: [external]
+        input: [client_id, client_input]
+        output:
+          200: { ref: client_detail }
+          400: { code: ERR_VALIDATION }
+          404: { code: ERR_NOT_FOUND }
+          500: { code: ERR_STORAGE_IO }
+      set_client_archived:
+        form: http
+        address: "PUT /clients/{client_id}/archived"
+        called_by: [external]
+        input: [client_id, is_archived]
+        output:
+          200: { ref: client_detail }
+          400: { code: ERR_VALIDATION }
+          404: { code: ERR_NOT_FOUND }
+          500: { code: ERR_STORAGE_IO }
+      get_client_summary:
+        form: in_process
+        address: "get_client_summary"
+        called_by: [manage_commission]
+        input: [client_id]
+        output:
+          200: { ref: client_summary }
+          404: { code: ERR_NOT_FOUND }
+          500: { code: ERR_STORAGE_IO }
+
+  manage_commission:
+    tag: "[Clause B]"
+    endpoints:
+      create_commission:
+        form: http
+        address: "POST /commissions"
+        called_by: [external]
+        input: [commission_input]
+        output:
+          201: { ref: commission_detail }
+          400: { code: ERR_VALIDATION }
+          404: { code: ERR_NOT_FOUND }
+          409: { code: ERR_CONFLICT }
+          500: { code: ERR_STORAGE_IO }
+      list_commissions:
+        form: http
+        address: "GET /commissions"
+        called_by: [external]
+        input: none
+        output:
+          200: { ref: commission_list }
+          500: { code: ERR_STORAGE_IO }
+      get_commission:
+        form: http
+        address: "GET /commissions/{commission_id}"
+        called_by: [external]
+        input: [commission_id]
+        output:
+          200: { ref: commission_detail }
+          404: { code: ERR_NOT_FOUND }
+          500: { code: ERR_STORAGE_IO }
+      edit_commission:
+        form: http
+        address: "PUT /commissions/{commission_id}"
+        called_by: [external]
+        input: [commission_id, commission_input]
+        output:
+          200: { ref: commission_detail }
+          400: { code: ERR_VALIDATION }
+          404: { code: ERR_NOT_FOUND }
+          409: { code: ERR_CONFLICT }
+          500: { code: ERR_STORAGE_IO }
+      list_currencies:
+        form: http
+        address: "GET /currencies"
+        called_by: [external]
+        input: none
+        output:
+          200: { ref: currency_options }
+      get_commission_summary:
+        form: in_process
+        address: "get_commission_summary"
+        called_by: [update_progress, record_payment, apply_watermark]
+        input: [commission_id]
+        output:
+          200: { ref: commission_summary }
+          404: { code: ERR_NOT_FOUND }
+          500: { code: ERR_STORAGE_IO }
+      list_commission_index:
+        form: in_process
+        address: "list_commission_index"
+        called_by: [view_income_report, send_reminder]
+        input: none
+        output:
+          200: { ref: commission_index }
+          500: { code: ERR_STORAGE_IO }
+
+  update_progress:
+    tag: "[Clause B]"
+    endpoints:
+      change_stage:
+        form: http
+        address: "PUT /commissions/{commission_id}/stage"
+        called_by: [external]
+        input: [commission_id, stage_change]
+        output:
+          200: { ref: progress_state }
+          400: { code: ERR_VALIDATION }
+          404: { code: ERR_NOT_FOUND }
+          409: { code: ERR_INVALID_TRANSITION }
+          500: { code: ERR_STORAGE_IO }
+      get_stage:
+        form: http
+        address: "GET /commissions/{commission_id}/stage"
+        called_by: [external]
+        input: [commission_id]
+        output:
+          200: { ref: progress_state }
+          404: { code: ERR_NOT_FOUND }
+          500: { code: ERR_STORAGE_IO }
+      get_stage_history:
+        form: http
+        address: "GET /commissions/{commission_id}/stage/history"
+        called_by: [external]
+        input: [commission_id]
+        output:
+          200: { ref: progress_history }
+          404: { code: ERR_NOT_FOUND }
+          500: { code: ERR_STORAGE_IO }
+      get_board:
+        form: http
+        address: "GET /progress/board"
+        called_by: [external]
+        input: none
+        output:
+          200: { ref: progress_board }
+          500: { code: ERR_STORAGE_IO }
+      list_stages:
+        form: http
+        address: "GET /progress/stages"
+        called_by: [external]
+        input: none
+        output:
+          200: { ref: stage_options }
+      list_progress_board:
+        form: in_process
+        address: "list_progress_board"
+        called_by: [view_income_report, send_reminder]
+        input: none
+        output:
+          200: { ref: progress_board }
+          500: { code: ERR_STORAGE_IO }
+
+  record_payment:
+    tag: "[Clause B]"
+    endpoints:
+      record:
+        form: http
+        address: "POST /payments"
+        called_by: [external]
+        input: [commission_id, payment_input]
+        output:
+          201: { ref: payment }
+          400: { code: ERR_VALIDATION }
+          404: { code: ERR_NOT_FOUND }
+          409: { code: ERR_OUT_OF_RANGE }
+          422: { code: ERR_CURRENCY_MISMATCH }
+          500: { code: ERR_STORAGE_IO }
+      list_for_commission:
+        form: http
+        address: "GET /payments"
+        called_by: [external]
+        input: [commission_id]
+        output:
+          200: { ref: payment_list }
+          404: { code: ERR_NOT_FOUND }
+          500: { code: ERR_STORAGE_IO }
+      void_payment:
+        form: http
+        address: "PUT /payments/{payment_id}/void"
+        called_by: [external]
+        input: [payment_id]
+        output:
+          200: { ref: payment }
+          404: { code: ERR_NOT_FOUND }
+          409: { code: ERR_CONFLICT }
+          500: { code: ERR_STORAGE_IO }
+      get_balance:
+        form: http
+        address: "GET /payments/balance/{commission_id}"
+        called_by: [external]
+        input: [commission_id]
+        output:
+          200: { ref: commission_balance }
+          404: { code: ERR_NOT_FOUND }
+          409: { code: ERR_OUT_OF_RANGE }
+          500: { code: ERR_STORAGE_IO }
+      list_ledger:
+        form: in_process
+        address: "list_payment_ledger"
+        called_by: [view_income_report]
+        input: none
+        output:
+          200: { ref: payment_ledger }
+          500: { code: ERR_STORAGE_IO }
+
+  view_income_report:
+    tag: "[Clause B]"
+    endpoints:
+      get_income_report:
+        form: http
+        address: "GET /reports/income"
+        called_by: [external]
+        input: [period_from, period_to]
+        output:
+          200: { ref: income_report }
+          400: { code: ERR_VALIDATION }
+          409: { code: ERR_OUT_OF_RANGE }
+          500: { code: ERR_STORAGE_IO }
+
+  manage_watermark_profile:
+    tag: "[Clause B]"
+    endpoints:
+      create_profile:
+        form: http
+        address: "POST /watermark-profiles"
+        called_by: [external]
+        input: [profile_input]
+        output:
+          201: { ref: watermark_profile }
+          400: { code: ERR_VALIDATION }
+          500: { code: ERR_STORAGE_IO }
+      list_profiles:
+        form: http
+        address: "GET /watermark-profiles"
+        called_by: [external]
+        input: none
+        output:
+          200: { ref: profile_list }
+          500: { code: ERR_STORAGE_IO }
+      get_profile:
+        form: http
+        address: "GET /watermark-profiles/{profile_id}"
+        called_by: [external]
+        input: [profile_id]
+        output:
+          200: { ref: watermark_profile }
+          404: { code: ERR_NOT_FOUND }
+          500: { code: ERR_STORAGE_IO }
+      edit_profile:
+        form: http
+        address: "PUT /watermark-profiles/{profile_id}"
+        called_by: [external]
+        input: [profile_id, profile_input]
+        output:
+          200: { ref: watermark_profile }
+          400: { code: ERR_VALIDATION }
+          404: { code: ERR_NOT_FOUND }
+          500: { code: ERR_STORAGE_IO }
+      list_strengths:
+        form: http
+        address: "GET /watermark-strengths"
+        called_by: [external]
+        input: none
+        output:
+          200: { ref: strength_options }
+      get_profile_record:
+        form: in_process
+        address: "get_watermark_profile"
+        called_by: [apply_watermark, verify_watermark]
+        input: [profile_id]
+        output:
+          200: { ref: watermark_profile }
+          404: { code: ERR_NOT_FOUND }
+          500: { code: ERR_STORAGE_IO }
+
+  apply_watermark:
+    tag: "[Clause B]"
+    endpoints:
+      apply:
+        form: http
+        address: "POST /artworks"
+        called_by: [external]
+        input: [apply_request]
+        output:
+          201: { ref: apply_result }
+          400: { code: ERR_VALIDATION }
+          404: { code: ERR_NOT_FOUND }
+          409: { code: ERR_CONFLICT }
+          413: { code: ERR_IMAGE_TOO_LARGE }
+          415: { code: ERR_UNSUPPORTED_IMAGE }
+          422: { code: ERR_WATERMARK_SELF_CHECK_FAILED }
+          500: { code: ERR_STORAGE_IO }
+          503: { code: ERR_SERVICE_UNAVAILABLE }
+      list_artworks:
+        form: http
+        address: "GET /artworks"
+        called_by: [external]
+        input: none
+        output:
+          200: { ref: artwork_list }
+          500: { code: ERR_STORAGE_IO }
+      get_artwork:
+        form: http
+        address: "GET /artworks/{artwork_id}"
+        called_by: [external]
+        input: [artwork_id]
+        output:
+          200: { ref: registered_artwork }
+          404: { code: ERR_NOT_FOUND }
+          500: { code: ERR_STORAGE_IO }
+      find_by_code:
+        form: in_process
+        address: "find_artwork_by_code"
+        called_by: [verify_watermark]
+        input: [watermark_code]
+        output:
+          200: { ref: registered_artwork }
+          404: { code: ERR_NOT_FOUND }
+          500: { code: ERR_STORAGE_IO }
+
+  verify_watermark:
+    tag: "[Clause B]"
+    endpoints:
+      verify:
+        form: http
+        address: "POST /verifications"
+        called_by: [external]
+        input: [suspect_file_path]
+        output:
+          200: { ref: verification_result }   # all three outcomes are 200
+          400: { code: ERR_VALIDATION }
+          404: { code: ERR_NOT_FOUND }
+          413: { code: ERR_IMAGE_TOO_LARGE }
+          415: { code: ERR_UNSUPPORTED_IMAGE }
+          500: { code: ERR_STORAGE_IO }
+          503: { code: ERR_SERVICE_UNAVAILABLE }
+
+  backup_data:
+    tag: "[Clause B]"
+    endpoints:
+      create_backup:
+        form: http
+        address: "POST /backups"
+        called_by: [external, restore_data]
+        input: [backup_request]
+        output:
+          201: { ref: backup_archive }
+          400: { code: ERR_VALIDATION }
+          500: { code: ERR_STORAGE_IO }
+      prepare_restore:
+        form: http
+        address: "POST /backups/restore-preparations"
+        called_by: [restore_data]
+        input: [archive_path]
+        output:
+          200: { ref: restore_staging }   # is_valid / is_compatible may be false; still 200
+          400: { code: ERR_VALIDATION }
+          404: { code: ERR_NOT_FOUND }
+          500: { code: ERR_STORAGE_IO }
+
+  send_reminder:
+    tag: "[Clause B]"
+    endpoints:
+      get_settings:
+        form: http
+        address: "GET /reminders/settings"
+        called_by: [external]
+        input: none
+        output:
+          200: { ref: reminder_settings }
+          500: { code: ERR_STORAGE_IO }
+      edit_settings:
+        form: http
+        address: "PUT /reminders/settings"
+        called_by: [external]
+        input: [reminder_settings_input]
+        output:
+          200: { ref: reminder_settings }
+          400: { code: ERR_VALIDATION }
+          500: { code: ERR_STORAGE_IO }
+      check_due:
+        form: http
+        address: "POST /reminders/checks"
+        called_by: [reminder_ticker]
+        input: none
+        output:
+          200: { ref: new_notifications }   # empty list when nothing became due
+          500: { code: ERR_STORAGE_IO }
+      list_pending:
+        form: http
+        address: "GET /reminders/pending"
+        called_by: [external]
+        input: none
+        output:
+          200: { ref: pending_notifications }
+          500: { code: ERR_STORAGE_IO }
+      acknowledge:
+        form: http
+        address: "PUT /reminders/{notification_id}/ack"
+        called_by: [external]
+        input: [notification_id]
+        output:
+          200: { ref: notification_ack }   # acknowledging twice is not an error
+          404: { code: ERR_NOT_FOUND }
+          500: { code: ERR_STORAGE_IO }
+
+# -----------------------------------------------------------------------------
+# CLAUSE C — AI SERVICE
+# -----------------------------------------------------------------------------
+# Called only by backend workflows, never by the UI.
+clause_c_ai_service:
+  lock_status: open
+  # init_watermark_engine does not appear: foundation workflow without
+  # Routers, run once by the AI Service Main.
+
+  embed_watermark:
+    tag: "[Clause C]"
+    endpoints:
+      embed:
+        form: http
+        address: "POST /embed"
+        called_by: [apply_watermark]
+        input: [embed_input]
+        output:
+          200: { ref: watermarked_image }
+          400: { code: ERR_VALIDATION }
+          413: { code: ERR_IMAGE_TOO_LARGE }
+          415: { code: ERR_UNSUPPORTED_IMAGE }
+          503: { code: ERR_SERVICE_UNAVAILABLE }
+
+  extract_watermark:
+    tag: "[Clause C]"
+    endpoints:
+      extract:
+        form: http
+        address: "POST /extract"
+        called_by: [apply_watermark, verify_watermark]
+        input: [extract_input]
+        output:
+          200: { ref: extraction }
+          400: { code: ERR_VALIDATION }
+          413: { code: ERR_IMAGE_TOO_LARGE }
+          415: { code: ERR_UNSUPPORTED_IMAGE }
+          503: { code: ERR_SERVICE_UNAVAILABLE }
+
+# -----------------------------------------------------------------------------
+# CLAUSE D — DESKTOP
+# -----------------------------------------------------------------------------
+clause_d_desktop:
+  lock_status: open
+
+  restore_data:
+    tag: "[Clause D]"
+    endpoints:
+      start_restore:
+        form: ipc
+        address: "restore:start"
+        called_by: [external]
+        input: [archive_path]
+        output:
+          200: { ref: restore_result }
+          400: { code: ERR_VALIDATION }
+          404: { code: ERR_NOT_FOUND }
+          409: { code: ERR_INCOMPATIBLE_BACKUP }   # nothing touched
+          424: { code: ERR_STORAGE_IO }            # safety archive failed; nothing touched
+          500: { code: ERR_RESTORE_FAILED }        # previous database put back
+          503: { code: ERR_SERVICE_UNAVAILABLE }   # backend not ready; nothing touched

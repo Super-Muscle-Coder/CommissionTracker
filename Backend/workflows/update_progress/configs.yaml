@@ -1,0 +1,19 @@
+# Configs of update_progress.
+
+# Boundary value (data_schema.yaml, clause_b_backend.update_progress,
+# input_expected.stage_catalog, from: environment_config): the ordered work
+# stages of a commission and their kind (clause_a_common.types.stage_kind).
+# Contract default, in this order. The first stage must be of kind 'active':
+# a commission with no stage set counts as the first stage, kind 'active'.
+stage_catalog:
+  - { stage: queued, kind: active }
+  - { stage: sketch, kind: active }
+  - { stage: lineart, kind: active }
+  - { stage: coloring, kind: active }
+  - { stage: rendering, kind: active }
+  - { stage: final_review, kind: active }
+  - { stage: revision, kind: active }
+  - { stage: completed, kind: active }
+  - { stage: on_hold, kind: on_hold }
+  - { stage: delivered, kind: finished }
+  - { stage: cancelled, kind: cancelled }

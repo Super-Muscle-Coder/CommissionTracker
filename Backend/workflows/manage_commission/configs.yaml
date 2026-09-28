@@ -1,0 +1,6 @@
+# Configs of manage_commission.
+
+# Boundary value (data_schema.yaml, clause_b_backend.manage_commission,
+# input_expected.supported_currencies, from: environment_config): the ISO 4217
+# codes an agreed_price may use. Contract default: [VND, USD].
+supported_currencies: [VND, USD]

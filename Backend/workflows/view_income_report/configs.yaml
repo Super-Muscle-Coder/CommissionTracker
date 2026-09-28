@@ -1,0 +1,7 @@
+# Configs of view_income_report.
+#
+# No boundary value: view_income_report has no input from environment_config
+# and uses no shared_values (the integer bound of clause_a_common is a rule of
+# the output's type, applied by the Services). No internal value yet. The
+# empty mapping keeps a place for the first value this workflow will need.
+{}

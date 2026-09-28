@@ -1,0 +1,69 @@
+{
+  "boundary": {
+    "loopback_host": "127.0.0.1",
+    "ui_origin": "app://commission-tracker",
+    "renderer_bridge": "commissionTracker",
+    "db_file_relative_to_app_data": "CommissionTracker/data.db"
+  },
+  "backend": {
+    "launch_env": {
+      "port": "CT_PORT",
+      "db_file_path": "CT_DB_FILE_PATH",
+      "ai_service_base_url": "CT_AI_SERVICE_BASE_URL",
+      "app_version": "CT_APP_VERSION"
+    },
+    "from_source": {
+      "interpreter": "../Backend/env/Scripts/python.exe",
+      "script": "Backend.py",
+      "working_dir": "../Backend"
+    },
+    "ready_line": "READY",
+    "ready_timeout_ms": 30000,
+    "shutdown_timeout_ms": 10000,
+    "start_attempts": 3
+  },
+  "renderer": {
+    "root_dir": "../UI/dist",
+    "entry_file": "index.html",
+    "window": { "width": 1200, "height": 800 },
+    "content_types": {
+      ".html": "text/html; charset=utf-8",
+      ".js": "text/javascript; charset=utf-8",
+      ".mjs": "text/javascript; charset=utf-8",
+      ".css": "text/css; charset=utf-8",
+      ".svg": "image/svg+xml",
+      ".png": "image/png",
+      ".json": "application/json; charset=utf-8"
+    },
+    "default_content_type": "application/octet-stream",
+    "non_fatal_first_load_errors": ["ERR_ABORTED"]
+  },
+  "preload": {
+    "arguments": {
+      "bridge_name": "--ct-renderer-bridge=",
+      "backend_base_url": "--ct-backend-base-url="
+    }
+  },
+  "main": {
+    "failure_exit_code": 1,
+    "error_dialog_title": "Commission Tracker"
+  },
+  "packaged": {
+    "backend": {
+      "interpreter": "python/python.exe",
+      "script": "Backend.py",
+      "working_dir": "backend"
+    },
+    "renderer_root_dir": "ui",
+    "ignored_test_flags": ["renderer_root", "backend_interpreter", "backend_script", "backend_working_dir", "first_backend_port"]
+  },
+  "test_flags": {
+    "renderer_root": "--ct-test-renderer-root=",
+    "data_dir": "--ct-test-data-dir=",
+    "backend_interpreter": "--ct-test-backend-interpreter=",
+    "backend_script": "--ct-test-backend-script=",
+    "backend_working_dir": "--ct-test-backend-working-dir=",
+    "first_backend_port": "--ct-test-first-backend-port=",
+    "no_dialog": "--ct-test-no-dialog"
+  }
+}

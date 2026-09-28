@@ -1,0 +1,8 @@
+# Configs of send_reminder.
+#
+# No boundary value: send_reminder has no input from environment_config and
+# uses no shared_values. The default reminder settings are not configuration:
+# they are written in the contract (data_schema.yaml, send_reminder.description)
+# and realized in the Services. No internal value yet. The empty mapping keeps
+# a place for the first value this workflow will need.
+{}

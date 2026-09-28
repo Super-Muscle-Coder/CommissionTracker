@@ -1,0 +1,9 @@
+# Backend layer dependencies (clause_b_backend): run time only. Versions are pinned.
+# This is what the packaged app ships (Desktop/packaging/prepare_runtime.mjs installs it).
+# Test tools live in requirements-dev.txt.
+# Target interpreter: Python 3.13, the Backend/env virtual environment (see CLAUDE.md, section 5).
+fastapi==0.136.1
+starlette==1.0.0
+pydantic==2.12.5
+uvicorn==0.47.0
+PyYAML==6.0.3

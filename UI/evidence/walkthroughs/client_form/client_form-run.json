@@ -1,0 +1,57 @@
+{
+  "page": "client_form",
+  "walkthrough": "src/screens/pages/client_form/walkthrough.yaml",
+  "steps": [
+    {
+      "step": "S1",
+      "passed": true,
+      "runner": "coding-agent@2026-09-28#2 (Playwright, tests/e2e/client_form_walkthrough.spec.ts)",
+      "finished_at": "2026-09-28T05:23:23.672Z",
+      "screenshot": "evidence/walkthroughs/client_form/client_form-S1.png",
+      "covers": [
+        "ok"
+      ]
+    },
+    {
+      "step": "S2",
+      "passed": true,
+      "runner": "coding-agent@2026-09-28#2 (Playwright, tests/e2e/client_form_walkthrough.spec.ts)",
+      "finished_at": "2026-09-28T05:23:24.271Z",
+      "screenshot": "evidence/walkthroughs/client_form/client_form-S2.png",
+      "covers": [
+        "rejected_input"
+      ]
+    },
+    {
+      "step": "S3",
+      "passed": true,
+      "runner": "coding-agent@2026-09-28#2 (Playwright, tests/e2e/client_form_walkthrough.spec.ts)",
+      "finished_at": "2026-09-28T05:23:24.965Z",
+      "screenshot": "evidence/walkthroughs/client_form/client_form-S3.png",
+      "covers": [
+        "ok"
+      ]
+    },
+    {
+      "step": "S4",
+      "passed": true,
+      "runner": "coding-agent@2026-09-28#2 (Playwright, tests/e2e/client_form_walkthrough.spec.ts)",
+      "finished_at": "2026-09-28T05:23:25.433Z",
+      "screenshot": "evidence/walkthroughs/client_form/client_form-S4.png",
+      "covers": [
+        "rejected_input"
+      ]
+    },
+    {
+      "step": "S5",
+      "passed": true,
+      "runner": "coding-agent@2026-09-28#2 (Playwright, tests/e2e/client_form_walkthrough.spec.ts)",
+      "finished_at": "2026-09-28T05:23:32.891Z",
+      "screenshot": "evidence/walkthroughs/client_form/client_form-S5.png",
+      "covers": [
+        "unreachable",
+        "ok"
+      ]
+    }
+  ]
+}

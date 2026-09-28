@@ -1,0 +1,32 @@
+.list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  background: var(--color-surface-raised);
+  border: var(--border-width-panel) solid var(--color-border);
+  border-radius: var(--radius-panel);
+}
+
+.entry {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 3fr);
+  column-gap: var(--space-md);
+  padding: var(--space-sm) var(--space-md);
+}
+
+.entry + .entry {
+  border-top: var(--border-width-panel) solid var(--color-border);
+}
+
+.term {
+  grid-column: 1;
+  color: var(--color-text-muted);
+}
+
+.detail {
+  grid-column: 2;
+  margin: 0;
+  color: var(--color-text);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

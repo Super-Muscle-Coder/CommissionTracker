@@ -1,0 +1,71 @@
+page: client_detail
+precondition: >
+  Desktop đã build (npm run build trong Desktop/). Trong UI/: npm run walkthrough:app
+  mở ứng dụng thật với thư mục dữ liệu tạm (không đụng %APPDATA%), Backend.py thật
+  sau fixture bật/tắt được, và nạp dữ liệu mẫu (xem precondition của client_list;
+  khách "Nguyễn Thu Hà" có hai liên hệ facebook: fb.com/thuha.art, email:
+  thuha@example.com và ghi chú "Thích tông màu ấm. Giao file PSD."). Chờ "ĐÃ NẠP XONG
+  dữ liệu mẫu", bấm "Tải lại" trên trang "Khách hàng". Bật/tắt backend: npm run
+  walkthrough:backend -- down|up (từ UI/, cửa sổ lệnh khác). Các bước nối tiếp nhau
+  trong cùng một lần mở ứng dụng; trước khi chạy, đặt CT_WALKTHROUGH_RUNNER là tên
+  người chạy.
+steps:
+  - id: S1
+    setup: null
+    action: >
+      Trên trang "Khách hàng", bấm vào "Nguyễn Thu Hà".
+    expect: >
+      Trang "Chi tiết khách hàng" hiện tên "Nguyễn Thu Hà" và danh sách: "Trạng thái:
+      Đang hoạt động"; "Liên hệ" với hai dòng "facebook: fb.com/thuha.art" và "email:
+      thuha@example.com"; "Ghi chú: Thích tông màu ấm. Giao file PSD."; "Ngày tạo" và
+      "Sửa lần cuối" dạng ngày/tháng/năm giờ:phút theo giờ của máy. Có nút "Sửa" (màu
+      nhấn), "Lưu trữ khách hàng" và "Quay lại danh sách". Không có thông báo lỗi.
+    covers: [ok]
+  - id: S2
+    setup: null
+    action: >
+      Bấm "Lưu trữ khách hàng".
+    expect: >
+      Không có hộp thoại xác nhận (lưu trữ quay lại được). Hiện thông báo xanh "Đã lưu
+      trữ. Khách này sẽ không có trong danh sách chọn khi tạo đơn mới; đơn cũ không bị
+      ảnh hưởng."; "Trạng thái" đổi thành "Đã lưu trữ"; nút đổi thành "Bỏ lưu trữ".
+    covers: [ok]
+  - id: S3
+    setup: null
+    action: >
+      Bấm "Bỏ lưu trữ".
+    expect: >
+      Hiện thông báo "Đã bỏ lưu trữ. Khách này lại có trong danh sách chọn khi tạo đơn
+      mới."; "Trạng thái" trở lại "Đang hoạt động"; nút trở lại "Lưu trữ khách hàng".
+    covers: [ok]
+  - id: S4
+    setup: >
+      npm run walkthrough:backend -- down (ứng dụng vẫn mở ở trang chi tiết).
+    action: >
+      Bấm "Lưu trữ khách hàng". Khi khung báo lỗi hiện ra, chạy npm run
+      walkthrough:backend -- up, rồi bấm "Lưu trữ khách hàng" lần nữa.
+    expect: >
+      Lần đầu: khung báo lỗi "Không kết nối được" với câu "Không kết nối được tới phần
+      xử lý của ứng dụng. Vui lòng thử lại."; thông tin khách vẫn hiện như cũ, "Trạng
+      thái" vẫn "Đang hoạt động", nút "Lưu trữ khách hàng" vẫn bấm được. Lần sau (backend
+      đã chạy lại): khung báo lỗi biến mất, hiện thông báo "Đã lưu trữ. …", "Trạng thái"
+      là "Đã lưu trữ".
+    covers: [unreachable, ok]
+  - id: S5
+    setup: null
+    action: >
+      Bấm "Quay lại danh sách".
+    expect: >
+      Trang "Khách hàng" hiện lại; "Nguyễn Thu Hà" nay nằm trong nhóm "Đã lưu trữ" (cùng
+      với Hà), không còn trong nhóm "Đang hoạt động".
+    covers: [ok]
+  - id: S6
+    setup: >
+      Bấm "Nguyễn Thu Hà" trong nhóm "Đã lưu trữ" để mở lại trang chi tiết.
+    action: >
+      Bấm "Sửa".
+    expect: >
+      Trang "Sửa khách hàng" mở ra với dữ liệu đã có: ô "Tên hiển thị" là "Nguyễn Thu
+      Hà", hai hàng liên hệ (Kênh 1 facebook, Giá trị 1 fb.com/thuha.art; Kênh 2 email,
+      Giá trị 2 thuha@example.com), ô "Ghi chú" có ghi chú.
+    covers: [ok]

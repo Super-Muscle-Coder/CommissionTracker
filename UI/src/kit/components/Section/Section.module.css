@@ -1,0 +1,40 @@
+.section {
+  display: flex;
+  flex-direction: column;
+}
+
+.pageTitle,
+.groupTitle {
+  margin: 0;
+  font-weight: var(--font-weight-heading);
+  line-height: var(--line-height-heading);
+}
+
+.pageTitle {
+  font-size: var(--font-size-xl);
+}
+
+.groupTitle {
+  font-size: var(--font-size-md);
+  color: var(--color-text-muted);
+}
+
+.gapXs {
+  gap: var(--space-xs);
+}
+
+.gapSm {
+  gap: var(--space-sm);
+}
+
+.gapMd {
+  gap: var(--space-md);
+}
+
+.gapLg {
+  gap: var(--space-lg);
+}
+
+.gapXl {
+  gap: var(--space-xl);
+}

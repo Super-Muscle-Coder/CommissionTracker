@@ -1,0 +1,46 @@
+# Layer-level configuration of the backend (clause_b_backend).
+# Read only by the backend Main (Backend.py).
+
+# Boundary values (data_schema.yaml, clause_a_common).
+loopback_host: "127.0.0.1"          # shared_values.loopback_host
+ui_origin: "app://commission-tracker"   # shared_values.ui_origin — the only origin answered with CORS
+
+# Launch values handed over by the desktop Main as environment variables
+# (clause_a_common.mandatory_rules). These are the variable names.
+launch_env:
+  port: CT_PORT
+  db_file_path: CT_DB_FILE_PATH
+  ai_service_base_url: CT_AI_SERVICE_BASE_URL
+  app_version: CT_APP_VERSION
+
+# Internal values of the layer's HTTP server.
+http_server:
+  log_level: info
+  graceful_shutdown_timeout_s: 5
+  # CORS for ui_origin (clause_a_common.mandatory_rules). Methods: exactly
+  # those used by the declared http addresses of api_contract.yaml. Headers:
+  # Content-Type, for the JSON body of POST and PUT (endpoint_forms.http).
+  cors_allow_methods: [GET, POST, PUT]
+  cors_allow_headers: [Content-Type]
+
+# Process exit code used when a launch value is missing or malformed, or
+# when the layer cannot start.
+startup_failure_exit_code: 2
+
+# Ownership of the database file (clause_a_common.mandatory_rules, Data
+# Schema 6.2.0: at most one backend uses db_file_path at a time). The Main
+# holds an OS lock on a separate lock file next to the database file, never
+# on the database file itself, so other SQLite connections are not blocked.
+database_ownership:
+  lock_file_suffix: ".lock"          # lock file = <db_file_path><suffix>
+  # A lock of a process that just ended is released within a few ms on
+  # Windows (measured 2026-09-27, Backend.py as holder, 20 runs each: at most
+  # 5.5 ms after a kill, 0.58 ms after a clean stop; checkpoint main-EXP-013).
+  # The Main retries for a short window, far below the desktop Main's
+  # 30 s ready timeout, so a backend that cannot take ownership exits early.
+  retry_window_ms: 2000
+  retry_interval_ms: 50
+  # Exit code when another backend owns the database file. Differs from 0,
+  # from 1 (uvicorn cannot bind the port; uncaught Python error) and from
+  # startup_failure_exit_code, so the desktop log explains itself.
+  database_in_use_exit_code: 3

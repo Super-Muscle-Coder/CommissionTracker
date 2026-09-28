@@ -1,0 +1,17 @@
+.alert {
+  padding: var(--space-md);
+  color: var(--color-text-danger);
+  background: var(--color-surface-danger);
+  border: var(--border-width-panel) solid var(--color-border-danger);
+  border-radius: var(--radius-panel);
+}
+
+.title {
+  margin: 0 0 var(--space-xs);
+  font-weight: var(--font-weight-heading);
+}
+
+.text {
+  margin: 0;
+  color: var(--color-text);
+}

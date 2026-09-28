@@ -1,0 +1,11 @@
+# Configs of scaffold_backend (foundation workflow).
+#
+# Boundary value db_file_path (input_expected, from: environment_config) is
+# not stored here: it is a launch value (CT_DB_FILE_PATH) read by the Main
+# and handed to this workflow's Adapters.
+
+# Internal values: connection-level SQLite settings.
+journal_mode: DELETE        # single-file database; see checkpoint (scaffold_backend-EXP-002)
+synchronous: FULL
+foreign_keys: true          # only within one workflow's own tables (mandatory_rules)
+busy_timeout_ms: 5000

@@ -1,0 +1,1421 @@
+// ===WCA-CHECKPOINT-START===
+// workflow: main
+// clause: clause_d_desktop
+// component: main
+// last_updated_by: coding-agent@2026-09-27#4
+// last_updated_at: 2026-09-27T21:15:00+07:00
+//
+// EXPERIENCES:
+//   - id: main-EXP-001
+//     content: >
+//       Nguồn hợp đồng của từng giá trị biên trong configs/desktop.json (JSON
+//       không có chú thích nên ghi ở đây). boundary.loopback_host,
+//       boundary.ui_origin, boundary.renderer_bridge: chép nguyên từ
+//       data_schema.yaml 6.1.0 clause_a_common.shared_values cùng tên.
+//       boundary.db_file_relative_to_app_data "CommissionTracker/data.db": phần
+//       sau %APPDATA% của shared_values.db_file_path; Main ghép sau
+//       app.getPath('appData') để có đường dẫn tuyệt đối cho CT_DB_FILE_PATH, ở
+//       cả bản chạy từ mã nguồn lẫn bản đóng gói (không theo thư mục cài đặt,
+//       không theo productName). backend.launch_env (CT_PORT, CT_DB_FILE_PATH,
+//       CT_AI_SERVICE_BASE_URL, CT_APP_VERSION) và backend.ready_line "READY":
+//       clause_a_common.mandatory_rules. CT_APP_VERSION là app.getVersion(), tức
+//       "version" của package.json (0.1.0), ở cả bản đóng gói. Mọi giá trị khác
+//       của tệp là giá trị nội bộ của Main: ready_timeout_ms 30000,
+//       shutdown_timeout_ms 10000 (phải lớn hơn graceful_shutdown_timeout_s 5
+//       của Backend/configs/backend.yaml), start_attempts 3, failure_exit_code
+//       1, content_types, renderer.non_fatal_first_load_errors, mục packaged,
+//       tên cờ kiểm thử và tên đối số của preload.
+//   - id: main-EXP-002
+//     content: >
+//       Preload sandbox. Main trao hai giá trị qua
+//       webPreferences.additionalArguments: tên bridge
+//       (--ct-renderer-bridge=<renderer_bridge>) và
+//       --ct-backend-base-url=http://127.0.0.1:<cổng>. Preload đọc process.argv
+//       (có sẵn trong preload sandbox, đã kiểm bằng chạy thật) rồi gọi
+//       contextBridge.exposeInMainWorld(tên, Object.freeze({backendBaseUrl})).
+//       Preload chỉ được require('electron'), không đọc được
+//       configs/desktop.json, nên hai tiền tố đối số được viết lại thành hằng
+//       số trong preload.ts và phải trùng preload.arguments trong tệp cấu hình.
+//       Kiểm thử 1 thấy bridge thì tức là hai nơi trùng nhau. Đo được: trong
+//       renderer, Object.keys là ['backendBaseUrl'], Object.isFrozen là true,
+//       typeof invoke/require/process đều là 'undefined', và gán đè
+//       window.commissionTracker không đổi được giá trị. tsc xuất
+//       "use strict" + exports cho preload.js và preload sandbox chạy được tệp
+//       đó. Không dùng IPC đồng bộ: không cần kênh nào, nên không có kênh để
+//       lộ ra.
+//   - id: main-EXP-003
+//     content: >
+//       protocol.handle('app'). Scheme được đăng ký standard, secure,
+//       supportFetchAPI, corsEnabled trước 'ready'. Handler dựng lại đường dẫn
+//       theo các bước: so host với phần sau app:// của ui_origin (khác thì
+//       404), decodeURIComponent pathname (lỗi thì 404), từ chối \0, bỏ các
+//       dấu / hay \ ở đầu, path.resolve vào thư mục gốc, rồi yêu cầu
+//       path.relative không rỗng, không là '..', không bắt đầu bằng '..\' và
+//       không tuyệt đối. Trình phân tích URL của Chromium đã tự gỡ '..' và
+//       '%2e%2e' trước khi tới handler (thành /x và 404 vì không có tệp);
+//       các dạng mà Chromium không gỡ (..%2f, ..%5c, dấu \ thật, đường dẫn ổ
+//       đĩa tuyệt đối đã mã hóa) do phép kiểm path.relative chặn. Trong Node,
+//       new URL('app://...').origin là "null" với scheme không đặc biệt: so
+//       origin phải dựng lại từ protocol + '//' + host (originOf()).
+//   - id: main-EXP-004
+//     content: >
+//       stdout của backend về theo từng mảnh bất kỳ: Main ghép vào bộ đệm,
+//       tách theo '\n', bỏ '\r' cuối dòng, rồi mới so với ready_line. Dòng
+//       READY thứ hai hay dòng lạ thì chỉ ghi log "backend stdout (unexpected)".
+//       Backend giả fake_backend_ignore_stdin.py in "REA" rồi "DY\r\n" để kiểm
+//       việc này. stderr của backend được chuyển tiếp nguyên văn ra stderr của
+//       Main. Log của Main có tiền tố "[desktop-main] " và ghi ra stderr. Các
+//       dòng mà kiểm thử và phép đo dựa vào: "running from source" hoặc
+//       "running the packaged app (resources: ...)"; "backend started (pid N)
+//       on port P: <interpreter> <script> in <thư mục làm việc>"; "backend
+//       READY on port P"; "serving the interface from <thư mục> at
+//       <ui_origin>"; "opening the window at ..."; "first load finished: ...".
+//   - id: main-EXP-005
+//     content: >
+//       Cây tiến trình của backend, đo được trên Windows. (1) Chạy từ mã nguồn
+//       (môi trường ảo): Main spawn Backend\env\Scripts\python.exe, đó là một
+//       trình phóng; nó sinh một python.exe thật làm con, kèm một conhost.exe.
+//       child.kill() (TerminateProcess) lên trình phóng thì con cũng chết theo,
+//       vì trình phóng giữ con trong một job object có KILL_ON_JOB_CLOSE (ca 3
+//       và 7 của npm test). (2) Bản đóng gói (Python nhúng): không còn trình
+//       phóng. Cây là python.exe (con trực tiếp của tiến trình chính Electron,
+//       ParentProcessId = PID của Main) cùng một conhost.exe; child.kill() tác
+//       động thẳng lên python.exe thật. Ở cả hai trường hợp Main không kết thúc
+//       cả cây và không gọi taskkill /T. Khi Main bị kết thúc đột ngột
+//       (taskkill /F lên tiến trình chính), pipe stdin đóng và backend tự thoát:
+//       với Python nhúng đo được 279 ms và 1649 ms ở hai lượt (ca P5 của npm
+//       run test:packaged); các
+//       tiến trình con khác của Electron và conhost cũng không còn.
+//       Đọc cây tiến trình trên Windows: ParentProcessId KHÔNG đáng tin khi
+//       PID bị tái sử dụng. Windows giữ nguyên ParentProcessId khi cha chết
+//       và cấp lại PID cũ cho tiến trình mới, nên một tiến trình lạ tạo từ
+//       trước (ví dụ bốn rsAppUI.exe của ReasonLabs ở lần P4 hỏng, DSK-1) có
+//       thể mang ParentProcessId = PID của backend. tests/helpers.ts
+//       buildTree(rows, rootPid) chỉ nhận con khi CreationDate của con không
+//       sớm hơn của cha; stillAlive so cả PID, tên và CreationDate.
+//       CreationDate lấy bằng $_.CreationDate.ToFileTimeUtc().ToString()
+//       (FILETIME dạng chuỗi, so bằng BigInt): ConvertTo-Json mặc định chỉ
+//       cho "\/Date(ms)\/", và FILETIME (~1,3e17) vượt Number.MAX_SAFE_INTEGER.
+//   - id: main-EXP-006
+//     content: >
+//       Hộp thoại lỗi và kiểm thử. fatal(message) ghi "[desktop-main] FATAL:
+//       <message>" ra stderr trước, rồi mới gọi dialog.showErrorBox (trừ khi
+//       có cờ --ct-test-no-dialog), rồi shutdown(failure_exit_code). Kiểm thử
+//       luôn truyền cờ đó và so nội dung dòng FATAL. Các lần chạy thoát trước
+//       khi có cửa sổ (ca 2, 3, 5, 6, 9, 10) được Playwright Test spawn thẳng
+//       electron.exe, vì _electron.launch ném lỗi khi ứng dụng thoát trước khi
+//       có cửa sổ. Ca có cửa sổ dùng _electron.launch và đọc stderr qua
+//       app.process(). shutdown() chỉ chạy một lần, dừng backend (đóng stdin,
+//       chờ, rồi kết thúc) xong mới app.exit(code); before-quit bị
+//       preventDefault cho tới lúc đó. Main ghi dòng "opening the window at
+//       ..." ngay trước loadURL, để kiểm thử chứng minh được là không có cửa
+//       sổ nào mở.
+//   - id: main-EXP-007
+//     content: >
+//       Thứ tự khởi động: (1) cờ thư mục dữ liệu đặt appData và userData;
+//       (2) requestSingleInstanceLock, khóa này tính theo userData nên mỗi
+//       kiểm thử có thư mục dữ liệu riêng thì không va nhau, còn ca 9 dùng
+//       chung một thư mục; (3) đăng ký scheme; (4) sau whenReady mới chọn cổng
+//       AI (không khởi động dịch vụ AI) và cổng backend, rồi start backend,
+//       chờ READY; (5) kiểm thư mục gốc renderer; (6) protocol.handle, gỡ menu
+//       nếu là bản đóng gói, rồi BrowserWindow. Thư mục gốc được kiểm sau
+//       READY, đúng thứ tự d→e của plan, nên khi thiếu UI/dist (hay thiếu
+//       index.html, ca 10) thì backend được dừng êm với mã 0.
+//       BackendProcess giữ port trên đối tượng và start(port) tạo tiến trình
+//       mới mỗi lần, để restore_data sau này dừng rồi khởi động lại được trên
+//       cùng cổng. Cổng bị chiếm (đo được): uvicorn báo WinError 10048 và
+//       thoát mã 1; Main thử lại với cổng mới. Phiên 13 không đổi thứ tự này.
+//   - id: main-EXP-008
+//     content: >
+//       Bố cục bản đóng gói và cách Main chọn đường dẫn (chặng C, plan phiên 13
+//       D2, D3). resources/ của bản đóng gói có app.asar (chỉ dist/main.js,
+//       dist/preload.js, configs/desktop.json, package.json), cùng ba thư mục
+//       do electron-builder chép từ packaging/stage: python/ (Python nhúng
+//       3.13.12 và Lib/site-packages), backend/ (Backend.py, configs/,
+//       workflows/ không có tests/, kèm .pyc), ui/ (bản build của UI). Main
+//       chọn theo app.isPackaged: chạy từ mã nguồn thì dùng backend.from_source
+//       và renderer.root_dir tính theo thư mục Desktop/ như trước; bản đóng
+//       gói thì dùng mục "packaged" của desktop.json, tính theo
+//       process.resourcesPath. Trong gói, LAYER_ROOT của Main là
+//       resources\app.asar và configs/desktop.json được đọc từ bên trong
+//       asar. Ở bản đóng gói Main truyền Backend.py bằng đường dẫn tuyệt đối,
+//       để CommandLine của tiến trình tự cho thấy script nào đang chạy
+//       (Backend.py dùng __file__ nên LAYER_ROOT của backend vẫn đúng); chạy
+//       từ mã nguồn vẫn truyền "Backend.py" tương đối như cũ. Khi
+//       app.isPackaged, Main gọi Menu.setApplicationMenu(null) ngay trước khi
+//       tạo cửa sổ (Q5b): không còn Ctrl+R hay DevTools; chạy từ mã nguồn giữ
+//       menu. productName "Commission Tracker" làm userData mặc định khi chạy
+//       từ mã nguồn đổi từ %APPDATA%\commission-tracker sang
+//       %APPDATA%\Commission Tracker; CT_DB_FILE_PATH không đổi vì ghép từ
+//       appData.
+//   - id: main-EXP-009
+//     content: >
+//       Tệp python313._pth của Python nhúng (chỉ tồn tại trong
+//       packaging/stage và trong gói, do packaging/prepare_runtime.mjs viết).
+//       Đo được với tệp gốc ("python313.zip", "."): sys.path chỉ gồm
+//       python313.zip và thư mục python\, thư mục của script KHÔNG được thêm,
+//       sys.flags.isolated = 1 và ignore_environment = 1. Lỗi đầu tiên là
+//       "ModuleNotFoundError: No module named 'uvicorn'"; thêm
+//       Lib\site-packages thì lỗi thành "No module named 'workflows'"; thêm
+//       ..\backend (tính theo thư mục của ._pth) thì Backend.py in READY và
+//       thoát mã 0 khi stdin đóng. Nội dung cuối: python313.zip, .,
+//       Lib\site-packages, ..\backend. Không bật "import site": site-packages
+//       không có tệp .pth nào cần xử lý, và site sẽ thêm site-packages riêng
+//       của người dùng (%APPDATA%\Python) vào sys.path. Nhờ ._pth, Python nhúng
+//       bỏ qua PYTHONHOME và PYTHONPATH (ca P6 đạt với hai biến trỏ vào thư mục
+//       không tồn tại), nên Main không phải lọc biến PYTHON* khỏi môi trường
+//       của backend; Main vẫn truyền process.env như cũ. Không sửa Backend.py.
+//       Bẫy khi viết ._pth bằng shell: printf biến "\b" trong "..\backend"
+//       thành ký tự backspace; viết tệp bằng Node hay công cụ soạn tệp.
+//   - id: main-EXP-010
+//     content: >
+//       Cờ kiểm thử ở bản đóng gói (D4, việc tồn Q1). Bản đóng gói bỏ qua năm
+//       cờ có thể trỏ ra ngoài gói: renderer_root, backend_interpreter,
+//       backend_script, backend_working_dir, first_backend_port (danh sách ở
+//       packaged.ignored_test_flags). Mỗi cờ có mặt được ghi một dòng
+//       "ignoring test flag <tiền tố>... in the packaged app" (không ghi giá
+//       trị). Bản đóng gói vẫn nhận data_dir (không có nó, kiểm thử sẽ ghi vào
+//       %APPDATA% thật) và no_dialog. Ca P3 truyền backend giả và thư mục giao
+//       diện không tồn tại: app vẫn chạy bằng backend và giao diện trong gói.
+//   - id: main-EXP-011
+//     content: >
+//       ERR_ABORTED (Q5a). Khi một điều hướng khác bắt đầu lúc lần nạp đầu
+//       chưa xong (ví dụ page.reload() của Playwright, hay người dùng bấm
+//       Ctrl+R khi chạy từ mã nguồn), promise của win.loadURL bị từ chối với
+//       code "ERR_ABORTED", errno -3; code cũ coi đó là lỗi chết (FATAL, thoát
+//       mã 1). Nay Main bỏ qua đúng các code trong
+//       renderer.non_fatal_first_load_errors (["ERR_ABORTED"]), ghi "first load
+//       of <url> was aborted (ERR_ABORTED, -3); continuing", và mọi lỗi nạp
+//       khác vẫn là lỗi chết. Tái hiện ổn định: trang tests/fixtures/
+//       slow_first_load chặn luồng 3 giây trong <head>, kiểm thử gọi
+//       page.reload() ngay sau firstWindow(). Một trang tự gọi
+//       location.reload() trong <head> KHÔNG tái hiện được (Electron 44 không
+//       từ chối loadURL khi điều hướng do trang tự khởi sau khi đã commit).
+//   - id: main-EXP-012
+//     content: >
+//       Renderer (chuyển từ NOTE "Cho phiên B2 (UI)" sau khi B2 xong). Main nạp
+//       <ui_origin>/index.html từ thư mục gốc renderer; mọi đường dẫn của bản
+//       build phải là tương đối hoặc tuyệt đối theo gốc (Vite: base './' hoặc
+//       '/'), vì chúng được phục vụ dưới app://commission-tracker/.
+//       Content-Type được đặt cho .html, .js, .mjs, .css, .svg, .png, .json;
+//       đuôi khác (ví dụ .woff2, .ico) là application/octet-stream, muốn thêm
+//       thì sửa renderer.content_types. Không có dự phòng kiểu SPA: đường dẫn
+//       không có tệp cho 404, nên điều hướng nằm trong trạng thái, không nằm
+//       trong URL. CSP do UI tự đặt bằng thẻ meta (connect-src
+//       http://127.0.0.1:*); vì vậy từ renderer của giao diện thật không fetch
+//       được app://... (kiểm thử phải dùng net.fetch ở tiến trình chính). Bridge
+//       đọc từ window.commissionTracker.backendBaseUrl, chưa có invoke.
+//   - id: main-EXP-013
+//     content: >
+//       Công cụ đóng gói (npm run dist = build, rồi node
+//       packaging/prepare_runtime.mjs, rồi electron-builder --win nsis --x64).
+//       prepare_runtime.mjs: tải gói nhúng về packaging/cache, kiểm SHA-256
+//       theo packaging/python_runtime.json (lần đầu tự ghi hash, sai thì dừng),
+//       xóa và dựng lại packaging/stage, giải nén bằng python -m zipfile của
+//       môi trường ảo, kiểm vcruntime140.dll và vcruntime140_1.dll, viết ._pth,
+//       pip install --only-binary=:all: --no-compile --target
+//       stage\python\Lib\site-packages -r Backend\requirements.txt, chép
+//       Backend.py, configs/**, workflows/** (chỉ .py và .yaml, bỏ tests/,
+//       __pycache__/, .pytest_cache/), compileall -f --invalidation-mode
+//       unchecked-hash bằng chính Python nhúng, npm run build trong UI rồi chép
+//       UI/dist (dừng nếu thiếu UI/node_modules), rồi kiểm thử khói: Backend.py
+//       của stage phải in READY và thoát mã 0 khi stdin đóng. electron-builder
+//       26.15.3 đóng gói được Electron 44.4.5. Nó gọi "npm list" qua
+//       powershell.exe: thư mục WindowsPowerShell\v1.0 phải có trong PATH
+//       (máy Project Owner từng thiếu; điều kiện build ở main-EXP-017). Dòng
+//       log "signing with signtool.exe" xuất hiện dù
+//       không có chứng chỉ; kết quả đo: bộ cài và Commission Tracker.exe là
+//       NotSigned, python.exe giữ nguyên chữ ký PSF. pip --target sinh thêm
+//       site-packages\bin\*.exe (trình phóng trỏ về môi trường ảo); từ phiên
+//       14 (DSK-4) prepare_runtime xóa thư mục bin ngay sau pip install.
+//   - id: main-EXP-014
+//     content: >
+//       Kiểm thử bản đóng gói (npm run test:packaged, playwright.packaged.config.ts,
+//       tests/packaged/; npm test bỏ qua thư mục này). (1) _electron.launch với
+//       executablePath có dấu cách chạy exe qua "cmd.exe /d /s /c": app.process()
+//       là cmd.exe; PID của tiến trình chính lấy bằng app.evaluate(() =>
+//       process.pid). Mã thoát của cmd.exe là mã thoát của exe. (2) Stderr chỉ
+//       đọc được từ lúc launch() trả về, nên mất các dòng log đầu; ca cần
+//       toàn bộ log (P3, công cụ đo) spawn exe trực tiếp và đóng cửa sổ bằng
+//       taskkill /PID không có /F (WM_CLOSE, Main dừng êm). (3) Sau khi app đã
+//       đóng, gọi app.process() sẽ ném lỗi: giữ tham chiếu từ lúc khởi chạy.
+//       (4) Yêu cầu tới backend, kể cả preflight OPTIONS, được ghi bằng
+//       netLog.startLogging(file, {captureMode: 'includeSensitive'}) rồi đọc
+//       các sự kiện HTTP_TRANSACTION_SEND_REQUEST_HEADERS và
+//       HTTP_TRANSACTION_READ_RESPONSE_HEADERS. (5) Thân POST của http là JSON
+//       có khóa là tên đầu vào (api_contract endpoint_forms.http), ví dụ
+//       {"client_input": {...}}.
+//   - id: main-EXP-015
+//     content: >
+//       Thời gian khởi động của bản đóng gói (node
+//       tests/packaged/measure_startup.cjs, phiên 14; máy có AVG và Reason
+//       Cybersecurity bật, Defender tắt). Trong release\ (có ngoại lệ thư mục
+//       của cả hai antivirus): dòng log đầu của Main sau 54-170 ms, backend
+//       spawn sau 0,11-0,25 s, READY sau 0,7-1,0 s, cửa sổ nạp xong sau
+//       0,84-1,16 s, kể cả lượt đầu của exe có hash mới (đợt A1, A2). Ở thư
+//       mục đã cài không có ngoại lệ (đợt C): lượt đầu của exe mới, dòng log
+//       đầu tới sau 64 s; các lượt sau 1,2-1,6 s, cửa sổ sau 4,1-4,5 s (khớp
+//       số "bình thường" 1,3-1,6 s / 4,1 s của phiên 13, đo trước khi có
+//       ngoại lệ). Phần chậm nằm TRƯỚC khi JavaScript của Main chạy: Win32
+//       ghi tiến trình được tạo sau 4 ms nhưng lời gọi CreateProcess của bên
+//       khởi chạy chỉ trả về sau 64 s (main-EXP-018). ready_timeout_ms 30000
+//       tính từ lúc spawn backend nên không bị ảnh hưởng; người dùng chờ cửa
+//       sổ lâu ở lần mở đầu tiên của mỗi exe mới. Không sửa được trong code.
+//   - id: main-EXP-016
+//     content: >
+//       Log vòng đời của Main (phiên 14, việc 6a; chỉ thêm dòng, không đổi
+//       hành vi). Dòng đầu tiên của mọi lần chạy: "main started: pid N, parent
+//       pid P, process start <ISO của performance.timeOrigin>, argv [...]",
+//       là mốc "JavaScript của Main đã chạy". Ở bản đóng gói argv che giá trị
+//       của năm cờ bị bỏ qua (argvForLog, như main-EXP-010), vì P3 kiểm log
+//       không chứa đường dẫn giả; --ct-test-data-dir vẫn hiện đủ. Thêm các
+//       dòng "second-instance: another launch asked for this instance (argv
+//       ..., working directory ...)", "window-all-closed", "before-quit
+//       (shutdown started: x, backend running: y)", "received SIGINT" /
+//       "received SIGTERM". Dòng khóa một-bản thất bại ("another instance is
+//       already running...") và "backend (pid N) exited with code C (signal
+//       S)" đã có từ trước. Không kiểm thử cũ nào phải sửa.
+//   - id: main-EXP-017
+//     content: >
+//       Điều kiện build trên Windows (DSK-5). (1) PATH có
+//       %SystemRoot%\System32\WindowsPowerShell\v1.0: electron-builder gọi
+//       powershell.exe, thiếu thì "spawn powershell.exe ENOENT"; máy Project
+//       Owner từng thiếu, và máy agent cũng thiếu, nên đây không phải chuyện
+//       hiếm. prepare_runtime.mjs kiểm việc này đầu tiên và dừng với thông báo
+//       nêu đúng thư mục cần thêm. (2) Antivirus: đặt ngoại lệ theo thư mục
+//       cho Desktop\release và Desktop\packaging\stage (ENV-2). Có ngoại lệ,
+//       5 lần dist trong phiên 14 chỉ một lần hỏng: electron-builder "EPERM:
+//       rename release\win-unpacked.tmp -> win-unpacked" (lần dist thứ 6 của
+//       phiên), vài giây sau không tệp nào trong win-unpacked.tmp còn bị giữ,
+//       chạy lại cùng lệnh thì đạt. Tức ngoại lệ giảm nhưng không loại hẳn
+//       lỗi này. (3) Không để chương trình nào mở tệp trong release (ENV-3).
+//       (4) prepare_runtime.mjs xóa release\ ngay đầu (rồi packaging\stage),
+//       thử 5 lần cách 3 s; không xóa được thì dừng, nêu tệp còn bị giữ (các
+//       tệp còn sót sau lần xóa hỏng), gợi ý resmon (CPU, Associated Handles)
+//       và ngoại lệ antivirus. Lỗi EPERM khi đổi tên nằm trong
+//       electron-builder, sau bước này: gặp thì chạy lại npm run dist.
+//   - id: main-EXP-018
+//     content: >
+//       Chẩn đoán DSK-2 và DSK-3 (phiên 14, đợt C, bản đã cài ở
+//       %TEMP%\ct-install-14, không có ngoại lệ antivirus): ở lượt đầu của
+//       exe mới, một thành phần ngoài ứng dụng giữ CreateProcess của Main thật
+//       64 s (Win32 tạo tiến trình lúc +4 ms, spawn() của Node chỉ trả về lúc
+//       +64006 ms, JavaScript của Main chạy lúc +64078 ms) và trong lúc đó
+//       chạy một BẢN SAO: Commission Tracker.exe, CommandLine trùng từng ký
+//       tự (cùng --ct-test-data-dir), ParentProcessId = PID của node chạy
+//       script đo, dù script chỉ gọi spawn một lần. Bản sao xuất hiện lúc
+//       +3,6 s, bản thân nó bị giữ tới khoảng +37,7 s (mới sinh gpu-process,
+//       utility), khởi động backend riêng (python.exe của gói, +38,4 s), còn
+//       sống ở +40,9 s và đã biến mất ở +64,0 s; Main thật chỉ chạy sau đó,
+//       backend của nó khởi động ở +64,2 s. Đây là giả thuyết H1 của plan,
+//       đúng với dữ liệu. Trong lượt này hai Main cùng thư mục dữ liệu cùng
+//       tồn tại khoảng 37 s, nhưng Main thật chưa chạy JavaScript, và hai
+//       backend không chạy chồng. Hành vi này khớp với cơ chế phân tích hành
+//       vi trong hộp cát của antivirus (chạy exe lạ chưa ký thay người dùng
+//       rồi mới thả bản thật), nhưng CHƯA xác định là AVG hay ReasonLabs.
+//       Trong release\ có ngoại lệ (đợt A1, A2, B: 16 lượt) không thấy bản sao
+//       nào. H2, H3, H4 bị loại cho lượt này: Main thật dừng êm (WM_CLOSE,
+//       "standard input closed", mã 0), script chỉ spawn một lần, và Main
+//       không làm gì trong 64 s đó vì JavaScript của nó chưa chạy.
+//
+// UNSOLVED_PROBLEMS:
+//   - id: main-PROB-001
+//     description: >
+//       Ở lần mở đầu của một Commission Tracker.exe mới ở thư mục không có
+//       ngoại lệ antivirus, một thành phần ngoài ứng dụng chạy một bản sao của
+//       exe với cùng dòng lệnh, có backend thật, trong khi giữ bản thật lại
+//       (main-EXP-018). Ở máy người dùng không có --ct-test-data-dir, bản sao
+//       đó dùng %APPDATA%\CommissionTracker\data.db thật. Chưa biết: bản sao
+//       ghi thẳng vào tệp thật hay vào một lớp ảo hóa; bản sao có thể chạy
+//       chồng với một bản thật đang chạy không (khóa một-bản tính theo
+//       userData, một lớp ảo hóa có thể tách khóa); và bị kết thúc thế nào
+//       (DSK-2: backend của nó thoát mã 0 không có dòng dừng; lượt 1 phiên 14
+//       không bắt được đoạn cuối, xem attempts). Hệ quả thứ hai: người dùng
+//       chờ khoảng 33-64 s ở lần mở đầu (DSK-3).
+//     attempts:
+//       - attempt: 1
+//         agent: coding-agent@2026-09-27#4
+//         tried: >
+//           Thêm log vòng đời vào Main, dựng lại measure_startup.cjs (ảnh chụp
+//           tiến trình 500 ms, stderr đầy đủ, extra_main_instances,
+//           second_instance_events), đo đợt A1, A2 (exe mới trong release\ có
+//           ngoại lệ), B (10 lượt), C (bản đã cài không ngoại lệ).
+//         result: >
+//           Tái lập ở C lượt 1: có bản Main thứ hai cùng dòng lệnh và một
+//           backend thứ hai; dừng phần DSK-2 theo điểm dừng bắt buộc của plan,
+//           không sửa Main, không sửa Backend/. Ảnh chụp bị hổng từ +40,9 s
+//           tới +64,0 s: spawn() đồng bộ chặn vòng lặp của Node, pipe của tiến
+//           trình theo dõi đầy; đã sửa công cụ (ghi ảnh chụp ra tệp) sau lượt
+//           đó, chưa đo lại. Không lượt nào có FATAL.
+//     next_suggested: >
+//       (1) Orchestrator và Project Owner quyết việc chống hai backend cùng mở
+//       một data.db (layer backend, có thể phải sửa hợp đồng), vì Main không
+//       ngăn được một bản sao mà hệ điều hành đã cho chạy. (2) Project Owner
+//       đo lại đợt C bằng công cụ đã sửa, ba cấu hình: cả hai antivirus bật;
+//       chỉ tạm dừng AVG; chỉ tạm dừng ReasonLabs (rồi cả hai), để biết bên
+//       nào tạo bản sao (xem báo cáo phiên 14). (3) Ký số exe (DSK-9, chặng
+//       G) là hướng khả dĩ nhất để antivirus không coi exe là tệp lạ; cần đo
+//       lại sau khi ký.
+//
+// EVIDENCE:
+//   - claim: >
+//       Môi trường của phiên 14: Node, npm, Python, Electron,
+//       electron-builder, antivirus.
+//     how: >
+//       Từ Desktop: node --version; npm --version;
+//       ..\Backend\env\Scripts\python.exe --version; npx electron --version;
+//       npx electron-builder --version; where.exe powershell; PowerShell:
+//       Get-CimInstance -Namespace root/SecurityCenter2 -ClassName
+//       AntiVirusProduct | Select-Object displayName, productState.
+//     result: >
+//       v24.14.1; 11.11.0; Python 3.13.12; v44.4.5; 26.15.3 (TypeScript
+//       6.0.3 và Playwright 1.63.0 không đổi từ phiên 13). Windows 11 Home
+//       10.0.26200. where.exe powershell:
+//       C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe. Antivirus:
+//       Reason Cybersecurity 266240 và AVG Antivirus 266240 (bật), Windows
+//       Defender 393472 (tắt); tiến trình AVGSvc, rsAppUI (4), rsEngineSvc
+//       đang chạy trong suốt phiên. Riêng sandbox của phiên agent chặn đổi tên
+//       trong %LOCALAPPDATA%\electron-builder\Cache (EXDEV ở bước NSIS, lần
+//       dist đầu của phiên), nên các lệnh dist của phiên đặt
+//       ELECTRON_BUILDER_CACHE vào một thư mục tạm; đây là môi trường của
+//       agent, không phải điều kiện build của dự án.
+//     recorded_at: 2026-09-27T20:28:06+07:00
+//   - claim: >
+//       Origin thật của renderer nạp từ app:// đúng bằng ui_origin, và
+//       Chromium không đòi preflight Private/Local Network Access khi gọi
+//       GET từ app://commission-tracker tới http://127.0.0.1:<cổng>: header
+//       Origin gửi đi là app://commission-tracker, backend thật trả 200 và
+//       renderer đọc được thân phản hồi.
+//     how: >
+//       cd Desktop; npm run build; npx playwright test -g "1. success path
+//       with the real backend". Đây là ca 1, dùng Backend.py thật và
+//       trang thử tests/fixtures/probe. Kiểm thử gắn
+//       session.defaultSession.webRequest.onBeforeSendHeaders trong tiến trình
+//       chính, bấm #rerun, rồi ghi method, URL và header Origin của mọi yêu cầu,
+//       cùng toàn bộ console của renderer.
+//     result: >
+//       MEASURED requests to the backend:
+//       [{"url":"http://127.0.0.1:58691/clients","method":"GET","origin":"app://commission-tracker"}]
+//       (chỉ một yêu cầu GET, không có OPTIONS hay preflight nào).
+//       location.origin = "app://commission-tracker". #status = 200, #body = [].
+//       Console của renderer chỉ có cảnh báo "Electron Security Warning
+//       (Insecure Content-Security-Policy)" của trang thử; không có lỗi CORS,
+//       Private Network hay Local Network.
+//     recorded_at: 2026-09-26T21:45:30+07:00
+//   - claim: >
+//       Mười bốn ca của npm test đạt trên Windows khi AVG và ReasonLabs bật:
+//       mười một ca chạy Main từ mã nguồn (tests/desktop_main.spec.ts, dùng
+//       processTree và stillAlive mới) và ba ca của buildTree
+//       (tests/process_tree.spec.ts, không cần Electron). Sau cả bộ không còn
+//       python.exe nào chạy Backend.py hay fake_backend_*.
+//     how: >
+//       cd Desktop; npm test (build rồi playwright test; workers 1;
+//       tests/packaged/ bị bỏ qua qua testIgnore).
+//     result: >
+//       14 passed (1.6m), chạy trên mã nguồn cuối của phiên 14 lúc 20:58.
+//       Log vòng đời mới (main-EXP-016) không làm hỏng ca nào; không sửa
+//       kiểm thử cũ. Ca 1 tới 9 cho kết quả như phiên 10 (ca 3: "did not
+//       write READY within 30000 ms; terminating it"; ca 7: đóng sau hơn 10000
+//       ms, "did not exit within 10000 ms; terminating it"). Ca 10: "FATAL: The
+//       interface files were not found: index.html is missing in <thư mục tạm
+//       rỗng>.", backend exited with code 0, app thoát mã 1, không có "opening
+//       the window". Ca 11: "first load of app://commission-tracker/index.html
+//       was aborted (ERR_ABORTED, -3); continuing", không có FATAL, trang
+//       #loaded hiện, đóng thoát mã 0. Sau cả bộ: "python processes of this
+//       project after the suite: []".
+//     recorded_at: 2026-09-27T20:58:40+07:00
+//   - claim: >
+//       DSK-1: ca kiểm thử buildTree với PID tái sử dụng hỏng trên logic cũ
+//       (chỉ theo ParentProcessId) và đạt trên logic mới (CreationDate).
+//     how: >
+//       cd Desktop; npx playwright test tests/process_tree.spec.ts, chạy hai
+//       lần: một lần sau khi tạm thay thân buildTree trong tests/helpers.ts
+//       bằng đúng thuật toán của processTree phiên 13 (hàng đợi PID, chỉ so
+//       ParentProcessId), một lần với helpers.ts mới. Dữ liệu giả: Main
+//       (pid 100, t=1000), backend (200, t=2000), conhost (201), cháu (300,
+//       cùng tick với cha), rsAppUI.exe (900, ParentProcessId 200, t=500) và
+//       con của nó (901).
+//     result: >
+//       Logic cũ: 3 failed; buildTree(backend) =
+//       [[200,"python.exe"],[900,"rsAppUI.exe"],[201,"conhost.exe"],[901,"rsAppUI.exe"],[300,"child.exe"]]
+//       (đúng hiện tượng P4 của DSK-1). Logic mới: 3 passed; buildTree(backend)
+//       = [[200,"python.exe"],[201,"conhost.exe"],[300,"child.exe"]].
+//     recorded_at: 2026-09-27T20:31:30+07:00
+//   - claim: >
+//       DSK-5: prepare_runtime.mjs dừng ngay với thông báo rõ khi PATH thiếu
+//       PowerShell, và khi một tệp trong release\ bị giữ thì nêu đúng tệp đó
+//       sau 5 lần thử.
+//     how: >
+//       cd Desktop, PowerShell. (a) $env:Path = thư mục của node.exe (bỏ mọi
+//       thứ khác) rồi node packaging/prepare_runtime.mjs. (b) Tạo
+//       release\win-unpacked\resources\app.asar và release\other.txt; một
+//       tiến trình PowerShell khác mở app.asar với FileShare None trong 25 s;
+//       chạy node packaging/prepare_runtime.mjs.
+//     result: >
+//       (a) mã 1, không làm bước nào khác: "[prepare_runtime] ERROR:
+//       powershell.exe is not in PATH; electron-builder needs it and would
+//       stop with "spawn powershell.exe ENOENT". Add
+//       C:\WINDOWS\System32\WindowsPowerShell\v1.0 to the Path variable
+//       (System variables), open a new terminal, and run again." (b) mã 1 sau
+//       12 s: 5 dòng "could not delete release (attempt i/5): EPERM; still
+//       there: ...\release\win-unpacked\resources\app.asar" (other.txt đã bị
+//       xóa), rồi "ERROR: ...\app.asar could not be deleted after 5
+//       attempt(s) (EPERM): a program is holding it open. Close the app if it
+//       is running from this folder. To find the program, open Resource
+//       Monitor (resmon), tab CPU, "Associated Handles", and search for
+//       "app.asar". If it is an antivirus, add E:\CommissionTracker\Desktop\
+//       release to its folder exceptions. Then run again." Mọi lần dist sau
+//       đó in "powershell.exe found in PATH" và "deleted release".
+//     recorded_at: 2026-09-27T20:34:10+07:00
+//   - claim: >
+//       Ca 11 tái hiện được ERR_ABORTED: hỏng trên code cũ, đạt sau khi sửa.
+//     how: >
+//       cd Desktop; npm run build; npx playwright test -g "11\. first load
+//       aborted", chạy 3 lần trước khi sửa main.ts và 3 lần sau khi sửa.
+//     result: >
+//       Trước khi sửa, 3/3 hỏng với "[desktop-main] FATAL: The app could not
+//       start: ERR_ABORTED (-3) loading 'app://commission-tracker/index.html'"
+//       rồi "exiting with code 1" (page.reload báo "Target page, context or
+//       browser has been closed" hoặc "net::ERR_ABORTED"). Sau khi sửa, 3/3 đạt
+//       với "[desktop-main] first load of app://commission-tracker/index.html
+//       was aborted (ERR_ABORTED, -3); continuing", không có FATAL, đóng app
+//       thoát mã 0. Phép thử đầu tiên bằng location.reload() trong <head>
+//       không tái hiện được (không FATAL trên code cũ) nên đã bị thay.
+//     recorded_at: 2026-09-27T14:26:30+07:00
+//   - claim: >
+//       npm run build và npm run lint sạch lỗi.
+//     how: cd Desktop; npm run build; npm run lint
+//     result: Cả hai lệnh kết thúc không có lỗi hay cảnh báo nào (mã nguồn cuối phiên 14).
+//     recorded_at: 2026-09-27T20:56:50+07:00
+//   - claim: >
+//       Gói Python nhúng đúng bản python.org công bố, có đủ C runtime cần
+//       thiết, và không cần DLL nào ngoài hệ điều hành.
+//     how: >
+//       cd Desktop; node packaging/prepare_runtime.mjs (in danh sách DLL và
+//       hash). Hash công bố: bảng Files của
+//       https://www.python.org/downloads/release/python-31312/ và digest trong
+//       python-3.13.12-embed-amd64.zip.sigstore. DLL mà các .pyd, .dll, .exe
+//       trong stage\python cần: đọc bảng import PE bằng một script Python đọc
+//       thẳng tệp (không có công cụ ngoài).
+//     result: >
+//       python-3.13.12-embed-amd64.zip, 10941233 byte, SHA-256
+//       76f238f606250c87c6beac75dccd35ee99070a13490555936abb6cb64ecce3d0, trùng
+//       với SHA-256 python.org công bố và với digest SHA2_256 trong bundle
+//       .sigstore. DLL trong gói: libcrypto-3.dll, libffi-8.dll, libssl-3.dll,
+//       python3.dll, python313.dll, sqlite3.dll, vcruntime140.dll,
+//       vcruntime140_1.dll (có cả hai tệp vcruntime). Import C runtime duy
+//       nhất: vcruntime140.dll, vcruntime140_1.dll; mọi import khác là DLL hệ
+//       thống hoặc api-ms-win-crt-* (UCRT có sẵn từ Windows 10). Hai .pyd nhị
+//       phân của phụ thuộc: pydantic_core và _yaml. Mọi gói đều có wheel.
+//     recorded_at: 2026-09-27T14:33:50+07:00
+//   - claim: >
+//       npm run dist chạy bằng một lệnh từ trạng thái đã xóa packaging/stage
+//       và release, sinh bộ cài và win-unpacked đúng bố cục D2; không ký số.
+//     how: >
+//       cd Desktop; xóa packaging\stage và release; npm run dist. Rồi liệt kê
+//       app.asar bằng require('@electron/asar').listPackage, liệt kê
+//       release\win-unpacked\resources và locales, và
+//       Get-AuthenticodeSignature cho bộ cài, Commission Tracker.exe và
+//       resources\python\python.exe.
+//     result: >
+//       Phiên 14, AVG và ReasonLabs bật, có ngoại lệ thư mục (ENV-2). Sáu lần
+//       dist: lần 1 hỏng ở NSIS với EXDEV (sandbox của agent, xem EVIDENCE môi
+//       trường); T (20:38, 77 s), A1 (20:41, 68 s), A2 (20:43, 68 s) đạt; lần
+//       cuối thứ nhất (20:54) hỏng sau 30 s với "EPERM: operation not
+//       permitted, rename 'release\win-unpacked.tmp' -> 'release\win-unpacked'"
+//       ở bước đóng gói của electron-builder (main-EXP-017), vài giây sau
+//       không tệp nào trong win-unpacked.tmp còn bị giữ; chạy lại đúng lệnh
+//       từ trạng thái sạch thì thoát mã 0 sau 61 s (20:56). Mọi lần đều in
+//       "powershell.exe found in PATH", "deleted release", "deleted
+//       packaging\stage", "removing site-packages\bin: fastapi.exe, httpx.exe,
+//       idna.exe, py.test.exe, pygmentize.exe, pytest.exe, uvicorn.exe" và
+//       kiểm thử khói "READY\n", mã 0, data.db được tạo; không còn cảnh báo
+//       "author is missed" (DSK-7) và không còn dòng "signing ...
+//       site-packages\bin\..." (DSK-4): chỉ ký python.exe, pythonw.exe,
+//       Commission Tracker.exe, elevate.exe, trình gỡ và bộ cài. Đầu ra:
+//       release\Commission Tracker Setup 0.1.0.exe và release\win-unpacked;
+//       release\win-unpacked\resources\python\Lib\site-packages\bin không tồn
+//       tại. Build cùng mã nguồn cho exe cùng SHA-256 (T và build cuối:
+//       7defb3d7...5084). Bố cục app.asar, resources, locales và chữ ký như
+//       phiên 13 (không đổi cấu hình electron-builder).
+//     recorded_at: 2026-09-27T20:56:08+07:00
+//   - claim: >
+//       DSK-4: gói không còn site-packages\bin.
+//     how: >
+//       Sau npm run dist: Test-Path
+//       release\win-unpacked\resources\python\Lib\site-packages\bin; đếm *.exe
+//       trong resources\python; sau khi cài (đợt C), Test-Path
+//       <thư mục cài>\resources\python\Lib\site-packages\bin.
+//     result: >
+//       False ở cả win-unpacked lẫn thư mục đã cài; resources\python chỉ còn 2
+//       exe (python.exe, pythonw.exe). Log dist không còn dòng ký tệp nào
+//       trong site-packages\bin.
+//     recorded_at: 2026-09-27T20:56:10+07:00
+//   - claim: >
+//       Dung lượng (D7): thư mục đã cài dưới trần 400 MB.
+//     how: >
+//       Tổng kích thước tệp (Get-ChildItem -Recurse -File | Measure-Object -Sum
+//       Length) của thư mục đã cài bằng bộ cài (việc 9) và của
+//       release\win-unpacked; phần Electron là toàn bộ trừ resources\python,
+//       resources\backend, resources\ui. Phần của pytest và httpx: cộng kích
+//       thước các tệp trong RECORD của từng gói (kèm .pyc tương ứng), với tập
+//       phụ thuộc lấy từ Requires-Dist.
+//     result: >
+//       Thư mục đã cài: 371,5 MB (389573499 byte), gồm Electron 320,6 MB
+//       (Commission Tracker.exe 246 MB; app.asar 43324 byte; trình gỡ cài đặt
+//       140040 byte), resources\python 50,0 MB (Python nhúng 20,2 MB,
+//       site-packages 29,8 MB), resources\backend 0,6 MB, resources\ui 0,3 MB.
+//       win-unpacked: 371,4 MB. Locale chỉ
+//       còn en-US.pak và vi.pak (electronLanguages). pytest riêng 2,81 MB,
+//       httpx riêng 0,61 MB; cộng mọi gói chỉ có mặt vì hai gói này (pytest,
+//       httpx, pluggy, iniconfig, packaging, pygments, colorama, httpcore,
+//       certifi) là 13,67 MB trên 29,07 MB của các gói. (Số liệu trên là của
+//       phiên 13.) Phiên 14 (DSK-6), sau khi bỏ site-packages\bin: build lúc
+//       20:56 có bộ cài 121412295 byte (115,8 MB), win-unpacked 388701422 byte
+//       (370,7 MB), trong đó resources\python 51699404 byte; build cuối lúc
+//       21:06, sau khi viết khối checkpoint này, có bộ cài 121417325 byte.
+//       Số byte của bộ cài phiên 13 đúng ra là 121709519 (build cuối của
+//       phiên đó), không phải 121703863. Mỗi lần sửa khối checkpoint này,
+//       dist\main.js và app.asar đổi theo, nên bộ cài build lại có thể lệch
+//       vài chục byte.
+//     recorded_at: 2026-09-27T20:59:40+07:00
+//   - claim: >
+//       Thời gian khởi động và các tiến trình quanh lần mở bản đóng gói, đợt
+//       A1, A2, B, C (DSK-2, DSK-3; main-EXP-015, main-EXP-018).
+//     how: >
+//       cd Desktop. A1, A2: npm run dist --
+//       "-c.extraMetadata.ctBuildStamp=<nhãn>-<giờ>" (khóa này chỉ vào
+//       package.json trong app.asar, để exe có hash mới mà không sửa mã
+//       nguồn), ngay sau đó node tests/packaged/measure_startup.cjs 3
+//       release/win-unpacked A1 (rồi A2). B: node
+//       tests/packaged/measure_startup.cjs 10 release/win-unpacked B (build
+//       A2). C: Start-Process "release\Commission Tracker Setup 0.1.0.exe"
+//       -ArgumentList '/S','/D=%TEMP%\ct-install-14' -Wait (build A2), node
+//       tests/packaged/measure_startup.cjs 3 %TEMP%\ct-install-14 C, rồi gỡ
+//       im lặng. Mọi lượt có --ct-test-data-dir tạm. Log từng lượt và tóm tắt
+//       của phiên 14 nằm ở test-results/startup/ và đã bị Playwright xóa khi
+//       chạy npm test / test:packaged sau đó; số liệu dưới đây chép từ đầu ra
+//       lúc đo. Công cụ nay ghi vào startup-logs/<nhãn>-run<N>.log và
+//       startup-logs/<nhãn>-summary.json.
+//     result: >
+//       Số ms kể từ spawn: dòng log đầu / backend started / READY / cửa sổ.
+//       A1 (exe 6f49062e...2b2d, hash mới): 155/241/993/1160; 59/116/712/888;
+//       57/139/934/1112. A2 (exe 54d32d39...ddb9, hash mới): 170/247/871/1059;
+//       75/152/773/931; 74/149/781/944. B (A2, 10 lượt): dòng đầu 54-87,
+//       started 113-167, READY 704-825, cửa sổ 884-985. C (A2 đã cài, không
+//       ngoại lệ): lượt 1: Main tạo lúc +4 ms, spawn() trả về lúc +64006,
+//       64078/64165/65573/66968; lượt 2: 1172/1264/2643/4130; lượt 3:
+//       1556/1663/3046/4491. Mọi lượt thoát mã 0, không FATAL, không
+//       second-instance, không backend nào thoát mã 0 mà thiếu "standard
+//       input closed", DSK-8 ("Failed to grant sandbox access") 0 lần,
+//       "being used by another process" 0, "Failed to find real location" 0.
+//       Bản Main thứ hai: chỉ ở C lượt 1: pid 23568, cha node.exe 10144 (cũng
+//       là cha của Main thật 2560), CommandLine trùng, thấy từ +3574 tới
+//       +40935 ms, có backend python.exe 19416 (cha 23568) từ +38386 tới
+//       +40935 ms; ảnh chụp +64008 ms không còn cả hai; không có ảnh chụp nào
+//       giữa +40935 và +64008 (lỗi pipe của công cụ, đã sửa sau lượt này).
+//       Backend thật 27480 tạo lúc +64136 ms. Đợt A, B, C lượt 2-3: không có
+//       bản Main hay backend thứ hai nào.
+//     recorded_at: 2026-09-27T20:49:30+07:00
+//   - claim: >
+//       measure_startup.cjs phát hiện được một bản Main thứ hai không do
+//       script khởi động (công cụ được chạy thử trước khi dùng, việc 6c).
+//     how: >
+//       Đối chứng dương: trong lúc node tests/packaged/measure_startup.cjs 1
+//       release/win-unpacked Tpc đang chạy, một tiến trình PowerShell khác
+//       (không phải script) chờ Main của lượt đó xuất hiện rồi chạy
+//       Start-Process "<exe>" với cùng --ct-test-data-dir và
+//       --ct-test-no-dialog.
+//     result: >
+//       Hai lần chạy thử trước khi sửa công cụ: (1) bản sao gặp khóa một-bản
+//       và thoát sau khoảng 200 ms; Main của script ghi "second-instance:
+//       another launch asked for this instance (argv [...])", công cụ báo
+//       second_instance_events 1 và thoát mã 1; ảnh chụp 500 ms không kịp
+//       thấy bản sao sống ngắn như vậy. (2) spawn của script bị giữ 1,3 s nên
+//       bản sao giành khóa trước, Main của script ghi "another instance is
+//       already running" và thoát; công cụ sập ở rmSync (EPERM, thư mục dữ
+//       liệu còn bị bản sao giữ). Sau khi sửa (ảnh chụp ghi ra tệp, không sập
+//       khi thư mục dữ liệu còn bị giữ, thêm data_folder_left và
+//       still_running_at_end): lần chạy lại cho second_instance_events 1,
+//       exit mã 0 của Main, script thoát mã 1. Nhánh bản sao sống lâu được
+//       chứng minh bằng dữ liệu thật của đợt C lượt 1 (extra_main_instances
+//       1, same_command_line true).
+//     recorded_at: 2026-09-27T20:53:45+07:00
+//   - claim: >
+//       Quét antivirus bằng Microsoft Defender theo plan: không thực hiện được
+//       trên máy này.
+//     how: >
+//       "C:\Program Files\Windows Defender\MpCmdRun.exe" -Scan -ScanType 3
+//       -File <bộ cài>, rồi -File <release\win-unpacked>; đọc
+//       %TEMP%\MpCmdRun.log. Trạng thái: Get-MpComputerStatus và
+//       root/SecurityCenter2 AntiVirusProduct.
+//     result: >
+//       Cả hai lệnh: "CmdTool: Failed with hr = 0x80004005", mã thoát 2; log
+//       ghi "WARN: Product/Feature disabled". Defender có (AMProductVersion
+//       4.18.26060.3008) nhưng AMRunningMode "Not running", AntivirusEnabled
+//       False; antivirus đang bật trên máy là AVG Antivirus và Reason
+//       Cybersecurity (productState 266240). Chưa có kết quả quét nào. Trong
+//       suốt phiên, AVG và Reason bật thời gian thực và không chặn hay cách ly
+//       tệp nào của bộ cài, win-unpacked hay thư mục đã cài (các tệp còn nguyên
+//       và chạy được); đây không phải một lượt quét.
+//     recorded_at: 2026-09-27T15:05:02+07:00
+//   - claim: >
+//       npm run test:packaged đạt P1-P6 trên release\win-unpacked.
+//     how: >
+//       cd Desktop; npm run dist; npm run test:packaged
+//       (playwright.packaged.config.ts, tests/packaged/packaged_app.spec.ts;
+//       mọi ca có --ct-test-data-dir tạm và --ct-test-no-dialog).
+//     result: >
+//       Phiên 14: 6 passed (34.3s) trên build lúc 20:56 và 6 passed (36.8s)
+//       trên build cuối lúc 21:06 (mã nguồn cuối, dist đạt ngay lần đầu),
+//       AVG và ReasonLabs đang bật (AVGSvc, 4 rsAppUI, rsEngineSvc), với buildTree/stillAlive
+//       mới (DSK-1); P5 lần này: backend biến mất sau 976 ms, cây lúc chạy
+//       [Main, ba Commission Tracker.exe con, python.exe cha là Main,
+//       conhost.exe cha là python.exe]. Phần còn lại như phiên 13. Phiên 13:
+//       6 passed (52.1s) trên build cuối; lượt trước trên cùng mã nguồn (build
+//       hỏng ở bước NSIS nhưng win-unpacked đã dựng xong) cũng 6 passed. P1:
+//       isPackaged true, resourcesPath đúng, trang client_list của giao diện
+//       thật với "Chưa có khách hàng nào đang hoạt động.", index.html phục vụ
+//       qua app:// trùng tệp resources\ui\index.html, backend là
+//       <win-unpacked>\resources\python\python.exe
+//       <win-unpacked>\resources\backend\Backend.py (ExecutablePath và
+//       CommandLine), data.db trong thư mục tạm, Menu.getApplicationMenu() là
+//       null. P2 (Q2, lần đo preflight đầu tiên trên Windows), netLog: [OPTIONS
+//       /clients, Origin app://commission-tracker,
+//       Access-Control-Request-Method POST, 200, Access-Control-Allow-Origin
+//       app://commission-tracker], [POST /clients, 201, cùng Allow-Origin],
+//       [GET /clients, 200, cùng Allow-Origin]; renderer đọc được khách hàng
+//       vừa tạo. P3: hai dòng "ignoring test flag --ct-test-renderer-root=...
+//       in the packaged app" và "... --ct-test-backend-script=...", một lần thử
+//       backend với python.exe và Backend.py trong gói, "serving the interface
+//       from <win-unpacked>\resources\ui", log không chứa đường dẫn backend giả
+//       hay thư mục giao diện giả. P4: đóng cửa sổ, "closing its standard
+//       input", backend exited with code 0, Electron thoát mã 0, không còn
+//       python.exe nào trong win-unpacked. P5: cây lúc chạy [Commission
+//       Tracker.exe (Main), ba tiến trình con Commission Tracker.exe,
+//       python.exe (cha là Main), conhost.exe (cha là python.exe)]; sau
+//       taskkill /F lên Main, backend biến mất sau 279 ms (lượt trước 1649 ms),
+//       cả cây không còn. P6: bỏ khỏi PATH C:\Python314, ...\Python\Python313,
+//       ...\Python\Python311; PYTHONHOME và PYTHONPATH trỏ vào thư mục không
+//       tồn tại (Electron thấy đúng hai giá trị này); P1 vẫn đạt. Sau cả bộ:
+//       "python processes of the package after the suite: []".
+//     recorded_at: 2026-09-27T20:57:00+07:00
+//   - claim: >
+//       Cài và gỡ im lặng bằng bộ cài thật: cài vào thư mục chỉ định,
+//       Publisher = TGN (DSK-7), gỡ sạch, không đụng %APPDATA%.
+//     how: >
+//       PowerShell: Start-Process "release\Commission Tracker Setup 0.1.0.exe"
+//       -ArgumentList '/S','/D=%TEMP%\ct-install-14b' -Wait; đọc DisplayName
+//       và Publisher trong HKCU\Software\Microsoft\Windows\CurrentVersion\
+//       Uninstall; Start-Process "<thư mục>\Uninstall Commission Tracker.exe"
+//       -ArgumentList '/S','/currentuser' -Wait, rồi chờ thư mục biến mất.
+//       Chụp mốc %APPDATA% sau đó.
+//     result: >
+//       Build cuối (20:56): bộ cài thoát mã 0 sau 34 s, có Commission
+//       Tracker.exe trong thư mục chỉ định; DisplayName "Commission Tracker
+//       0.1.0", Publisher "TGN". Trình gỡ thoát mã 0, thư mục cài bị xóa sau
+//       6 s, không còn mục nào trong Uninstall. Cùng kết quả ở đợt C (build
+//       A2, %TEMP%\ct-install-14: cài 50 s, Publisher "TGN", thư mục bị xóa
+//       sau 33 s). Exe đã cài chạy được ở đợt C (xem EVIDENCE thời gian khởi
+//       động), backend là <thư mục cài>\resources\python\python.exe.
+//     recorded_at: 2026-09-27T21:00:10+07:00
+//   - claim: >
+//       Đường chạy từ mã nguồn không hỏng (roadmap chặng C, tiêu chí 4).
+//     how: >
+//       cd UI; npm run e2e. cd Desktop; npm run lint; npm test. (Phiên 14
+//       không đổi Backend/ hay UI/, nên không chạy lại pytest của backend và
+//       npm run check của UI; kết quả của hai lệnh đó là của phiên 13.)
+//     result: >
+//       Phiên 14, mã nguồn cuối: UI npm run e2e 4 passed (24.1s), gồm
+//       walkthrough client_list S1-S3 và main_layout, với Main đã có log vòng
+//       đời mới; lệnh này tự ghi lại ảnh và client_list-run.json trong
+//       UI/evidence/walkthroughs/client_list như thiết kế của nó. Desktop: npm
+//       run lint sạch, npm test 14 passed. Phiên 13: Backend 375 passed, 1
+//       warning in 353.68s; UI npm run check đạt (vitest 6 tệp, 65 kiểm thử).
+//     recorded_at: 2026-09-27T20:59:30+07:00
+//   - claim: >
+//       Không kiểm thử nào của phiên đụng tới %APPDATA%\CommissionTracker thật:
+//       các lần chụp mốc giống hệt nhau.
+//     how: >
+//       PowerShell, cho %APPDATA%\CommissionTracker và %APPDATA%\Commission
+//       Tracker (userData theo productName): nếu thư mục có thì liệt kê mọi
+//       tệp với kích thước, LastWriteTimeUtc và SHA-256; không có thì ghi
+//       "NOT-EXISTS <đường dẫn>"; thêm mọi thư mục *ommission* trong
+//       %APPDATA%. Chụp ở đầu phiên, sau đợt C (sau khi gỡ), và cuối phiên
+//       (sau việc 9); so nội dung ba tệp.
+//     result: >
+//       Ba lần chụp (20:28:06 đầu phiên, 20:50 sau đợt C, 21:00:10 cuối
+//       phiên) giống hệt nhau: "NOT-EXISTS
+//       C:\Users\A\AppData\Roaming\CommissionTracker" và "NOT-EXISTS
+//       C:\Users\A\AppData\Roaming\Commission Tracker", không có thư mục
+//       *ommission* nào khác. Mọi lần chạy ứng dụng trong phiên, kể cả bản
+//       sao ở đợt C lượt 1, đều mang --ct-test-data-dir.
+//     recorded_at: 2026-09-27T21:00:10+07:00
+//
+// NOTES:
+//   - content: >
+//       Dịch vụ AI không được khởi động ở V1 (.design/v1_scope.md: watermark để
+//       dành V2). Main vẫn chọn một cổng trống cho nó và trao
+//       CT_AI_SERVICE_BASE_URL=http://127.0.0.1:<cổng> cho backend, vì backend
+//       bắt buộc có biến này (main-EXP-003 của backend). Không tiến trình nào
+//       nghe trên cổng đó. Ở V2, Main khởi động clause_c_ai_service với CT_PORT
+//       là đúng cổng này (tìm aiPort trong startBackend) và chờ READY theo luật
+//       "the app must run without clause_c_ai_service".
+//     written_at: 2026-09-26
+//   - content: >
+//       Desktop.esproj giữ nguyên JavaScriptTestFramework = Vitest: không chắc
+//       Visual Studio có giá trị cho Playwright nên không đoán. Test Explorer của
+//       Visual Studio có thể không thấy kiểm thử; chạy bằng npm test
+//       (TestCommand). Đã đổi StartupCommand = npm start, BuildCommand = npm run
+//       build, TestCommand = npm test, JavaScriptTestRoot = tests\. Phiên 13
+//       và 14 không sửa tệp này.
+//     written_at: 2026-09-26
+//   - content: >
+//       Cờ dòng lệnh chỉ dành cho kiểm thử (configs/desktop.json test_flags; lần
+//       chạy bình thường không truyền cờ nào): --ct-test-renderer-root=,
+//       --ct-test-data-dir= (đặt appData và userData, không bao giờ đụng
+//       %APPDATA% thật), --ct-test-backend-interpreter=, --ct-test-backend-script=,
+//       --ct-test-backend-working-dir=, --ct-test-first-backend-port= (ép cổng
+//       của lần thử đầu, dùng cho ca 4), --ct-test-no-dialog. Chạy từ mã nguồn:
+//       mọi cờ đều có hiệu lực; đường dẫn trong cờ tính theo thư mục hiện tại,
+//       đường dẫn trong desktop.json tính theo thư mục Desktop/. Bản đóng gói:
+//       chỉ --ct-test-data-dir= và --ct-test-no-dialog có hiệu lực, năm cờ kia
+//       bị bỏ qua và ghi log (main-EXP-010).
+//     written_at: 2026-09-27
+//   - content: >
+//       Cách làm của phiên 13 so với plan. Ngoài danh sách tệp của D8, phiên
+//       thêm: tests/fixtures/slow_first_load (ca 11), tests/packaged/
+//       (packaged_app.spec.ts, measure_startup.cjs), playwright.packaged.config.ts;
+//       sửa eslint.config.js (bỏ qua obj, packaging/cache, packaging/stage,
+//       release; nhận .mjs), playwright.config.ts (testIgnore packaged/**),
+//       tests/helpers.ts (xuất processTable, thêm ExecutablePath). Main có thêm
+//       ba dòng log phục vụ bằng chứng và phép đo (lệnh và thư mục làm việc
+//       trong "backend started", "serving the interface from", "first load
+//       finished"). Thứ tự: việc 7 (đo) và việc 8 (kiểm thử) đan xen, vì các
+//       lần build trung gian phải sửa kiểm thử; số đo cuối là của build cuối,
+//       đo khởi động trước rồi mới chạy test:packaged.
+//     written_at: 2026-09-27
+//   - content: >
+//       Cho Project Owner và phiên sau. (1) Lần mở đầu tiên của một exe mới ở
+//       thư mục không có ngoại lệ antivirus có thể mất tới khoảng 64 giây mới
+//       có cửa sổ, và trong lúc đó một bản sao của ứng dụng chạy
+//       (main-EXP-015, main-EXP-018, main-PROB-001); người chạy thử cần được
+//       dặn chờ. Màn hình chờ không giúp được, vì JavaScript của Main chưa
+//       chạy trong khoảng chờ đó. Ký số là quyết định của Project Owner. (2)
+//       Chưa có lượt quét antivirus nào (Defender tắt trên máy này). (3)
+//       Phiên backend sau tách pytest và httpx khỏi requirements.txt sẽ bớt
+//       khoảng 13,7 MB (D6). (4) npm run dist có thể hỏng vì antivirus giữ tệp
+//       dù đã có ngoại lệ thư mục: phiên 13 gặp "spawn EPERM" ở bước NSIS,
+//       phiên 14 gặp "EPERM ... rename win-unpacked.tmp" (1 trên 5 lần). Chạy
+//       lại cùng lệnh; nếu lặp lại thường xuyên thì báo. Điều kiện build ở
+//       main-EXP-017. (Nhận định cũ "máy bình thường không gặp" về PATH thiếu
+//       PowerShell là sai và đã bỏ.)
+//     written_at: 2026-09-27
+//   - content: >
+//       Cách làm của phiên 14 so với plan. Thứ tự: việc 6c cần một build
+//       nhưng release\ chưa có, nên đã dist một lần (build T) trước khi chạy
+//       thử công cụ; đợt A dùng hai build khác (A1, A2) có hash mới nhờ
+//       -c.extraMetadata.ctBuildStamp, không sửa mã nguồn. Ngoài danh sách của
+//       plan: stillAlive cũng so CreationDate (cùng nguyên nhân với DSK-1);
+//       prepare_runtime dùng cùng hàm xóa có thử lại cho cả packaging\stage;
+//       argv trong log của bản đóng gói che giá trị năm cờ bị bỏ qua (P3);
+//       measure_startup đếm thêm second_instance_events (dòng second-instance
+//       của Main), other_mains_in_folder, data_folder_left, và ghi vào
+//       startup-logs/ (test-results/ bị Playwright dọn mỗi lần chạy). Tệp mới:
+//       tests/process_tree.spec.ts. Sau khi chạm điểm dừng bắt buộc của việc 7
+//       (đợt C lượt 1), phiên chỉ vá công cụ đo và làm việc 8-10, không đo
+//       thêm DSK-2.
+//     written_at: 2026-09-27
+// ===WCA-CHECKPOINT-END===
+/**
+ * Main of the desktop layer (clause_d_desktop).
+ *
+ * Logistics only: read configs/desktop.json, hold the single-instance lock,
+ * choose ports on the loopback host, launch the backend as a child process
+ * and wait for its READY line, serve the renderer from ui_origin, open the
+ * window with the preload script, and stop the backend (close its stdin)
+ * before the app exits (data_schema.yaml, clause_a_common.mandatory_rules).
+ * No workflow and no cross-cutting component is wired yet.
+ */
+
+import { app, BrowserWindow, dialog, Menu, protocol } from 'electron'
+import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process'
+import * as fs from 'node:fs'
+import * as net from 'node:net'
+import * as path from 'node:path'
+
+const LAYER_ROOT = path.resolve(__dirname, '..')
+const CONFIG_FILE = path.join(LAYER_ROOT, 'configs', 'desktop.json')
+
+// --- 1. configuration --------------------------------------------------------
+
+interface DesktopConfig {
+  boundary: {
+    loopback_host: string
+    ui_origin: string
+    renderer_bridge: string
+    db_file_relative_to_app_data: string
+  }
+  backend: {
+    launch_env: { port: string; db_file_path: string; ai_service_base_url: string; app_version: string }
+    from_source: { interpreter: string; script: string; working_dir: string }
+    ready_line: string
+    ready_timeout_ms: number
+    shutdown_timeout_ms: number
+    start_attempts: number
+  }
+  renderer: {
+    root_dir: string
+    entry_file: string
+    window: { width: number; height: number }
+    content_types: Record<string, string>
+    default_content_type: string
+    non_fatal_first_load_errors: string[]
+  }
+  preload: { arguments: { bridge_name: string; backend_base_url: string } }
+  main: { failure_exit_code: number; error_dialog_title: string }
+  packaged: {
+    backend: { interpreter: string; script: string; working_dir: string }
+    renderer_root_dir: string
+    ignored_test_flags: Array<keyof DesktopConfig['test_flags']>
+  }
+  test_flags: {
+    renderer_root: string
+    data_dir: string
+    backend_interpreter: string
+    backend_script: string
+    backend_working_dir: string
+    first_backend_port: string
+    no_dialog: string
+  }
+}
+
+/** What this run of the Main uses, after test flags (if any) are applied. */
+interface RunSettings {
+  backendCommand: BackendCommand
+  rendererRoot: string
+  dataDir: string | null
+  firstBackendPort: number | null
+  showDialogs: boolean
+}
+
+interface BackendCommand {
+  interpreter: string
+  script: string
+  workingDir: string
+}
+
+function loadConfig(): DesktopConfig {
+  return JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8')) as DesktopConfig
+}
+
+function flagValue(argv: readonly string[], prefix: string): string | null {
+  const hit = argv.find((arg) => arg.startsWith(prefix))
+  return hit === undefined ? null : hit.slice(prefix.length)
+}
+
+/** Run from source: paths in desktop.json (from_source, renderer.root_dir)
+ * are relative to the layer folder, and every test flag applies; paths given
+ * on the command line are relative to the current directory.
+ * Packaged app (resourcesPath not null): paths come from desktop.json
+ * "packaged", relative to the app's resources folder, and the test flags
+ * that could point outside the package are ignored (only data_dir and
+ * no_dialog apply), so a run of the package always uses its own backend and
+ * interface. */
+function readRunSettings(config: DesktopConfig, argv: readonly string[], resourcesPath: string | null): RunSettings {
+  const flags = config.test_flags
+  const dataDir = flagValue(argv, flags.data_dir)
+  const common = {
+    dataDir: dataDir === null || dataDir === '' ? null : path.resolve(dataDir),
+    showDialogs: !argv.includes(flags.no_dialog),
+  }
+
+  if (resourcesPath !== null) {
+    const packaged = config.packaged
+    for (const key of packaged.ignored_test_flags) {
+      const prefix = flags[key]
+      if (argv.some((arg) => arg.startsWith(prefix))) log(`ignoring test flag ${prefix}... in the packaged app`)
+    }
+    const fromResources = (p: string) => path.resolve(resourcesPath, p)
+    const workingDir = fromResources(packaged.backend.working_dir)
+    return {
+      ...common,
+      backendCommand: {
+        interpreter: fromResources(packaged.backend.interpreter),
+        // Absolute, so the process's command line shows which Backend.py runs.
+        script: path.join(workingDir, packaged.backend.script),
+        workingDir,
+      },
+      rendererRoot: fromResources(packaged.renderer_root_dir),
+      firstBackendPort: null,
+    }
+  }
+
+  const fromLayer = (p: string) => path.resolve(LAYER_ROOT, p)
+  const fromFlag = (prefix: string, fallback: string): string => {
+    const value = flagValue(argv, prefix)
+    return value === null || value === '' ? fallback : path.resolve(value)
+  }
+  const rawPort = flagValue(argv, flags.first_backend_port)
+  const src = config.backend.from_source
+  return {
+    ...common,
+    backendCommand: {
+      interpreter: fromFlag(flags.backend_interpreter, fromLayer(src.interpreter)),
+      script: fromFlag(flags.backend_script, src.script),
+      workingDir: fromFlag(flags.backend_working_dir, fromLayer(src.working_dir)),
+    },
+    rendererRoot: fromFlag(flags.renderer_root, fromLayer(config.renderer.root_dir)),
+    firstBackendPort: rawPort === null ? null : Number.parseInt(rawPort, 10),
+  }
+}
+
+function parseOrigin(origin: string): { scheme: string; host: string } {
+  // "app://commission-tracker" -> scheme "app", host "commission-tracker"
+  const match = /^([a-z][a-z0-9+.-]*):\/\/([^/]+)$/.exec(origin)
+  if (match === null) throw new Error(`ui_origin is not <scheme>://<host>: ${origin}`)
+  return { scheme: match[1], host: match[2] }
+}
+
+function originOf(rawUrl: string): string | null {
+  // Node's URL gives origin "null" for non-special schemes such as app:, so
+  // the origin is rebuilt from protocol and host.
+  try {
+    const url = new URL(rawUrl)
+    return `${url.protocol}//${url.host}`
+  } catch {
+    return null
+  }
+}
+
+function log(message: string): void {
+  process.stderr.write(`[desktop-main] ${message}\n`)
+}
+
+// --- ports -------------------------------------------------------------------
+
+function pickFreePort(host: string, avoid: readonly number[] = []): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const server = net.createServer()
+    server.unref()
+    server.once('error', reject)
+    server.listen(0, host, () => {
+      const address = server.address()
+      const port = typeof address === 'object' && address !== null ? address.port : 0
+      server.close(() => {
+        if (port === 0) reject(new Error('could not read the chosen port'))
+        else if (avoid.includes(port)) pickFreePort(host, avoid).then(resolve, reject)
+        else resolve(port)
+      })
+    })
+  })
+}
+
+// --- backend child process (lifecycle tool) ----------------------------------
+
+type StartOutcome =
+  | { kind: 'ready' }
+  | { kind: 'exited'; code: number | null; signal: NodeJS.Signals | null }
+  | { kind: 'spawn_error'; message: string }
+  | { kind: 'timeout' }
+
+interface BackendProcessOptions {
+  command: BackendCommand
+  env: (port: number) => NodeJS.ProcessEnv
+  readyLine: string
+  readyTimeoutMs: number
+  shutdownTimeoutMs: number
+  onUnexpectedExit: (code: number | null, signal: NodeJS.Signals | null) => void
+}
+
+/**
+ * One backend child process at a time. The port stays on the object, so the
+ * backend can later be stopped and started again on the same port
+ * (restore_data.backend_controller, not wired yet).
+ */
+class BackendProcess {
+  port: number | null = null
+  private child: ChildProcessWithoutNullStreams | null = null
+  private exited: Promise<number | null> | null = null
+  private ready = false
+  private stopping = false
+
+  constructor(private readonly options: BackendProcessOptions) {}
+
+  get running(): boolean {
+    return this.child !== null && this.child.exitCode === null && this.child.signalCode === null
+  }
+
+  start(port: number): Promise<StartOutcome> {
+    const { command, readyLine, readyTimeoutMs } = this.options
+    this.port = port
+    this.ready = false
+    this.stopping = false
+    // stdin is a pipe kept open for the whole life of the backend: closing
+    // it is the stop signal (clause_a_common.mandatory_rules).
+    const child = spawn(command.interpreter, [command.script], {
+      cwd: command.workingDir,
+      env: this.options.env(port),
+      stdio: ['pipe', 'pipe', 'pipe'],
+      windowsHide: true,
+    })
+    this.child = child
+    child.stdin.on('error', () => {
+      // EPIPE when the backend is already gone; its exit is reported below.
+    })
+    child.stderr.on('data', (chunk: Buffer) => process.stderr.write(chunk))
+
+    this.exited = new Promise((resolve) => {
+      child.once('exit', (code, signal) => {
+        log(`backend (pid ${child.pid}) exited with code ${code}${signal ? ` (signal ${signal})` : ''}`)
+        resolve(code)
+      })
+      child.once('error', () => {
+        if (child.pid === undefined) resolve(null)
+      })
+    })
+
+    return new Promise((resolve) => {
+      let settled = false
+      let pending = ''
+      const finish = (outcome: StartOutcome) => {
+        if (settled) return
+        settled = true
+        clearTimeout(timer)
+        resolve(outcome)
+      }
+      const timer = setTimeout(() => finish({ kind: 'timeout' }), readyTimeoutMs)
+
+      child.once('spawn', () =>
+        log(`backend started (pid ${child.pid}) on port ${port}: ${command.interpreter} ${command.script} in ${command.workingDir}`),
+      )
+      child.once('error', (err) => finish({ kind: 'spawn_error', message: err.message }))
+      child.once('exit', (code, signal) => {
+        if (!this.ready) finish({ kind: 'exited', code, signal })
+        else if (!this.stopping) this.options.onUnexpectedExit(code, signal)
+      })
+
+      // stdout arrives in arbitrary chunks: split on line ends, never compare
+      // raw chunks.
+      child.stdout.setEncoding('utf8')
+      child.stdout.on('data', (chunk: string) => {
+        pending += chunk
+        let end: number
+        while ((end = pending.indexOf('\n')) >= 0) {
+          const line = pending.slice(0, end).replace(/\r$/, '')
+          pending = pending.slice(end + 1)
+          if (!this.ready && line === readyLine) {
+            this.ready = true
+            log(`backend READY on port ${port}`)
+            finish({ kind: 'ready' })
+          } else {
+            log(`backend stdout (unexpected): ${JSON.stringify(line)}`)
+          }
+        }
+      })
+    })
+  }
+
+  /** Close stdin, wait for the backend to exit on its own, terminate it after
+   * the shutdown timeout. Resolves with its exit code (null if terminated or
+   * never started). */
+  async stop(): Promise<number | null> {
+    const child = this.child
+    const exited = this.exited
+    if (child === null || exited === null) return null
+    this.stopping = true
+    if (!this.running) return exited
+    log(`stopping backend (pid ${child.pid}): closing its standard input`)
+    child.stdin.end()
+    const timedOut = Symbol('timeout')
+    let timer: NodeJS.Timeout | undefined
+    const result = await Promise.race([
+      exited,
+      new Promise<typeof timedOut>((resolve) => {
+        timer = setTimeout(() => resolve(timedOut), this.options.shutdownTimeoutMs)
+      }),
+    ])
+    clearTimeout(timer)
+    if (result !== timedOut) return result
+    log(`backend (pid ${child.pid}) did not exit within ${this.options.shutdownTimeoutMs} ms; terminating it`)
+    return this.terminate()
+  }
+
+  /** Terminate the backend now (used after a timeout). */
+  async terminate(): Promise<number | null> {
+    const child = this.child
+    const exited = this.exited
+    if (child === null || exited === null) return null
+    this.stopping = true
+    if (this.running) child.kill()
+    return exited
+  }
+}
+
+// --- renderer files (app:// protocol) ----------------------------------------
+
+/** Maps an app:// URL to a file inside the renderer root, or null (404). */
+function resolveRendererFile(rawUrl: string, host: string, root: string, entry: string): string | null {
+  let url: URL
+  try {
+    url = new URL(rawUrl)
+  } catch {
+    return null
+  }
+  if (url.host !== host) return null
+  let decoded: string
+  try {
+    decoded = decodeURIComponent(url.pathname)
+  } catch {
+    return null
+  }
+  if (decoded.includes('\0')) return null
+  const relative = decoded.replace(/^[/\\]+/, '')
+  const target = path.resolve(root, relative === '' ? entry : relative)
+  const inside = path.relative(root, target)
+  if (inside === '' || inside === '..' || inside.startsWith(`..${path.sep}`) || path.isAbsolute(inside)) return null
+  return target
+}
+
+function registerRendererProtocol(config: DesktopConfig, scheme: string, host: string, root: string): void {
+  const { entry_file, content_types, default_content_type } = config.renderer
+  protocol.handle(scheme, async (request) => {
+    const file = resolveRendererFile(request.url, host, root, entry_file)
+    if (file !== null) {
+      try {
+        const data = await fs.promises.readFile(file)
+        const type = content_types[path.extname(file).toLowerCase()] ?? default_content_type
+        return new Response(data, { status: 200, headers: { 'content-type': type } })
+      } catch {
+        // missing file or a folder: 404 below
+      }
+    }
+    return new Response('Not Found', { status: 404, headers: { 'content-type': 'text/plain; charset=utf-8' } })
+  })
+}
+
+/** Describes what is missing, or null when the renderer root is usable. */
+function missingRendererFiles(root: string, entry: string): string | null {
+  if (!fs.existsSync(root) || !fs.statSync(root).isDirectory()) {
+    return `The interface files were not found: the folder ${root} does not exist.`
+  }
+  const entryPath = path.join(root, entry)
+  if (!fs.existsSync(entryPath) || !fs.statSync(entryPath).isFile()) {
+    return `The interface files were not found: ${entry} is missing in ${root}.`
+  }
+  return null
+}
+
+// --- lifecycle ---------------------------------------------------------------
+
+/** process.argv for the log. The packaged app does not show the values of
+ * the test flags it ignores (as in readRunSettings): they must not appear in
+ * its log at all. */
+function argvForLog(config: DesktopConfig, argv: readonly string[], packaged: boolean): string[] {
+  if (!packaged) return [...argv]
+  const ignored = config.packaged.ignored_test_flags.map((key) => config.test_flags[key])
+  return argv.map((arg) => {
+    const prefix = ignored.find((p) => arg.startsWith(p))
+    return prefix === undefined ? arg : `${prefix}...`
+  })
+}
+
+function main(): void {
+  const config = loadConfig()
+  const resourcesPath = app.isPackaged ? process.resourcesPath : null
+  // First line of every run: the moment the Main's JavaScript runs, and
+  // which process this is (start-up time and duplicate instances, DSK-2/3).
+  log(
+    `main started: pid ${process.pid}, parent pid ${process.ppid}, process start ` +
+      `${new Date(performance.timeOrigin).toISOString()}, argv ${JSON.stringify(argvForLog(config, process.argv, resourcesPath !== null))}`,
+  )
+  const settings = readRunSettings(config, process.argv, resourcesPath)
+  log(resourcesPath === null ? 'running from source' : `running the packaged app (resources: ${resourcesPath})`)
+  const { loopback_host: host, ui_origin: uiOrigin } = config.boundary
+  const origin = parseOrigin(uiOrigin)
+
+  // Test flag only: keep the database and Chromium's profile out of the
+  // user's real app-data folder. Must happen before the instance lock, which
+  // is keyed on userData.
+  if (settings.dataDir !== null) {
+    app.setPath('appData', settings.dataDir)
+    app.setPath('userData', path.join(settings.dataDir, 'electron-user-data'))
+  }
+
+  // a. One instance only: two instances would mean two backends writing the
+  //    same SQLite file.
+  if (!app.requestSingleInstanceLock()) {
+    log('another instance is already running; exiting without starting the backend')
+    app.quit()
+    return
+  }
+
+  // b. Before 'ready': the renderer's scheme.
+  protocol.registerSchemesAsPrivileged([
+    {
+      scheme: origin.scheme,
+      privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true },
+    },
+  ])
+
+  let mainWindow: BrowserWindow | null = null
+  let shutdownStarted = false
+
+  const launchEnv = config.backend.launch_env
+  const dbFilePath = path.join(app.getPath('appData'), ...config.boundary.db_file_relative_to_app_data.split('/'))
+  let aiServiceBaseUrl = ''
+
+  const backend = new BackendProcess({
+    command: settings.backendCommand,
+    env: (port) => ({
+      ...process.env,
+      [launchEnv.port]: String(port),
+      [launchEnv.db_file_path]: dbFilePath,
+      [launchEnv.ai_service_base_url]: aiServiceBaseUrl,
+      [launchEnv.app_version]: app.getVersion(),
+    }),
+    readyLine: config.backend.ready_line,
+    readyTimeoutMs: config.backend.ready_timeout_ms,
+    shutdownTimeoutMs: config.backend.shutdown_timeout_ms,
+    onUnexpectedExit: (code, signal) =>
+      fatal(`The backend stopped unexpectedly (exit code ${code}${signal ? `, signal ${signal}` : ''}). The app will close.`),
+  })
+
+  // h. Stop: the app exits only after the backend has exited.
+  async function shutdown(exitCode: number): Promise<void> {
+    if (shutdownStarted) return
+    shutdownStarted = true
+    await backend.stop()
+    log(`exiting with code ${exitCode}`)
+    app.exit(exitCode)
+  }
+
+  function fatal(message: string): void {
+    // Logged first, so the message can be checked without a click.
+    log(`FATAL: ${message}`)
+    if (settings.showDialogs) dialog.showErrorBox(config.main.error_dialog_title, message)
+    void shutdown(config.main.failure_exit_code)
+  }
+
+  app.on('second-instance', (_event, argv, workingDirectory) => {
+    log(
+      `second-instance: another launch asked for this instance ` +
+        `(argv ${JSON.stringify(argvForLog(config, argv, resourcesPath !== null))}, working directory ${workingDirectory})`,
+    )
+    if (mainWindow === null) return
+    if (mainWindow.isMinimized()) mainWindow.restore()
+    mainWindow.focus()
+  })
+  app.on('window-all-closed', () => {
+    log('window-all-closed')
+    void shutdown(0)
+  })
+  app.on('before-quit', (event) => {
+    log(`before-quit (shutdown started: ${shutdownStarted}, backend running: ${backend.running})`)
+    if (shutdownStarted && !backend.running) return
+    event.preventDefault()
+    void shutdown(0)
+  })
+  for (const signal of ['SIGINT', 'SIGTERM'] as const) {
+    process.on(signal, () => {
+      log(`received ${signal}`)
+      void shutdown(0)
+    })
+  }
+
+  // c-d. Ports, then the backend; retry on a new port while it exits before
+  //      READY.
+  async function startBackend(): Promise<string | null> {
+    const attempts = config.backend.start_attempts
+    // The AI Service is not started in V1, but the backend requires its
+    // address: a port is reserved and handed over anyway.
+    const aiPort = await pickFreePort(host)
+    aiServiceBaseUrl = `http://${host}:${aiPort}`
+    let lastFailure = ''
+    for (let attempt = 1; attempt <= attempts; attempt++) {
+      const port =
+        attempt === 1 && settings.firstBackendPort !== null ? settings.firstBackendPort : await pickFreePort(host, [aiPort])
+      log(`backend start attempt ${attempt}/${attempts} on port ${port}`)
+      const outcome = await backend.start(port)
+      if (outcome.kind === 'ready') return null
+      if (outcome.kind === 'timeout') {
+        log(`backend did not write ${config.backend.ready_line} within ${config.backend.ready_timeout_ms} ms; terminating it`)
+        await backend.terminate()
+        return `The backend did not become ready within ${config.backend.ready_timeout_ms / 1000} seconds.`
+      }
+      lastFailure =
+        outcome.kind === 'exited'
+          ? `exit code ${outcome.code}${outcome.signal ? `, signal ${outcome.signal}` : ''}`
+          : `could not be launched: ${outcome.message}`
+      log(`backend start attempt ${attempt}/${attempts} failed (${lastFailure})`)
+    }
+    return `The backend could not start after ${attempts} attempts (last: ${lastFailure}).`
+  }
+
+  async function startLayer(): Promise<void> {
+    const backendFailure = await startBackend()
+    if (backendFailure !== null) return fatal(backendFailure)
+
+    // e. Renderer files.
+    const missing = missingRendererFiles(settings.rendererRoot, config.renderer.entry_file)
+    if (missing !== null) return fatal(missing)
+    registerRendererProtocol(config, origin.scheme, origin.host, settings.rendererRoot)
+    log(`serving the interface from ${settings.rendererRoot} at ${uiOrigin}`)
+
+    // Packaged app: no default menu, so no reload shortcut and no developer
+    // tools. Run from source keeps it.
+    if (app.isPackaged) Menu.setApplicationMenu(null)
+
+    // f-g. Window; the preload script receives the single launch value.
+    const backendBaseUrl = `http://${host}:${backend.port}`
+    const args = config.preload.arguments
+    const win = new BrowserWindow({
+      width: config.renderer.window.width,
+      height: config.renderer.window.height,
+      webPreferences: {
+        contextIsolation: true,
+        sandbox: true,
+        nodeIntegration: false,
+        preload: path.join(__dirname, 'preload.js'),
+        additionalArguments: [
+          `${args.bridge_name}${config.boundary.renderer_bridge}`,
+          `${args.backend_base_url}${backendBaseUrl}`,
+        ],
+      },
+    })
+    mainWindow = win
+    win.on('closed', () => {
+      if (mainWindow === win) mainWindow = null
+    })
+    win.webContents.on('will-navigate', (event) => {
+      if (originOf(event.url) !== uiOrigin) {
+        log(`blocked navigation to ${event.url}`)
+        event.preventDefault()
+      }
+    })
+    win.webContents.setWindowOpenHandler(({ url }) => {
+      log(`blocked new window for ${url}`)
+      return { action: 'deny' }
+    })
+    const entryUrl = `${uiOrigin}/${config.renderer.entry_file}`
+    log(`opening the window at ${entryUrl}`)
+    try {
+      await win.loadURL(entryUrl)
+      log(`first load finished: ${entryUrl}`)
+    } catch (err) {
+      // A first load aborted by another navigation (a reload started before
+      // it finished) is not a failure: the newer navigation carries on. Any
+      // other load error stays fatal.
+      const { code, errno } = err as { code?: unknown; errno?: unknown }
+      if (typeof code !== 'string' || !config.renderer.non_fatal_first_load_errors.includes(code)) throw err
+      log(`first load of ${entryUrl} was aborted (${code}, ${String(errno)}); continuing`)
+    }
+  }
+
+  app
+    .whenReady()
+    .then(startLayer)
+    .catch((err: unknown) => fatal(`The app could not start: ${err instanceof Error ? err.message : String(err)}`))
+}
+
+main()

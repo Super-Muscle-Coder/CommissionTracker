@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Commission Tracker — slow first load (test page)</title>
+    <script>
+      // Keeps every load of this page busy for 3 seconds before it can
+      // finish, so a test can start another navigation (a reload) while the
+      // Main's first loadURL is still pending: that first load is then
+      // aborted with ERR_ABORTED (-3).
+      const end = Date.now() + 3000
+      while (Date.now() < end) {
+        // busy
+      }
+    </script>
+  </head>
+  <body>
+    <p id="loaded">loaded</p>
+  </body>
+</html>

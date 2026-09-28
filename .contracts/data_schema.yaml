@@ -1,0 +1,725 @@
+# =============================================================================
+# DATA SCHEMA — COMMISSION TRACKER (V1)
+# =============================================================================
+# Frame: 02-contract.md (frame revision of 2026-09-24).
+# Clause A = Common.
+# Clause B = backend      (Python, HTTP on loopback, owns SQLite)      OPEN
+# Clause C = ai_service   (Python, separate process, watermark engine) OPEN
+# Clause D = desktop      (Electron main process)                      OPEN
+# The React renderer (UI/) is deliberately outside every Clause (theory §7). It
+# is the `external` caller in api_contract.yaml and never appears in
+# consumed_by. Internally it is organized by iWCA (skill iwca-implementation),
+# which changes nothing in this contract.
+#
+# Changelog:
+#   v1.0.0 — [Toàn tệp, THÊM] Contract rewritten in the 2026-09-24 frame,
+#            replacing draft 1.0.0-draft.2 (old frame). Workflow list carried
+#            over, with these Stage-1 backtracks:
+#            * launch_services removed: starting, awaiting and stopping the
+#              Python layers is the desktop Main's job (theory §4), not a
+#              workflow's. Clause D keeps only restore_data.
+#            * Clause D key renamed clause_d_frontend -> clause_d_desktop,
+#              because the renderer is not part of this layer.
+#            * scaffold_backend no longer creates tables; each workflow
+#              creates and upgrades its own tables (theory §4).
+#            * Health outputs removed: readiness is a Main-level signal
+#              (clause_a_common.mandatory_rules), not a workflow output.
+#            * Every call parameter is now an input of the callee, and every
+#              value a workflow passes to another is an output of the caller.
+#            * restore_data.backend_controller declared from: main (lifecycle
+#              tool handed over by the desktop Main).
+#   v1.0.0 — [Toàn tệp, SỬA] contract_state: draft -> approved — approved
+#            by the Project Owner on 2026-09-24. Every Clause stays OPEN;
+#            Clause C must not be locked before the watermark robustness
+#            EVIDENCE has been reviewed.
+#   v1.1.0 — [Clause A, THÊM] mandatory_rules: how the desktop Main hands
+#            launch values to a Python layer (environment variables) and
+#            how it stops one (closing stdin) — Main-to-Main agreement
+#            that both sides must implement identically; found while
+#            drafting the first backend session plan.
+#   v1.1.0 — [Clause B, SỬA] status of scaffold_backend and manage_client:
+#            đang_chờ_triển_khai -> đang_triển_khai — plan of backend
+#            session #1 issued.
+#   v1.1.1 — [Clause B, SỬA] status of scaffold_backend: đang_triển_khai ->
+#            đã_hoàn_thiện — Stage-6 proposal of backend session #1 verified
+#            by the Orchestrator (08, Part 5): independent re-run 44/44 on
+#            another machine, and 44/44 by the Project Owner with the
+#            project interpreter Backend/env (Python 3.13); no unsolved
+#            problem. manage_client stays đang_triển_khai (must add the 500
+#            label of API Contract 2.0.0).
+#   v1.1.1 — [Clause B, SỬA] status of manage_commission:
+#            đang_chờ_triển_khai -> đang_triển_khai — plan of backend
+#            session #2 issued.
+#   v2.0.0 — [Clause A, THÊM] mandatory_rules: every integer in any input or
+#            output lies within -9007199254740991..9007199254740991 (2^53-1),
+#            the range a JavaScript number holds exactly — the UI is
+#            JavaScript and would silently round larger integers.
+#   v2.0.0 — [Clause A, SỬA] types.money: amount_minor bounded to the same
+#            range; each use keeps its own sign constraint (>= 0, > 0) and a
+#            computed amount (balance) may be negative. Breaking change: the
+#            allowed values were narrowed. Affected code: manage_commission
+#            (its bound was 2^63-1). Found in the audit of backend session #2.
+#   v2.0.0 — [Clause B, SỬA] status of manage_client: đang_triển_khai ->
+#            đã_hoàn_thiện — Stage-6 proposal of backend session #2 verified
+#            by the Orchestrator (independent re-run 106/106).
+#   v2.0.0 — [Clause B, SỬA] status of record_payment:
+#            đang_chờ_triển_khai -> đang_triển_khai — plan of backend
+#            session #3 issued.
+#   v3.0.0 — [Clause A, THÊM] mandatory_rules: a computed integer (a sum, a
+#            balance) in any output must also lie within the integer range;
+#            it is never rounded, clamped or wrapped. An endpoint whose
+#            result would carry one outside the range answers
+#            ERR_OUT_OF_RANGE; an endpoint that would write data producing
+#            such a result refuses the write with ERR_OUT_OF_RANGE where it
+#            declares that code. Found in backend session #3 (two payments
+#            of 2^53-1 gave received_net = 2^54-2).
+#   v3.0.0 — [Clause B, SỬA] record_payment.description: a payment that
+#            would put received_net or outstanding of its commission
+#            outside the integer range is refused. payment_list and
+#            payment_ledger: order written down (clarification, no change
+#            of meaning). Affected code: record_payment.
+#   v3.0.0 — [Clause B, SỬA] update_progress.progress_state.updated_at:
+#            timestamp -> timestamp|null; null means no stage has been set
+#            yet (the commission counts as the first stage of the catalog).
+#            Breaking change: consumers must handle null. No code consumes
+#            it yet. update_progress.description: changing to the current
+#            stage is refused (the first stage counts as current when
+#            none has been set). progress_history: meaning of from_stage
+#            null and the empty history written down (clarification).
+#            Found while planning backend session #4.
+#   v3.0.0 — [Clause B, SỬA] status of manage_commission: đang_triển_khai
+#            -> đã_hoàn_thiện — Stage-6 proposal of backend session #3
+#            verified by the Orchestrator (independent re-run 166/166).
+#   v3.0.0 — [Clause B, SỬA] status of update_progress:
+#            đang_chờ_triển_khai -> đang_triển_khai — plan of backend
+#            session #4 issued. record_payment stays đang_triển_khai (must
+#            apply the computed-integer rule).
+#   v3.0.1 — [Clause B, SỬA] status of record_payment and update_progress:
+#            đang_triển_khai -> đã_hoàn_thiện — Stage-6 proposals of backend
+#            session #4 verified by the Orchestrator (independent re-run
+#            216/216).
+#   v4.0.0 — [Clause B, SỬA] record_payment.commission_balance: outstanding
+#            no longer counts tips — outstanding = agreed − (incoming −
+#            refund) over non-voided payments whose kind is not 'tip';
+#            received_net still counts every non-voided payment. A tip is a
+#            gift on top of the agreed price, not a payment of it; before,
+#            a tip made a fully paid commission look overpaid. Breaking
+#            change: same key, different value. Affected code:
+#            record_payment (get_balance and the range check of record).
+#            Raised by the Project Owner while planning backend session #5.
+#   v4.0.0 — [Clause A, SỬA] types.ledger_entry_record: kind added, so that
+#            view_income_report can apply the same outstanding rule.
+#            Breaking change: an output shape changed. Affected code:
+#            record_payment (list_payment_ledger); no consumer exists yet.
+#   v4.0.0 — [Clause B, SỬA] view_income_report: how every number of
+#            income_report is computed written down (dates of payments,
+#            inclusive period, what counts in each total, which commissions
+#            count as owing, which currencies and months are listed and in
+#            which order). No shape change. Found while planning backend
+#            session #5; decided by the Project Owner.
+#   v4.0.0 — [Clause B, SỬA] status of record_payment: đã_hoàn_thiện ->
+#            đang_triển_khai (must apply the tip rule); status of
+#            view_income_report: đang_chờ_triển_khai -> đang_triển_khai —
+#            plan of backend session #5 issued.
+#   v4.0.1 — [Clause B, SỬA] status of record_payment and view_income_report:
+#            đang_triển_khai -> đã_hoàn_thiện — Stage-6 proposals of backend
+#            session #5 verified by the Orchestrator (independent re-run
+#            253/253; every number of the report EVIDENCE recomputed by hand).
+#   v4.0.1 — [Clause B, SỬA] status of manage_watermark_profile:
+#            đang_chờ_triển_khai -> đang_triển_khai — plan of backend
+#            session #6 issued.
+#   v5.0.0 — [Clause A, SỬA] types.reminder_settings_record: weekday must be
+#            null when unit = 'days'; two lead_times with the same duration
+#            (1 day = 24 hours) are invalid. Breaking change: allowed input
+#            values were narrowed. No code consumes it yet.
+#   v5.0.0 — [Clause B, SỬA] send_reminder: how reminders are timed written
+#            down — default settings; the start of the digest cadence; what
+#            "open" and "upcoming" mean; no digest when nothing is open; the
+#            moment a deadline reminder is due; a reminder whose moment had
+#            already passed when it became possible is produced at the next
+#            check. Clarification of the description; decided by the Project
+#            Owner while planning backend session #7.
+#   v5.0.0 — [Clause B, SỬA] status of manage_watermark_profile:
+#            đang_triển_khai -> đã_hoàn_thiện — Stage-6 proposal of backend
+#            session #6 verified by the Orchestrator (independent re-run
+#            293/293). status of send_reminder: đang_chờ_triển_khai ->
+#            đang_triển_khai — plan of backend session #7 issued.
+#   v5.1.0 — [Clause A, SỬA] types.reminder_settings_record: a lead time is
+#            at most 365 days (8760 hours). Beyond that the reminder's
+#            moment can fall outside the representable calendar and the
+#            lead was silently skipped. Narrows the allowed input, but no
+#            realistic commission has a deadline a year away; no stored
+#            settings can hold such a value yet. Affected code:
+#            send_reminder (Routers). Found in the audit of backend
+#            session #7.
+#   v5.1.0 — [Clause B, SỬA] send_reminder.description: "changing a
+#            deadline re-arms that commission's deadline reminders" said
+#            plainly — what is remembered is the commission, the deadline
+#            and the lead duration, so a deadline moved back to a date
+#            whose reminders were already given does not give them again.
+#            Wording only; the behaviour is what backend session #7 built.
+#   v5.1.1 — [Clause B, SỬA] status of send_reminder: đang_triển_khai ->
+#            đã_hoàn_thiện — Stage-6 proposal of backend session #7,
+#            plus the 365-day bound applied in backend session #8, verified
+#            by the Orchestrator (independent re-run 361/361; the bound and
+#            the repaired EVIDENCE command both re-checked by hand).
+#   v6.0.0 — [Clause A, THÊM] shared_values.ui_origin and two
+#            mandatory_rules: (1) the desktop Main loads the renderer only
+#            from ui_origin and hands it the backend base URL as its single
+#            launch value, through the preload script; (2) the backend
+#            answers CORS, preflight included, for ui_origin and for no other
+#            origin. Found in Orchestrator stage A (2026-09-26): the contract
+#            said how each Python layer receives its launch values but not
+#            how the renderer learns the backend address (chosen at run
+#            time), and a renderer whose origin differs from the backend's
+#            cannot read any backend response without CORS. Breaking change:
+#            a new obligation on an existing layer. Affected code: the
+#            backend Main (Backend/Backend.py, session B0); the desktop Main
+#            and the UI (neither written yet). No workflow and no status
+#            changes.
+#   v6.0.0 — [Toàn tệp, SỬA] Header comment: the renderer is organized
+#            internally by iWCA; its place in the contract is unchanged.
+#            Wording only.
+#   v6.0.1 — [Clause A, SỬA] mandatory_rules, CORS rule: "a request from
+#            any other origin receives no CORS headers" narrowed to "no
+#            Access-Control-Allow-Origin header, so the browser grants it
+#            nothing", and the status and body of a refused preflight are
+#            left unspecified. The rule's intent (no permission for any
+#            other origin) is unchanged. Starlette's CORS middleware still
+#            sends Access-Control-Allow-Methods/-Headers/-Max-Age on a
+#            preflight it refuses; these grant nothing and reveal only what
+#            this contract already publishes, and removing them would need
+#            a hand-written wrapper around the middleware (V1 priority:
+#            simplest form that works). Found in the audit of backend
+#            session #9 (B0), finding P1; option A approved by the Project
+#            Owner on 2026-09-26. Affected code: none; the claim of the
+#            backend Main's CORS EVIDENCE must be reworded to the scope
+#            proven.
+#   v6.1.0 — [Clause A, THÊM] shared_values.renderer_bridge, and the renderer
+#            mandatory_rule now names where the launch value lives: a frozen
+#            object on the renderer's global object under the name
+#            renderer_bridge, carrying the property backendBaseUrl and, once
+#            an ipc entry is implemented, the function invoke (realizing the
+#            ipc endpoint form, api_contract.yaml 4.0.0), and nothing else.
+#            The contract said the preload script hands over the backend
+#            base URL but not under what name; that name is the boundary
+#            between clause_d_desktop and the UI, so the UI session must
+#            learn it from here, not from desktop code. Found while drafting
+#            the plan of desktop session B1; approved by the Project Owner
+#            on 2026-09-26. Affected code: none yet (desktop Main not
+#            written).
+#   v6.2.0 — [Clause A, THÊM] mandatory_rules: at most one clause_b_backend
+#            process uses the database file at db_file_path at any time; the
+#            backend's Main takes exclusive ownership of the file at start-up,
+#            before opening it, keeps it for the whole life of the process,
+#            and loses it when the process ends however it ends; a backend
+#            that cannot take ownership exits non-zero and never writes
+#            READY. Found in desktop sessions #13 and #14 (open_issues DSK-2,
+#            main-EXP-018 and main-PROB-001 of the desktop Main): on the
+#            first run of a new, unsigned executable, security software on
+#            Windows held the real process and ran a copy of the app with the
+#            same command line, including its own backend on the same data
+#            folder. The desktop Main cannot prevent a copy the operating
+#            system has already started, and its single-instance lock is not
+#            guaranteed to see such a copy, so the guarantee has to sit with
+#            the owner of the file. The mechanism is left to the backend.
+#            Approved by the Project Owner on 2026-09-27. Breaking change: a
+#            new obligation on an existing layer. Affected code: the backend
+#            Main (Backend/Backend.py). The desktop Main needs no change: a
+#            backend that exits before READY is already retried and then
+#            reported. No workflow and no status changes.
+#   v7.0.0 — [Clause A, THÊM] formats.not_blank: a constraint a string type
+#            may carry — the string keeps at least one character after its
+#            leading and trailing whitespace is removed; the value is stored
+#            and returned exactly as given.
+#   v7.0.0 — [Clause B, SỬA] manage_client.input_expected.client_input:
+#            display_name is not blank; contacts[].channel and
+#            contacts[].value are 1.. characters and not blank. Found in UI
+#            session #16 (open_issues UI-5 / CT-2): the backend accepted a
+#            name made only of spaces and a contact with an empty field; the
+#            rule existed only in the interface layer, so any other writer
+#            (tests, a restored older backup, a future caller) could store
+#            such data. Approved by the Project Owner on 2026-09-28.
+#            Breaking change: allowed input values were narrowed (same rule
+#            as v5.0.0). The error label is unchanged (400 ERR_VALIDATION),
+#            so api_contract.yaml does not change. Stored data is not
+#            migrated: the rule applies when data is written.
+#   v7.0.0 — [Clause B, SỬA] status of manage_client: đã_hoàn_thiện ->
+#            đang_triển_khai (must apply the narrowed client_input).
+#   v8.0.0 — [Clause B, SỬA] manage_commission.input_expected.commission_input:
+#            title is not blank (formats.not_blank);
+#            manage_watermark_profile.input_expected.profile_input:
+#            display_name (pen name) is not blank. Same gap as v7.0.0, found
+#            by the Orchestrator while planning backend session #18 (open_issues
+#            CT-3): both required names accepted a value made only of spaces.
+#            Optional fields (string|null) are unchanged: an empty or blank
+#            optional text is a separate decision, not taken here. Approved by
+#            the Project Owner on 2026-09-28. Breaking change: allowed input
+#            values were narrowed (same rule as v5.0.0 and v7.0.0). Error
+#            labels are unchanged (400 ERR_VALIDATION), so api_contract.yaml
+#            does not change. Stored data is not migrated.
+#   v8.0.0 — [Clause B, SỬA] status of manage_commission and
+#            manage_watermark_profile: đã_hoàn_thiện -> đang_triển_khai (must
+#            apply the narrowed inputs).
+# =============================================================================
+
+schema_version: 8.0.0
+contract_state: approved
+
+# -----------------------------------------------------------------------------
+# CLAUSE A — COMMON
+# -----------------------------------------------------------------------------
+clause_a_common:
+  lock_status: open
+
+  mandatory_rules:
+    - "The UI (React renderer, outside WCA) reaches Python code only through http endpoints of clause_b_backend declared in api_contract.yaml, and reaches clause_d_desktop only through its ipc endpoints. The UI never calls clause_c_ai_service and is never given its address."
+    - "clause_c_ai_service holds no business data and has no storage. It only transforms what it is given."
+    - "Each backend workflow creates and upgrades only its own tables, through its own Adapters, during start-up. No table references a table owned by another workflow (no cross-workflow foreign keys). A database restored from an older app_version is upgraded by the same start-up step."
+    - "Artwork files supplied by the user are never modified or overwritten. Watermarked output is always written as a new file."
+    - "Every inter-process endpoint listens on shared_values.loopback_host only. Ports are chosen at run time by the desktop Main and handed to each layer when it is launched."
+    - "Each Python layer's Main, once every workflow is registered and its server is listening, writes exactly one line 'READY' to standard output. The desktop Main treats that line as the layer's readiness signal; no health endpoint exists."
+    - "The desktop Main launches each Python layer as a child process and hands it its launch values as environment variables. clause_b_backend receives CT_PORT (integer), CT_DB_FILE_PATH (absolute path realizing shared_values.db_file_path), CT_AI_SERVICE_BASE_URL (http://<loopback_host>:<port>) and CT_APP_VERSION (semantic version of the build). clause_c_ai_service receives CT_PORT. A Python layer's Main that finds a required variable missing or malformed exits with a non-zero code and never writes READY."
+    - "The desktop Main loads the renderer (the UI) only from shared_values.ui_origin, never from a file:// URL or an http(s) origin, and hands it exactly one launch value: the backend base URL (http://<loopback_host>:<port handed to clause_b_backend>), exposed read-only by the preload script before any renderer code runs. The preload script places one frozen object on the renderer's global object, under the name shared_values.renderer_bridge; it carries the launch value as the string property backendBaseUrl and, once at least one ipc entry is implemented, the function invoke that realizes the ipc endpoint form (api_contract.yaml clause_a_common.endpoint_forms.ipc), and nothing else. The renderer never chooses, guesses or stores a port, and is never given the AI Service address or any other value this way."
+    - "The backend answers cross-origin requests from shared_values.ui_origin and from no other origin: a request whose Origin header equals ui_origin receives CORS response headers allowing that origin, and a preflight (OPTIONS) request from ui_origin for any declared http address is answered so that the actual request may proceed; a request from any other origin receives no Access-Control-Allow-Origin header, so the browser grants it nothing. A preflight belongs to the http endpoint form; it is not an endpoint and has no entry in api_contract.yaml; the status and body of a refused preflight are not specified."
+    - "The desktop Main stops a Python layer by closing that child process's standard input. The layer's Main then stops accepting calls, releases its resources (closing storage cleanly) and exits with code 0. If the process has not exited within the desktop Main's shutdown timeout, the desktop Main terminates it."
+    - "At most one clause_b_backend process uses the database file at shared_values.db_file_path at any time. At start-up, before opening that file, the backend's Main takes exclusive ownership of it and keeps it for the whole life of the process; the ownership ends when the process ends, however it ends (clean stop, crash or termination). A backend that cannot take ownership exits with a non-zero code and never writes READY. The mechanism belongs to the backend; no other layer relies on how it is done."
+    - "Every integer in any input or output of any layer lies within -9007199254740991..9007199254740991 (2^53-1), the range a JavaScript number holds exactly. An input outside this range is rejected with ERR_VALIDATION; narrower ranges written in a type still apply."
+    - "A computed integer (a sum, a balance) in any output also lies within -9007199254740991..9007199254740991 and is never rounded, clamped or wrapped. An endpoint whose result would carry one outside the range answers ERR_OUT_OF_RANGE and returns no partial result. An endpoint that would write data producing such a result writes nothing and answers ERR_OUT_OF_RANGE, when its contract declares that code for it."
+    - "The app must run without clause_c_ai_service: if it is not ready within the desktop Main's start-up timeout, business features keep working and watermark endpoints answer ERR_SERVICE_UNAVAILABLE."
+
+  formats:
+    not_blank: "Constraint written in a string type as (not blank): the string still has at least one character after its leading and trailing whitespace is removed. It is a check only: the value is stored and returned exactly as given."
+    timestamp: "ISO 8601 with UTC offset, e.g. 2026-09-23T14:05:00+07:00"
+    date: "ISO 8601 calendar date, e.g. 2026-10-01"
+    id: "UUID v4, lowercase string"
+
+  types:
+    id: "string (formats.id)"
+    file_path: "string — absolute path on the local machine"
+    currency_code: "string (ISO 4217 alphabetic code, e.g. VND, USD)"
+    money: "object { amount_minor: integer (-9007199254740991..9007199254740991), currency: currency_code } — amount in the currency's ISO 4217 minor unit (VND: 1 = 1 đồng; USD: 1 = 1 cent); never floating point. Each use states its own sign constraint (e.g. >= 0, > 0); a computed amount such as a balance may be negative"
+    stage_kind: "'active' | 'on_hold' | 'finished' | 'cancelled'"
+    watermark_code: "string (exactly 12 lowercase hex characters) — encodes exactly shared_values.watermark_payload_bits bits"
+    watermark_strength: "'subtle' | 'balanced' | 'robust' — the values of shared_values.watermark_strength_presets"
+    image_limits_record: "object { accepted_formats: list[string], max_file_bytes: integer, max_pixels: integer } — realizes shared_values.accepted_image_formats, max_image_bytes, max_image_pixels"
+    client_summary_record: "object { client_id: id, is_archived: boolean }"
+    commission_summary_record: "object { commission_id: id, title: string, agreed_price: money, deadline: date|null }"
+    progress_entry_record: "object { commission_id: id, current_stage: string, stage_kind: stage_kind } — a commission with no entry has not had a stage set yet and counts as the first stage of the catalog (stage_kind 'active')"
+    ledger_entry_record: "object { payment_id: id, commission_id: id, direction: 'incoming' | 'refund', kind: 'deposit' | 'milestone' | 'final' | 'tip' | 'other', amount: money, paid_at: timestamp } — non-voided payments only"
+    payment_record: "object { payment_id: id, commission_id: id, direction: 'incoming' | 'refund', kind: 'deposit' | 'milestone' | 'final' | 'tip' | 'other', amount: money, method: string, paid_at: timestamp, note: string|null, is_voided: boolean }"
+    watermark_profile_record: "object { profile_id: id, display_name: string, legal_name: string|null, contact: string|null, ownership_statement: string|null, default_strength: watermark_strength }"
+    registered_artwork_record: "object { artwork_id: id, watermark_code: watermark_code, profile_id: id, commission_id: id|null, title: string|null, source_sha256: string, output_sha256: string, width: integer, height: integer, registered_at: timestamp }"
+    embed_request_record: "object { image: bytes (one of accepted_image_formats; RGB or RGBA), watermark_code: watermark_code, strength: watermark_strength }"
+    extract_request_record: "object { image: bytes (one of accepted_image_formats) }"
+    extraction_record: "object { detected: boolean, watermark_code: watermark_code|null, confidence: number (0..1) }"
+    backup_request_record: "object { destination_dir: file_path, purpose: 'manual' | 'pre_restore' }"
+    backup_archive_record: "object { archive_path: file_path, app_version: string, size_bytes: integer, sha256: string, created_at: timestamp }"
+    reminder_settings_record: "object { periodic: object { enabled: boolean, every: integer (>= 1), unit: 'days' | 'weeks', at_time: string (HH:MM, local time), weekday: integer|null (1..7, ISO weekday; required when unit = 'weeks', null when unit = 'days') }, deadline: object { enabled: boolean, lead_times: list[object { amount: integer (>= 1), unit: 'hours' | 'days' }] (1..5 entries; 1 day = 24 hours; each at most 365 days / 8760 hours; no two entries of the same duration) } }"
+    reminder_notification_record: "object { notification_id: id, kind: 'periodic_digest' | 'deadline', due_at: timestamp, deadline_item: object { commission_id: id, title: string, deadline: date, lead: object { amount: integer, unit: 'hours' | 'days' } }|null (set when kind = 'deadline'), digest: object { open_count: integer, upcoming: list[object { commission_id: id, title: string, deadline: date }] }|null (set when kind = 'periodic_digest') }"
+
+  shared_values:
+    loopback_host: { value: "127.0.0.1", used_by: [clause_b_backend, clause_c_ai_service, clause_d_desktop] }
+    db_file_path: { value: "%APPDATA%/CommissionTracker/data.db (the per-user app-data folder on other OSes)", used_by: [clause_b_backend, clause_d_desktop] }
+    # The origin Chromium gives a page loaded from a scheme the desktop Main
+    # registers as standard. To be confirmed by measurement in desktop
+    # session B1 (the Origin header the backend actually receives); if it
+    # differs, this value is corrected here, never worked around in code.
+    ui_origin: { value: "app://commission-tracker", used_by: [clause_b_backend, clause_d_desktop] }
+    # Name of the global object the desktop preload script exposes to the
+    # renderer (window.commissionTracker). The UI, outside every Clause,
+    # reads it too.
+    renderer_bridge: { value: "commissionTracker", used_by: [clause_d_desktop] }
+    # Tentative: may change after the Stage-4 robustness test on real sample
+    # artworks. Clause C must not be locked before that evidence is reviewed.
+    watermark_payload_bits: { value: 48, used_by: [clause_b_backend, clause_c_ai_service] }
+    watermark_strength_presets: { value: [subtle, balanced, robust], used_by: [clause_b_backend, clause_c_ai_service] }
+    accepted_image_formats: { value: [png, jpeg, webp], used_by: [clause_b_backend, clause_c_ai_service] }
+    max_image_bytes: { value: 104857600, used_by: [clause_b_backend, clause_c_ai_service] }
+    max_image_pixels: { value: 100000000, used_by: [clause_b_backend, clause_c_ai_service] }
+
+# -----------------------------------------------------------------------------
+# CLAUSE B — BACKEND
+# -----------------------------------------------------------------------------
+clause_b_backend:
+  lock_status: open
+
+  scaffold_backend:
+    tag: "[Clause B]"
+    workflow_type: nền_tảng
+    status: đã_hoàn_thiện
+    description: "Opens the SQLite database at db_file_path before any business workflow of the layer is wired, creating the folder and an empty database file on first run. Creates no tables: each workflow prepares its own."
+    input_expected:
+      db_file_path: { type: file_path, from: environment_config }
+    output_guaranteed:
+      db_connection:
+        type: "resource — open connection to the SQLite database"
+        consumed_by: [manage_client, manage_commission, update_progress, record_payment, manage_watermark_profile, apply_watermark, backup_data, send_reminder]
+
+  manage_client:
+    tag: "[Clause B]"
+    workflow_type: nghiệp_vụ
+    status: đang_triển_khai
+    description: "Create, edit, view, list, archive and unarchive clients."
+    input_expected:
+      db_connection: { type: resource, from: scaffold_backend }
+      client_input:
+        type: "object { display_name: string (1..120 characters, not blank), contacts: list[object { channel: string (1.. characters, not blank; free label, e.g. email, facebook, discord, zalo), value: string (1.. characters, not blank) }], note: string|null }"
+        from: end_user
+      client_id: { type: id, from: [end_user, manage_commission] }
+      is_archived: { type: boolean, from: end_user }
+    output_guaranteed:
+      client_summary:
+        type: client_summary_record
+        consumed_by: [manage_commission]
+      client_detail:
+        type: "object { client_id: id, display_name: string, contacts: list[object { channel: string, value: string }], note: string|null, is_archived: boolean, created_at: timestamp, updated_at: timestamp }"
+        consumed_by: none
+      client_list:
+        type: "list[object { client_id: id, display_name: string, is_archived: boolean, updated_at: timestamp }]"
+        consumed_by: none
+
+  manage_commission:
+    tag: "[Clause B]"
+    workflow_type: nghiệp_vụ
+    status: đang_triển_khai
+    description: "Create, edit, view and list commissions. Owns the agreed terms (client, scope, price, deadline); does not own the progress stage or payments. A commission cannot be created for, or moved to, an unknown or archived client. The currency of agreed_price is fixed at creation; edits may change the amount only."
+    input_expected:
+      db_connection: { type: resource, from: scaffold_backend }
+      commission_input:
+        type: "object { client_id: id, title: string (1..200 characters, not blank), description: string|null, commission_type: string|null (free label, e.g. bust, full body), agreed_price: money (amount_minor >= 0; currency in supported_currencies), deadline: date|null, reference_links: list[string] }"
+        from: end_user
+      commission_id: { type: id, from: [end_user, update_progress, record_payment, apply_watermark] }
+      client_summary: { type: client_summary_record, from: manage_client }
+      supported_currencies:
+        type: "list[currency_code] — default [VND, USD]"
+        from: environment_config
+    output_guaranteed:
+      client_lookup:
+        type: "id — the client_id of the commission being created or edited"
+        consumed_by: [manage_client]
+      commission_summary:
+        type: commission_summary_record
+        consumed_by: [update_progress, record_payment, apply_watermark]
+      commission_index:
+        type: "list[commission_summary_record] — every commission"
+        consumed_by: [view_income_report, send_reminder]
+      commission_detail:
+        type: "object { commission_id: id, client_id: id, title: string, description: string|null, commission_type: string|null, agreed_price: money, deadline: date|null, reference_links: list[string], created_at: timestamp, updated_at: timestamp }"
+        consumed_by: none
+      commission_list:
+        type: "list[object { commission_id: id, client_id: id, title: string, agreed_price: money, deadline: date|null, updated_at: timestamp }]"
+        consumed_by: none
+      currency_options:
+        type: "list[currency_code] — supported_currencies, for the UI picker"
+        consumed_by: none
+
+  update_progress:
+    tag: "[Clause B]"
+    workflow_type: nghiệp_vụ
+    status: đã_hoàn_thiện
+    description: "Moves a commission through its work stages and keeps the stage history, including putting on hold and cancelling. A commission in a stage of kind 'finished' or 'cancelled' cannot change stage; from any other stage it may move to any other stage of the catalog. Changing to the current stage is not a stage change and is refused."
+    input_expected:
+      db_connection: { type: resource, from: scaffold_backend }
+      commission_id: { type: id, from: end_user }
+      stage_change:
+        type: "object { to_stage: string (a stage of stage_catalog), note: string|null }"
+        from: end_user
+      commission_summary: { type: commission_summary_record, from: manage_commission }
+      stage_catalog:
+        type: "list[object { stage: string, kind: stage_kind }] (ordered) — default: queued, sketch, lineart, coloring, rendering, final_review, revision, completed (active); on_hold (on_hold); delivered (finished); cancelled (cancelled)"
+        from: environment_config
+    output_guaranteed:
+      progress_commission_lookup:
+        type: "id — the commission whose stage is being changed or read"
+        consumed_by: [manage_commission]
+      progress_state:
+        type: "object { commission_id: id, current_stage: string, stage_kind: stage_kind, updated_at: timestamp|null } — updated_at is null when no stage has been set yet; current_stage and stage_kind are then the first stage of the catalog"
+        consumed_by: none
+      progress_board:
+        type: "list[progress_entry_record] — one entry per commission that has had a stage set"
+        consumed_by: [view_income_report, send_reminder]
+      progress_history:
+        type: "list[object { from_stage: string|null, to_stage: string, note: string|null, changed_at: timestamp }] — oldest first; from_stage is null on the first change (no stage had been set before); a commission with no stage set has an empty history"
+        consumed_by: none
+      stage_options:
+        type: "list[object { stage: string, kind: stage_kind }] (ordered) — stage_catalog, for the UI"
+        consumed_by: none
+
+  record_payment:
+    tag: "[Clause B]"
+    workflow_type: nghiệp_vụ
+    status: đã_hoàn_thiện
+    description: "Records money received or refunded for a commission, any number of times and in any split. A payment's currency must equal the commission's agreed currency. Entries are voided, never deleted or edited. A payment is refused if, with it, received_net or outstanding of its commission would fall outside the integer range of clause_a_common."
+    input_expected:
+      db_connection: { type: resource, from: scaffold_backend }
+      commission_id: { type: id, from: end_user }
+      payment_input:
+        type: "object { direction: 'incoming' | 'refund', kind: 'deposit' | 'milestone' | 'final' | 'tip' | 'other', amount: money (amount_minor > 0), method: string (free label, e.g. bank_transfer, momo, paypal, cash), paid_at: timestamp, note: string|null }"
+        from: end_user
+      payment_id: { type: id, from: end_user }
+      commission_summary: { type: commission_summary_record, from: manage_commission }
+    output_guaranteed:
+      payment_commission_lookup:
+        type: "id — the commission a payment is recorded for or a balance is asked for"
+        consumed_by: [manage_commission]
+      payment:
+        type: payment_record
+        consumed_by: none
+      payment_list:
+        type: "list[payment_record] — one commission's payments, voided ones included, newest first by the instant of paid_at"
+        consumed_by: none
+      commission_balance:
+        type: "object { commission_id: id, agreed: money, received_net: money, outstanding: money } — received_net = incoming − refund over every non-voided payment, tips included; outstanding = agreed − (incoming − refund) over non-voided payments whose kind is not 'tip' (a tip, and the refund of a tip, never changes what is still owed)"
+        consumed_by: none
+      payment_ledger:
+        type: "list[ledger_entry_record] — every non-voided payment, oldest first by the instant of paid_at, then by payment_id"
+        consumed_by: [view_income_report]
+
+  view_income_report:
+    tag: "[Clause B]"
+    workflow_type: nghiệp_vụ
+    status: đã_hoàn_thiện
+    description: "Read-only income summary for a period: net received per month and per currency, refunds, and the outstanding balance of every commission that is not cancelled. No currency conversion in V1. Stores nothing. A payment belongs to the calendar date written in its paid_at, in its own UTC offset (no conversion to another time zone); its month is that date's YYYY-MM. The period runs from period_from to period_to, both days included; period_from after period_to is invalid. A commission is owing unless its stage is of kind 'cancelled' (a commission with no stage set counts as the first stage of the catalog)."
+    input_expected:
+      period_from: { type: date, from: end_user }
+      period_to: { type: date, from: end_user }
+      commissions: { type: "list[commission_summary_record]", from: manage_commission }
+      progress: { type: "list[progress_entry_record]", from: update_progress }
+      payments: { type: "list[ledger_entry_record]", from: record_payment }
+    output_guaranteed:
+      income_report:
+        type: "object { period_from: date, period_to: date, currencies: list[object { currency: currency_code, received_net_minor: integer, refunded_minor: integer, outstanding_minor: integer, by_month: list[object { month: string (YYYY-MM), received_net_minor: integer }] }], generated_at: timestamp } — per currency: received_net_minor = incoming − refund of the payments in the period (tips and payments of cancelled commissions included); refunded_minor = total of the refunds in the period (>= 0); outstanding_minor = sum, sign kept, of record_payment's outstanding over every owing commission in that currency, as of generated_at, whatever the period (an overpaid commission lowers it). currencies: every currency that has a payment in the period or an owing commission, ordered by currency code. by_month: only the months with at least one payment of that currency in the period, oldest first. generated_at: when the report was made"
+        consumed_by: none
+
+  manage_watermark_profile:
+    tag: "[Clause B]"
+    workflow_type: nghiệp_vụ
+    status: đang_triển_khai
+    description: "Create, edit, view and list ownership profiles: the identity a watermark proves, and the embedding strength used by default."
+    input_expected:
+      db_connection: { type: resource, from: scaffold_backend }
+      profile_input:
+        type: "object { display_name: string (pen name, 1..80 characters, not blank), legal_name: string|null, contact: string|null, ownership_statement: string|null, default_strength: watermark_strength }"
+        from: end_user
+      profile_id: { type: id, from: [end_user, apply_watermark, verify_watermark] }
+      strength_presets:
+        type: "list[watermark_strength] — realizes shared_values.watermark_strength_presets"
+        from: environment_config
+    output_guaranteed:
+      watermark_profile:
+        type: watermark_profile_record
+        consumed_by: [apply_watermark, verify_watermark]
+      profile_list:
+        type: "list[watermark_profile_record]"
+        consumed_by: none
+      strength_options:
+        type: "list[watermark_strength] — strength_presets, for the UI"
+        consumed_by: none
+
+  apply_watermark:
+    tag: "[Clause B]"
+    workflow_type: nghiệp_vụ
+    status: đang_chờ_triển_khai
+    description: "Registers an artwork: generates a unique watermark code, has the AI Service embed it, reads it back from the result as a self-check, writes the watermarked copy as a new PNG file, and keeps the registration as ownership evidence. If the self-check fails, nothing is written or registered."
+    input_expected:
+      db_connection: { type: resource, from: scaffold_backend }
+      apply_request:
+        type: "object { source_file_path: file_path, output_file_path: file_path (ends in .png; must not exist yet; differs from source_file_path), profile_id: id, commission_id: id|null, strength: watermark_strength|null (null = the profile's default_strength), title: string|null }"
+        from: end_user
+      artwork_id: { type: id, from: end_user }
+      watermark_code: { type: watermark_code, from: verify_watermark }
+      watermark_profile: { type: watermark_profile_record, from: manage_watermark_profile }
+      commission_summary: { type: commission_summary_record, from: manage_commission }
+      watermarked_image:
+        type: "object { image_png: bytes (PNG, same pixel dimensions as the input, alpha channel kept if present), payload_bits_embedded: integer }"
+        from: embed_watermark
+      readback: { type: extraction_record, from: extract_watermark }
+      image_limits: { type: image_limits_record, from: environment_config }
+      ai_service_base_url:
+        type: "string — http://<loopback_host>:<port>, handed over at launch"
+        from: environment_config
+    output_guaranteed:
+      artwork_profile_lookup:
+        type: "id — apply_request.profile_id"
+        consumed_by: [manage_watermark_profile]
+      artwork_commission_lookup:
+        type: "id — apply_request.commission_id, only when it is not null"
+        consumed_by: [manage_commission]
+      embed_request:
+        type: embed_request_record
+        consumed_by: [embed_watermark]
+      readback_request:
+        type: "extract_request_record — the image_png just returned by embed_watermark"
+        consumed_by: [extract_watermark]
+      registered_artwork:
+        type: registered_artwork_record
+        consumed_by: [verify_watermark]
+      apply_result:
+        type: "object { artwork_id: id, watermark_code: watermark_code, output_file_path: file_path, output_sha256: string, registered_at: timestamp }"
+        consumed_by: none
+      artwork_list:
+        type: "list[registered_artwork_record] — newest first"
+        consumed_by: none
+
+  verify_watermark:
+    tag: "[Clause B]"
+    workflow_type: nghiệp_vụ
+    status: đang_chờ_triển_khai
+    description: "Takes a suspect image, has the AI Service extract any watermark, and matches the code against the artwork registry to produce ownership evidence. A decoded code that is not in the registry is reported as 'unregistered_code', never as proof. Stores nothing."
+    input_expected:
+      suspect_file_path: { type: file_path, from: end_user }
+      extraction: { type: extraction_record, from: extract_watermark }
+      registered_artwork: { type: registered_artwork_record, from: apply_watermark }
+      watermark_profile: { type: watermark_profile_record, from: manage_watermark_profile }
+      image_limits: { type: image_limits_record, from: environment_config }
+      ai_service_base_url: { type: "string — http://<loopback_host>:<port>, handed over at launch", from: environment_config }
+    output_guaranteed:
+      extract_request:
+        type: "extract_request_record — the suspect file as read from disk"
+        consumed_by: [extract_watermark]
+      verify_code_lookup:
+        type: "watermark_code — the code just extracted, only when detected"
+        consumed_by: [apply_watermark]
+      verify_profile_lookup:
+        type: "id — the profile_id of the matched artwork"
+        consumed_by: [manage_watermark_profile]
+      verification_result:
+        type: "object { outcome: 'match' | 'no_watermark' | 'unregistered_code', confidence: number (0..1), watermark_code: watermark_code|null, suspect_sha256: string, checked_at: timestamp, evidence: object { artwork_id: id, title: string|null, registered_at: timestamp, source_sha256: string, output_sha256: string, owner: object { display_name: string, legal_name: string|null, contact: string|null, ownership_statement: string|null } }|null (set only when outcome = 'match') }"
+        consumed_by: none
+
+  backup_data:
+    tag: "[Clause B]"
+    workflow_type: nghiệp_vụ
+    status: đang_chờ_triển_khai
+    description: "Storage-level operation (05-edge-cases.md, Step 5.6): writes a consistent snapshot of the whole database to one archive file, and prepares an archive for restore by checking it and extracting its database into a staging file. Works on the database as a whole through db_connection; never reads or interprets any workflow's records. Only this workflow knows the archive format. An archive is compatible when its app_version is not newer than the running app_version."
+    input_expected:
+      db_connection: { type: resource, from: scaffold_backend }
+      backup_request: { type: backup_request_record, from: [end_user, restore_data] }
+      archive_path: { type: file_path, from: restore_data }
+      app_version:
+        type: "string — semantic version of the running build, handed over at launch"
+        from: environment_config
+    output_guaranteed:
+      backup_archive:
+        type: backup_archive_record
+        consumed_by: [restore_data]
+      restore_staging:
+        type: "object { archive_path: file_path, is_valid: boolean, is_compatible: boolean, app_version: string|null, created_at: timestamp|null, reason: string|null, staged_db_path: file_path|null (set only when is_valid and is_compatible) }"
+        consumed_by: [restore_data]
+
+  send_reminder:
+    tag: "[Clause B]"
+    workflow_type: nghiệp_vụ
+    status: đã_hoàn_thiện
+    description: "Keeps the artist's reminder settings and, each time reminder_ticker asks, decides which reminders have become due. Two independent kinds: (1) a periodic digest of open commissions on a user-chosen cadence; (2) one pre-deadline reminder per commission for each user-chosen lead time, where a deadline means the end of that calendar day in local time. Commissions whose stage kind is 'finished' or 'cancelled' never trigger reminders. A reminder that fell due while the app was closed is produced once at the next check if the deadline has not passed; a missed digest is produced once, not repeatedly (its due_at is the latest missed occurrence; its content is computed at the check). Whether a reminder was already given is remembered per commission, deadline and lead duration, so moving a deadline re-arms that commission's reminders for the new date, while moving it back to a date whose reminders were already given does not give them again. Each due reminder is handed out exactly once for display, then stays pending until the artist acknowledges it. Default settings (returned while never saved, with updated_at null): periodic { enabled: false, every: 1, unit: 'weeks', at_time: '09:00', weekday: 1 }, deadline { enabled: false, lead_times: [{ amount: 1, unit: 'days' }] }. Local time is the time zone of the machine. Periodic digest: the cadence starts when the settings are saved — the first occurrence is the first moment at or after saving that matches at_time (and weekday, for weeks), then one every 'every' days or weeks; saving the settings again restarts it. A commission is open unless its stage kind is 'finished' or 'cancelled' (on hold counts as open; no stage set counts as the first stage of the catalog). digest.open_count counts open commissions; digest.upcoming lists every open commission that has a deadline, overdue ones included, earliest deadline first. No digest is produced when no commission is open. Deadline reminders: a commission's deadline ends at 00:00 local time of the day after the deadline date; the reminder for a lead time is due at that end minus the lead (1 day = 24 hours), and due_at is that moment. A reminder whose moment had already passed when it became possible (commission created, deadline set or changed, reminders enabled, lead time added) is produced at the next check, provided the deadline has not ended."
+    input_expected:
+      db_connection: { type: resource, from: scaffold_backend }
+      reminder_settings_input: { type: reminder_settings_record, from: end_user }
+      notification_id: { type: id, from: end_user }
+      commissions: { type: "list[commission_summary_record]", from: manage_commission }
+      progress: { type: "list[progress_entry_record]", from: update_progress }
+    output_guaranteed:
+      reminder_settings:
+        type: "object { settings: reminder_settings_record, updated_at: timestamp|null (null = defaults, never saved) }"
+        consumed_by: none
+      new_notifications:
+        type: "list[reminder_notification_record] — reminders that became due since the last check, oldest first; empty when none"
+        consumed_by: none
+      pending_notifications:
+        type: "list[reminder_notification_record] — every handed-out, unacknowledged reminder, oldest first"
+        consumed_by: none
+      notification_ack:
+        type: "object { notification_id: id, acknowledged_at: timestamp }"
+        consumed_by: none
+
+# -----------------------------------------------------------------------------
+# CLAUSE C — AI SERVICE (watermark engine)
+# -----------------------------------------------------------------------------
+# Lock condition: stays OPEN until the robustness test on real sample artworks
+# has been run and its EVIDENCE reviewed (decode rate after screenshot,
+# re-save and social-media recompression, plus a visual invisibility check).
+clause_c_ai_service:
+  lock_status: open
+
+  init_watermark_engine:
+    tag: "[Clause C]"
+    workflow_type: nền_tảng
+    status: đang_chờ_triển_khai
+    description: "Loads the watermark engine (weights or algorithm state) once, before any business workflow of the layer is wired."
+    input_expected:
+      payload_bits:
+        type: "integer — realizes shared_values.watermark_payload_bits"
+        from: environment_config
+      strength_presets:
+        type: "list[watermark_strength] — realizes shared_values.watermark_strength_presets"
+        from: environment_config
+    output_guaranteed:
+      watermark_engine:
+        type: "resource — loaded engine that embeds and extracts exactly payload_bits bits, at any of strength_presets"
+        consumed_by: [embed_watermark, extract_watermark]
+
+  embed_watermark:
+    tag: "[Clause C]"
+    workflow_type: nghiệp_vụ
+    status: đang_chờ_triển_khai
+    description: "Embeds a fixed-length bit payload invisibly into an image. Stateless: stores nothing."
+    input_expected:
+      embed_input: { type: embed_request_record, from: apply_watermark }
+      watermark_engine: { type: resource, from: init_watermark_engine }
+      image_limits: { type: image_limits_record, from: environment_config }
+    output_guaranteed:
+      watermarked_image:
+        type: "object { image_png: bytes (PNG, same pixel dimensions as the input, alpha channel kept if present), payload_bits_embedded: integer }"
+        consumed_by: [apply_watermark]
+
+  extract_watermark:
+    tag: "[Clause C]"
+    workflow_type: nghiệp_vụ
+    status: đang_chờ_triển_khai
+    description: "Tries to read a watermark payload from an image of any size. Stateless: stores nothing and knows nothing about the registry."
+    input_expected:
+      extract_input: { type: extract_request_record, from: [apply_watermark, verify_watermark] }
+      watermark_engine: { type: resource, from: init_watermark_engine }
+      image_limits: { type: image_limits_record, from: environment_config }
+    output_guaranteed:
+      extraction:
+        type: extraction_record
+        consumed_by: [apply_watermark, verify_watermark]
+
+# -----------------------------------------------------------------------------
+# CLAUSE D — DESKTOP (Electron main process)
+# -----------------------------------------------------------------------------
+# No foundation workflow: nothing in this layer needs preparing. Starting,
+# awaiting and stopping the Python layers is the desktop Main's job.
+clause_d_desktop:
+  lock_status: open
+
+  restore_data:
+    tag: "[Clause D]"
+    workflow_type: nghiệp_vụ
+    status: đang_chờ_triển_khai
+    description: "Replaces the live database with a backup archive. Order: ask backup_data to prepare the archive (stop here if it is invalid or incompatible); ask backup_data for a pre-restore safety archive (stop here if it fails); stop the backend through backend_controller; move the live database file aside; move the staged file into db_file_path; start the backend and wait for it to be ready. If any step after the stop fails, put the moved-aside file back and start the backend again, so the artist never ends up without a working database. Operates on whole files only (05-edge-cases.md, Step 5.6)."
+    input_expected:
+      archive_path: { type: file_path, from: end_user }
+      restore_staging:
+        type: "object { archive_path: file_path, is_valid: boolean, is_compatible: boolean, app_version: string|null, created_at: timestamp|null, reason: string|null, staged_db_path: file_path|null }"
+        from: backup_data
+      safety_backup: { type: backup_archive_record, from: backup_data }
+      backend_controller:
+        type: "resource — lifecycle tool handed over by the desktop Main: stop the backend, start it on the same port, wait until it signals READY"
+        from: main
+      db_file_path: { type: file_path, from: environment_config }
+      backend_base_url:
+        type: "string — http://<loopback_host>:<port>, chosen by the desktop Main"
+        from: environment_config
+    output_guaranteed:
+      restore_preparation_request:
+        type: "file_path — the archive to prepare"
+        consumed_by: [backup_data]
+      safety_backup_request:
+        type: "backup_request_record — purpose = 'pre_restore'"
+        consumed_by: [backup_data]
+      restore_result:
+        type: "object { restored_from: file_path, archive_app_version: string, safety_backup_path: file_path, completed_at: timestamp }"
+        consumed_by: none
