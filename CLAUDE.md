@@ -31,6 +31,7 @@ Nếu bạn là coding agent:
 - Nếu hợp đồng đang ở `contract_state: draft` (hoặc còn nhãn DRAFT), **không viết code**. Dừng lại và báo người vận hành.
 - Chỉ làm đúng phạm vi của plan phiên này (`.plan/<layer>_plan.md`) (xem `08-operating-protocol.md`, Phần 6).
 - Viết checkpoint đúng khuôn `07-checkpoint-protocol.md`; không tự chạy công cụ gom checkpoint.
+- **Git:** không chạy `git commit`, `git push`, `git reset`, `git checkout` hay lệnh nào đổi lịch sử hoặc trạng thái của kho. Được đọc (`git status`, `git diff`, `git log`). Project Owner tạo commit sau khi Orchestrator audit phiên đạt.
 
 ## 3. Dự án
 
@@ -193,6 +194,7 @@ UI/
 ## 6. Hiện trạng
 
 - Hợp đồng đã được **duyệt** (`contract_state: approved`): Data Schema `8.0.0`, API Contract `4.0.0`. Bản 7.0.0 (2026-09-28, CT-2) thu hẹp `client_input`: `display_name`, `channel`, `value` đều **not blank** (`formats.not_blank`). Bản 8.0.0 (2026-09-28, CT-3) làm tương tự cho `commission_input.title` và bút danh `profile_input.display_name`. `manage_client`, `manage_commission`, `manage_watermark_profile` trở về `đang_triển_khai` cho tới khi backend áp dụng (BE-5, BE-6, phiên 18). Bản 6.2.0 (2026-09-27) thêm luật: mỗi lúc chỉ một tiến trình backend được dùng tệp dữ liệu (phát hiện ở phiên desktop 13 và 14; backend hiện thực ở phiên 15). Bản 6.0.0 (2026-09-26) thêm `shared_values.ui_origin` và hai luật về renderer và CORS; bản 6.0.1 làm rõ luật CORS với origin khác (audit phiên B0); bản 6.1.0 thêm `shared_values.renderer_bridge` (tên đối tượng preload phơi cho renderer), và API Contract 4.0.0 cho lời gọi `ipc` đi qua hàm `invoke` của đối tượng đó. Phần của backend đã xong ở phiên B0. Mọi Điều khoản vẫn **mở** (`lock_status: open`). Riêng `clause_c_ai_service` không được khóa trước khi có EVIDENCE về độ bền của watermark.
+- **Quản lý phiên bản (từ 2026-09-28):** git ở gốc dự án, đẩy lên `https://github.com/Super-Muscle-Coder/CommissionTracker` (public). Quy ước: mỗi phiên coding agent đã audit đạt là một commit do Project Owner tạo. Orchestrator kiểm bằng cách clone kho. Kho có `.gitattributes` (`* text=auto`) và `.gitignore` gốc.
 - Giai đoạn 3 đã xong: `.design/03_classification.md`.
 - Đã xong: phiên backend #1 → #9 (audit của Orchestrator xác nhận). Tám workflow đã xây xong: `scaffold_backend`, `manage_client`, `manage_commission`, `update_progress`, `record_payment`, `view_income_report`, `manage_watermark_profile`, `send_reminder`. Từ Data Schema 7.0.0 và 8.0.0, ba trong số đó (`manage_client`, `manage_commission`, `manage_watermark_profile`) tạm ở `đang_triển_khai`; năm workflow còn lại `đã_hoàn_thiện`. Phiên #9 (B0) thêm CORS cho renderer ở Main backend. Toàn bộ 375 kiểm thử đạt; không còn `UNSOLVED_PROBLEMS` ở khối checkpoint nào.
 - Backend còn `backup_data` (thuộc V1) và `apply_watermark`, `verify_watermark` (để dành V4 trở đi).

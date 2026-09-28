@@ -101,6 +101,8 @@ Mục Publisher trong danh sách gỡ cài đặt đang trống. **Project Owner
 
 ### DSK-10 — `startup-logs/` chưa có trong `.gitignore` (thấp; Q14-2 của audit phiên 14)
 
+> **Chuyển thành việc của Project Owner, 2026-09-28:** thêm `Desktop/startup-logs/` vào `.gitignore` gốc, cùng lúc với phần còn thiếu của ENV-6. Hiện `*.log` đã bị bỏ qua nhờ `Desktop/.gitignore`, nhưng `*-summary.json` thì chưa.
+
 Phiên desktop sau thêm vào.
 
 ### DSK-9 — Đã chấp nhận ở V1, không làm ở phiên 14
@@ -261,6 +263,8 @@ Chi tiết: audit phiên 16 §6.
 
 ### UI-7 — Chưa có quy ước xuống dòng (thấp; Q17-1)
 
+> **ĐÃ ĐÓNG 2026-09-28** bằng ENV-6: `.gitattributes` gốc có `* text=auto`, nên git chuẩn hóa xuống dòng khi commit.
+
 > **Đính chính 2026-09-28 (Orchestrator):** rà lại thì dự án **chưa có git** (xem ENV-6). Lý do "commit sẽ hiện cả tệp là đã sửa" vì vậy chưa áp dụng. Mục này được giải quyết cùng ENV-6, bằng tệp `.gitattributes` đặt ngay từ commit đầu tiên.
 
 Hiện `UI/` có 11 tệp CRLF và 72 tệp LF. Phiên 17 đổi `tokens.css` từ CRLF sang LF, nên lần commit tới sẽ hiện toàn bộ tệp là đã sửa. Đề xuất cho một phiên dọn dẹp:
@@ -278,7 +282,7 @@ Không ảnh hưởng hành vi.
   - Đo với cả hai antivirus bật, rồi lần lượt tạm dừng AVG, rồi tạm dừng ReasonLabs.
   - Mục đích: xác nhận lại H1 bằng log được lưu, và biết bên nào tạo bản sao (Q14-1).
 - **ENV-4** (Project Owner): chạy tay trên máy bạn của Project Owner, là tiêu chí 1 của chặng C. Ghi lại thời gian chờ ở lần mở đầu.
-- **ENV-6** (Project Owner quyết; phát hiện của Orchestrator, 2026-09-28): **dự án chưa có quản lý phiên bản.** Không có `.git` ở `E:\CommissionTracker` hay ở `E:\`. Mọi phiên coding agent sửa tệp trực tiếp, không có mốc để quay lại hay so sánh. Các tệp `.gitignore` trong `UI/` và `Desktop/` hiện chưa có tác dụng gì.
+- **ENV-6** — **ĐÃ LÀM 2026-09-28.** Project Owner khởi tạo git và đẩy lên GitHub: `https://github.com/Super-Muscle-Coder/CommissionTracker` (public). Hai commit đầu: `9f5218a` (`.gitattributes` với `* text=auto`, `.gitignore` mẫu Visual Studio), `2c10b9a` (toàn bộ dự án). Orchestrator đã clone và kiểm: 298 tệp; hợp đồng 8.0.0; mã `UI/` và `Backend/` khớp đúng từng tệp với bản trên đĩa; không có thư mục build, môi trường ảo hay tệp lớn; không có thông tin bí mật. **Còn thiếu ba dòng trong `.gitignore` gốc**, vì `Backend/env/`, `Backend/.pytest_cache/` và `Desktop/startup-logs/*.json` hiện **không** bị bỏ qua: một lệnh `git add .` sau này sẽ đưa cả môi trường ảo Python lên kho. Cách làm: Project Owner thêm ba dòng `Backend/env/`, `.pytest_cache/`, `Desktop/startup-logs/` vào `.gitignore` gốc rồi commit. *Nội dung phát hiện ban đầu:* **dự án chưa có quản lý phiên bản.** Không có `.git` ở `E:\CommissionTracker` hay ở `E:\`. Mọi phiên coding agent sửa tệp trực tiếp, không có mốc để quay lại hay so sánh. Các tệp `.gitignore` trong `UI/` và `Desktop/` hiện chưa có tác dụng gì.
   - **Đề xuất:** khởi tạo git ở gốc dự án, kèm hai tệp đặt ngay từ đầu:
     - `.gitignore` chung (thư mục build, `node_modules`, môi trường ảo, cache, `startup-logs/`, kết quả kiểm thử);
     - `.gitattributes` (`* text=auto`), để giải quyết UI-7.
