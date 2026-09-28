@@ -143,7 +143,7 @@ Cả tám tệp `workflows/*/configs.yaml` cùng `configs/backend.yaml` được
 
 **Phiên 14 (vá và chẩn đoán) — xong 2026-09-27** (`.reviews/audits/desktop/audit_desktop_session14.md`). Đã đóng DSK-1, 4, 5, 6, 7; đóng phần chẩn đoán DSK-3 (antivirus giữ exe lạ; hướng xử lý là ký số ở chặng G). DSK-2 thành việc liên layer: CT-1 (sửa hợp đồng, chờ duyệt) + BE-3 (khóa độc quyền `data.db`). **ENV-5 xong 2026-09-28:** lần mở đầu của exe mới bị giữ 75 s, không thấy bản sao, bản thật chạy đúng với khóa; DSK-2 đóng (`.reviews/runbooks/env4_env5_runbook.md`). **Chặng C chỉ còn chờ ENV-4 (máy khác).**
 
-**Data Schema 6.2.0 (2026-09-27):** thêm luật một backend cho một tệp dữ liệu (CT-1). **Phiên 15 (backend) — xong 2026-09-28** (`.reviews/audits/backend/audit_backend_session15.md`): BE-3 (luật mới), BE-1 và BE-2 đều đã đóng. Backend có 381 kiểm thử. **Phiên 16 (D1) — xong 2026-09-28**; audit (`.reviews/audits/ui/audit_ui_session16.md`) thấy e2e không tất định (UI-4) và luật trống chỉ có ở giao diện (UI-5 → CT-2). **Data Schema 7.0.0 (2026-09-28):** CT-2 đã duyệt và ghi. **Phiên 17 (vá D1) — xong 2026-09-28**, audit đạt (`.reviews/audits/ui/audit_ui_session17.md`; e2e 6/6 trên Linux). Project Owner chạy tay ba kịch bản xong ngày 2026-09-28: **ba trang D1 `hoàn_tất`, D1 xong về phía giao diện.** **Data Schema 8.0.0 (2026-09-28):** CT-3. **Việc tiếp theo: phiên 18 (backend, BE-5 và BE-6)**, plan phát hành 2026-09-28; rồi D2. Ở I1 của D2, tiêu đề đơn hàng áp dụng luật not blank (CT-3).
+**Data Schema 6.2.0 (2026-09-27):** thêm luật một backend cho một tệp dữ liệu (CT-1). **Phiên 15 (backend) — xong 2026-09-28** (`.reviews/audits/backend/audit_backend_session15.md`): BE-3 (luật mới), BE-1 và BE-2 đều đã đóng. Backend có 381 kiểm thử. **Phiên 16 (D1) — xong 2026-09-28**; audit (`.reviews/audits/ui/audit_ui_session16.md`) thấy e2e không tất định (UI-4) và luật trống chỉ có ở giao diện (UI-5 → CT-2). **Data Schema 7.0.0 (2026-09-28):** CT-2 đã duyệt và ghi. **Phiên 17 (vá D1) — xong 2026-09-28**, audit đạt (`.reviews/audits/ui/audit_ui_session17.md`; e2e 6/6 trên Linux). Project Owner chạy tay ba kịch bản xong ngày 2026-09-28: **ba trang D1 `hoàn_tất`, D1 xong về phía giao diện.** **Data Schema 8.0.0 (2026-09-28):** CT-3. **Phiên 18 (backend, BE-5 và BE-6) — xong 2026-09-28**, audit đạt (`.reviews/audits/backend/audit_backend_session18.md`; 445/445 chạy lại hai lần). Backend có 445 kiểm thử. Đề xuất đưa `manage_client`, `manage_commission`, `manage_watermark_profile` về `đã_hoàn_thiện` (Data Schema 8.0.1) chờ Project Owner duyệt. **Việc tiếp theo: D2.** Ở I1 của D2, tiêu đề đơn hàng áp dụng luật not blank (CT-3), và văn bản tùy chọn để trống thì gửi `null`; plan D2 vá thêm UI-8.
 
 **Plan phiên 13 (2026-09-27):** đã hoàn tất; đã được thay bằng plan phiên 14. Tóm tắt các quyết định:
 - chỉ đo gói nhúng của python.org, bản 3.13.12; chỉ xét biến thể khác nếu gói này không đạt;
@@ -168,7 +168,7 @@ Phần lớn nhất của V1. Chia thành nhiều phiên, mỗi phiên một nh�
 
 | Phiên | Màn hình | Dựa trên workflow |
 |---|---|---|
-| D1 | Khách hàng: danh sách, thêm, sửa, lưu trữ — **phiên 16** xong 2026-09-28 (`client_list`, `client_detail`, `client_form`; kèm UI-1..3 và token giao diện tối); **phiên 17** vá sau audit (UI-4, CT-2 phía giao diện, tương phản 3:1, hàng nút và focus của form), plan phát hành 2026-09-28. Phần backend của CT-2 (BE-5) làm ở một phiên backend riêng | `manage_client` |
+| D1 | Khách hàng: danh sách, thêm, sửa, lưu trữ — **phiên 16** xong 2026-09-28 (`client_list`, `client_detail`, `client_form`; kèm UI-1..3 và token giao diện tối); **phiên 17** vá sau audit (UI-4, CT-2 phía giao diện, tương phản 3:1, hàng nút và focus của form), xong 2026-09-28. Phần backend của CT-2 (BE-5) xong ở phiên 18 | `manage_client` |
 | D2 | Đơn hàng: danh sách, thêm, sửa, xem chi tiết | `manage_commission` |
 | D3 | Tiến độ: đổi giai đoạn, xem lịch sử, bảng tiến độ | `update_progress` |
 | D4 | Thanh toán: ghi khoản, hủy khoản, xem số dư | `record_payment` |
@@ -212,5 +212,5 @@ Workflow này thao tác trên cả tệp cơ sở dữ liệu qua `db_connection
 Ba việc nhỏ, gộp vào phiên nào cũng được:
 
 1. **Ba NOTE còn lại trong checkpoint sẽ hết hạn 2026-10-08** (`CLAUDE.md` mục 5: ngưỡng 14 ngày kể từ `written_at`, cả ba ghi ngày 2026-09-24). Quan trọng nhất là NOTE ở Main backend về stdin phải là pipe — nó là thông điệp dành riêng cho chặng B. Lộ trình này đã chép lại nội dung đó nên kiến thức không mất, nhưng khi chặng B xong thì NOTE ấy nên được chuyển thành một mục EXPERIENCES.
-2. **`.plan/backend_plan.md` hiện giữ plan phiên 18 (BE-5).** Mỗi phiên backend ghi đè tệp này.
+2. **`.plan/backend_plan.md` hiện giữ plan phiên 18 (BE-5, BE-6), đã hoàn tất.** Mỗi phiên backend ghi đè tệp này.
 3. **`.reviews/` đã được Project Owner sắp lại (2026-09-26):** `audits/<layer>/`, `prompts/<layer>/`, `session_reports/`. Xong.

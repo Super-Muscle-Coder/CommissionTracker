@@ -390,3 +390,93 @@ def test_programming_error_is_not_reported_as_storage_error(wired, monkeypatch):
     monkeypatch.setattr(CommissionRepository, "fetch_all_list_items", broken)
     with pytest.raises(KeyError):
         http.get("/commissions")
+
+
+# --- not blank (Data Schema 8.0.0, clause_a_common.formats.not_blank) ---------
+# Empty, or only whitespace in the sense of str.isspace: ASCII (space, tab,
+# newline) and Unicode (U+00A0 no-break space, U+3000 ideographic space).
+
+BLANKS = ["", "   ", "\t\n", " ", "　"]
+BLANK_IDS = ["empty", "spaces", "tab_newline", "nbsp", "ideographic_space"]
+TITLE_LOC = ["commission_input", "title"]
+
+
+def assert_rejected_at(r, loc):
+    assert_error(r, 400, "ERR_VALIDATION")
+    assert [e["loc"] for e in r.json()["details"]["errors"]] == [loc]
+
+
+@pytest.mark.parametrize("blank", BLANKS, ids=BLANK_IDS)
+def test_create_rejects_blank_title_and_writes_nothing(wired, blank):
+    http, *_ = wired
+    cid = new_client(http)
+    create(http, cid)
+    before = http.get("/commissions").json()
+    r = http.post("/commissions", json={"commission_input": commission_input(cid, title=blank)})
+    assert_rejected_at(r, TITLE_LOC)
+    assert http.get("/commissions").json() == before
+
+
+@pytest.mark.parametrize("blank", BLANKS, ids=BLANK_IDS)
+def test_edit_rejects_blank_title_and_writes_nothing(wired, blank):
+    http, *_ = wired
+    cid = new_client(http)
+    created = create(http, cid)
+    r = http.put(f"/commissions/{created['commission_id']}",
+                 json={"commission_input": commission_input(cid, title=blank)})
+    assert_rejected_at(r, TITLE_LOC)
+    assert http.get(f"/commissions/{created['commission_id']}").json() == created
+
+
+def test_padded_title_is_accepted_and_stored_verbatim(wired):
+    http, *_ = wired
+    cid = new_client(http)
+    created = create(http, cid, title="  Chân dung  ")
+    assert created["title"] == "  Chân dung  "
+    assert http.get(f"/commissions/{created['commission_id']}").json() == created
+
+    r = http.put(f"/commissions/{created['commission_id']}",
+                 json={"commission_input": commission_input(cid, title="　Bán thân ")})
+    assert r.status_code == 200, r.text
+    edited = r.json()
+    assert edited["title"] == "　Bán thân "
+    assert http.get(f"/commissions/{created['commission_id']}").json() == edited
+    assert [i["title"] for i in http.get("/commissions").json()] == ["　Bán thân "]
+
+
+def test_title_at_the_length_limit_with_vietnamese_marks_is_accepted(wired):
+    http, *_ = wired
+    cid = new_client(http)
+    created = create(http, cid, title="Ệ" * 200)
+    assert created["title"] == "Ệ" * 200
+    r = http.put(f"/commissions/{created['commission_id']}",
+                 json={"commission_input": commission_input(cid, title="Ánh" * 66 + "ạ" * 2)})
+    assert r.status_code == 200, r.text
+    assert r.json()["title"] == "Ánh" * 66 + "ạ" * 2
+
+
+def test_blank_optional_texts_are_not_subject_to_the_rule(wired):
+    http, *_ = wired
+    cid = new_client(http)
+    created = create(http, cid, description="   ", commission_type="\t")
+    assert created["description"] == "   " and created["commission_type"] == "\t"
+    read = http.get(f"/commissions/{created['commission_id']}").json()
+    assert read["description"] == "   " and read["commission_type"] == "\t"
+
+
+def test_length_counts_the_title_as_given_including_padding(wired):
+    # 200 characters plus one space on each side is 202 characters: refused,
+    # because the contract counts the length of the value as given (the UI
+    # strips padding before sending, so the artist never meets this case).
+    http, *_ = wired
+    cid = new_client(http)
+    padded = " " + "Ệ" * 200 + " "
+    before = http.get("/commissions").json()
+    assert_rejected_at(http.post("/commissions", json={"commission_input": commission_input(cid, title=padded)}),
+                       TITLE_LOC)
+    assert http.get("/commissions").json() == before
+    created = create(http, cid)
+    r = http.put(f"/commissions/{created['commission_id']}",
+                 json={"commission_input": commission_input(cid, title=padded)})
+    assert_rejected_at(r, TITLE_LOC)
+    assert http.get(f"/commissions/{created['commission_id']}").json() == created

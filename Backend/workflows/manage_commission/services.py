@@ -2,8 +2,8 @@
 # workflow: manage_commission
 # clause: clause_b_backend
 # component: services
-# last_updated_by: coding-agent@2026-09-25#1
-# last_updated_at: 2026-09-25T08:40:00+07:00
+# last_updated_by: coding-agent@2026-09-28#3
+# last_updated_at: 2026-09-28T21:45:00+07:00
 #
 # EXPERIENCES:
 #   - id: manage_commission-EXP-001
@@ -36,10 +36,13 @@
 #       label 500 -> StorageIOError của manage_commission (reason có tiền tố
 #       "manage_client: "), lỗi khác nổi lên nguyên vẹn. Kết quả được chuyển
 #       thành ClientSummary trong entities.py của chính workflow này.
-#   - id: manage_commission-EXP-005
+#   - id: manage_commission-EXP-006
 #     content: >
-#       Kiểm tra định dạng ở Routers: thân {"commission_input": {...}} có đủ 7
-#       khóa, strict, extra=forbid ở mọi cấp (kể cả agreed_price). client_id
+#       Kiểm tra định dạng ở Routers (Data Schema 8.0.0, commission_input): thân
+#       {"commission_input": {...}} có đủ 7 khóa, strict, extra=forbid ở mọi
+#       cấp (kể cả agreed_price). title 1..200 ký tự và not blank (xem
+#       manage_commission-EXP-007); description, commission_type là
+#       string|null, không có luật not blank. client_id
 #       phải là UUID v4 chữ thường (400 ở create/edit). currency phải nằm trong
 #       supported_currencies: danh sách lấy từ service.currency_options() và
 #       truyền vào Pydantic qua context lúc kiểm tra, sai -> 400 (ràng buộc
@@ -48,8 +51,33 @@
 #       (_MAX_BOUNDARY_INTEGER, theo luật số nguyên của clause_a_common, Data
 #       Schema 2.0.0); 2^53 -> 400. commission_id sai định dạng: GET và
 #       get_commission_summary (không khai báo 400) -> 404; PUT -> 400.
-#       list_currencies chỉ trả Configs, không có nhãn 500.
-#     derived_from: manage_commission-EXP-004
+#       list_currencies chỉ trả Configs, không có nhãn 500. PUT kiểm
+#       commission_id trước thân yêu cầu.
+#     derived_from: manage_commission-EXP-005
+#   - id: manage_commission-EXP-007
+#     content: >
+#       Luật not blank (clause_a_common.formats.not_blank; Data Schema 8.0.0,
+#       CT-3 / BE-6) cho commission_input.title là ràng buộc của kiểu, nên nằm
+#       ở Routers: hàm _not_blank trong routers.py, gắn bằng AfterValidator sau
+#       StringConstraints(1..200). Khoảng trắng là theo str.isspace (dùng
+#       value.strip() không đối số). Luật chỉ kiểm, không đổi giá trị: tiêu đề
+#       hợp lệ được lưu và trả lại nguyên văn (" Chân dung " vẫn giữ hai dấu
+#       cách), vì hợp đồng ghi "It is a check only". Độ dài đếm trên giá trị
+#       gốc: 200 ký tự cộng một dấu cách mỗi đầu bị 400 (Project Owner xác
+#       nhận cách đọc này 2026-09-28; giao diện bỏ khoảng trắng trước khi gửi).
+#       Vi phạm -> 400 ERR_VALIDATION "Invalid commission_input.",
+#       details.errors đúng một mục loc [commission_input, title], msg "Value
+#       error, must not be blank" (chuỗi rỗng: "at least 1 character", cùng
+#       loc). Dữ liệu cũ không bị chuyển đổi. Hàm _not_blank là bản riêng của
+#       workflow này, giống hệt bản của manage_client và
+#       manage_watermark_profile (quyết định của Project Owner 2026-09-28:
+#       không tạo Backend/shared/, không import chéo); sửa định nghĩa thì sửa
+#       cả ba. Giới hạn đã biết, không vá ở V1: (1) chỉ Python coi
+#       U+001C..U+001F và U+0085 là khoảng trắng, chỉ JavaScript (trim) coi
+#       U+FEFF là khoảng trắng (đo trên Python 3.13.12 và Node 24.14.1); backend
+#       là bên quyết định, giao diện hiện thông báo 400 chung. (2) Ký tự vô
+#       hình không phải khoảng trắng (ví dụ U+200B) vẫn qua luật; hợp đồng
+#       không cấm.
 #
 # UNSOLVED_PROBLEMS: []
 #
@@ -120,10 +148,69 @@
 #     how: >
 #       cd Backend; env\Scripts\python.exe -m pytest -q workflows/manage_client workflows/manage_commission
 #     result: >
-#       93 passed (manage_client và manage_commission cùng chạy).
-#     recorded_at: 2026-09-24T20:10:00+07:00
+#       143 passed (manage_client 70 và manage_commission 73 cùng chạy; gồm cả
+#       các ca not blank của phiên 18).
+#     recorded_at: 2026-09-28T22:05:00+07:00
+#   - claim: >
+#       create_commission và edit_commission trả 400 ERR_VALIDATION, details
+#       loc [commission_input, title], và không ghi gì, khi title là "", "   ",
+#       "\t\n", U+00A0 hoặc U+3000; tiêu đề có khoảng trắng hai đầu được lưu và
+#       trả lại nguyên văn (cả GET và GET /commissions); description "   " và
+#       commission_type "\t" được nhận nguyên văn; tiêu đề có dấu dài đúng 200
+#       ký tự được nhận; 200 ký tự cộng khoảng trắng hai đầu bị 400. Kiểm thử
+#       cắn.
+#     how: >
+#       cd Backend; env\Scripts\python.exe -m pytest -q workflows/manage_commission
+#       (Python 3.13.12, Windows 11; ráp nối bằng Backend.wire_workflows, HTTP
+#       qua TestClient, SQLite thật). "Không ghi gì": sau POST bị từ chối GET
+#       /commissions không đổi; sau PUT bị từ chối GET /commissions/{id} bằng
+#       đúng bản trước. Bằng chứng cắn: tạm đổi "if not value.strip():" trong
+#       routers.py thành "if False and not value.strip():", chạy pytest -q
+#       workflows/manage_commission -k "blank or padding or padded", rồi khôi
+#       phục và chạy lại.
+#     result: >
+#       73 passed (59 ca cũ + 14 ca mới: 5 tạo, 5 sửa, 4 hợp lệ và biên). Khi
+#       tắt phép kiểm: 8 failed, 5 passed; 8 ca hỏng đúng là 4 dạng chỉ khoảng
+#       trắng x tạo/sửa; 2 ca "" vẫn đạt vì min_length. Khôi phục: 13 passed.
+#     recorded_at: 2026-09-28T21:30:00+07:00
+#   - claim: >
+#       Trên tiến trình Backend.py thật, title trống bị từ chối ở POST và PUT,
+#       tiêu đề hợp lệ có khoảng trắng hai đầu được lưu nguyên văn.
+#     how: >
+#       Script tạm của phiên (không nằm trong dự án) khởi động
+#       Backend\env\Scripts\python.exe Backend.py với CT_PORT trống, CT_DB_FILE_PATH
+#       trong %TEMP%\ct_s18_*, chờ READY, gọi bằng urllib, đóng stdin.
+#     result: >
+#       POST title " \t " -> 400 {"code":"ERR_VALIDATION","message":"Invalid
+#       commission_input.","details":{"errors":[{"loc":["commission_input",
+#       "title"],"msg":"Value error, must not be blank"}]}}; POST title
+#       " Chân dung ", description "  " -> 201 nguyên văn; PUT title "　" ->
+#       400 cùng loc; GET /commissions/{id} -> 200 vẫn " Chân dung ",
+#       description "  ". Đóng stdin -> exit code 0.
+#     recorded_at: 2026-09-28T21:33:15+07:00
+#   - claim: >
+#       Luật not blank của phiên 18 không làm hỏng workflow nào khác của
+#       backend, cũng không làm hỏng desktop hay giao diện; không kiểm thử nào
+#       đụng %APPDATA%\CommissionTracker thật.
+#     how: >
+#       Windows 11, Python 3.13.12 (Backend/env), Node 24.14.1. (1) cd Backend;
+#       env\Scripts\python.exe -m pytest -q. (2) cd Desktop; npm test (backend
+#       thật). (3) cd UI; npm run e2e. (4) Băm SHA-256, kích thước, thời điểm
+#       sửa của mọi tệp trong %APPDATA%\CommissionTracker trước việc 1 và sau
+#       (1)-(3).
+#     result: >
+#       (1) 445 passed (381 cũ + 64 mới), không sửa kiểm thử của workflow khác.
+#       (2) 14 passed. (3) 17 passed. (4) giống hệt: data.db 114688 byte,
+#       data.db.lock 0 byte, cùng băm và thời điểm.
+#     recorded_at: 2026-09-28T22:05:00+07:00
 #
-# NOTES: []
+# NOTES:
+#   - content: >
+#       Đề xuất (Giai đoạn 6, Bước 6.6): chuyển status của manage_commission
+#       đang_triển_khai -> đã_hoàn_thiện. BE-6 đã áp dụng commission_input của
+#       Data Schema 8.0.0 (title not blank); bằng chứng ở EVIDENCE; không có
+#       UNSOLVED_PROBLEMS. Coding agent không tự sửa hợp đồng.
+#     written_at: 2026-09-28
 # ===WCA-CHECKPOINT-END===
 """Services of manage_commission: every business decision of the workflow."""
 

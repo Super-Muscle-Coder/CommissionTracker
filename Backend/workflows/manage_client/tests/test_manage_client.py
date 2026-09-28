@@ -416,3 +416,106 @@ def test_programming_error_is_not_reported_as_storage_error(wired, monkeypatch):
     monkeypatch.setattr(repo, "fetch_all_list_items", broken)
     with pytest.raises(KeyError):
         http.get("/clients")
+
+
+# --- not blank (Data Schema 8.0.0, clause_a_common.formats.not_blank) ---------
+# Empty, or only whitespace in the sense of str.isspace: ASCII (space, tab,
+# newline) and Unicode (U+00A0 no-break space, U+3000 ideographic space).
+
+BLANKS = ["", "   ", "\t\n", " ", "　"]
+BLANK_IDS = ["empty", "spaces", "tab_newline", "nbsp", "ideographic_space"]
+NOT_BLANK_FIELDS = ["display_name", "channel", "value"]
+
+
+def with_blank(field, blank):
+    """client_input with one not-blank field set to blank, and the loc that
+    details must point at."""
+    if field == "display_name":
+        return client_input(name=blank), ["client_input", "display_name"]
+    contact = {"channel": "discord", "value": "mai#0001", field: blank}
+    return client_input(contacts=[contact]), ["client_input", "contacts", "0", field]
+
+
+def assert_rejected_at(r, loc):
+    assert_error(r, 400, "ERR_VALIDATION")
+    assert [e["loc"] for e in r.json()["details"]["errors"]] == [loc]
+
+
+@pytest.mark.parametrize("blank", BLANKS, ids=BLANK_IDS)
+@pytest.mark.parametrize("field", NOT_BLANK_FIELDS)
+def test_create_rejects_blank_field_and_writes_nothing(wired, field, blank):
+    http, *_ = wired
+    create(http, name="Existing")
+    before = http.get("/clients").json()
+    body, loc = with_blank(field, blank)
+    assert_rejected_at(http.post("/clients", json={"client_input": body}), loc)
+    assert http.get("/clients").json() == before
+
+
+@pytest.mark.parametrize("blank", BLANKS, ids=BLANK_IDS)
+@pytest.mark.parametrize("field", NOT_BLANK_FIELDS)
+def test_edit_rejects_blank_field_and_writes_nothing(wired, field, blank):
+    http, *_ = wired
+    created = create(http, name="Mai", note="kept")
+    body, loc = with_blank(field, blank)
+    assert_rejected_at(http.put(f"/clients/{created['client_id']}", json={"client_input": body}), loc)
+    assert http.get(f"/clients/{created['client_id']}").json() == created
+
+
+def test_padded_values_are_accepted_and_stored_verbatim(wired):
+    http, *_ = wired
+    padded = {"display_name": "  An  ", "contacts": [{"channel": " email ", "value": "\tan@example.com\n"}],
+              "note": None}
+    r = http.post("/clients", json={"client_input": padded})
+    assert r.status_code == 201, r.text
+    created = r.json()
+    assert created["display_name"] == "  An  " and created["contacts"] == padded["contacts"]
+    assert http.get(f"/clients/{created['client_id']}").json() == created
+
+    repadded = {"display_name": "　Bình ", "contacts": [{"channel": "  zalo", "value": "0901 "}],
+                "note": None}
+    r = http.put(f"/clients/{created['client_id']}", json={"client_input": repadded})
+    assert r.status_code == 200, r.text
+    edited = r.json()
+    assert edited["display_name"] == "　Bình " and edited["contacts"] == repadded["contacts"]
+    assert http.get(f"/clients/{created['client_id']}").json() == edited
+    assert [i["display_name"] for i in http.get("/clients").json()] == ["　Bình "]
+
+
+def test_name_at_the_length_limit_with_vietnamese_marks_is_accepted(wired):
+    http, *_ = wired
+    created = create(http, name="Ệ" * 120)
+    assert created["display_name"] == "Ệ" * 120
+    r = http.put(f"/clients/{created['client_id']}", json={"client_input": client_input(name="Ánh" * 40)})
+    assert r.status_code == 200, r.text
+    assert r.json()["display_name"] == "Ánh" * 40
+
+
+@pytest.mark.parametrize("note", ["   ", ""])
+def test_blank_optional_note_is_not_subject_to_the_rule(wired, note):
+    http, *_ = wired
+    created = create(http, note=note)
+    assert created["note"] == note
+    assert http.get(f"/clients/{created['client_id']}").json()["note"] == note
+
+
+def test_empty_contact_list_is_accepted(wired):
+    http, *_ = wired
+    created = create(http, contacts=[])
+    assert created["contacts"] == []
+
+
+def test_length_counts_the_value_as_given_including_padding(wired):
+    # 120 characters plus one space on each side is 122 characters: refused,
+    # because the contract counts the length of the value as given (the UI
+    # strips padding before sending, so the artist never meets this case).
+    http, *_ = wired
+    padded = " " + "Ệ" * 120 + " "
+    before = http.get("/clients").json()
+    assert_rejected_at(http.post("/clients", json={"client_input": client_input(name=padded)}),
+                       ["client_input", "display_name"])
+    assert http.get("/clients").json() == before
+    created = create(http)
+    assert_rejected_at(http.put(f"/clients/{created['client_id']}", json={"client_input": client_input(name=padded)}),
+                       ["client_input", "display_name"])
+    assert http.get(f"/clients/{created['client_id']}").json() == created

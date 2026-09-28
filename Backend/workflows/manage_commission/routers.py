@@ -26,7 +26,16 @@ from typing import Annotated, Any
 
 from fastapi import APIRouter, Body
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, ConfigDict, Field, StringConstraints, ValidationError, ValidationInfo, field_validator
+from pydantic import (
+    AfterValidator,
+    BaseModel,
+    ConfigDict,
+    Field,
+    StringConstraints,
+    ValidationError,
+    ValidationInfo,
+    field_validator,
+)
 
 from .entities import Commission, CommissionInput, CommissionListItem, CommissionSummary, Money
 from .services import (
@@ -46,6 +55,15 @@ _DATE_PATTERN = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 # clause_a_common.mandatory_rules / types.money: every integer at the boundary
 # lies within -(2^53-1)..2^53-1 (what a JavaScript number holds exactly).
 _MAX_BOUNDARY_INTEGER = 2**53 - 1
+
+
+def _not_blank(value: str) -> str:
+    # clause_a_common.formats.not_blank: at least one character is left once
+    # leading and trailing whitespace (str.isspace) is removed. A check only:
+    # the value is returned unchanged, never stripped.
+    if not value.strip():
+        raise ValueError("must not be blank")
+    return value
 
 
 # --- format models (input_expected.commission_input) ------------------------
@@ -68,7 +86,7 @@ class _MoneyFormat(BaseModel):
 class _CommissionInputFormat(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
     client_id: Annotated[str, StringConstraints(pattern=_ID_REGEX)]
-    title: Annotated[str, StringConstraints(min_length=1, max_length=200)]
+    title: Annotated[str, StringConstraints(min_length=1, max_length=200), AfterValidator(_not_blank)]
     description: str | None
     commission_type: str | None
     agreed_price: _MoneyFormat

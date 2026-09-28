@@ -2,8 +2,8 @@
 # workflow: manage_client
 # clause: clause_b_backend
 # component: services
-# last_updated_by: coding-agent@2026-09-24#3
-# last_updated_at: 2026-09-24T20:26:00+07:00
+# last_updated_by: coding-agent@2026-09-28#3
+# last_updated_at: 2026-09-28T21:45:00+07:00
 #
 # EXPERIENCES:
 #   - id: manage_client-EXP-003
@@ -14,15 +14,6 @@
 #       created_at; khách đã lưu trữ vẫn sửa được (hợp đồng không khai báo 409);
 #       client_list xếp theo display_name (casefold) rồi theo client_id; thời
 #       điểm lưu là giờ địa phương kèm độ lệch múi giờ, chính xác tới giây.
-#   - id: manage_client-EXP-004
-#     content: >
-#       Kiểm tra định dạng ở Routers: cả ba khóa của client_input đều bắt buộc
-#       (note được là null, nhưng khóa phải có mặt, đúng 02-contract.md v2.1:
-#       không có trường tùy chọn), không nhận khóa thừa ở bất kỳ cấp nào, kiểu
-#       chặt (không ép "true" thành true). client_id sai định dạng: ở PUT (có
-#       khai báo 400) trả 400 + ERR_VALIDATION; ở get_client và
-#       get_client_summary (không khai báo 400) trả 404 + ERR_NOT_FOUND. Độ dài
-#       display_name 1..120 tính theo ký tự.
 #   - id: manage_client-EXP-005
 #     content: >
 #       Nhãn 500 + ERR_STORAGE_IO (API Contract 2.0.0) có ở cả sáu điểm giao
@@ -48,6 +39,47 @@
 #       cấu trúc (không đổi số phiên bản, bước 1 giữ nguyên). Nếu phần sau
 #       của ensure_storage lỗi, cả việc đổi tên được ROLLBACK.
 #     derived_from: manage_client-EXP-002
+#   - id: manage_client-EXP-007
+#     content: >
+#       Kiểm tra định dạng ở Routers (Data Schema 8.0.0, client_input): cả ba
+#       khóa của client_input đều bắt buộc (note được là null, nhưng khóa phải
+#       có mặt, đúng 02-contract.md v2.1: không có trường tùy chọn), không nhận
+#       khóa thừa ở bất kỳ cấp nào, kiểu chặt (không ép "true" thành true).
+#       display_name 1..120 ký tự và not blank; contacts[].channel,
+#       contacts[].value 1.. ký tự và not blank (xem manage_client-EXP-008);
+#       note không có ràng buộc nào ngoài string|null. client_id sai định dạng:
+#       ở PUT (có khai báo 400) trả 400 + ERR_VALIDATION, kiểm trước thân yêu
+#       cầu; ở get_client và get_client_summary (không khai báo 400) trả 404 +
+#       ERR_NOT_FOUND.
+#     derived_from: manage_client-EXP-004
+#   - id: manage_client-EXP-008
+#     content: >
+#       Luật not blank (clause_a_common.formats.not_blank, Data Schema 7.0.0,
+#       CT-2 / BE-5) là ràng buộc của kiểu, nên nằm ở Routers: hàm _not_blank
+#       trong routers.py, gắn bằng AfterValidator sau StringConstraints của
+#       display_name, channel, value. Khoảng trắng là theo str.isspace (dùng
+#       value.strip() không đối số). Luật chỉ kiểm, không đổi giá trị: giá trị
+#       hợp lệ được lưu và trả lại nguyên văn ("  An  " vẫn là "  An  "), vì
+#       hợp đồng ghi "It is a check only"; bỏ khoảng trắng là việc của giao
+#       diện nếu nó muốn. Độ dài đếm trên giá trị gốc, nên 120 ký tự cộng một
+#       dấu cách mỗi đầu (122) bị 400; hợp đồng giữ cách đọc này (Project Owner
+#       xác nhận 2026-09-28), giao diện bỏ khoảng trắng trước khi gửi nên họa
+#       sĩ không gặp. Vi phạm -> 400 ERR_VALIDATION "Invalid client_input.",
+#       details.errors đúng một mục, loc chỉ đúng trường (ví dụ [client_input,
+#       contacts, "0", channel]), msg "Value error, must not be blank"; riêng
+#       chuỗi rỗng bị min_length bắt trước ("at least 1 character"), cùng loc.
+#       Dữ liệu cũ không bị chuyển đổi: luật chỉ áp khi ghi. Mỗi workflow tự có
+#       một hàm _not_blank riêng, giống hệt nhau ở manage_client,
+#       manage_commission, manage_watermark_profile (quyết định của Project
+#       Owner 2026-09-28: không tạo Backend/shared/, không import chéo, theo
+#       tiền lệ mỗi workflow tự giữ _ID_PATTERN); sửa định nghĩa thì sửa cả
+#       ba. Giới hạn đã biết, không vá ở V1: (1) str.strip của Python và
+#       String.prototype.trim của JavaScript khác nhau ở vài ký tự hiếm, đo
+#       trên Python 3.13.12 và Node 24.14.1: chỉ Python coi U+001C..U+001F và
+#       U+0085 là khoảng trắng, chỉ JS coi U+FEFF là khoảng trắng. Backend là
+#       bên quyết định; giao diện hiện thông báo 400 chung khi bị từ chối. (2)
+#       Ký tự vô hình không phải khoảng trắng (ví dụ U+200B) vẫn qua luật này;
+#       hợp đồng không cấm.
 #
 # UNSOLVED_PROBLEMS: []
 #
@@ -135,8 +167,69 @@
 #       StorageVersionError, bảng trong DB vẫn là {client, client_contact,
 #       client_schema_version}.
 #     recorded_at: 2026-09-24T20:25:01+07:00
+#   - claim: >
+#       create_client và edit_client trả 400 ERR_VALIDATION, details chỉ đúng
+#       trường, và không ghi gì, khi display_name, contacts[].channel hoặc
+#       contacts[].value là "", "   ", "\t\n", U+00A0 hoặc U+3000; giá trị có
+#       khoảng trắng hai đầu được lưu và trả lại nguyên văn; note toàn khoảng
+#       trắng hay rỗng, contacts rỗng, tên có dấu dài đúng 120 ký tự đều được
+#       nhận; 120 ký tự cộng khoảng trắng hai đầu bị 400. Kiểm thử cắn.
+#     how: >
+#       cd Backend; env\Scripts\python.exe -m pytest -q workflows/manage_client
+#       (Python 3.13.12 của Backend/env, Windows 11; HTTP qua TestClient tới
+#       Routers thật, SQLite thật trong thư mục tạm). "Không ghi gì": sau POST
+#       bị từ chối GET /clients không đổi; sau PUT bị từ chối GET
+#       /clients/{id} bằng đúng bản trước. Bằng chứng cắn: tạm đổi dòng
+#       "if not value.strip():" trong routers.py thành "if False and not
+#       value.strip():", chạy pytest -q workflows/manage_client -k "blank or
+#       padding or padded", rồi khôi phục và chạy lại.
+#     result: >
+#       70 passed (34 ca cũ + 36 ca mới: 15 ca tạo, 15 ca sửa, 6 ca hợp lệ và
+#       biên). Khi tắt phép kiểm: 24 failed, 10 passed; 24 ca hỏng đúng là 4
+#       dạng chỉ khoảng trắng x 3 trường x tạo/sửa; 6 ca "" vẫn đạt vì
+#       min_length bắt trước. Khôi phục: 34 passed (cùng bộ lọc).
+#     recorded_at: 2026-09-28T21:30:00+07:00
+#   - claim: >
+#       Trên tiến trình Backend.py thật, luật not blank chạy đúng qua HTTP và
+#       giá trị hợp lệ được lưu nguyên văn.
+#     how: >
+#       Script tạm của phiên (không nằm trong dự án) khởi động
+#       Backend\env\Scripts\python.exe Backend.py với CT_PORT trống, CT_DB_FILE_PATH
+#       trong %TEMP%\ct_s18_*, chờ READY, gọi bằng urllib, đóng stdin.
+#     result: >
+#       POST display_name "　 " -> 400 {"code":"ERR_VALIDATION","message":
+#       "Invalid client_input.","details":{"errors":[{"loc":["client_input",
+#       "display_name"],"msg":"Value error, must not be blank"}]}}; POST
+#       channel "\t" -> 400 loc ["client_input","contacts","0","channel"]; POST
+#       {"display_name":"  An  ","contacts":[{"channel":" zalo","value":"0901 "}],
+#       "note":"   "} -> 201, GET -> 200 cùng các giá trị nguyên văn; PUT
+#       display_name " " -> 400 loc display_name; GET /clients -> 1 phần tử
+#       "  An  ". Đóng stdin -> exit code 0, dòng đầu stdout b'READY\n'.
+#     recorded_at: 2026-09-28T21:33:15+07:00
+#   - claim: >
+#       Luật not blank của phiên 18 không làm hỏng workflow nào khác của
+#       backend, cũng không làm hỏng desktop hay giao diện; không kiểm thử nào
+#       đụng %APPDATA%\CommissionTracker thật.
+#     how: >
+#       Windows 11, Python 3.13.12 (Backend/env), Node 24.14.1. (1) cd Backend;
+#       env\Scripts\python.exe -m pytest -q. (2) cd Desktop; npm test (backend
+#       thật). (3) cd UI; npm run e2e. (4) Băm SHA-256, kích thước, thời điểm
+#       sửa của mọi tệp trong %APPDATA%\CommissionTracker trước việc 1 và sau
+#       (1)-(3).
+#     result: >
+#       (1) 445 passed (381 cũ + 64 mới), không sửa kiểm thử của workflow khác.
+#       (2) 14 passed. (3) 17 passed. (4) giống hệt: data.db 114688 byte,
+#       data.db.lock 0 byte, cùng băm và thời điểm.
+#     recorded_at: 2026-09-28T22:05:00+07:00
 #
-# NOTES: []
+# NOTES:
+#   - content: >
+#       Đề xuất (Giai đoạn 6, Bước 6.6): chuyển status của manage_client
+#       đang_triển_khai -> đã_hoàn_thiện. BE-5 đã áp dụng client_input của Data
+#       Schema 8.0.0 (not blank cho display_name, contacts[].channel,
+#       contacts[].value); bằng chứng ở EVIDENCE; không có UNSOLVED_PROBLEMS.
+#       Coding agent không tự sửa hợp đồng.
+#     written_at: 2026-09-28
 # ===WCA-CHECKPOINT-END===
 """Services of manage_client: every business decision of the workflow."""
 

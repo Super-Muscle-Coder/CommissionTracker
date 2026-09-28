@@ -2,8 +2,8 @@
 # workflow: manage_watermark_profile
 # clause: clause_b_backend
 # component: services
-# last_updated_by: coding-agent@2026-09-25#1
-# last_updated_at: 2026-09-25T08:40:00+07:00
+# last_updated_by: coding-agent@2026-09-28#3
+# last_updated_at: 2026-09-28T21:45:00+07:00
 #
 # EXPERIENCES:
 #   - id: manage_watermark_profile-EXP-001
@@ -29,17 +29,6 @@
 #       như client_list. Lưu ý: casefold so theo mã ký tự, nên tên bắt đầu bằng
 #       chữ có dấu ("Ánh") đứng sau "z". created_at, updated_at chỉ là cột nội
 #       bộ, không có trong watermark_profile_record.
-#   - id: manage_watermark_profile-EXP-003
-#     content: >
-#       Kiểm tra định dạng ở Routers: đủ năm khóa của profile_input (ba trường
-#       tự do được null nhưng khóa phải có), không khóa thừa ở cả hai cấp, kiểu
-#       strict, display_name 1..80 ký tự (đếm theo ký tự như manage_client),
-#       không ràng buộc thêm cho legal_name, contact, ownership_statement.
-#       default_strength phải thuộc strength_options() của Services (tức là
-#       Configs), sai thì 400 với loc [profile_input, default_strength].
-#       profile_id sai định dạng: PUT trả 400 (có khai báo 400); GET và
-#       get_watermark_profile trả 404. Lối vào in_process trả dict đúng 6 khóa,
-#       lỗi raise InProcessCallError (label, error_body) theo main-EXP-004.
 #   - id: manage_watermark_profile-EXP-004
 #     content: >
 #       Lưu trữ: bảng watermark_profile và manage_watermark_profile_schema_version
@@ -51,6 +40,44 @@
 #       200 khi DB lỗi. Workflow không gọi ai. Main ráp nối ở Order 4, sau
 #       update_progress, và giữ get_watermark_profile trong in_process cho
 #       apply_watermark, verify_watermark.
+#   - id: manage_watermark_profile-EXP-005
+#     content: >
+#       Kiểm tra định dạng ở Routers (Data Schema 8.0.0, profile_input): đủ năm
+#       khóa của profile_input (ba trường tự do được null nhưng khóa phải có),
+#       không khóa thừa ở cả hai cấp, kiểu strict, display_name (bút danh)
+#       1..80 ký tự (đếm theo ký tự như manage_client) và not blank (xem
+#       manage_watermark_profile-EXP-006); không ràng buộc thêm cho legal_name,
+#       contact, ownership_statement (không có luật not blank).
+#       default_strength phải thuộc strength_options() của Services (tức là
+#       Configs), sai thì 400 với loc [profile_input, default_strength].
+#       profile_id sai định dạng: PUT trả 400 (có khai báo 400), kiểm trước
+#       thân yêu cầu; GET và get_watermark_profile trả 404. Lối vào in_process
+#       trả dict đúng 6 khóa, lỗi raise InProcessCallError (label, error_body)
+#       theo main-EXP-004.
+#     derived_from: manage_watermark_profile-EXP-003
+#   - id: manage_watermark_profile-EXP-006
+#     content: >
+#       Luật not blank (clause_a_common.formats.not_blank; Data Schema 8.0.0,
+#       CT-3 / BE-6) cho profile_input.display_name là ràng buộc của kiểu, nên
+#       nằm ở Routers: hàm _not_blank trong routers.py, gắn bằng AfterValidator
+#       sau StringConstraints(1..80). Khoảng trắng là theo str.isspace (dùng
+#       value.strip() không đối số). Luật chỉ kiểm, không đổi giá trị: bút
+#       danh hợp lệ được lưu và trả lại nguyên văn (" Mây " giữ hai dấu cách),
+#       vì hợp đồng ghi "It is a check only". Độ dài đếm trên giá trị gốc: 80
+#       ký tự cộng một dấu cách mỗi đầu bị 400 (Project Owner xác nhận cách
+#       đọc này 2026-09-28). Vi phạm -> 400 ERR_VALIDATION "Invalid
+#       profile_input.", details.errors đúng một mục loc [profile_input,
+#       display_name], msg "Value error, must not be blank" (chuỗi rỗng: "at
+#       least 1 character", cùng loc). Dữ liệu cũ không bị chuyển đổi. Hàm
+#       _not_blank là bản riêng của workflow này, giống hệt bản của
+#       manage_client và manage_commission (quyết định của Project Owner
+#       2026-09-28: không tạo Backend/shared/, không import chéo); sửa định
+#       nghĩa thì sửa cả ba. Giao diện V1 không có màn hình hồ sơ bút danh,
+#       nên backend là nơi duy nhất giữ luật này. Giới hạn đã biết, không vá ở
+#       V1: (1) chỉ Python coi U+001C..U+001F và U+0085 là khoảng trắng, chỉ
+#       JavaScript (trim) coi U+FEFF là khoảng trắng (đo trên Python 3.13.12 và
+#       Node 24.14.1); backend là bên quyết định. (2) Ký tự vô hình không phải
+#       khoảng trắng (ví dụ U+200B) vẫn qua luật; hợp đồng không cấm.
 #
 # UNSOLVED_PROBLEMS: []
 #
@@ -136,8 +163,67 @@
 #     result: >
 #       33 passed.
 #     recorded_at: 2026-09-24T22:31:00+07:00
+#   - claim: >
+#       create_profile và edit_profile trả 400 ERR_VALIDATION, details loc
+#       [profile_input, display_name], và không ghi gì, khi bút danh là "",
+#       "   ", "\t\n", U+00A0 hoặc U+3000; bút danh có khoảng trắng hai đầu
+#       được lưu và trả lại nguyên văn (cả GET và list); legal_name "   ",
+#       contact "\t", ownership_statement "" được nhận nguyên văn; bút danh có
+#       dấu dài đúng 80 ký tự được nhận; 80 ký tự cộng khoảng trắng hai đầu bị
+#       400. Kiểm thử cắn.
+#     how: >
+#       cd Backend; env\Scripts\python.exe -m pytest -q workflows/manage_watermark_profile
+#       (Python 3.13.12, Windows 11; ráp nối bằng Backend.wire_workflows, HTTP
+#       qua TestClient, SQLite thật). "Không ghi gì": sau POST bị từ chối GET
+#       /watermark-profiles không đổi; sau PUT bị từ chối GET
+#       /watermark-profiles/{id} bằng đúng bản trước. Bằng chứng cắn: tạm đổi
+#       "if not value.strip():" trong routers.py thành "if False and not
+#       value.strip():", chạy pytest -q workflows/manage_watermark_profile -k
+#       "blank or padding or padded", rồi khôi phục và chạy lại.
+#     result: >
+#       47 passed (33 ca cũ + 14 ca mới: 5 tạo, 5 sửa, 4 hợp lệ và biên). Khi
+#       tắt phép kiểm: 8 failed, 5 passed; 8 ca hỏng đúng là 4 dạng chỉ khoảng
+#       trắng x tạo/sửa; 2 ca "" vẫn đạt vì min_length. Khôi phục: 13 passed.
+#     recorded_at: 2026-09-28T21:30:00+07:00
+#   - claim: >
+#       Trên tiến trình Backend.py thật, bút danh trống bị từ chối ở POST và
+#       PUT, bút danh hợp lệ có khoảng trắng hai đầu được lưu nguyên văn.
+#     how: >
+#       Script tạm của phiên (không nằm trong dự án) khởi động
+#       Backend\env\Scripts\python.exe Backend.py với CT_PORT trống, CT_DB_FILE_PATH
+#       trong %TEMP%\ct_s18_*, chờ READY, gọi bằng urllib, đóng stdin.
+#     result: >
+#       POST display_name "   " -> 400 {"code":"ERR_VALIDATION","message":
+#       "Invalid profile_input.","details":{"errors":[{"loc":["profile_input",
+#       "display_name"],"msg":"Value error, must not be blank"}]}}; POST
+#       display_name " Mây ", legal_name " " -> 201 nguyên văn; PUT
+#       display_name "\n" -> 400 cùng loc; GET /watermark-profiles -> 1 phần tử
+#       vẫn " Mây ", legal_name " ". Đóng stdin -> exit code 0.
+#     recorded_at: 2026-09-28T21:33:15+07:00
+#   - claim: >
+#       Luật not blank của phiên 18 không làm hỏng workflow nào khác của
+#       backend, cũng không làm hỏng desktop hay giao diện; không kiểm thử nào
+#       đụng %APPDATA%\CommissionTracker thật.
+#     how: >
+#       Windows 11, Python 3.13.12 (Backend/env), Node 24.14.1. (1) cd Backend;
+#       env\Scripts\python.exe -m pytest -q. (2) cd Desktop; npm test (backend
+#       thật). (3) cd UI; npm run e2e. (4) Băm SHA-256, kích thước, thời điểm
+#       sửa của mọi tệp trong %APPDATA%\CommissionTracker trước việc 1 và sau
+#       (1)-(3).
+#     result: >
+#       (1) 445 passed (381 cũ + 64 mới), không sửa kiểm thử của workflow khác.
+#       (2) 14 passed. (3) 17 passed. (4) giống hệt: data.db 114688 byte,
+#       data.db.lock 0 byte, cùng băm và thời điểm.
+#     recorded_at: 2026-09-28T22:05:00+07:00
 #
-# NOTES: []
+# NOTES:
+#   - content: >
+#       Đề xuất (Giai đoạn 6, Bước 6.6): chuyển status của
+#       manage_watermark_profile đang_triển_khai -> đã_hoàn_thiện. BE-6 đã áp
+#       dụng profile_input của Data Schema 8.0.0 (display_name not blank);
+#       bằng chứng ở EVIDENCE; không có UNSOLVED_PROBLEMS. Coding agent không
+#       tự sửa hợp đồng.
+#     written_at: 2026-09-28
 # ===WCA-CHECKPOINT-END===
 """Services of manage_watermark_profile: every business decision of the workflow."""
 

@@ -150,11 +150,17 @@ Gộp vào phiên backend ngắn cùng BE-1 và BE-2.
 
 ### BE-5 — Backend áp dụng CT-2: `client_input` not blank (trung bình; Data Schema 7.0.0) — **plan phiên 18** (`.plan/backend_plan.md`, phát hành 2026-09-28)
 
+> **ĐÃ ĐÓNG 2026-09-28, phiên 18** (`coding-agent@2026-09-28#3`). Audit: `.reviews/audits/backend/audit_backend_session18.md`. Đạt: 445/445 chạy lại hai lần; cắn 24/8/8; giá trị hợp lệ lưu nguyên văn. Đề xuất `đã_hoàn_thiện` (Data Schema 8.0.1) chờ Project Owner duyệt.
+
 `create_client` và `edit_client` trả `400 ERR_VALIDATION` khi `display_name`, `channel` hoặc `value` trống sau khi bỏ khoảng trắng ở hai đầu, theo `formats.not_blank`. Giá trị hợp lệ được lưu **đúng như nhận được**, không bỏ khoảng trắng. Có kiểm thử cho mỗi trường: chuỗi rỗng, chỉ khoảng trắng ASCII, chỉ khoảng trắng Unicode (`U+00A0`, `U+3000`), và giá trị có khoảng trắng ở hai đầu (hợp lệ, lưu nguyên). Sau đó đề xuất đưa `manage_client` trở lại `đã_hoàn_thiện`.
 
 ### BE-6 — Backend áp dụng CT-3: `commission_input.title` và `profile_input.display_name` not blank (trung bình; Data Schema 8.0.0) — **gộp vào plan phiên 18**
 
+> **ĐÃ ĐÓNG 2026-09-28, phiên 18**, cùng audit với BE-5.
+
 Cùng cách làm với BE-5, cho `manage_commission` và `manage_watermark_profile`. Sau đó đề xuất đưa hai workflow này trở lại `đã_hoàn_thiện`.
+
+**Giới hạn đã biết, không vá ở V1** (ghi trong checkpoint cả ba workflow; Orchestrator đã so toàn BMP): `str.isspace` của Python và `trim` của JavaScript khác nhau ở `U+001C..U+001F` và `U+0085` (chỉ Python coi là khoảng trắng) và `U+FEFF` (chỉ JavaScript). Ký tự vô hình như `U+200B` qua luật; hợp đồng không cấm.
 
 ### DSK-11 — Desktop chưa diễn giải mã thoát 3 của backend (thấp; Q15-2) — không làm ở V1
 
@@ -276,6 +282,26 @@ Hiện `UI/` có 11 tệp CRLF và 72 tệp LF. Phiên 17 đổi `tokens.css` t�
 - chuẩn hóa toàn kho một lần, trong một commit riêng.
 
 Không ảnh hưởng hành vi.
+
+## Layer giao diện — sau audit phiên 18
+
+### UI-8 — `npm run e2e` ghi đè bằng chứng đã commit trong `UI/evidence/` (trung bình; Q18-1) — cho plan chặng D2
+
+**Hiện tượng:** phiên 18 (backend) chạy `npm run e2e` để kiểm hồi quy theo plan. Lệnh này ghi lại toàn bộ 27 tệp đang được git theo dõi trong `UI/evidence/`:
+- 26 tệp ở `walkthroughs/`;
+- `b2a/main_layout.png`.
+
+Vì `CT_WALKTHROUGH_RUNNER` không được đặt, ba tệp `*-run.json` ghi runner `"unknown (Playwright, …)"`, thay cho bằng chứng mà Project Owner đã chấp nhận ở phiên 17.
+
+**Xử lý tạm:** trước mỗi commit của một phiên không phải giao diện, Project Owner chạy `git restore UI/evidence`.
+
+**Việc sửa:** một lần chạy e2e để kiểm hồi quy không được ghi vào `UI/evidence/`. Hai hướng:
+- chỉ ghi khi `CT_WALKTHROUGH_RUNNER` được đặt;
+- hoặc tách lệnh: e2e ghi ra thư mục tạm, còn một lệnh riêng ghi bằng chứng.
+
+Plan D2 chọn một hướng.
+
+**Tiêu chí đóng:** chạy `npm run e2e` không đặt biến thì `git status UI/evidence` sạch; chạy với biến thì bằng chứng ghi đúng tên người chạy.
 
 ## Môi trường và vận hành (không phải việc của coding agent)
 

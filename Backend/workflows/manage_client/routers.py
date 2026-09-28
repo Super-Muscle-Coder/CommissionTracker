@@ -23,7 +23,7 @@ from typing import Annotated, Any
 
 from fastapi import APIRouter, Body
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, ConfigDict, StringConstraints, ValidationError
+from pydantic import AfterValidator, BaseModel, ConfigDict, StringConstraints, ValidationError
 
 from .entities import Client, ClientInput, ClientListItem, Contact
 from .services import ClientNotFoundError, ManageClientService, StorageIOError
@@ -32,17 +32,26 @@ from .services import ClientNotFoundError, ManageClientService, StorageIOError
 _ID_PATTERN = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$")
 
 
+def _not_blank(value: str) -> str:
+    # clause_a_common.formats.not_blank: at least one character is left once
+    # leading and trailing whitespace (str.isspace) is removed. A check only:
+    # the value is returned unchanged, never stripped.
+    if not value.strip():
+        raise ValueError("must not be blank")
+    return value
+
+
 # --- format models (input_expected.client_input, is_archived) ---------------
 
 class _ContactFormat(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
-    channel: str
-    value: str
+    channel: Annotated[str, StringConstraints(min_length=1), AfterValidator(_not_blank)]
+    value: Annotated[str, StringConstraints(min_length=1), AfterValidator(_not_blank)]
 
 
 class _ClientInputFormat(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
-    display_name: Annotated[str, StringConstraints(min_length=1, max_length=120)]
+    display_name: Annotated[str, StringConstraints(min_length=1, max_length=120), AfterValidator(_not_blank)]
     contacts: list[_ContactFormat]
     note: str | None
 

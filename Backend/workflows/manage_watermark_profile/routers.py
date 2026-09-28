@@ -24,7 +24,7 @@ from typing import Annotated, Any
 
 from fastapi import APIRouter, Body
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, ConfigDict, StringConstraints, ValidationError
+from pydantic import AfterValidator, BaseModel, ConfigDict, StringConstraints, ValidationError
 
 from .entities import ProfileInput, WatermarkProfile
 from .services import ManageWatermarkProfileService, ProfileNotFoundError, StorageIOError
@@ -33,11 +33,20 @@ from .services import ManageWatermarkProfileService, ProfileNotFoundError, Stora
 _ID_PATTERN = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$")
 
 
+def _not_blank(value: str) -> str:
+    # clause_a_common.formats.not_blank: at least one character is left once
+    # leading and trailing whitespace (str.isspace) is removed. A check only:
+    # the value is returned unchanged, never stripped.
+    if not value.strip():
+        raise ValueError("must not be blank")
+    return value
+
+
 # --- format models (input_expected.profile_input) ---------------------------
 
 class _ProfileInputFormat(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
-    display_name: Annotated[str, StringConstraints(min_length=1, max_length=80)]
+    display_name: Annotated[str, StringConstraints(min_length=1, max_length=80), AfterValidator(_not_blank)]
     legal_name: str | None
     contact: str | None
     ownership_statement: str | None
