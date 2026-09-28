@@ -23,6 +23,8 @@ Mức độ:
 
 ### DSK-2 — Một lần chạy bản đóng gói kết thúc bằng FATAL chưa giải thích được (cao)
 
+> **ĐÃ ĐÓNG 2026-09-28 (ENV-5).** Lần đo lại không thấy bản sao nào trong vùng quan sát được. Ở lần mở đầu, bản thật giành khóa dữ liệu ngay lần thử đầu và chạy đúng. Rủi ro dữ liệu đã được chặn bằng BE-3. Chi tiết: `.reviews/runbooks/env4_env5_runbook.md`, mục "Kết quả ENV-5".
+
 > **CHUYỂN THÀNH VIỆC LIÊN LAYER, 2026-09-27, phiên 14. H1 phù hợp với dữ liệu, nhưng mới có một lần quan sát (đợt C, lượt 1; `main-EXP-018`, `main-PROB-001`): antivirus giữ CreateProcess 64 s và chạy một bản sao có backend thật. Hướng xử lý: CT-1 (sửa hợp đồng) + BE-3 (khóa độc quyền `data.db`) + ENV-5 (đo lại). Main không sửa.**
 
 - **Hiện tượng** (log `measure_startup` của Project Owner, 2026-09-27, lúc 19:59–20:00): một tiến trình Main của bản đóng gói ghi ra console lần lượt:
@@ -50,6 +52,8 @@ Mức độ:
 - **Tiêu chí đóng:** hoặc giải thích được bằng log tái hiện, hoặc 10 lượt liên tiếp trên build mới không tái hiện được, và ghi rõ đã thử những gì.
 
 ### DSK-3 — Lần mở đầu tiên chờ khoảng 33–36 s (trung bình; là Q-C1 của audit phiên 13)
+
+> **Xác nhận lại 2026-09-28 (ENV-5), lần này có log gốc:** exe mới vừa cài, cả hai antivirus bật. Tiến trình bị giữ **75 s** trước khi chạy dòng code đầu tiên; lần mở thứ hai và thứ ba mất khoảng 4–5 s. Hướng xử lý giữ nguyên: ký số ở chặng G (DSK-9).
 
 > **ĐÓNG PHẦN CHẨN ĐOÁN 2026-09-27, phiên 14. Phần chậm nằm trước khi code JavaScript của Main chạy: antivirus giữ exe lạ chưa ký. Không sửa được trong code; hướng xử lý là ký số (DSK-9, chặng G). Trong thư mục có ngoại lệ, lượt đầu chỉ khoảng 1,1 s.**
 
@@ -278,10 +282,10 @@ Không ảnh hưởng hành vi.
 - **ENV-1** (Project Owner): thêm vĩnh viễn `%SystemRoot%\System32\WindowsPowerShell\v1.0\` vào `Path` của System variables. **Đã làm, 2026-09-27.**
 - **ENV-2** (Project Owner): thêm hai thư mục vào **ngoại lệ theo thư mục** (Exceptions) của AVG, không phải Allow App, và của ReasonLabs (RAV, loại rule `Folder`): `Desktop\release` và `Desktop\packaging\stage`. Không đặt ngoại lệ rộng hơn hai thư mục này; không dùng rule theo `Process` hay `Extension`. **Đã làm ở cả AVG lẫn RAV, 2026-09-27; cả hai vẫn bật.** Lỗi `EPERM` khi đổi tên `win-unpacked.tmp` biến mất khi tắt AVG, tức AVG là nguyên nhân.
 - **ENV-3** (Orchestrator): không liệt kê hay đọc vào bên trong tệp `.asar` qua ứng dụng Claude trên máy Project Owner. Ứng dụng đó giữ tệp mở, và việc này đã gây ra lỗi `EBUSY` lúc 19:15 ngày 2026-09-27.
-- **ENV-5** (Project Owner): đo lại đợt C bằng công cụ đã sửa, theo các lệnh ở mục 7 của báo cáo phiên 14 (log nay được giữ ở `Desktop/startup-logs/`).
+- **ENV-5 — ĐÃ LÀM 2026-09-28.** Kết quả và cách đọc ở `.reviews/runbooks/env4_env5_runbook.md`. Đóng DSK-2; xác nhận lại DSK-3. *Nội dung gốc:* (Project Owner) đo lại đợt C bằng công cụ đã sửa, theo các lệnh ở mục 7 của báo cáo phiên 14 (log nay được giữ ở `Desktop/startup-logs/`).
   - Đo với cả hai antivirus bật, rồi lần lượt tạm dừng AVG, rồi tạm dừng ReasonLabs.
   - Mục đích: xác nhận lại H1 bằng log được lưu, và biết bên nào tạo bản sao (Q14-1).
-- **ENV-4** (Project Owner): chạy tay trên máy bạn của Project Owner, là tiêu chí 1 của chặng C. Ghi lại thời gian chờ ở lần mở đầu.
+- **ENV-4** (Project Owner): chạy tay trên máy bạn của Project Owner, là tiêu chí 1 của chặng C. **Còn mở**; quy trình chi tiết ở `.reviews/runbooks/env4_env5_runbook.md`. Đây là việc duy nhất còn lại của chặng C. Ghi lại thời gian chờ ở lần mở đầu.
 - **ENV-6** — **ĐÃ LÀM 2026-09-28.** Project Owner khởi tạo git và đẩy lên GitHub: `https://github.com/Super-Muscle-Coder/CommissionTracker` (public). Hai commit đầu: `9f5218a` (`.gitattributes` với `* text=auto`, `.gitignore` mẫu Visual Studio), `2c10b9a` (toàn bộ dự án). Orchestrator đã clone và kiểm: 298 tệp; hợp đồng 8.0.0; mã `UI/` và `Backend/` khớp đúng từng tệp với bản trên đĩa; không có thư mục build, môi trường ảo hay tệp lớn; không có thông tin bí mật. **Còn thiếu ba dòng trong `.gitignore` gốc**, vì `Backend/env/`, `Backend/.pytest_cache/` và `Desktop/startup-logs/*.json` hiện **không** bị bỏ qua: một lệnh `git add .` sau này sẽ đưa cả môi trường ảo Python lên kho. Cách làm: Project Owner thêm ba dòng `Backend/env/`, `.pytest_cache/`, `Desktop/startup-logs/` vào `.gitignore` gốc rồi commit. *Nội dung phát hiện ban đầu:* **dự án chưa có quản lý phiên bản.** Không có `.git` ở `E:\CommissionTracker` hay ở `E:\`. Mọi phiên coding agent sửa tệp trực tiếp, không có mốc để quay lại hay so sánh. Các tệp `.gitignore` trong `UI/` và `Desktop/` hiện chưa có tác dụng gì.
   - **Đề xuất:** khởi tạo git ở gốc dự án, kèm hai tệp đặt ngay từ đầu:
     - `.gitignore` chung (thư mục build, `node_modules`, môi trường ảo, cache, `startup-logs/`, kết quả kiểm thử);
@@ -298,14 +302,16 @@ Không ảnh hưởng hành vi.
 
 ### DSK-12 — Dọn checkpoint Main desktop (thấp) — cho phiên desktop kế tiếp
 
-- `main-PROB-001` (bản sao do antivirus chạy) nay đã có hướng xử lý ở mọi mặt, nên chuyển thành EXPERIENCES và dẫn nguồn:
+- `main-PROB-001` (bản sao do antivirus chạy) nay đã có hướng xử lý ở mọi mặt, nên chuyển thành EXPERIENCES và dẫn nguồn. Đây cũng là nơi ghi kết quả ENV-5: giữ 75 s; không thấy bản sao trong 15,9 s quan sát được, trước khi AVG chặn tiến trình theo dõi (DSK-14); bản thật chạy đúng với khóa của phiên 15. Các nguồn:
   - rủi ro dữ liệu: đã chặn bằng khóa backend (BE-3, Data Schema 6.2.0);
   - độ trễ lần mở đầu: đã chẩn đoán xong, hướng xử lý là ký số ở chặng G (DSK-3, DSK-9);
   - việc đo lại: ENV-5.
 - NOTE "Dịch vụ AI không được khởi động ở V1 (watermark để dành V2)": sửa thành "V4 trở đi", theo `.design/product_versions.md`.
 - NOTE "Cách làm của phiên 13 so với plan": chuyển thành EXPERIENCES nếu còn giá trị, hoặc xóa.
 
-### DSK-13 — Hộp thoại lỗi của desktop viết bằng tiếng Anh kỹ thuật (thấp; chờ Project Owner quyết) — cho phiên desktop kế tiếp
+### DSK-13 — Hộp thoại lỗi của desktop viết bằng tiếng Anh kỹ thuật (thấp) — **ĐÃ DUYỆT 2026-09-28**, cho phiên desktop kế tiếp
+
+> Project Owner: ứng dụng phục vụ cộng đồng họa sĩ Việt, nên V1 dùng **tiếng Việt**. Tiếng Anh (hay đa ngôn ngữ) bàn ở phiên bản sau; đặt câu chữ trong `configs/desktop.json` giúp việc đó rẻ về sau.
 
 `fatal()` hiện đưa thẳng thông điệp kỹ thuật lên hộp thoại. Ví dụ: "The backend could not start after 3 attempts (last: …)", "The backend stopped unexpectedly (exit code 0). The app will close."
 
@@ -316,5 +322,29 @@ Họa sĩ là người Việt, và giao diện V1 dùng nhãn tiếng Việt (`u
 - chi tiết kỹ thuật giữ ở dòng thứ hai;
 - dòng log `FATAL:` giữ tiếng Anh như cũ, vì kiểm thử so trên dòng đó.
 
-Câu chữ đặt trong `configs/desktop.json`. Chỉ làm nếu Project Owner đồng ý.
+Câu chữ đặt trong `configs/desktop.json`.
+
+### DSK-14 — AVG chặn công cụ đo `measure_startup.cjs` (thấp; phát hiện ở ENV-5, 2026-09-28) — cho phiên desktop kế tiếp
+
+**Hiện tượng:** AVG Behavior Shield chặn `powershell.exe` với nhận dạng `IDP.HELU.PSE91 - Command line detection`. Project Owner có ảnh chụp cảnh báo.
+
+**Nguyên nhân gần như chắc chắn:** tiến trình theo dõi của `tests/packaged/measure_startup.cjs` (khoảng dòng 80) chạy `powershell.exe -NoProfile -NonInteractive -EncodedCommand <base64>`. Trong lượt 1 của ENV-5, ảnh chụp tiến trình dừng ở +15,9 s và không chạy lại.
+
+**Phạm vi:**
+- Chỉ ảnh hưởng **công cụ đo**, không ảnh hưởng ứng dụng. Main desktop chỉ chạy `python.exe`, không gọi PowerShell.
+- `tests/helpers.ts` gọi PowerShell bằng `-Command` thường, chưa thấy bị chặn.
+
+**Đề xuất:** viết script theo dõi ra một tệp `.ps1` tạm, rồi chạy bằng `-File`, hoặc dùng cùng cách gọi `-Command` như `tests/helpers.ts`. Không dùng `-EncodedCommand`.
+
+**Không** thêm ngoại lệ antivirus cho `powershell.exe`: đó là ngoại lệ quá rộng cho máy của Project Owner.
+
+Chưa rõ AVG chặn lúc build hay lúc đo; lịch sử cảnh báo của AVG ghi giờ chính xác. Theo log, tiến trình theo dõi dừng khoảng 21:06:43.
+
+## Quyết định của Project Owner — 2026-09-28, trước phiên 18
+
+- **Not blank ở backend:** mỗi workflow tự có hàm kiểm riêng, theo tiền lệ `_ID_PATTERN`; không tạo `Backend/shared/`. Đã ghi vào `.plan/backend_plan.md`.
+- **Độ dài tối đa đếm trên giá trị gốc**, kể cả khoảng trắng hai đầu: giữ nguyên như hợp đồng.
+- **DSK-13:** hộp thoại lỗi desktop bằng tiếng Việt ở V1.
+- **Thứ tự:** sau phiên 18 là **D2 (đơn hàng)**. Phiên desktop dọn dẹp (DSK-12, DSK-13) gộp với lần đo lại, nếu cần build lại.
+- **Văn bản tùy chọn để trống** (`description`, `commission_type` và các trường `string|null` khác): giao diện gửi `null`, là quy tắc `[UI-ONLY]` như ô ghi chú khách hàng. Không sửa hợp đồng. Ghi vào I1 của D2.
 

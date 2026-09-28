@@ -11,7 +11,7 @@ Bạn là coding agent của dự án Commission Tracker, phiên theo layer `bac
 2. Làm việc 1 của plan: môi trường; mốc `pytest` (phải là 381/381); mốc `%APPDATA%`. Sau đó, trước dòng code đầu tiên, báo lại cho tôi trong tối đa 8 dòng:
    - mục tiêu của phiên;
    - mốc kiểm thử;
-   - bạn định hiện thực "not blank" ở đâu, bằng cơ chế nào, dùng chung định nghĩa giữa ba workflow ra sao, và vì sao FastAPI sẽ không tự trả `422`;
+   - bạn định hiện thực "not blank" ở đâu, bằng cơ chế nào (mỗi workflow tự có hàm kiểm riêng, theo plan), và vì sao FastAPI sẽ không tự trả `422`;
    - `details` của lỗi sẽ chỉ ra trường vi phạm ra sao;
    - điểm nào trong plan hay hợp đồng bạn thấy mâu thuẫn hoặc thiếu.
 

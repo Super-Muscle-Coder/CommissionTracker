@@ -58,11 +58,7 @@ Chi tiết ở các mục changelog `v7.0.0` và `v8.0.0` đầu `data_schema.ya
 2. **Áp dụng "not blank" ở Routers của ba workflow.**
    - **Vị trí:** đây là một ràng buộc của **kiểu** trong hợp đồng, nên nó là phép kiểm định dạng ở **Routers** (`04-implement.md`), cùng chỗ với `min_length`/`max_length` hiện có. Không đặt vào Services hay Adapters.
    - **Định nghĩa**, theo `formats.not_blank`: chuỗi còn **ít nhất một ký tự** sau khi bỏ khoảng trắng ở **hai đầu**. Dùng `str.strip()` không đối số của Python, tức khoảng trắng theo `str.isspace()`.
-   - **Một định nghĩa, không chép ba lần:** luật dùng chung cho ba workflow. Nhưng mỗi workflow không import code của workflow khác (luật WCA). Chọn một trong hai cách, ghi lựa chọn và lý do vào EXPERIENCES:
-     - mỗi workflow tự có một hàm kiểm ngắn giống nhau;
-     - hoặc đặt ở một chỗ dùng chung mà `CLAUDE.md` hay lý thuyết WCA cho phép.
-
-     Nếu không chắc chỗ dùng chung nào hợp lệ, chọn cách thứ nhất.
+   - **Mỗi workflow tự có một hàm kiểm ngắn của riêng nó** (quyết định của Project Owner, 2026-09-28). Không tạo `Backend/shared/`, không import code giữa các workflow. Lý do: đây là tiền lệ sẵn có của dự án, vì mỗi workflow đã tự giữ `_ID_PATTERN` của mình dù cùng lấy từ `formats.id`. Một thư mục `shared/` đầu tiên chỉ để tiết kiệm vài dòng thì phá tiền lệ cấu trúc. Ba hàm phải có cùng định nghĩa; ghi rõ điều đó trong EXPERIENCES của từng workflow.
    - **Áp cho năm trường** ở bảng mục tiêu. `channel` và `value` cũng thành `1..` ký tự; not blank đã bao hàm điều đó.
    - **Giữ nguyên:**
      - các giới hạn độ dài hiện có (120, 200, 80 ký tự), đếm trên giá trị **gốc**, không phải giá trị đã bỏ khoảng trắng;
@@ -86,7 +82,7 @@ Chi tiết ở các mục changelog `v7.0.0` và `v8.0.0` đầu `data_schema.ya
      - giá trị dài đúng giới hạn, có dấu tiếng Việt → thành công;
      - một trường tùy chọn là `"   "` (ví dụ `note`, `description`, `legal_name`) → thành công, lưu nguyên văn, vì trường tùy chọn không thuộc luật;
      - `contacts: []` → thành công (`manage_client`).
-   - **Ca biên:** giá trị dài đúng giới hạn, **cộng** khoảng trắng hai đầu → 400, vì độ dài đếm trên giá trị gốc. Ghi rõ đây là hành vi theo hợp đồng.
+   - **Ca biên:** giá trị dài đúng giới hạn, **cộng** khoảng trắng hai đầu → 400, vì độ dài đếm trên giá trị gốc. Project Owner đã xác nhận giữ cách đọc này (2026-09-28): giao diện tự bỏ khoảng trắng trước khi gửi, nên họa sĩ không gặp ca này. Ghi rõ đây là hành vi theo hợp đồng.
    - **Kiểm thử của workflow khác vẫn đạt.** Ví dụ `update_progress`, `record_payment`, `view_income_report`, `send_reminder` tạo khách và đơn trong kiểm thử của chúng. Nếu một kiểm thử cũ đang dùng tên hay tiêu đề trống làm dữ liệu mẫu hợp lệ, **dừng lại và báo**; không tự sửa kiểm thử của workflow ngoài ba workflow này.
    - **Chứng minh kiểm thử cắn:** tạm bỏ phép kiểm not blank ở từng workflow. Các ca "chỉ khoảng trắng" của workflow đó phải **hỏng**. Ghi số ca hỏng, rồi khôi phục.
 
@@ -96,7 +92,7 @@ Chi tiết ở các mục changelog `v7.0.0` và `v8.0.0` đầu `data_schema.ya
      - định nghĩa khoảng trắng đã dùng (`str.isspace`);
      - "lưu nguyên văn", và vì sao;
      - độ dài đếm trên giá trị gốc;
-     - cách dùng chung định nghĩa not blank (việc 2).
+     - mỗi workflow tự có hàm kiểm, giống hệt nhau, theo quyết định của Project Owner (việc 2).
    - Thêm EVIDENCE: lệnh chạy, số ca, bằng chứng cắn.
    - **Giới hạn đã biết**, ghi vào EXPERIENCES, không đòi vá ở V1:
      - `str.strip()` của Python và `String.prototype.trim` của JavaScript khác nhau ở vài ký tự hiếm. Python coi `\x1c`–`\x1f` là khoảng trắng còn JS thì không; với `﻿` thì ngược lại. Backend là bên quyết định. Giao diện hiện thông báo 400 chung khi backend từ chối.
@@ -124,7 +120,7 @@ Chi tiết ở các mục changelog `v7.0.0` và `v8.0.0` đầu `data_schema.ya
 
 ## CẢNH BÁO — điều KHÔNG được làm trong phiên này
 
-- Chỉ sửa `Backend/workflows/manage_client/`, `Backend/workflows/manage_commission/`, `Backend/workflows/manage_watermark_profile/` (code, kiểm thử, checkpoint), cộng một chỗ dùng chung nếu chọn cách đó ở việc 2 và cách đó hợp lệ.
+- Chỉ sửa `Backend/workflows/manage_client/`, `Backend/workflows/manage_commission/`, `Backend/workflows/manage_watermark_profile/` (code, kiểm thử, checkpoint), Không tạo `Backend/shared/`.
 - Không sửa Main (`Backend.py`), `scaffold_backend`, hay workflow nào khác, kể cả kiểm thử của chúng.
 - Không sửa tệp nào ngoài `Backend/`. Được **chạy** các lệnh của `Desktop/` và `UI/`, không sửa tệp nào ở đó.
 - Không bỏ khoảng trắng khỏi giá trị trước khi lưu.
