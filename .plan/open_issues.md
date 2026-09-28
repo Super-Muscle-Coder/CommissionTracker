@@ -150,7 +150,7 @@ Gộp vào phiên backend ngắn cùng BE-1 và BE-2.
 
 ### BE-5 — Backend áp dụng CT-2: `client_input` not blank (trung bình; Data Schema 7.0.0) — **plan phiên 18** (`.plan/backend_plan.md`, phát hành 2026-09-28)
 
-> **ĐÃ ĐÓNG 2026-09-28, phiên 18** (`coding-agent@2026-09-28#3`). Audit: `.reviews/audits/backend/audit_backend_session18.md`. Đạt: 445/445 chạy lại hai lần; cắn 24/8/8; giá trị hợp lệ lưu nguyên văn. Đề xuất `đã_hoàn_thiện` (Data Schema 8.0.1) chờ Project Owner duyệt.
+> **ĐÃ ĐÓNG 2026-09-28, phiên 18** (`coding-agent@2026-09-28#3`). Audit: `.reviews/audits/backend/audit_backend_session18.md`. Đạt: 445/445 chạy lại hai lần; cắn 24/8/8; giá trị hợp lệ lưu nguyên văn. Project Owner duyệt; **Data Schema 8.0.1** ghi ba workflow `đã_hoàn_thiện`.
 
 `create_client` và `edit_client` trả `400 ERR_VALIDATION` khi `display_name`, `channel` hoặc `value` trống sau khi bỏ khoảng trắng ở hai đầu, theo `formats.not_blank`. Giá trị hợp lệ được lưu **đúng như nhận được**, không bỏ khoảng trắng. Có kiểm thử cho mỗi trường: chuỗi rỗng, chỉ khoảng trắng ASCII, chỉ khoảng trắng Unicode (`U+00A0`, `U+3000`), và giá trị có khoảng trắng ở hai đầu (hợp lệ, lưu nguyên). Sau đó đề xuất đưa `manage_client` trở lại `đã_hoàn_thiện`.
 
@@ -285,7 +285,7 @@ Không ảnh hưởng hành vi.
 
 ## Layer giao diện — sau audit phiên 18
 
-### UI-8 — `npm run e2e` ghi đè bằng chứng đã commit trong `UI/evidence/` (trung bình; Q18-1) — cho plan chặng D2
+### UI-8 — `npm run e2e` ghi đè bằng chứng đã commit trong `UI/evidence/` (trung bình; Q18-1) — **plan phiên 19** (D2, việc 2)
 
 **Hiện tượng:** phiên 18 (backend) chạy `npm run e2e` để kiểm hồi quy theo plan. Lệnh này ghi lại toàn bộ 27 tệp đang được git theo dõi trong `UI/evidence/`:
 - 26 tệp ở `walkthroughs/`;
@@ -299,7 +299,7 @@ Vì `CT_WALKTHROUGH_RUNNER` không được đặt, ba tệp `*-run.json` ghi ru
 - chỉ ghi khi `CT_WALKTHROUGH_RUNNER` được đặt;
 - hoặc tách lệnh: e2e ghi ra thư mục tạm, còn một lệnh riêng ghi bằng chứng.
 
-Plan D2 chọn một hướng.
+Plan phiên 19 chọn hướng thứ nhất: không có biến thì ghi vào `UI/test-results/evidence/` (đã bị git bỏ qua).
 
 **Tiêu chí đóng:** chạy `npm run e2e` không đặt biến thì `git status UI/evidence` sạch; chạy với biến thì bằng chứng ghi đúng tên người chạy.
 

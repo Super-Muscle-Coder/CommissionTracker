@@ -261,9 +261,18 @@
 #   v8.0.0 — [Clause B, SỬA] status of manage_commission and
 #            manage_watermark_profile: đã_hoàn_thiện -> đang_triển_khai (must
 #            apply the narrowed inputs).
+#   v8.0.1 — [Clause B, SỬA] status of manage_client, manage_commission,
+#            manage_watermark_profile: đang_triển_khai -> đã_hoàn_thiện —
+#            Stage-6 proposals of backend session #18 (BE-5, BE-6) verified
+#            by the Orchestrator (08, Part 5; .reviews/audits/backend/
+#            audit_backend_session18.md): independent re-run 445/445 twice on
+#            another machine; bite tests reproduced (24/8/8); the not_blank
+#            rule applies to exactly the five required names of v7.0.0 and
+#            v8.0.0, valid values are stored verbatim; no unsolved problem.
+#            Approved by the Project Owner on 2026-09-28.
 # =============================================================================
 
-schema_version: 8.0.0
+schema_version: 8.0.1
 contract_state: approved
 
 # -----------------------------------------------------------------------------
@@ -359,7 +368,7 @@ clause_b_backend:
   manage_client:
     tag: "[Clause B]"
     workflow_type: nghiệp_vụ
-    status: đang_triển_khai
+    status: đã_hoàn_thiện
     description: "Create, edit, view, list, archive and unarchive clients."
     input_expected:
       db_connection: { type: resource, from: scaffold_backend }
@@ -382,7 +391,7 @@ clause_b_backend:
   manage_commission:
     tag: "[Clause B]"
     workflow_type: nghiệp_vụ
-    status: đang_triển_khai
+    status: đã_hoàn_thiện
     description: "Create, edit, view and list commissions. Owns the agreed terms (client, scope, price, deadline); does not own the progress stage or payments. A commission cannot be created for, or moved to, an unknown or archived client. The currency of agreed_price is fixed at creation; edits may change the amount only."
     input_expected:
       db_connection: { type: resource, from: scaffold_backend }
@@ -495,7 +504,7 @@ clause_b_backend:
   manage_watermark_profile:
     tag: "[Clause B]"
     workflow_type: nghiệp_vụ
-    status: đang_triển_khai
+    status: đã_hoàn_thiện
     description: "Create, edit, view and list ownership profiles: the identity a watermark proves, and the embedding strength used by default."
     input_expected:
       db_connection: { type: resource, from: scaffold_backend }

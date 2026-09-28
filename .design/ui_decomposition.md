@@ -60,7 +60,7 @@ Mặc định của iWCA: mỗi workflow hệ thống mà giao diện dùng có 
 |---|---|---|---|---|
 | `scaffold_ui` | `nền_tảng` | — | Không có quyết định. Chuẩn bị tài nguyên `http_client` từ `backendBaseUrl`; về sau thêm tài nguyên `ipc_bridge` từ `invoke`, khi có lối vào `ipc` đầu tiên. | B2a |
 | `manage_client` | `nghiệp_vụ` | `manage_client` | Sắp danh sách khách hàng theo thứ tự chữ cái tiếng Việt (backend trả theo `casefold`, nên "Ánh" đứng sau "z"); tách khách đang hoạt động và khách đã lưu trữ; chọn câu thông báo cho từng nhãn lỗi. **Từ D1:** kiểm dữ liệu form trước khi gửi (§5, trang `client_form`); định dạng ngày giờ để hiển thị. | B2b, D1 |
-| `manage_commission` | `nghiệp_vụ` | `manage_commission` | Ghép tên khách hàng vào danh sách đơn. Adapters của workflow này gọi luôn `GET /clients`: đây là trùng lặp có chủ đích theo I1.3, không đi qua `manage_client` của giao diện. Cũng lo định dạng tiền theo `currency_code`. | D2 |
+| `manage_commission` | `nghiệp_vụ` | `manage_commission` | Ghép tên khách hàng vào danh sách và chi tiết đơn. Adapters của workflow này gọi luôn `GET /clients` và `GET /clients/{client_id}`: đây là trùng lặp có chủ đích theo I1.3, không đi qua `manage_client` của giao diện. Sắp danh sách đơn (hợp đồng không hứa thứ tự). Đọc và định dạng số tiền theo `currency_code`; định dạng ngày hạn giao. Kiểm dữ liệu form trước khi gửi (§5, trang `commission_form`). Chi tiết từ D2 ở §5. | D2 |
 | `update_progress` | `nghiệp_vụ` | `update_progress` | Nhóm bảng tiến độ theo giai đoạn, theo thứ tự của `list_stages`. | D3 |
 | `record_payment` | `nghiệp_vụ` | `record_payment` | Trình bày số dư và các khoản đã hủy. | D4 |
 | `view_income_report` | `nghiệp_vụ` | `view_income_report` | Trình bày báo cáo theo tháng và theo tiền tệ. Không quy đổi tiền tệ (hợp đồng). | D5 |
@@ -90,14 +90,16 @@ Mặc định của iWCA: mỗi workflow hệ thống mà giao diện dùng có 
 
 ## 5. Trang và layout (Bước I1.5)
 
-Layout: `main_layout` (khung chính có điều hướng) — layout duy nhất. **Từ D1:** `main_layout` có một vùng điều hướng cố định, liệt kê các mục cấp cao nhất; hiện chỉ có mục "Khách hàng" (mở `client_list`). Mỗi phiên sau thêm mục của mình vào đúng vùng này, không đổi vị trí các mục cũ (§7.2, nguyên tắc 7). Màn hình lỗi khởi động không phải layout và không phải đích điều hướng: Main dựng thẳng component kit `FatalMessage` khi giá trị khởi động hỏng, trước khi có trang nào (iWCA I2.6, bước 1).
+Layout: `main_layout` (khung chính có điều hướng) — layout duy nhất. **Từ D1:** `main_layout` có một vùng điều hướng cố định, liệt kê các mục cấp cao nhất. Hiện có hai mục, theo thứ tự: "Khách hàng" (mở `client_list`), rồi "Đơn hàng" (mở `commission_list`, từ D2). Mỗi phiên sau thêm mục của mình vào đúng vùng này, không đổi vị trí các mục cũ (§7.2, nguyên tắc 7). Màn hình lỗi khởi động không phải layout và không phải đích điều hướng: Main dựng thẳng component kit `FatalMessage` khi giá trị khởi động hỏng, trước khi có trang nào (iWCA I2.6, bước 1).
 
 | Trang (khóa điều hướng) | Mục đích | Workflow giao diện dùng Routers | Layout | Trạng thái |
 |---|---|---|---|---|
 | `client_list` | Xem danh sách khách hàng; lối vào thêm khách và xem chi tiết | `manage_client` | `main_layout` | `hoàn_tất` (2026-09-28: phiên 16 và 17, audit phiên 17 đạt, Project Owner tự chạy tay. Trước đó `hoàn_tất` ngày 2026-09-27 với phạm vi chỉ đọc) |
 | `client_detail` | Xem một khách hàng; lưu trữ, bỏ lưu trữ; lối vào sửa | `manage_client` | `main_layout` | `hoàn_tất` (2026-09-28: phiên 16 và 17, audit phiên 17 đạt, Project Owner tự chạy tay) |
 | `client_form` | Thêm khách hàng mới, hoặc sửa một khách hàng | `manage_client` | `main_layout` | `hoàn_tất` (2026-09-28: phiên 16 và 17, audit phiên 17 đạt, Project Owner tự chạy tay) |
-| *(D2)* danh sách, chi tiết, form đơn hàng | — | `manage_commission` | `main_layout` | `chưa_làm` |
+| `commission_list` | Xem danh sách đơn hàng; lối vào thêm đơn và xem chi tiết | `manage_commission` | `main_layout` | `đang_làm` (2026-09-28: plan phiên 19) |
+| `commission_detail` | Xem một đơn hàng; lối vào sửa | `manage_commission` | `main_layout` | `đang_làm` (2026-09-28: plan phiên 19) |
+| `commission_form` | Thêm đơn hàng mới, hoặc sửa một đơn | `manage_commission` | `main_layout` | `đang_làm` (2026-09-28: plan phiên 19) |
 | *(D3)* bảng tiến độ, lịch sử giai đoạn | — | `update_progress` | `main_layout` | `chưa_làm` |
 | *(D4)* thanh toán của một đơn | — | `record_payment` | `main_layout` | `chưa_làm` |
 | *(D5)* báo cáo thu nhập | — | `view_income_report` | `main_layout` | `chưa_làm` |
@@ -174,10 +176,121 @@ Layout: `main_layout` (khung chính có điều hướng) — layout duy nhất.
   - `ok` cho mọi thao tác;
   - ít nhất một bước `unreachable` cho **mỗi** trang.
 
+## Chặng D2 — Đơn hàng (làm lại I1 ngày 2026-09-28, trước phiên 19)
+
+Căn cứ: Data Schema **8.0.1** (`manage_commission`: `commission_input`, `commission_detail`, `commission_list`, `currency_options`; `formats.not_blank`, `types.money`, `formats.date`), API Contract 4.0.0 (`manage_commission`, cùng `list_clients` và `get_client` của `manage_client`).
+
+### Lời gọi của workflow giao diện `manage_commission`
+
+| Lời gọi | Dùng ở | Nhãn phải xử lý (hợp đồng) |
+|---|---|---|
+| `list_commissions` (`GET /commissions`) | `commission_list` | 200, 500 |
+| `get_commission` (`GET /commissions/{commission_id}`) | `commission_detail`, `commission_form(edit)` | 200, 404, 500 |
+| `create_commission` (`POST /commissions`) | `commission_form(create)` | 201, 400, 404, 409, 500 |
+| `edit_commission` (`PUT /commissions/{commission_id}`) | `commission_form(edit)` | 200, 400, 404, 409, 500 |
+| `list_currencies` (`GET /currencies`) | `commission_form(create)` | 200 |
+| `list_clients` (`GET /clients`) | `commission_list` (tên khách), `commission_form` (danh sách chọn) | 200, 500 |
+| `get_client` (`GET /clients/{client_id}`) | `commission_detail` (tên khách) | 200, 404, 500 |
+
+Mọi lời gọi còn phải xử lý thêm "không tới được" và "vi phạm hợp đồng", như D1. Lời gọi `list_clients`, `get_client` nằm trong Adapters của `manage_commission` (I1.3), không import `manage_client` của giao diện (R2).
+
+Một thao tác cần hai lời gọi (danh sách đơn cùng danh sách khách; chi tiết đơn cùng khách của nó) thì là **một** thao tác với **một** kết quả. Lời gọi nào hỏng thì kết quả là lỗi của lời gọi đó, và trang hiện như mọi lỗi tải khác, có nút tải lại. Ngoại lệ: ở `commission_detail`, `get_client` trả 404 thì không phải lỗi; tên khách hiện là "Không tìm thấy khách hàng".
+
+### Luật trình bày chung của D2 (quyết định của `manage_commission`, đều `[UI-ONLY]`)
+
+- **Thứ tự danh sách đơn:** hợp đồng không hứa thứ tự của `commission_list`. Giao diện sắp theo `updated_at` mới nhất trước, rồi theo `commission_id`.
+- **Thứ tự khách trong danh sách chọn:** chữ cái tiếng Việt (`Intl.Collator('vi')`), như `manage_client`. Workflow này giữ **bản riêng** của cách sắp và cách định dạng ngày giờ, không import từ `manage_client` (R2; tiền lệ `_not_blank` ở backend).
+- **Số tiền (`types.money`).** `amount_minor` là số nguyên theo đơn vị nhỏ nhất của ISO 4217. Configs của workflow giữ bảng **số chữ số lẻ** của từng mã tiền: `VND: 0`, `USD: 2`. Đây là hai mã mặc định của `supported_currencies`.
+  - **Hiển thị:** dạng `<số> <mã>`, nhóm nghìn bằng dấu chấm, phần lẻ sau dấu phẩy, đúng số chữ số lẻ của mã tiền. Ví dụ `1.500.000 VND`, `12,50 USD`, `0 VND`. Tách phần nguyên và phần lẻ bằng phép tính số nguyên; **không** chia ra số thực, vì `amount_minor` có thể tới 2^53−1.
+  - Mã tiền không có trong bảng thì hiện `<amount_minor> <mã> (đơn vị nhỏ nhất)`, và không có trong danh sách chọn của form.
+  - **Đọc số người dùng nhập** (form):
+    1. bỏ khoảng trắng ở hai đầu và ở giữa;
+    2. rỗng: lỗi "Nhập giá thỏa thuận";
+    3. chỉ được có chữ số, dấu chấm, dấu phẩy, và phải bắt đầu bằng chữ số; sai thì lỗi "Số tiền không hợp lệ";
+    4. với mã tiền có chữ số lẻ: nếu chuỗi kết thúc bằng một dấu chấm hoặc dấu phẩy rồi **1 tới đúng số chữ số lẻ** chữ số, thì đó là phần lẻ;
+    5. phần còn lại là phần nguyên: mỗi dấu chấm hoặc dấu phẩy trong đó phải là dấu nhóm nghìn, tức theo sau là **đúng 3** chữ số; sai thì lỗi "Số tiền không hợp lệ";
+    6. số âm không thể xảy ra, vì dấu trừ bị bước 3 chặn. Giá 0 hợp lệ (hợp đồng: `amount_minor >= 0`);
+    7. kết quả vượt 9007199254740991 thì lỗi "Số tiền quá lớn".
+
+    Ví dụ, VND: `1500000`, `1.500.000`, `1,500,000` → 1500000; `1,5` và `1.50` → lỗi. USD: `12.5`, `12,50` → 1250; `1,250` và `1.250` → 125000; `1.250,5` → 125050; `12.505` → 1250500 (dấu chấm là nhóm nghìn: mười hai nghìn năm trăm lẻ năm đô); `12.5055` và `1.2345` → lỗi.
+  - Ở chế độ sửa, ô số tiền điền sẵn đúng dạng hiển thị mà không có mã tiền, ví dụ `1.500.000` hoặc `12,50`. Dạng này đọc lại được bằng luật trên.
+- **Ngày hạn giao (`deadline: date|null`):** hiển thị `dd/mm/yyyy`, tách thẳng từ chuỗi `YYYY-MM-DD`. **Không** đi qua `new Date(...)`, vì đọc chuỗi ngày thành thời điểm UTC có thể lệch sang ngày khác theo múi giờ. Không có hạn thì hiện "Không có hạn".
+- **Ngày giờ tạo, sửa (`timestamp`):** như `client_detail`.
+
+### Chi tiết trang `commission_list` (D2)
+
+- **Mở từ:** mục "Đơn hàng" của vùng điều hướng.
+- **Khi mở, và khi bấm "Tải lại":** `list_commissions` và `list_clients`, là một thao tác.
+- **Mỗi đơn hiện:** tiêu đề (dòng chính); dòng phụ gồm tên khách, giá thỏa thuận, hạn giao. `client_id` không có trong danh sách khách thì tên khách hiện "Không tìm thấy khách hàng". Không hiện thêm gì (§7.2, nguyên tắc 2).
+- **Thao tác:** "Thêm đơn hàng" là **hành động chính**, mở `commission_form(create)`; bấm một đơn mở `commission_detail(commission_id)`. Hai thao tác này chỉ là điều hướng.
+- **Trạng thái rỗng:** "Chưa có đơn hàng nào", kèm nút "Thêm đơn hàng".
+- **Nhãn phải xử lý:** 200, 500, không tới được, vi phạm hợp đồng, cho cả hai lời gọi.
+
+### Chi tiết trang `commission_detail` (D2)
+
+- **Khi mở:** `get_commission`, rồi `get_client` với `client_id` của đơn.
+- **Hiện:** tiêu đề; khách hàng (tên; khách đã lưu trữ thì thêm "(đã lưu trữ)"); loại tranh (không có thì không hiện mục này); giá thỏa thuận; hạn giao; mô tả (không có thì không hiện); liên kết tham khảo (danh sách rỗng thì không hiện); ngày tạo; ngày sửa gần nhất.
+- **Liên kết tham khảo hiện dạng chữ thường, chọn và sao chép được, không bấm mở được.** Desktop V1 chặn mọi điều hướng và cửa sổ mới (kiểm thử số 8 của `Desktop/`), và hợp đồng chưa có lối vào `ipc` để mở trình duyệt ngoài. Mở liên kết là việc của phiên bản sau.
+- **Thao tác:** "Sửa" là **hành động chính**, mở `commission_form(edit, commission_id)`; "Quay lại danh sách" về `commission_list`.
+- **Nhãn phải xử lý:** `get_commission`: 200, 404 ("Không tìm thấy đơn hàng này", kèm nút quay lại danh sách), 500, không tới được, vi phạm hợp đồng. `get_client`: 200, 404 (không phải lỗi, xem trên), 500, không tới được, vi phạm hợp đồng.
+- D2 **không** có giai đoạn tiến độ (D3) và thanh toán (D4) trên trang này.
+
+### Chi tiết trang `commission_form` (D2)
+
+- **Chế độ `create`:** gọi `list_clients` và `list_currencies`, là một thao tác. **Chế độ `edit`:** gọi `get_commission` và `list_clients`, là một thao tác; 404 thì hiện "Không tìm thấy đơn hàng này", kèm nút quay lại.
+- **Các ô**, theo `commission_input`, theo thứ tự trên màn hình:
+  1. "Khách hàng": chọn từ danh sách, **bắt buộc**. Danh sách gồm các khách **đang hoạt động**, sắp theo chữ cái tiếng Việt, có một lựa chọn đầu "Chọn khách hàng" nghĩa là chưa chọn. Ở chế độ `edit`, nếu khách hiện tại của đơn đã lưu trữ hoặc không còn trong danh sách, thêm đúng khách đó vào danh sách với nhãn "<tên> (đã lưu trữ)", và chọn sẵn (hợp đồng cho giữ nguyên khách đã lưu trữ).
+  2. "Tiêu đề": bắt buộc; tối đa 200 ký tự, đếm theo ký tự thật (code point).
+  3. "Loại tranh": tùy chọn, chữ tự do, có gợi ý (ví dụ bán thân, toàn thân, chibi, chân dung, minh họa).
+  4. "Giá thỏa thuận": ô số tiền và ô đơn vị tiền.
+     - `create`: đơn vị tiền chọn từ `list_currencies` giao với bảng số chữ số lẻ; mặc định là `VND` nếu có, không thì mã đầu tiên.
+     - `edit`: đơn vị tiền **không đổi được** (hợp đồng: đơn vị tiền cố định từ lúc tạo), hiện dạng chữ cạnh ô số tiền, và form luôn gửi đúng đơn vị tiền cũ.
+  5. "Hạn giao": tùy chọn, ô ngày của hệ thống (`<input type="date">`), có cách xóa để về "không có hạn".
+  6. "Mô tả": tùy chọn, nhiều dòng.
+  7. "Liên kết tham khảo": tùy chọn, nhiều dòng, **mỗi dòng một liên kết**.
+- **Kiểm trước khi gửi**, trong phân khu logic, trả `rejected_input` kèm lỗi từng ô. Luật sao từ hợp đồng, trừ những điều ghi `[UI-ONLY]`:
+  - `[UI-ONLY]` bỏ khoảng trắng ở hai đầu mọi ô chữ trước khi kiểm và gửi (như `client_form`);
+  - chưa chọn khách: "Chọn khách hàng";
+  - tiêu đề rỗng sau khi bỏ khoảng trắng: "Nhập tiêu đề đơn hàng" (Data Schema 8.0.0, CT-3: not blank); quá 200 ký tự: lỗi nêu giới hạn;
+  - số tiền: luật đọc số ở trên; `amount_minor >= 0` và trong ±(2^53−1) là luật hợp đồng, phần cách viết là `[UI-ONLY]`;
+  - `[UI-ONLY]` **văn bản tùy chọn để trống thì gửi `null`**: "Loại tranh", "Mô tả" rỗng sau khi bỏ khoảng trắng → `null` (quyết định của Project Owner 2026-09-28, CT-3). Hạn giao để trống → `null`;
+  - `[UI-ONLY]` liên kết tham khảo: tách theo dòng, bỏ khoảng trắng hai đầu từng dòng, bỏ dòng rỗng; không kiểm dạng URL, vì hợp đồng chỉ ghi `list[string]`. Không có dòng nào thì gửi `[]`;
+  - đơn vị tiền phải thuộc danh sách của `list_currencies` (hợp đồng: `currency in supported_currencies`); với form này điều đó luôn đúng, vì chỉ chọn được từ danh sách.
+- **Vị trí nút và focus:** như `client_form` (hàng "Lưu", "Hủy" ngay dưới tiêu đề; lỗi nhập thì focus tới ô lỗi đầu tiên theo thứ tự ở trên).
+- **Không có khách nào đang hoạt động** (chế độ `create`): thay form bằng trạng thái rỗng "Chưa có khách hàng đang hoạt động. Thêm khách hàng trước khi tạo đơn.", kèm nút "Thêm khách hàng" mở `client_form(create)` (§7.2, nguyên tắc 6).
+- **Gửi:** `create_commission` hoặc `edit_commission`, thân `{ "commission_input": … }`. Trong lúc gửi, "Lưu" bị vô hiệu.
+  - 201 hoặc 200: chuyển sang `commission_detail`, kèm "Đã thêm đơn hàng" hoặc "Đã lưu thay đổi".
+  - 400: thông báo chung ở đầu form ("Máy chủ không nhận dữ liệu này"), giữ nguyên dữ liệu. Không đọc `error_body.details`.
+  - 404 khi tạo: "Không tìm thấy khách hàng đã chọn. Hãy chọn lại." và tải lại danh sách khách. 404 khi sửa: "Không tìm thấy đơn hàng hoặc khách hàng đã chọn." Hai mã lỗi như nhau (`ERR_NOT_FOUND`) nên giao diện không phân biệt; trong dùng bình thường không xảy ra, vì không có thao tác xóa.
+  - 409: "Khách hàng đã chọn đã được lưu trữ. Hãy chọn khách khác." và tải lại danh sách khách. Hợp đồng còn trả 409 khi đổi đơn vị tiền, nhưng form không cho đổi, nên đường bình thường không gây ra.
+  - 500, không tới được: thông báo, giữ nguyên dữ liệu, cho gửi lại.
+- **Nhãn phải xử lý:** `create_commission`: 201, 400, 404, 409, 500; `edit_commission`: 200, 400, 404, 409, 500; `get_commission`: như `commission_detail`; `list_clients`: 200, 500; `list_currencies`: 200; mọi lời gọi: không tới được, vi phạm hợp đồng.
+- Tiêu đề trùng được phép. V1 không chặn rời form khi có thay đổi chưa lưu (V2).
+
+### Điều hướng của D2
+
+- Tham số có kiểu trong `screens/navigation.ts`: `commission_detail` nhận `commission_id`; `commission_form` nhận `create`, hoặc `edit` kèm `commission_id`.
+- Luồng:
+  - vùng điều hướng "Đơn hàng" → `commission_list`;
+  - `commission_list` → bấm đơn → `commission_detail`; → "Thêm đơn hàng" → `commission_form(create)` → lưu → `commission_detail(id mới)` kèm "Đã thêm đơn hàng";
+  - `commission_detail` → "Sửa" → `commission_form(edit)` → lưu → `commission_detail` kèm "Đã lưu thay đổi";
+  - "Hủy" ở form về trang trước (`commission_detail` nếu sửa, `commission_list` nếu thêm); "Quay lại danh sách" ở chi tiết về `commission_list`;
+  - `commission_form(create)` khi không có khách → "Thêm khách hàng" → `client_form(create)`. Đây là lối sang trang của D1 duy nhất; D1 không đổi.
+- Mục điều hướng "Đơn hàng" được đánh dấu đang mở ở cả ba trang của D2.
+
+### Luật phủ của kịch bản bấm thử ở D2 (iWCA I6.3)
+
+Như D1:
+- `rejected_input` cho thao tác lưu của `commission_form`, ở **cả hai** chế độ; ít nhất một bước có tiêu đề chỉ gồm khoảng trắng, và một bước có số tiền sai cách viết;
+- `ok` cho mọi thao tác, gồm cả số tiền USD có phần lẻ và một đơn có đủ mọi ô tùy chọn;
+- ít nhất một bước `unreachable` cho **mỗi** trang;
+- không đòi `rejected_system`: 404 và 409 không gây ra được bằng thao tác bình thường; kiểm thử dựng trang (I5) chứng minh chúng hiện đúng.
+
 ## 6. Đối chiếu độ phủ (Bước I1.6)
 
 - Mọi lối vào ở §1, hoặc có workflow giao diện đối ứng ở §2, hoặc nằm trong bảng loại trừ ở §4. Không lối vào nào ở trạng thái "chưa rõ".
 - Không có nhu cầu V1 nào mà thực đơn không đáp ứng được. Việc sắp xếp tên tiếng Việt là quyết định trình bày, không cần endpoint mới.
+- D2 (2026-09-28): mọi lời gọi D2 cần đều có trong hợp đồng (bảng lời gọi ở phần D2). Nhu cầu không có lối vào: mở liên kết tham khảo bằng trình duyệt ngoài. Ghi nhận cho phiên bản sau, không vá ở V1.
 - Giá trị khởi động đã trả lời đủ ba câu. Cách trao nằm trong hợp đồng và đã được đo.
 
 ## 7. Hướng giao diện V1 (quyết định của Project Owner, 2026-09-28)
@@ -220,3 +333,4 @@ Kịch bản bấm thử và audit kiểm các điều sau.
 - 2026-09-28: sau audit phiên 16. `client_form` ghi rõ luật nào sao từ hợp đồng (Data Schema 7.0.0, CT-2: not blank) và luật nào `[UI-ONLY]`. Hàng nút của form nằm dưới tiêu đề, và focus chuyển tới ô lỗi đầu tiên. §7.1 thêm luật tương phản 3:1 cho thành phần tương tác. §7.2 bổ sung nguyên tắc 4 và 7. Ba trang giữ `đang_làm`, vá ở phiên 17.
 - 2026-09-28: audit phiên 17 đạt (`.reviews/audits/ui/audit_ui_session17.md`). Ba trang D1 chờ Project Owner chạy tay ba kịch bản, rồi chuyển `hoàn_tất`.
 - 2026-09-28: `client_list`, `client_detail`, `client_form` → `hoàn_tất`. Project Owner đã tự chạy tay ba kịch bản và xác nhận chức năng chạy đúng. Chặng D1 xong về phía giao diện.
+- 2026-09-28: làm lại I1 cho D2, căn cứ Data Schema 8.0.1: ba trang `commission_list`, `commission_detail`, `commission_form` → `đang_làm` (plan phiên 19); mục điều hướng "Đơn hàng"; lời gọi, luật trình bày tiền và ngày, luật kiểm form (tiêu đề not blank theo CT-3; văn bản tùy chọn để trống gửi `null`), luật phủ của D2.
