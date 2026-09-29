@@ -1,154 +1,96 @@
 # ===WCA-PLAN===
 # session_for: ui
 # drafted_by: Orchestrator + Project Owner
-# drafted_at: 2026-09-29T11:30:00+07:00
+# drafted_at: 2026-09-29T20:30:00+07:00
 # contract: data_schema 8.0.1, api_contract 4.0.0 (approved)
 
 ## MỤC TIÊU PHIÊN NÀY
 
-Phiên 20 của dự án, phiên giao diện thứ sáu. Hai phần, làm theo thứ tự:
+Phiên 21 của dự án, phiên giao diện thứ bảy. **Phiên vá ngắn, chỉ làm UI-10**: các spec e2e khẳng định chữ trên `getByRole('status')` mà không lọc. Xem `.plan/open_issues.md` UI-10.
 
-1. **Vá tồn đọng của D2:** UI-9 (e2e `commission_form` S2 không tất định), kèm Q19-3 (nhãn khách vắng mặt). Xem `.plan/open_issues.md` UI-9.
-2. **Chặng D3, tiến độ:**
-   - workflow giao diện `update_progress`;
-   - hai trang mới, `progress_board` và `stage_change`;
-   - phần "Tiến độ" trong trang `commission_detail` (trang của D2).
+Phiên này **không** thêm trang, không thêm lời gọi, không đổi hành vi nào của sản phẩm. Chỉ sửa trong `UI/tests/`, `UI/scripts/`, và `UI/package.json` (thêm một bước vào `check`).
 
-Đặc tả là `.design/ui_decomposition.md`, mục **"Chặng D3 — Tiến độ"** (làm lại I1 ngày 2026-09-29), cùng §5 và §7. Mọi quyết định trình bày, câu chữ, luật kiểm form, cách xác nhận và luật phủ đều đã chốt ở đó. Plan này không chép lại.
-
-Cuối phiên, **cả năm trang** của D2 và D3 được đề xuất `hoàn_tất`: `commission_list`, `commission_detail`, `commission_form`, `progress_board`, `stage_change`.
+Mục đích: năm trang D2 và D3 (`commission_list`, `commission_detail`, `commission_form`, `progress_board`, `stage_change`) đủ điều kiện `hoàn_tất` sau audit.
 
 **Điểm dừng:**
-- `npm run check` đạt;
-- `npm run e2e` đạt **5 lần liên tiếp**, có đặt `CT_WALKTHROUGH_RUNNER`;
-- riêng spec `commission_form` đạt **10 lần liên tiếp**;
-- mọi kịch bản bấm thử chạy lại trên hệ thống thật.
+- `npm run check` đạt, và có phép kiểm tĩnh mới;
+- spec `commission_form` chạy riêng đạt **30 lần liên tiếp**;
+- `npm run e2e` đạt **5 lần liên tiếp**, có đặt `CT_WALKTHROUGH_RUNNER`.
 
 ## VIỆC CẦN LÀM, THEO THỨ TỰ
 
 0. **Đọc tài liệu** theo `08-operating-protocol.md`, Phần 1:
-   - `CLAUDE.md`, mục 2 (luật git) và mục 5 (vận hành layer giao diện);
-   - skill `iwca-implementation` v1.0: `iwca_theory.md` (§6, §7 ma trận R1–R14), `i1-decompose.md` (Bước I1.5: một trang dùng Routers của nhiều workflow), `i3-logic.md`, `i4-kit.md`, `i5-screens.md`, `i6-self-check.md`;
-   - `.design/ui_decomposition.md`: §2 (hàng `update_progress`), §5, mục "Chặng D2 — Đơn hàng", mục **"Chặng D3 — Tiến độ"**, §7;
-   - `.plan/open_issues.md`: UI-9; UI-6 (phần để V2);
-   - hợp đồng:
-     - `data_schema.yaml`: `clause_a_common.types` (`stage_kind`, `progress_entry_record`, `commission_summary_record`) và `formats`; `update_progress` (toàn mục);
-     - `api_contract.yaml`: `update_progress`, `manage_commission` (`list_commissions`), `error_codes`, `error_body`, `endpoint_forms.http`;
-   - mọi khối checkpoint của `UI/`: `main`, `kit`, `screens`, `scaffold_ui`, `manage_client`, `manage_commission`. Khối `manage_commission` là mẫu gần nhất;
+   - `CLAUDE.md`, mục 2 (luật git) và mục 5 (vận hành layer giao diện, kịch bản bấm thử);
+   - `.plan/open_issues.md`: UI-10, UI-9 (đã đóng, để hiểu tiền lệ), UI-4;
+   - skill `iwca-implementation` v1.0: `i6-self-check.md` (kịch bản bấm thử, EVIDENCE);
+   - checkpoint `screens` (`src/screens/navigation.ts`) và `main` (`src/main.tsx`), phần về e2e và UI-9;
+   - mọi tệp trong `UI/tests/e2e/` và `UI/tests/tools/`; `UI/scripts/`; `UI/package.json`;
    - plan này sau cùng.
 
-   Xác nhận Data Schema **`8.0.1`** và API Contract **`4.0.0`**, cả hai `approved`, và `update_progress` ở `đã_hoàn_thiện`. Sai thì dừng lại và báo.
+   Xác nhận Data Schema **`8.0.1`** và API Contract **`4.0.0`**, cả hai `approved`. Sai thì dừng lại và báo.
 
 1. **Môi trường và mốc.**
    - Ghi phiên bản Node, npm; chạy `npm ci`.
-   - `npm run check`: mốc **555** kiểm thử.
-   - `npm run e2e` có đặt `CT_WALKTHROUGH_RUNNER`: mốc **32**.
-   - Chạy riêng spec `commission_form` 10 lần (`npx playwright test -c tests/e2e/playwright.config.ts commission_form`), ghi số lần hỏng. Đây là mốc của UI-9; trên máy chậm có thể 0 lần, vẫn ghi.
-   - Chụp mốc `%APPDATA%\CommissionTracker`; cuối phiên chụp lại, hai lần phải giống nhau.
-   - Ghi `git status --short` đầu phiên (chỉ đọc).
+   - `npm run check`: mốc **780** kiểm thử.
+   - `npm run e2e` có đặt `CT_WALKTHROUGH_RUNNER`: mốc **42**.
+   - Chạy riêng spec `commission_form` **30 lần**, không đặt biến (`npx playwright test -c tests/e2e/playwright.config.ts commission_form`). Ghi số lần hỏng và câu lỗi. Trên máy chậm có thể 0 lần; vẫn ghi.
+   - Chụp mốc `%APPDATA%\CommissionTracker`. Ghi `git status --short` (chỉ đọc).
 
-2. **UI-9: e2e tất định** (`.plan/open_issues.md` UI-9).
-   - **Nguyên nhân:** backend ghi `updated_at` tới giây, còn `seedCommissionSample` (`tests/tools/walkthrough_lib.mjs`) không chờ sau lần ghi cuối. Trên máy nhanh, S1 lưu cùng giây với đơn mẫu cuối, nên thứ tự của hai đơn phụ thuộc hai UUID ngẫu nhiên.
-   - **Sửa nguồn:** hàm nạp mẫu chờ hơn 1 s **sau** lần ghi cuối, để mọi lần ghi của kịch bản chắc chắn mới hơn dữ liệu mẫu. Áp dụng cho mọi hàm nạp mẫu có ghi đơn, kể cả hàm nạp mẫu mới của D3 nếu có.
-   - **Rà mọi khẳng định về vị trí** trong danh sách, ở cả các spec cũ và mới. Chỗ nào hai lần ghi có thể trùng giây thì tìm theo tên, không theo vị trí. Chỗ nào **cố ý** kiểm thứ tự (ví dụ `commission_list` S2) thì các lần ghi phải cách nhau hơn 1 s, và ghi rõ điều đó bằng chú thích.
-   - **Q19-3:** nhãn khách vắng mặt ở chế độ sửa của `commission_form` đổi thành "Không tìm thấy khách hàng" (bỏ "(đã lưu trữ)"). Sửa cả kiểm thử của nó.
-   - **Bằng chứng:**
-     - spec `commission_form` đạt 10/10 lần sau khi sửa;
-     - chứng minh bản sửa có tác dụng: tạm bỏ lần chờ sau lần ghi cuối **và** tạm thêm một cách ép hai lần ghi trùng giây (ví dụ lưu S1 ngay sau khi nạp mẫu), cho thấy khẳng định cũ hỏng, rồi khôi phục. Nếu không ép được trên máy này thì ghi rõ đã thử gì.
+2. **Sửa bốn khẳng định của `commission_form`** (UI-10, việc sửa 1).
 
-3. **Logic: workflow giao diện `update_progress`** (I3), đủ các thành phần như `manage_commission`.
-   - **Configs:**
-     - `contract.dataSchema: '8.0.1'`, `apiContract: '4.0.0'`;
-     - bảng tên tiếng Việt của giai đoạn, đúng bảng trong `ui_decomposition.md`;
-     - câu chữ mọi thông báo;
-     - locale hiển thị.
-   - **Adapters:** sáu lời gọi của bảng D3. Kiểm hình dạng bằng Zod.
-     - `stage_kind` phải là một trong bốn giá trị của hợp đồng; khác thì là vi phạm hợp đồng.
-     - `updated_at` được phép `null`; `from_stage` được phép `null`.
-     - `list_commissions` là bản riêng của workflow này (R2).
-   - **Services:**
-     - nhóm bảng tiến độ theo luật của trang `progress_board` (gồm đơn chưa có mục, và nhóm "Giai đoạn khác");
-     - thứ tự trong nhóm;
-     - tên giai đoạn;
-     - lịch sử mới nhất trước;
-     - các giai đoạn chọn được (trừ giai đoạn hiện tại);
-     - nhận biết giai đoạn khép lại theo `kind` (không theo mã);
-     - định dạng ngày giờ và hạn giao.
-   - **Routers:** mỗi thao tác của hai trang mới và của phần Tiến độ là một lối vào. Kiểm form trước khi gửi (chưa chọn giai đoạn → `rejected_input`, khóa ô `to_stage`; ghi chú rỗng → `null`).
-   - **Kiểm thử bắt buộc**, ngoài ma trận I3.6:
-     - nhóm bảng: đơn không có mục thì nằm ở giai đoạn đầu; nhóm rỗng không có; nhóm theo thứ tự `list_stages`, kể cả khi `list_stages` trả thứ tự khác mặc định; mã giai đoạn lạ; mục của đơn không có trong danh sách đơn bị bỏ;
-     - thứ tự trong nhóm: hạn sớm trước, không hạn cuối, cùng hạn thì mới sửa trước;
-     - `updated_at: null` và lịch sử rỗng;
-     - danh sách chọn không có giai đoạn hiện tại;
-     - giai đoạn khép lại nhận theo `kind`: thử với một danh mục giả có mã khác mặc định nhưng `kind` là `finished`;
-     - ghi chú chỉ khoảng trắng (ASCII, `U+00A0`, `U+3000`) → `null`.
+   Dòng 109, 175, 211, 237 của `tests/e2e/commission_form_walkthrough.spec.ts` đang dùng `getByRole('status')).toHaveText('…')` trên trang `commission_detail`. Trang này có thể có cùng lúc thông báo chuyển trang và "Đang tải tiến độ…".
 
-4. **Kit** (I4). Dùng component có sẵn nếu đủ. Nếu khung xác nhận trong trang cần một component mới (ví dụ một khung cảnh báo có hàng nút), thêm vào kit, dùng token có sẵn, và `check_contrast.mjs` phủ nó. Không dùng `window.confirm`, không hộp thoại gốc. Mọi component mới export qua `kit/index.ts` (R9).
+   Đổi sang cách mà `stage_change_walkthrough.spec.ts` đã dùng: lọc theo chữ, rồi khẳng định đúng một phần tử khớp, ví dụ `getByRole('status').filter({ hasText: '…' })` kèm `toHaveCount(1)`. Nếu bạn dùng cách khác thì cách đó phải không phụ thuộc việc phần Tiến độ đã tải xong hay chưa; ghi lý do.
 
-5. **Màn hình** (I5).
-   - Trang `progress_board` và `stage_change`, cùng hook của chúng, theo mẫu của D2:
-     - cờ tải khởi tạo `true`;
-     - hàng nút dưới tiêu đề;
-     - focus tới ô lỗi đầu tiên;
-     - khi khung xác nhận hiện, focus tới nút "Xác nhận".
-   - `commission_detail` thêm phần Tiến độ, dùng Routers của `update_progress` với **hook riêng**, tải riêng và lỗi riêng. Trang **không ghép** dữ liệu của hai workflow: phần đơn hàng và phần Tiến độ chỉ đặt cạnh nhau. Nút "Đổi giai đoạn" trong hàng nút, sau "Sửa", chỉ có khi phần Tiến độ đã tải xong và giai đoạn chưa khép lại.
-   - Mục "Tiến độ" trong vùng điều hướng, **sau** "Đơn hàng". Tham số có kiểu cho `stage_change` (`commission_id`, `title`). Ráp nối `update_progress` ở Main và `logic_context`.
-   - **Kiểm thử dựng trang:**
-     - mọi nhãn của bảng D3, cho từng lời gọi;
-     - lần vẽ đầu của hai trang mới và của phần Tiến độ;
-     - phần Tiến độ lỗi trong khi phần đơn hàng vẫn hiện;
-     - không có nút "Đổi giai đoạn" khi giai đoạn khép lại, và khi phần Tiến độ chưa tải hoặc lỗi;
-     - khung xác nhận: hiện khi chọn giai đoạn khép lại, không hiện với giai đoạn thường; "Quay lại" không gửi gì; "Xác nhận" gửi đúng một lần;
-     - `stage_change` mở khi giai đoạn đã khép lại thì không có form.
+3. **Rà mọi `getByRole('status')` trong `tests/e2e/`** (UI-10, việc sửa 2).
+   - Lập danh sách mọi chỗ. Hiện có ở `client_detail`, `client_form`, `commission_form`, `stage_change` và `walkthrough_harness.ts`.
+   - Với từng chỗ, quyết và ghi lý do:
+     - **khẳng định chữ** (`toHaveText`, `toContainText`) trên vùng `status` chưa lọc: lọc theo chữ, **kể cả ở trang D1** hiện chỉ có một vùng `status`, để spec không phụ thuộc số vùng `status` của trang;
+     - **chờ mọi chỉ báo tải biến mất** (`toHaveCount(0)`, chủ yếu ở harness): giữ nguyên nếu ý đúng là "không còn vùng `status` nào". Nếu ý thật chỉ là "không còn chỉ báo tải của một phần" thì lọc cho đúng ý đó.
+   - Không đổi ý nghĩa của bước nào trong `walkthrough.yaml`. Nếu một bước buộc phải đổi câu chữ, sửa cả `walkthrough.yaml` tương ứng.
 
-   Không đổi hành vi của ba trang D1; kiểm thử của chúng vẫn đạt.
+4. **Phép kiểm tĩnh trong `npm run check`** (UI-10, việc sửa 3).
+   - Thêm một script trong `UI/scripts/`, cùng kiểu với `check_layer.mjs` (Node thuần, không phụ thuộc mới). Script báo lỗi và trả mã thoát khác 0 khi, trong `tests/e2e/**/*.ts`, một khẳng định chữ (`toHaveText`, `toContainText`) được gọi thẳng trên kết quả của `getByRole('status')` chưa lọc (không có `.filter(`, không có tùy chọn `name`).
+   - Thêm bước đó vào script `check` của `UI/package.json`. Không sửa bước nào khác, không sửa gì khác trong `package.json`.
+   - Thông báo lỗi nêu tệp, dòng, và cách sửa.
+   - **Bằng chứng cắn:** tạm thêm một khẳng định chưa lọc vào một spec thì `npm run check` hỏng, và thông báo chỉ đúng dòng đó; khôi phục thì đạt. Ghi cả hai vào EVIDENCE.
+   - Script chỉ đọc tệp; không đụng `src/`.
 
-6. **Kịch bản bấm thử và e2e** (I6.3).
-   - `walkthrough.yaml` mới cho `progress_board` và `stage_change`, theo luật phủ D3.
-   - Bổ sung các bước của phần Tiến độ vào `commission_detail/walkthrough.yaml`.
-   - Kịch bản tự tạo dữ liệu của chính nó; nạp mẫu theo luật của việc 2.
-   - Tín hiệu "đã tải xong" là nội dung đã tải; mọi phép so "không đổi" khẳng định giá trị trước khác rỗng.
-   - Chạy `npm run e2e` **5 lần liên tiếp** có đặt `CT_WALKTHROUGH_RUNNER=coding-agent@<ngày>#<số>`, ghi dòng tổng kết từng lần. Chạy spec `commission_form` **10 lần liên tiếp**.
-   - Chạy thêm một lần không đặt biến: `UI/evidence` không đổi (UI-8 không tái phát).
+5. **Theo dõi `main_layout.spec.ts`** (UI-10, phần theo dõi). Không sửa gì nếu trong phiên này nó không hỏng. Nếu nó hỏng vì hết giờ chụp ảnh:
+   - ghi lại đầy đủ (lần chạy, thời gian, câu lỗi);
+   - chưa sửa;
+   - báo trong báo cáo cuối phiên.
 
-7. **Tự kiểm I6** cho năm trang của D2 và D3, đủ năm góc; đối chiếu bảy nguyên tắc §7.2, đặc biệt nguyên tắc 5 (xác nhận) ở `stage_change`. Ghi vào checkpoint `screens`.
+   Orchestrator sẽ quyết ở audit.
 
-8. **Checkpoint** (Giao thức 07; mọi khối `clause: external`):
-   - khối mới `update_progress` (logic);
-   - `manage_commission`: Q19-3;
-   - `kit`: component mới, nếu có;
-   - `screens`: hai trang mới, phần Tiến độ của `commission_detail`, UI-9, tự kiểm I6, **đề xuất** trạng thái của năm trang;
-   - `main`: ráp nối mới, mốc kiểm thử mới.
+6. **Chạy và ghi bằng chứng.**
+   - Spec `commission_form` chạy riêng **30 lần liên tiếp**, không đặt biến: cả 30 lần đạt. Ghi số lần đạt.
+   - `npm run e2e` **5 lần liên tiếp** có `CT_WALKTHROUGH_RUNNER=coding-agent@<ngày>#<số>`: cả 5 lần 42 đạt. Ghi dòng tổng kết từng lần.
+   - Một lần `npm run e2e` không đặt biến: `UI/evidence` nguyên vẹn (so băm trước và sau).
+   - `npm run check` đạt; số kiểm thử **bằng** mốc 780, vì phiên này không thêm kiểm thử vitest nào; nếu khác thì giải thích.
+
+7. **Checkpoint** (Giao thức 07; `clause: external`):
+   - `screens`: UI-10 (nguyên nhân, cách sửa, bằng chứng 30 lần và 5 lần); cập nhật NOTE đề xuất trạng thái năm trang D2 và D3 (chỉ đề xuất, không sửa `ui_decomposition.md`);
+   - `main`: phép kiểm tĩnh mới là một bước của `check`; mốc kiểm thử; lần chạy không đặt biến.
 
 ## KẾ THỪA TỪ CHECKPOINT — vấn đề tồn đọng
 
-- **UI-9, Q19-3:** việc 2.
-- **Ô ngày hiện kiểu tháng/ngày/năm** (NOTE ở checkpoint `kit`): việc của Desktop (DSK-15), **không** làm ở phiên này. Giữ NOTE.
-- **Giới hạn R13 đã khai:** Orchestrator chấp nhận ở V1, không vá.
+- **UI-10:** toàn bộ phiên này.
+- **Ô ngày hiện kiểu tháng/ngày/năm** (NOTE ở `kit`): việc của Desktop (DSK-15); không làm. Giữ NOTE.
+- **Giới hạn R13 đã khai:** chấp nhận ở V1, không vá.
 
 ## RÀNG BUỘC CẦN NHỚ TỪ HỢP ĐỒNG
 
-- `stage_change` = `{ to_stage: string (a stage of stage_catalog), note: string|null }`. Thân của `change_stage` là `{ "stage_change": … }` (`endpoint_forms.http`).
-- Mô tả của workflow `update_progress`:
-  - đơn ở giai đoạn có `kind` `finished` hoặc `cancelled` không đổi giai đoạn được;
-  - từ giai đoạn khác, đổi được sang **bất kỳ** giai đoạn nào khác của danh mục, không theo thứ tự;
-  - đổi sang đúng giai đoạn hiện tại bị từ chối (409).
-- `progress_state.updated_at` là `null` khi đơn chưa từng đặt giai đoạn; khi đó `current_stage` là giai đoạn đầu của danh mục.
-- `progress_board` chỉ có đơn đã từng đặt giai đoạn.
-- `progress_history`: cũ nhất trước; `from_stage` là `null` ở lần đổi đầu tiên.
-- `stage_kind` = `'active' | 'on_hold' | 'finished' | 'cancelled'`.
-- `list_stages` chỉ có nhãn 200. `error_body.details` không có hình dạng trong hợp đồng: không đọc.
+Phiên này không chạm hợp đồng. Không có lời gọi mới, không đổi Adapters, Services, Routers hay màn hình.
 
 ## CẢNH BÁO — điều KHÔNG được làm trong phiên này
 
-- ⚠ **Không có màn hình hồ sơ quyền sở hữu** (`/watermark-profiles`, `/watermark-strengths`): không trang, không workflow giao diện, không lời gọi. Watermark thuộc V4 trở đi.
-- Không làm thanh toán (D4), báo cáo (D5), nhắc việc (D6). Không thêm lời gọi ngoài sáu lời gọi của bảng D3 và các lời gọi D1, D2 đã có. Việc nào cần một điều chưa có trong `ui_decomposition.md` thì **dừng và báo**.
-- Không kéo thả trên bảng tiến độ, không đổi giai đoạn ngay trên bảng: đổi giai đoạn chỉ qua trang `stage_change`.
-- Không dùng `window.confirm`, `alert` hay hộp thoại gốc nào.
-- Không sửa Desktop (kể cả DSK-15), không sửa Backend. Không sửa tệp nào ngoài `UI/`. Được **chạy** Desktop và Backend.
-- Không làm các mục V2: Enter để lưu, chặn rời form, lọc hay tìm kiếm, đánh dấu đơn quá hạn.
-- Không gọt giao diện: không animation, không transition, không hiệu ứng trang trí, không giao diện sáng, không thư viện hay component từ nguồn ngoài, không Tailwind.
-- Không tắt luật, không thêm `eslint-disable`. Ngoại lệ lint mới phải liệt kê trong báo cáo, kèm lý do.
+- **Không sửa `UI/src/`**, trừ khối chú thích checkpoint ở `src/screens/navigation.ts` và `src/main.tsx`. Nếu thấy lỗi của sản phẩm, ghi lại và báo; không sửa.
+- Không thêm trang, không thêm lời gọi, không làm D4.
+- ⚠ **Không có màn hình hồ sơ quyền sở hữu** (`/watermark-profiles`, `/watermark-strengths`).
+- Không nới thời gian chờ chung (`timeout` của Playwright, của `expect`) để che lỗi không tất định. Không thêm `retries`. Không đánh dấu kiểm thử `skip`, `fixme` hay `flaky`.
+- Không tắt luật, không thêm `eslint-disable`.
+- Không sửa tệp nào ngoài `UI/`. Được **chạy** Desktop và Backend.
 - Không sửa `.contracts/`, `CLAUDE.md`, `.plan/`, `.design/`. Không đọc, không ghi `.reviews/`.
 - Không chạy `git commit`, `push`, `reset`, `checkout`, `restore` hay lệnh nào đổi trạng thái kho. Chỉ được đọc.
 - Không kiểm thử nào đụng `%APPDATA%\CommissionTracker` thật.
@@ -159,23 +101,19 @@ Cuối phiên, **cả năm trang** của D2 và D3 được đề xuất `hoàn_
 
 Phiên xong khi **tất cả** những điều dưới đây đúng, trên Windows:
 
-1. **UI-9:**
-   - hàm nạp mẫu chờ sau lần ghi cuối;
-   - mọi khẳng định vị trí đã rà;
-   - spec `commission_form` đạt 10/10 lần;
-   - có bằng chứng bản sửa có tác dụng, hoặc ghi rõ vì sao không ép được;
-   - Q19-3 đã sửa.
-2. Workflow `update_progress` có đủ thành phần; Configs ghi Data Schema 8.0.1; các ca kiểm thử bắt buộc của việc 3 đều có.
-3. Hai trang mới và phần Tiến độ chạy đúng đặc tả D3. Khung xác nhận nằm trong trang. Kiểm thử dựng trang phủ mọi nhãn. Ba trang D1 không đổi hành vi.
-4. `npm run check` đạt, với số kiểm thử cao hơn mốc 555.
-5. `npm run e2e` đạt **5/5 lần liên tiếp**, có dòng tổng kết từng lần; số e2e cao hơn mốc 32. Một lần chạy không đặt biến để `UI/evidence` nguyên vẹn.
-6. Mọi kịch bản bấm thử (ba D1, ba D2 đã bổ sung, hai D3) chạy trên hệ thống thật, có ảnh chụp và đúng tên người chạy.
-7. Tự kiểm I6 đủ năm góc cho năm trang của D2 và D3.
-8. Checkpoint `update_progress` (mới), `manage_commission`, `screens`, `main`, và `kit` nếu có đổi, theo Giao thức 07. Không `UNSOLVED_PROBLEMS`, trừ khi có ghi rõ.
-9. Mốc `%APPDATA%` không đổi.
-10. `git status --short` cuối phiên chỉ có tệp trong `UI/`. Liệt kê chúng trong báo cáo.
-11. Báo cáo cuối phiên theo `CLAUDE.md` mục 5, kèm:
+1. Bốn khẳng định của `commission_form` đã lọc theo chữ. Mọi `getByRole('status')` trong `tests/e2e/` đã rà, mỗi chỗ có lý do giữ hay sửa (ghi trong checkpoint `screens` hoặc báo cáo).
+2. Phép kiểm tĩnh nằm trong `npm run check`, có bằng chứng cắn.
+3. `git diff` không có dòng nào trong `UI/src/`.
+4. Spec `commission_form` chạy riêng đạt **30/30** lần liên tiếp.
+5. `npm run e2e` đạt **5/5** lần liên tiếp, mỗi lần 42; một lần không đặt biến để `UI/evidence` nguyên vẹn.
+6. `npm run check` đạt; số kiểm thử vitest bằng 780 hoặc có giải thích.
+7. Checkpoint `screens`, `main` theo Giao thức 07. Không `UNSOLVED_PROBLEMS`, trừ khi có ghi rõ.
+8. Mốc `%APPDATA%` không đổi.
+9. `git status --short` cuối phiên chỉ có tệp trong `UI/tests/`, `UI/scripts/`, `UI/package.json`, `UI/evidence/`, và hai tệp checkpoint (`src/screens/navigation.ts`, `src/main.tsx`: chỉ chú thích). Liệt kê trong báo cáo.
+
+   ⚠ Hai tệp checkpoint là ngoại lệ **chỉ cho khối chú thích**. `git diff` của chúng chỉ được đổi dòng chú thích nằm trong khối checkpoint.
+10. Báo cáo cuối phiên theo `CLAUDE.md` mục 5, kèm:
     - các lệnh để Project Owner tự chạy;
-    - **các bước bấm tay** cho hai kịch bản mới và các bước mới của `commission_detail`;
-    - đề xuất trạng thái của năm trang;
-    - danh sách ngoại lệ lint mới, nếu có.
+    - danh sách các chỗ `getByRole('status')` đã rà và quyết định từng chỗ;
+    - kết quả theo dõi `main_layout.spec.ts`;
+    - đề xuất trạng thái năm trang.
