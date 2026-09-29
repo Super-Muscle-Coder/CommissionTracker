@@ -61,7 +61,7 @@ Mặc định của iWCA: mỗi workflow hệ thống mà giao diện dùng có 
 | `scaffold_ui` | `nền_tảng` | — | Không có quyết định. Chuẩn bị tài nguyên `http_client` từ `backendBaseUrl`; về sau thêm tài nguyên `ipc_bridge` từ `invoke`, khi có lối vào `ipc` đầu tiên. | B2a |
 | `manage_client` | `nghiệp_vụ` | `manage_client` | Sắp danh sách khách hàng theo thứ tự chữ cái tiếng Việt (backend trả theo `casefold`, nên "Ánh" đứng sau "z"); tách khách đang hoạt động và khách đã lưu trữ; chọn câu thông báo cho từng nhãn lỗi. **Từ D1:** kiểm dữ liệu form trước khi gửi (§5, trang `client_form`); định dạng ngày giờ để hiển thị. | B2b, D1 |
 | `manage_commission` | `nghiệp_vụ` | `manage_commission` | Ghép tên khách hàng vào danh sách và chi tiết đơn. Adapters của workflow này gọi luôn `GET /clients` và `GET /clients/{client_id}`: đây là trùng lặp có chủ đích theo I1.3, không đi qua `manage_client` của giao diện. Sắp danh sách đơn (hợp đồng không hứa thứ tự). Đọc và định dạng số tiền theo `currency_code`; định dạng ngày hạn giao. Kiểm dữ liệu form trước khi gửi (§5, trang `commission_form`). Chi tiết từ D2 ở §5. | D2 |
-| `update_progress` | `nghiệp_vụ` | `update_progress` | Nhóm bảng tiến độ theo giai đoạn, theo thứ tự của `list_stages`. | D3 |
+| `update_progress` | `nghiệp_vụ` | `update_progress` | Nhóm bảng tiến độ theo giai đoạn, theo thứ tự của `list_stages`; ghép tiêu đề và hạn giao của đơn vào bảng (Adapters gọi luôn `GET /commissions`, trùng lặp có chủ đích theo I1.3). Đặt tên tiếng Việt cho từng giai đoạn. Kiểm form đổi giai đoạn. Chi tiết từ D3 ở §5. | D3 |
 | `record_payment` | `nghiệp_vụ` | `record_payment` | Trình bày số dư và các khoản đã hủy. | D4 |
 | `view_income_report` | `nghiệp_vụ` | `view_income_report` | Trình bày báo cáo theo tháng và theo tiền tệ. Không quy đổi tiền tệ (hợp đồng). | D5 |
 | `send_reminder` | `nghiệp_vụ` | `send_reminder` | Trình bày danh sách nhắc việc đang chờ và phần cài đặt. | D6 |
@@ -90,7 +90,7 @@ Mặc định của iWCA: mỗi workflow hệ thống mà giao diện dùng có 
 
 ## 5. Trang và layout (Bước I1.5)
 
-Layout: `main_layout` (khung chính có điều hướng) — layout duy nhất. **Từ D1:** `main_layout` có một vùng điều hướng cố định, liệt kê các mục cấp cao nhất. Hiện có hai mục, theo thứ tự: "Khách hàng" (mở `client_list`), rồi "Đơn hàng" (mở `commission_list`, từ D2). Mỗi phiên sau thêm mục của mình vào đúng vùng này, không đổi vị trí các mục cũ (§7.2, nguyên tắc 7). Màn hình lỗi khởi động không phải layout và không phải đích điều hướng: Main dựng thẳng component kit `FatalMessage` khi giá trị khởi động hỏng, trước khi có trang nào (iWCA I2.6, bước 1).
+Layout: `main_layout` (khung chính có điều hướng) — layout duy nhất. **Từ D1:** `main_layout` có một vùng điều hướng cố định, liệt kê các mục cấp cao nhất. Hiện có ba mục, theo thứ tự: "Khách hàng" (mở `client_list`), "Đơn hàng" (mở `commission_list`, từ D2), rồi "Tiến độ" (mở `progress_board`, từ D3). Mỗi phiên sau thêm mục của mình vào đúng vùng này, không đổi vị trí các mục cũ (§7.2, nguyên tắc 7). Màn hình lỗi khởi động không phải layout và không phải đích điều hướng: Main dựng thẳng component kit `FatalMessage` khi giá trị khởi động hỏng, trước khi có trang nào (iWCA I2.6, bước 1).
 
 | Trang (khóa điều hướng) | Mục đích | Workflow giao diện dùng Routers | Layout | Trạng thái |
 |---|---|---|---|---|
@@ -98,9 +98,10 @@ Layout: `main_layout` (khung chính có điều hướng) — layout duy nhất.
 | `client_detail` | Xem một khách hàng; lưu trữ, bỏ lưu trữ; lối vào sửa | `manage_client` | `main_layout` | `hoàn_tất` (2026-09-28: phiên 16 và 17, audit phiên 17 đạt, Project Owner tự chạy tay) |
 | `client_form` | Thêm khách hàng mới, hoặc sửa một khách hàng | `manage_client` | `main_layout` | `hoàn_tất` (2026-09-28: phiên 16 và 17, audit phiên 17 đạt, Project Owner tự chạy tay) |
 | `commission_list` | Xem danh sách đơn hàng; lối vào thêm đơn và xem chi tiết | `manage_commission` | `main_layout` | `đang_làm` (2026-09-28: plan phiên 19) |
-| `commission_detail` | Xem một đơn hàng; lối vào sửa | `manage_commission` | `main_layout` | `đang_làm` (2026-09-28: plan phiên 19) |
+| `commission_detail` | Xem một đơn hàng; lối vào sửa; **từ D3:** phần "Tiến độ" (giai đoạn hiện tại, lịch sử, lối vào đổi giai đoạn) | `manage_commission`; từ D3 thêm `update_progress` | `main_layout` | `đang_làm` (2026-09-28: plan phiên 19; phiên 20 sửa thêm) |
 | `commission_form` | Thêm đơn hàng mới, hoặc sửa một đơn | `manage_commission` | `main_layout` | `đang_làm` (2026-09-28: plan phiên 19) |
-| *(D3)* bảng tiến độ, lịch sử giai đoạn | — | `update_progress` | `main_layout` | `chưa_làm` |
+| `progress_board` | Xem mọi đơn hàng nhóm theo giai đoạn; lối vào chi tiết đơn | `update_progress` | `main_layout` | `đang_làm` (2026-09-29: plan phiên 20) |
+| `stage_change` | Đổi giai đoạn của một đơn, kèm ghi chú | `update_progress` | `main_layout` | `đang_làm` (2026-09-29: plan phiên 20) |
 | *(D4)* thanh toán của một đơn | — | `record_payment` | `main_layout` | `chưa_làm` |
 | *(D5)* báo cáo thu nhập | — | `view_income_report` | `main_layout` | `chưa_làm` |
 | *(D6)* nhắc việc | — | `send_reminder` | `main_layout` | `chưa_làm` |
@@ -286,6 +287,119 @@ Như D1:
 - ít nhất một bước `unreachable` cho **mỗi** trang;
 - không đòi `rejected_system`: 404 và 409 không gây ra được bằng thao tác bình thường; kiểm thử dựng trang (I5) chứng minh chúng hiện đúng.
 
+## Chặng D3 — Tiến độ (làm lại I1 ngày 2026-09-29, trước phiên 20)
+
+Căn cứ: Data Schema 8.0.1 (`update_progress`: `stage_change`, `stage_catalog`, `progress_state`, `progress_board`, `progress_history`, `stage_options`; `types.stage_kind`, `types.progress_entry_record`), API Contract 4.0.0 (`update_progress`; cùng `list_commissions` của `manage_commission`).
+
+### Lời gọi của workflow giao diện `update_progress`
+
+| Lời gọi | Dùng ở | Nhãn phải xử lý (hợp đồng) |
+|---|---|---|
+| `get_stage` (`GET /commissions/{commission_id}/stage`) | `commission_detail` (phần Tiến độ), `stage_change` | 200, 404, 500 |
+| `get_stage_history` (`GET /commissions/{commission_id}/stage/history`) | `commission_detail` (phần Tiến độ) | 200, 404, 500 |
+| `change_stage` (`PUT /commissions/{commission_id}/stage`, thân `{ "stage_change": … }`) | `stage_change` | 200, 400, 404, 409, 500 |
+| `get_board` (`GET /progress/board`) | `progress_board` | 200, 500 |
+| `list_stages` (`GET /progress/stages`) | `progress_board`, `stage_change` | 200 |
+| `list_commissions` (`GET /commissions`) | `progress_board` (tiêu đề, hạn giao) | 200, 500 |
+
+Mọi lời gọi còn phải xử lý "không tới được" và "vi phạm hợp đồng", như D1, D2. `list_commissions` là bản riêng trong Adapters của `update_progress`, không import `manage_commission` của giao diện (R2). Một thao tác gồm nhiều lời gọi thì là **một** thao tác với **một** kết quả, như D2.
+
+### Luật trình bày chung của D3 (quyết định của `update_progress`, đều `[UI-ONLY]`)
+
+- **Tên giai đoạn.** Mã giai đoạn của hợp đồng là tiếng Anh kỹ thuật; họa sĩ thấy tên tiếng Việt (§7.2, nguyên tắc 3). Configs của workflow giữ bảng tên:
+
+  | Mã | Tên hiện |
+  |---|---|
+  | `queued` | Chờ bắt đầu |
+  | `sketch` | Phác thảo |
+  | `lineart` | Lên nét |
+  | `coloring` | Tô màu |
+  | `rendering` | Hoàn thiện chi tiết |
+  | `final_review` | Duyệt lần cuối |
+  | `revision` | Sửa theo yêu cầu |
+  | `completed` | Đã vẽ xong |
+  | `on_hold` | Tạm dừng |
+  | `delivered` | Đã giao |
+  | `cancelled` | Đã hủy |
+
+  Mã không có trong bảng (cấu hình backend đổi) thì hiện đúng mã đó. **Thứ tự** giai đoạn luôn lấy từ `list_stages`, không từ bảng tên.
+- **Giai đoạn "khép lại":** giai đoạn có `kind` là `finished` hoặc `cancelled`. Hợp đồng: đơn ở giai đoạn khép lại không đổi giai đoạn được nữa.
+- **Đơn chưa từng đặt giai đoạn** (`updated_at: null`, hoặc không có trong `progress_board`) được tính là giai đoạn đầu của danh mục, đúng hợp đồng.
+- **Ngày giờ** (`changed_at`, `updated_at`): như `client_detail`. **Hạn giao:** như D2 (`dd/mm/yyyy`, cắt từ chuỗi). Workflow này giữ bản riêng của các cách định dạng đó (R2).
+- **Lịch sử giai đoạn:** hợp đồng trả cũ nhất trước; giao diện hiện **mới nhất trước**.
+
+### Chi tiết trang `progress_board` (D3)
+
+- **Mở từ:** mục "Tiến độ" của vùng điều hướng.
+- **Khi mở, và khi bấm "Tải lại":** `list_stages`, `get_board`, `list_commissions`, là một thao tác.
+- **Hiện:** mỗi giai đoạn **có ít nhất một đơn** là một nhóm, theo đúng thứ tự của `list_stages`. Tiêu đề nhóm là tên giai đoạn kèm số đơn, ví dụ "Phác thảo (2)". Nhóm rỗng không hiện (§7.2, nguyên tắc 2).
+  - Đơn có mục trong `progress_board` nằm ở nhóm của `current_stage`. Đơn không có mục nằm ở nhóm giai đoạn đầu.
+  - Mục có `current_stage` không có trong `list_stages` thì nằm ở một nhóm cuối, tên "Giai đoạn khác: <mã>".
+  - Mục của `progress_board` mà không có trong `list_commissions` thì bỏ qua (không xảy ra ở V1, vì không có thao tác xóa đơn).
+- **Mỗi đơn hiện:** tiêu đề (dòng chính); dòng phụ là hạn giao ("Hạn giao dd/mm/yyyy" hoặc "Không có hạn").
+- **Thứ tự trong nhóm:** hạn giao sớm nhất trước, đơn không có hạn xếp cuối; cùng hạn thì `updated_at` mới nhất trước, rồi `commission_id`.
+- **Thao tác:** bấm một đơn mở `commission_detail(commission_id)`. Trang **không có** hành động chính riêng; hàng nút dưới tiêu đề chỉ có "Tải lại" (§7.2, nguyên tắc 7: hàng nút vẫn có mặt).
+- **Trạng thái rỗng** (chưa có đơn nào): "Chưa có đơn hàng nào", kèm nút "Thêm đơn hàng" mở `commission_form(create)`.
+- **Nhãn phải xử lý:** 200, 500, không tới được, vi phạm hợp đồng, cho cả ba lời gọi.
+
+### Sửa trang `commission_detail` (D3)
+
+Trang có thêm một phần **"Tiến độ"**, nằm dưới các thông tin của đơn. Phần này dùng Routers của `update_progress`, tải **riêng** với phần đơn hàng (một thao tác gồm `get_stage` và `get_stage_history`). Hai phần không ghép dữ liệu với nhau (I1.5).
+- **Hiện:**
+  - "Giai đoạn hiện tại": tên giai đoạn; kèm "cập nhật lúc <ngày giờ>", hoặc "chưa cập nhật lần nào" khi `updated_at` là `null`;
+  - "Lịch sử": mỗi dòng là "<từ> → <đến>" (dòng đầu tiên của đơn, khi `from_stage` là `null`: "Bắt đầu: <đến>"), ngày giờ đổi, và ghi chú nếu có; mới nhất trước. Lịch sử rỗng: "Chưa đổi giai đoạn lần nào".
+- **Thao tác:** "Đổi giai đoạn" là hành động **phụ** (hành động chính vẫn là "Sửa"), đặt trong hàng nút dưới tiêu đề trang, sau "Sửa". Nút mở `stage_change(commission_id)`.
+  - Giai đoạn hiện tại đã khép lại: không có nút "Đổi giai đoạn"; phần Tiến độ ghi "Đơn đã <tên giai đoạn>, không đổi giai đoạn được nữa."
+  - Trong lúc phần Tiến độ chưa tải xong hoặc tải lỗi: không có nút "Đổi giai đoạn".
+- **Lỗi của phần Tiến độ** (500, không tới được, vi phạm hợp đồng, 404): hiện trong chính phần đó, kèm nút "Thử lại" của riêng phần đó. Phần thông tin đơn không bị ảnh hưởng.
+- Trang nhận thêm **thông báo chuyển trang** "Đã đổi giai đoạn sang <tên>." khi quay về từ `stage_change`.
+
+### Chi tiết trang `stage_change` (D3)
+
+- **Tham số:** `commission_id`, và `title` (tiêu đề đơn, để hiện, do `commission_detail` trao; không gọi lại `get_commission`).
+- **Tiêu đề trang:** "Đổi giai đoạn"; dưới đó là tiêu đề đơn.
+- **Khi mở:** `list_stages` và `get_stage`, là một thao tác. 404: "Không tìm thấy đơn hàng này", kèm nút quay lại.
+  - Giai đoạn hiện tại đã khép lại: không có form; hiện "Đơn đã <tên>, không đổi giai đoạn được nữa." kèm nút quay lại.
+- **Các ô:**
+  1. "Giai đoạn hiện tại": chữ, không sửa được;
+  2. "Giai đoạn mới": chọn từ `list_stages`, theo đúng thứ tự, **trừ** giai đoạn hiện tại (hợp đồng: đổi sang chính giai đoạn hiện tại bị từ chối); có lựa chọn đầu "Chọn giai đoạn" nghĩa là chưa chọn; bắt buộc;
+  3. "Ghi chú": tùy chọn, nhiều dòng.
+- **Kiểm trước khi gửi**, trong phân khu logic:
+  - chưa chọn giai đoạn: "Chọn giai đoạn mới";
+  - `[UI-ONLY]` ghi chú bỏ khoảng trắng hai đầu; rỗng thì gửi `null`.
+- **Xác nhận khi chọn giai đoạn khép lại** (§7.2, nguyên tắc 5: thao tác không quay lại được). Bấm "Lưu" với giai đoạn mới là `finished` hoặc `cancelled` thì **chưa gửi**, mà hiện ngay trong trang một khung cảnh báo: "Sau khi chuyển sang \"<tên>\", đơn này không đổi giai đoạn được nữa." kèm hai nút "Xác nhận" và "Quay lại".
+  - "Xác nhận" gửi đi; "Quay lại" đóng khung, giữ nguyên dữ liệu.
+  - **Không** dùng hộp thoại của hệ thống hay của trình duyệt (`window.confirm`): khung nằm trong trang, dùng component của kit.
+  - Giai đoạn mới không khép lại thì gửi ngay, không hỏi.
+- **Vị trí nút và focus:** như các form khác (hàng "Lưu", "Hủy" dưới tiêu đề; lỗi nhập thì focus tới ô lỗi đầu tiên). Khi khung xác nhận hiện, focus chuyển tới nút "Xác nhận".
+- **Gửi:** `change_stage`, thân `{ "stage_change": { "to_stage": …, "note": … } }`. Trong lúc gửi, "Lưu" và "Xác nhận" bị vô hiệu.
+  - 200: về `commission_detail(commission_id)` kèm "Đã đổi giai đoạn sang <tên>."
+  - 400: thông báo chung "Máy chủ không nhận dữ liệu này", giữ dữ liệu. Không đọc `details`.
+  - 404: "Không tìm thấy đơn hàng này."
+  - 409: "Không đổi được giai đoạn: đơn đã được đổi sang giai đoạn khác hoặc đã khép lại. Hãy mở lại trang." Không tự tải lại.
+  - 500, không tới được: thông báo, giữ dữ liệu, cho gửi lại.
+- **"Hủy"** về `commission_detail(commission_id)`.
+
+### Điều hướng của D3
+
+- Tham số có kiểu: `stage_change` nhận `commission_id` và `title`. `progress_board` không có tham số.
+- Luồng:
+  - vùng điều hướng "Tiến độ" → `progress_board` → bấm đơn → `commission_detail`;
+  - `commission_detail` → "Đổi giai đoạn" → `stage_change` → lưu → `commission_detail` kèm thông báo; "Hủy" → `commission_detail`;
+  - `progress_board` rỗng → "Thêm đơn hàng" → `commission_form(create)`.
+- Mục "Tiến độ" được đánh dấu đang mở ở `progress_board`. Ở `stage_change`, mục "Đơn hàng" được đánh dấu đang mở, vì trang này là một bước của trang chi tiết đơn.
+
+### Luật phủ của kịch bản bấm thử ở D3 (iWCA I6.3)
+
+- `ok` cho mọi thao tác, gồm:
+  - đổi sang một giai đoạn thường (không hỏi xác nhận);
+  - đổi sang "Đã giao" qua khung xác nhận, sau đó nút "Đổi giai đoạn" biến mất ở `commission_detail`;
+  - bấm "Quay lại" ở khung xác nhận (không gửi gì).
+- `rejected_input`: lưu khi chưa chọn giai đoạn.
+- Ít nhất một bước `unreachable` cho mỗi trang (`progress_board`, `stage_change`, và phần Tiến độ của `commission_detail`).
+- Không đòi `rejected_system`: 404 và 409 không gây ra được bằng thao tác bình thường; kiểm thử dựng trang chứng minh chúng hiện đúng.
+- Kịch bản `commission_detail` (D2) được bổ sung các bước của phần Tiến độ; ba kịch bản D2 chạy lại đủ.
+
 ## 6. Đối chiếu độ phủ (Bước I1.6)
 
 - Mọi lối vào ở §1, hoặc có workflow giao diện đối ứng ở §2, hoặc nằm trong bảng loại trừ ở §4. Không lối vào nào ở trạng thái "chưa rõ".
@@ -333,4 +447,6 @@ Kịch bản bấm thử và audit kiểm các điều sau.
 - 2026-09-28: sau audit phiên 16. `client_form` ghi rõ luật nào sao từ hợp đồng (Data Schema 7.0.0, CT-2: not blank) và luật nào `[UI-ONLY]`. Hàng nút của form nằm dưới tiêu đề, và focus chuyển tới ô lỗi đầu tiên. §7.1 thêm luật tương phản 3:1 cho thành phần tương tác. §7.2 bổ sung nguyên tắc 4 và 7. Ba trang giữ `đang_làm`, vá ở phiên 17.
 - 2026-09-28: audit phiên 17 đạt (`.reviews/audits/ui/audit_ui_session17.md`). Ba trang D1 chờ Project Owner chạy tay ba kịch bản, rồi chuyển `hoàn_tất`.
 - 2026-09-28: `client_list`, `client_detail`, `client_form` → `hoàn_tất`. Project Owner đã tự chạy tay ba kịch bản và xác nhận chức năng chạy đúng. Chặng D1 xong về phía giao diện.
+- 2026-09-29: làm lại I1 cho D3: trang `progress_board`, `stage_change` → `đang_làm` (plan phiên 20); `commission_detail` thêm phần Tiến độ; mục điều hướng "Tiến độ"; tên tiếng Việt của giai đoạn; xác nhận trong trang khi chuyển sang giai đoạn khép lại; luật phủ D3.
+- 2026-09-29: audit phiên 19 (`.reviews/audits/ui/audit_ui_session19.md`): D2 đúng đặc tả, nhưng e2e không tất định (UI-9). Ba trang D2 giữ `đang_làm`. Ghi nhận: hai đơn lưu trong cùng một giây có thứ tự tùy ý (backend ghi `updated_at` tới giây).
 - 2026-09-28: làm lại I1 cho D2, căn cứ Data Schema 8.0.1: ba trang `commission_list`, `commission_detail`, `commission_form` → `đang_làm` (plan phiên 19); mục điều hướng "Đơn hàng"; lời gọi, luật trình bày tiền và ngày, luật kiểm form (tiêu đề not blank theo CT-3; văn bản tùy chọn để trống gửi `null`), luật phủ của D2.

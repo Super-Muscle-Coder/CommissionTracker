@@ -287,6 +287,8 @@ Không ảnh hưởng hành vi.
 
 ### UI-8 — `npm run e2e` ghi đè bằng chứng đã commit trong `UI/evidence/` (trung bình; Q18-1) — **plan phiên 19** (D2, việc 2)
 
+> **ĐÃ ĐÓNG 2026-09-29, phiên 19** (`coding-agent@2026-09-29#1`). Hàm `evidenceRoot()` trong `tests/tools/walkthrough_lib.mjs`. Orchestrator xác nhận: ba lần chạy không đặt biến, băm toàn bộ `UI/evidence` trước và sau giống hệt (`.reviews/audits/ui/audit_ui_session19.md`).
+
 **Hiện tượng:** phiên 18 (backend) chạy `npm run e2e` để kiểm hồi quy theo plan. Lệnh này ghi lại toàn bộ 27 tệp đang được git theo dõi trong `UI/evidence/`:
 - 26 tệp ở `walkthroughs/`;
 - `b2a/main_layout.png`.
@@ -302,6 +304,29 @@ Vì `CT_WALKTHROUGH_RUNNER` không được đặt, ba tệp `*-run.json` ghi ru
 Plan phiên 19 chọn hướng thứ nhất: không có biến thì ghi vào `UI/test-results/evidence/` (đã bị git bỏ qua).
 
 **Tiêu chí đóng:** chạy `npm run e2e` không đặt biến thì `git status UI/evidence` sạch; chạy với biến thì bằng chứng ghi đúng tên người chạy.
+
+## Layer giao diện — sau audit phiên 19
+
+### UI-9 — e2e `commission_form` S2 không tất định (trung bình; chặn `hoàn_tất` của ba trang D2; Q19-1) — **plan phiên 20** (việc 2)
+
+> Project Owner chạy tay ba kịch bản D2 ngày 2026-09-29, không thấy bất thường; e2e trên máy Project Owner đạt 32/32. Quyết định: gộp UI-9 vào phiên 20 (D3), chốt `hoàn_tất` cả năm trang D2 và D3 ở cuối phiên đó.
+
+**Hiện tượng:** S2 khẳng định đơn đứng đầu danh sách là đơn vừa tạo ở S1. Trên máy Orchestrator (Linux), khẳng định này hỏng khoảng 1/6 số lần: đơn mẫu tạo cuối lại đứng đầu.
+
+**Nguyên nhân:**
+- Backend ghi `updated_at` tới giây. Giao diện sắp theo `updated_at` rồi theo `commission_id` (UUID ngẫu nhiên), đúng đặc tả.
+- `seedCommissionSample` (`tests/tools/walkthrough_lib.mjs`) không chờ sau đơn mẫu cuối. Trên máy nhanh, S1 lưu trong cùng giây với đơn mẫu cuối.
+
+Thí nghiệm: chờ thêm 1,1 s sau khi nạp mẫu thì 8/8 lần đạt; không chờ thì 3/22 lần hỏng.
+
+**Việc sửa:**
+- `seedCommissionSample` chờ hơn 1 s sau lần ghi cuối;
+- rà mọi khẳng định về vị trí trong danh sách của cả sáu spec: chỗ nào có thể trùng giây với một lần ghi khác thì tìm theo tên, không theo vị trí;
+- kèm Q19-3: nhãn khách vắng mặt ở chế độ sửa đổi từ "Không tìm thấy khách hàng (đã lưu trữ)" thành "Không tìm thấy khách hàng".
+
+**Tiêu chí đóng:** `npm run e2e` đạt 5/5 trên Windows, và Orchestrator chạy lại trên Linux đạt ổn định (ít nhất 10 lần spec `commission_form`, 5 lần toàn bộ e2e).
+
+**Ghi nhận về sản phẩm, không vá ở V1:** hai đơn lưu trong cùng một giây có thứ tự ổn định nhưng tùy ý trong danh sách.
 
 ## Môi trường và vận hành (không phải việc của coding agent)
 
@@ -374,3 +399,10 @@ Chưa rõ AVG chặn lúc build hay lúc đo; lịch sử cảnh báo của AVG 
 - **Thứ tự:** sau phiên 18 là **D2 (đơn hàng)**. Phiên desktop dọn dẹp (DSK-12, DSK-13) gộp với lần đo lại, nếu cần build lại.
 - **Văn bản tùy chọn để trống** (`description`, `commission_type` và các trường `string|null` khác): giao diện gửi `null`, là quy tắc `[UI-ONLY]` như ô ghi chú khách hàng. Không sửa hợp đồng. Ghi vào I1 của D2.
 
+### DSK-15 — Ô ngày của giao diện hiện kiểu tháng/ngày/năm (thấp; Q19-2 của audit phiên 19) — cho phiên desktop kế tiếp
+
+Ô "Hạn giao" (`<input type="date">`) hiện `11/30/2026`, trong khi trang chi tiết và danh sách hiện `30/11/2026`. Nguyên nhân: locale của Electron đang là `en-US`, và giao diện không đổi được định dạng ô ngày gốc.
+
+**Hướng xử lý:** desktop Main đặt ngôn ngữ ứng dụng là tiếng Việt trước sự kiện `ready`, và giá trị đó nằm trong `configs/desktop.json`. Orchestrator chưa kiểm cách nào của Electron 44 thật sự đổi được định dạng ô ngày; phiên desktop phải đo trên máy thật, có ảnh chụp trước và sau.
+
+**Tiêu chí đóng:** ô "Hạn giao" hiện `30/11/2026` trên bản chạy từ mã nguồn và trên bản đóng gói; kiểm thử của Desktop vẫn đạt.

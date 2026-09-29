@@ -1,152 +1,156 @@
 # ===WCA-PLAN===
 # session_for: ui
 # drafted_by: Orchestrator + Project Owner
-# drafted_at: 2026-09-28T23:00:00+07:00
+# drafted_at: 2026-09-29T11:30:00+07:00
 # contract: data_schema 8.0.1, api_contract 4.0.0 (approved)
 
 ## MỤC TIÊU PHIÊN NÀY
 
-Phiên 19 của dự án, phiên giao diện thứ năm: **chặng D2, đơn hàng.** Làm I3 → I6 cho ba trang mới, `commission_list`, `commission_detail`, `commission_form`, cùng workflow giao diện `manage_commission`. Làm thêm **UI-8** (e2e không được ghi đè bằng chứng đã commit) trước tiên.
+Phiên 20 của dự án, phiên giao diện thứ sáu. Hai phần, làm theo thứ tự:
 
-Đặc tả của phiên là `.design/ui_decomposition.md`, mục **"Chặng D2 — Đơn hàng"** (làm lại I1 ngày 2026-09-28), cùng §5 (layout, vùng điều hướng) và §7. Đọc kỹ phần D2: mọi quyết định trình bày, luật kiểm form, câu chữ thông báo và luật phủ đã chốt ở đó. Plan này không chép lại, chỉ nêu thứ tự việc, điểm cần chú ý và tiêu chí hoàn tất.
+1. **Vá tồn đọng của D2:** UI-9 (e2e `commission_form` S2 không tất định), kèm Q19-3 (nhãn khách vắng mặt). Xem `.plan/open_issues.md` UI-9.
+2. **Chặng D3, tiến độ:**
+   - workflow giao diện `update_progress`;
+   - hai trang mới, `progress_board` và `stage_change`;
+   - phần "Tiến độ" trong trang `commission_detail` (trang của D2).
 
-Phía backend đã sẵn sàng: `manage_client` và `manage_commission` đều `đã_hoàn_thiện` (Data Schema 8.0.1), tiêu đề đơn hàng đã được backend kiểm "not blank" (phiên 18).
+Đặc tả là `.design/ui_decomposition.md`, mục **"Chặng D3 — Tiến độ"** (làm lại I1 ngày 2026-09-29), cùng §5 và §7. Mọi quyết định trình bày, câu chữ, luật kiểm form, cách xác nhận và luật phủ đều đã chốt ở đó. Plan này không chép lại.
+
+Cuối phiên, **cả năm trang** của D2 và D3 được đề xuất `hoàn_tất`: `commission_list`, `commission_detail`, `commission_form`, `progress_board`, `stage_change`.
 
 **Điểm dừng:**
 - `npm run check` đạt;
-- `npm run e2e` đạt **5 lần liên tiếp**, và `git status UI/evidence` sạch sau các lần chạy đó;
-- sáu kịch bản bấm thử (ba cũ, ba mới) chạy trên hệ thống thật, có đúng tên người chạy.
+- `npm run e2e` đạt **5 lần liên tiếp**, có đặt `CT_WALKTHROUGH_RUNNER`;
+- riêng spec `commission_form` đạt **10 lần liên tiếp**;
+- mọi kịch bản bấm thử chạy lại trên hệ thống thật.
 
 ## VIỆC CẦN LÀM, THEO THỨ TỰ
 
 0. **Đọc tài liệu** theo `08-operating-protocol.md`, Phần 1:
    - `CLAUDE.md`, mục 2 (luật git) và mục 5 (vận hành layer giao diện);
-   - skill `iwca-implementation` v1.0: `iwca_theory.md` (§6, §7 ma trận R1–R14), `i3-logic.md`, `i4-kit.md`, `i5-screens.md`, `i6-self-check.md`;
-   - `.design/ui_decomposition.md`: §1, §2 (hàng `manage_commission`), §5, mục **"Chặng D2 — Đơn hàng"**, §7;
-   - `.plan/open_issues.md`: UI-8; UI-6 (phần để V2, để biết những gì **không** làm);
+   - skill `iwca-implementation` v1.0: `iwca_theory.md` (§6, §7 ma trận R1–R14), `i1-decompose.md` (Bước I1.5: một trang dùng Routers của nhiều workflow), `i3-logic.md`, `i4-kit.md`, `i5-screens.md`, `i6-self-check.md`;
+   - `.design/ui_decomposition.md`: §2 (hàng `update_progress`), §5, mục "Chặng D2 — Đơn hàng", mục **"Chặng D3 — Tiến độ"**, §7;
+   - `.plan/open_issues.md`: UI-9; UI-6 (phần để V2);
    - hợp đồng:
-     - `data_schema.yaml`: `clause_a_common` (`formats`: `not_blank`, `date`, `timestamp`, `id`, `currency_code`, `money`; luật số nguyên ±(2^53−1)); `manage_commission` (toàn mục); `manage_client.output_guaranteed`;
-     - `api_contract.yaml`: `manage_commission`, `manage_client`, `error_codes`, `error_body`;
-   - mọi khối checkpoint của `UI/`: `main`, `kit`, `screens`, `scaffold_ui`, `manage_client`. Khối `manage_client` là mẫu gần nhất cho workflow mới;
+     - `data_schema.yaml`: `clause_a_common.types` (`stage_kind`, `progress_entry_record`, `commission_summary_record`) và `formats`; `update_progress` (toàn mục);
+     - `api_contract.yaml`: `update_progress`, `manage_commission` (`list_commissions`), `error_codes`, `error_body`, `endpoint_forms.http`;
+   - mọi khối checkpoint của `UI/`: `main`, `kit`, `screens`, `scaffold_ui`, `manage_client`, `manage_commission`. Khối `manage_commission` là mẫu gần nhất;
    - plan này sau cùng.
 
-   Xác nhận Data Schema **`8.0.1`** và API Contract **`4.0.0`**, cả hai `approved`, `manage_commission` ở `đã_hoàn_thiện`. Sai thì dừng lại và báo.
+   Xác nhận Data Schema **`8.0.1`** và API Contract **`4.0.0`**, cả hai `approved`, và `update_progress` ở `đã_hoàn_thiện`. Sai thì dừng lại và báo.
 
 1. **Môi trường và mốc.**
    - Ghi phiên bản Node, npm; chạy `npm ci`.
-   - `npm run check`: mốc **241** kiểm thử.
-   - `npm run e2e`: mốc **17** kiểm thử. Chạy **có** đặt `CT_WALKTHROUGH_RUNNER` (vì UI-8 chưa sửa, chạy không đặt biến sẽ ghi đè bằng chứng với tên "unknown").
+   - `npm run check`: mốc **555** kiểm thử.
+   - `npm run e2e` có đặt `CT_WALKTHROUGH_RUNNER`: mốc **32**.
+   - Chạy riêng spec `commission_form` 10 lần (`npx playwright test -c tests/e2e/playwright.config.ts commission_form`), ghi số lần hỏng. Đây là mốc của UI-9; trên máy chậm có thể 0 lần, vẫn ghi.
    - Chụp mốc `%APPDATA%\CommissionTracker`; cuối phiên chụp lại, hai lần phải giống nhau.
-   - Ghi `git status --short` lúc đầu phiên (chỉ đọc).
+   - Ghi `git status --short` đầu phiên (chỉ đọc).
 
-2. **UI-8: e2e không ghi đè bằng chứng đã commit** (`.plan/open_issues.md` UI-8).
-   - Thư mục gốc của bằng chứng do **một chỗ** trong harness quyết định:
-     - có `CT_WALKTHROUGH_RUNNER` (khác rỗng): `UI/evidence/`, như hiện nay;
-     - không có: `UI/test-results/evidence/`. `test-results` đã có trong `UI/.gitignore`. Nếu Playwright dọn thư mục này ở đầu mỗi lần chạy thì không sao: đó là bằng chứng nháp.
-   - Áp dụng cho `walkthrough_harness.ts` và `main_layout.spec.ts` (ảnh `b2a/main_layout.png`), cùng mọi spec mới của phiên này.
-   - Khi không có biến, giữ nguyên hành vi còn lại: vẫn chụp ảnh, vẫn ghi `*-run.json` (runner `unknown`), chỉ khác thư mục.
+2. **UI-9: e2e tất định** (`.plan/open_issues.md` UI-9).
+   - **Nguyên nhân:** backend ghi `updated_at` tới giây, còn `seedCommissionSample` (`tests/tools/walkthrough_lib.mjs`) không chờ sau lần ghi cuối. Trên máy nhanh, S1 lưu cùng giây với đơn mẫu cuối, nên thứ tự của hai đơn phụ thuộc hai UUID ngẫu nhiên.
+   - **Sửa nguồn:** hàm nạp mẫu chờ hơn 1 s **sau** lần ghi cuối, để mọi lần ghi của kịch bản chắc chắn mới hơn dữ liệu mẫu. Áp dụng cho mọi hàm nạp mẫu có ghi đơn, kể cả hàm nạp mẫu mới của D3 nếu có.
+   - **Rà mọi khẳng định về vị trí** trong danh sách, ở cả các spec cũ và mới. Chỗ nào hai lần ghi có thể trùng giây thì tìm theo tên, không theo vị trí. Chỗ nào **cố ý** kiểm thứ tự (ví dụ `commission_list` S2) thì các lần ghi phải cách nhau hơn 1 s, và ghi rõ điều đó bằng chú thích.
+   - **Q19-3:** nhãn khách vắng mặt ở chế độ sửa của `commission_form` đổi thành "Không tìm thấy khách hàng" (bỏ "(đã lưu trữ)"). Sửa cả kiểm thử của nó.
    - **Bằng chứng:**
-     - chạy `npm run e2e` **không** đặt biến, rồi `git status --short UI/evidence`: không có dòng nào;
-     - chạy có biến: bằng chứng ghi vào `UI/evidence/` với đúng tên người chạy.
+     - spec `commission_form` đạt 10/10 lần sau khi sửa;
+     - chứng minh bản sửa có tác dụng: tạm bỏ lần chờ sau lần ghi cuối **và** tạm thêm một cách ép hai lần ghi trùng giây (ví dụ lưu S1 ngay sau khi nạp mẫu), cho thấy khẳng định cũ hỏng, rồi khôi phục. Nếu không ép được trên máy này thì ghi rõ đã thử gì.
 
-     Ghi cả hai vào EVIDENCE.
-   - Ghi cách chạy mới vào NOTE cách chạy của checkpoint `main` (hoặc khối đang giữ NOTE đó).
-
-3. **Logic: workflow giao diện `manage_commission`** (I3). Bốn thành phần như `manage_client`: `configs`, `entities`, `adapters`, `services`, `routers`, cùng khối checkpoint ở `services`.
+3. **Logic: workflow giao diện `update_progress`** (I3), đủ các thành phần như `manage_commission`.
    - **Configs:**
      - `contract.dataSchema: '8.0.1'`, `apiContract: '4.0.0'`;
-     - bảng số chữ số lẻ `{ VND: 0, USD: 2 }`;
-     - giới hạn tiêu đề 200;
-     - gợi ý loại tranh;
-     - locale hiển thị, locale sắp xếp;
-     - câu chữ mọi thông báo, lấy đúng từ `ui_decomposition.md`.
-     
-     Chú thích `[CONTRACT]` trích đúng kiểu trong hợp đồng; luật nào là `[UI-ONLY]` thì ghi rõ.
-   - **Adapters:** bảy lời gọi ở bảng "Lời gọi của workflow giao diện `manage_commission`". Kiểm hình dạng mọi phản hồi 2xx và mọi `error_body` bằng Zod, như `manage_client`; lệch hình dạng là **vi phạm hợp đồng**. `list_clients` và `get_client` là bản của workflow này, **không** import từ `manage_client` (R2).
+     - bảng tên tiếng Việt của giai đoạn, đúng bảng trong `ui_decomposition.md`;
+     - câu chữ mọi thông báo;
+     - locale hiển thị.
+   - **Adapters:** sáu lời gọi của bảng D3. Kiểm hình dạng bằng Zod.
+     - `stage_kind` phải là một trong bốn giá trị của hợp đồng; khác thì là vi phạm hợp đồng.
+     - `updated_at` được phép `null`; `from_stage` được phép `null`.
+     - `list_commissions` là bản riêng của workflow này (R2).
    - **Services:**
-     - sắp đơn theo `updated_at` mới nhất trước, rồi `commission_id`;
-     - ghép tên khách;
-     - danh sách khách chọn được (đang hoạt động, sắp tiếng Việt; ở chế độ sửa, thêm khách hiện tại nếu đã lưu trữ hoặc vắng mặt);
-     - định dạng tiền và đọc số tiền theo đúng luật ở `ui_decomposition.md`, **bằng phép tính số nguyên**;
-     - định dạng ngày hạn giao từ chuỗi, không qua `Date`;
-     - định dạng ngày giờ tạo, sửa.
-   - **Routers:** mỗi thao tác của ba trang là một lối vào; thao tác gồm hai lời gọi thì trả **một** kết quả (quy tắc ở phần D2). Kiểm form trước khi gửi, trả `rejected_input` kèm lỗi từng ô, khóa ô theo đúng tên trường của hợp đồng.
-   - **Kiểm thử bắt buộc**, ngoài các ca thường:
-     - bảng ví dụ đọc số tiền trong `ui_decomposition.md`, **từng dòng một**, cả VND lẫn USD; cộng thêm `9007199254740991` (đạt, VND), số vượt 2^53−1 ("Số tiền quá lớn"), dấu trừ, chữ cái, chuỗi rỗng, chỉ khoảng trắng;
-     - định dạng tiền: `0 VND`, `1.500.000 VND`, `12,50 USD`, `5 USD` → `0,05 USD`, `9007199254740991` với cả VND và USD, hiện đúng từng chữ số; mã tiền lạ;
-     - khứ hồi: với mọi giá trị ở trên, định dạng dạng điền sẵn rồi đọc lại ra đúng `amount_minor` ban đầu;
-     - hạn giao `2026-01-01` hiện `01/01/2026` bất kể múi giờ của tiến trình kiểm thử (chạy ca này với ít nhất một múi giờ âm, ví dụ đặt `TZ=America/Los_Angeles` cho riêng ca đó hoặc cho một lần chạy riêng; ghi lại cách làm);
-     - tiêu đề chỉ gồm khoảng trắng ASCII, `U+00A0`, `U+3000` → "Nhập tiêu đề đơn hàng"; tiêu đề đúng 200 ký tự có dấu (code point) đạt; 201 ký tự lỗi;
-     - "Loại tranh", "Mô tả" chỉ khoảng trắng → gửi `null`; hạn giao rỗng → `null`; liên kết: dòng rỗng và dòng khoảng trắng bị bỏ, không dòng nào → `[]`;
-     - sửa đơn gửi đúng đơn vị tiền cũ, kể cả khi người dùng không đụng ô tiền;
-     - thao tác hai lời gọi: mỗi lời gọi hỏng (500, không tới được, vi phạm hợp đồng) cho ra đúng lỗi đó; ở `commission_detail`, `get_client` 404 không phải lỗi.
+     - nhóm bảng tiến độ theo luật của trang `progress_board` (gồm đơn chưa có mục, và nhóm "Giai đoạn khác");
+     - thứ tự trong nhóm;
+     - tên giai đoạn;
+     - lịch sử mới nhất trước;
+     - các giai đoạn chọn được (trừ giai đoạn hiện tại);
+     - nhận biết giai đoạn khép lại theo `kind` (không theo mã);
+     - định dạng ngày giờ và hạn giao.
+   - **Routers:** mỗi thao tác của hai trang mới và của phần Tiến độ là một lối vào. Kiểm form trước khi gửi (chưa chọn giai đoạn → `rejected_input`, khóa ô `to_stage`; ghi chú rỗng → `null`).
+   - **Kiểm thử bắt buộc**, ngoài ma trận I3.6:
+     - nhóm bảng: đơn không có mục thì nằm ở giai đoạn đầu; nhóm rỗng không có; nhóm theo thứ tự `list_stages`, kể cả khi `list_stages` trả thứ tự khác mặc định; mã giai đoạn lạ; mục của đơn không có trong danh sách đơn bị bỏ;
+     - thứ tự trong nhóm: hạn sớm trước, không hạn cuối, cùng hạn thì mới sửa trước;
+     - `updated_at: null` và lịch sử rỗng;
+     - danh sách chọn không có giai đoạn hiện tại;
+     - giai đoạn khép lại nhận theo `kind`: thử với một danh mục giả có mã khác mặc định nhưng `kind` là `finished`;
+     - ghi chú chỉ khoảng trắng (ASCII, `U+00A0`, `U+3000`) → `null`.
 
-4. **Kit** (I4). Nhiều khả năng cần hai component mới, dùng phần tử HTML gốc, không thư viện ngoài:
-   - `SelectField`: `<select>` có nhãn, lỗi, vô hiệu, yêu cầu focus (cùng cơ chế `focusRequest` như `TextField`);
-   - `DateField`: `<input type="date">` có nhãn, lỗi, vô hiệu, yêu cầu focus; giá trị là chuỗi `YYYY-MM-DD` hoặc rỗng.
+4. **Kit** (I4). Dùng component có sẵn nếu đủ. Nếu khung xác nhận trong trang cần một component mới (ví dụ một khung cảnh báo có hàng nút), thêm vào kit, dùng token có sẵn, và `check_contrast.mjs` phủ nó. Không dùng `window.confirm`, không hộp thoại gốc. Mọi component mới export qua `kit/index.ts` (R9).
 
-   Viền của hai component dùng `--color-border-field` và `--color-border-field-danger`. `scripts/check_contrast.mjs` phải phủ viền, viền lỗi và vòng focus của chúng, theo đúng vị trí thật trong CSS như phiên 17. Nếu một component có sẵn đã đủ thì không tạo mới; ghi lý do. Export qua `kit/index.ts` (R9).
+5. **Màn hình** (I5).
+   - Trang `progress_board` và `stage_change`, cùng hook của chúng, theo mẫu của D2:
+     - cờ tải khởi tạo `true`;
+     - hàng nút dưới tiêu đề;
+     - focus tới ô lỗi đầu tiên;
+     - khi khung xác nhận hiện, focus tới nút "Xác nhận".
+   - `commission_detail` thêm phần Tiến độ, dùng Routers của `update_progress` với **hook riêng**, tải riêng và lỗi riêng. Trang **không ghép** dữ liệu của hai workflow: phần đơn hàng và phần Tiến độ chỉ đặt cạnh nhau. Nút "Đổi giai đoạn" trong hàng nút, sau "Sửa", chỉ có khi phần Tiến độ đã tải xong và giai đoạn chưa khép lại.
+   - Mục "Tiến độ" trong vùng điều hướng, **sau** "Đơn hàng". Tham số có kiểu cho `stage_change` (`commission_id`, `title`). Ráp nối `update_progress` ở Main và `logic_context`.
+   - **Kiểm thử dựng trang:**
+     - mọi nhãn của bảng D3, cho từng lời gọi;
+     - lần vẽ đầu của hai trang mới và của phần Tiến độ;
+     - phần Tiến độ lỗi trong khi phần đơn hàng vẫn hiện;
+     - không có nút "Đổi giai đoạn" khi giai đoạn khép lại, và khi phần Tiến độ chưa tải hoặc lỗi;
+     - khung xác nhận: hiện khi chọn giai đoạn khép lại, không hiện với giai đoạn thường; "Quay lại" không gửi gì; "Xác nhận" gửi đúng một lần;
+     - `stage_change` mở khi giai đoạn đã khép lại thì không có form.
 
-   **Phải tự thử và ghi lại:** ô ngày và danh sách chọn của Chromium hiện đúng giao diện tối (đã có `color-scheme: dark`); chữ bên trong đọc được. Có ảnh chụp trong bằng chứng kịch bản.
+   Không đổi hành vi của ba trang D1; kiểm thử của chúng vẫn đạt.
 
-5. **Màn hình** (I5). Ba trang, ba hook, theo mẫu của D1, gồm cả bài học của phiên 17:
-   - cờ tải khởi tạo `true` ở mọi hook tải ngay khi mở;
-   - hàng nút ngay dưới tiêu đề, hành động chính đứng đầu;
-   - focus tới ô lỗi đầu tiên theo thứ tự ô ở `ui_decomposition.md`.
+6. **Kịch bản bấm thử và e2e** (I6.3).
+   - `walkthrough.yaml` mới cho `progress_board` và `stage_change`, theo luật phủ D3.
+   - Bổ sung các bước của phần Tiến độ vào `commission_detail/walkthrough.yaml`.
+   - Kịch bản tự tạo dữ liệu của chính nó; nạp mẫu theo luật của việc 2.
+   - Tín hiệu "đã tải xong" là nội dung đã tải; mọi phép so "không đổi" khẳng định giá trị trước khác rỗng.
+   - Chạy `npm run e2e` **5 lần liên tiếp** có đặt `CT_WALKTHROUGH_RUNNER=coding-agent@<ngày>#<số>`, ghi dòng tổng kết từng lần. Chạy spec `commission_form` **10 lần liên tiếp**.
+   - Chạy thêm một lần không đặt biến: `UI/evidence` không đổi (UI-8 không tái phát).
 
-   Thêm:
-   - mục "Đơn hàng" vào vùng điều hướng, **sau** "Khách hàng", không đổi vị trí mục cũ;
-   - tham số có kiểu trong `navigation.ts`;
-   - ráp nối `manage_commission` ở Main và `logic_context`.
-
-   **Kiểm thử dựng trang:**
-   - mọi nhãn ở phần D2, cho từng lời gọi;
-   - lần vẽ đầu của cả ba trang;
-   - form ở chế độ sửa: đơn vị tiền không chọn được;
-   - form khi không có khách đang hoạt động: trạng thái rỗng và nút "Thêm khách hàng";
-   - khách đã lưu trữ xuất hiện với nhãn "(đã lưu trữ)" ở chế độ sửa;
-   - focus khi lỗi ở ô "Khách hàng" và khi lỗi chỉ ở ô số tiền;
-   - liên kết tham khảo hiện dạng chữ, không phải phần tử liên kết.
-
-   Không thay đổi hành vi của ba trang D1. Kiểm thử của chúng phải vẫn đạt.
-
-6. **Kịch bản bấm thử và e2e** (I6.3). Ba `walkthrough.yaml` mới, theo luật phủ D2. Spec e2e mới chạy trên hệ thống thật, dùng `walkthrough_harness.ts` và fixture `switchable_backend.py` cho bước `unreachable`. Tín hiệu "đã tải xong" là **nội dung đã tải**, không phải trạng thái nút (bài học UI-4); mọi phép so "không đổi" phải khẳng định giá trị trước khác rỗng. Kịch bản phải tạo khách hàng của chính nó; không dựa vào dữ liệu của kịch bản khác.
-   - Chạy `npm run e2e` **5 lần liên tiếp**, cả 5 lần đạt, với `CT_WALKTHROUGH_RUNNER=coding-agent@<ngày>#<số>`; ghi dòng tổng kết từng lần. Sau đó chạy thêm một lần **không** đặt biến để chứng minh UI-8 (việc 2).
-   - Ảnh chụp của ba kịch bản D1 được chụp lại trong lần chạy có biến; đó là điều bình thường.
-
-7. **Tự kiểm I6** cho ba trang mới, đủ năm góc; đối chiếu bảy nguyên tắc §7.2. Ghi vào checkpoint `screens`.
+7. **Tự kiểm I6** cho năm trang của D2 và D3, đủ năm góc; đối chiếu bảy nguyên tắc §7.2, đặc biệt nguyên tắc 5 (xác nhận) ở `stage_change`. Ghi vào checkpoint `screens`.
 
 8. **Checkpoint** (Giao thức 07; mọi khối `clause: external`):
-   - khối mới `manage_commission` (logic): các quyết định ở việc 3, luật nào sao từ hợp đồng, luật nào `[UI-ONLY]`, bằng chứng;
-   - `kit`: component mới, cặp tương phản mới;
-   - `screens`: ba trang, điều hướng, tự kiểm I6, **đề xuất** trạng thái ba trang (không sửa `ui_decomposition.md`);
-   - `main`: ráp nối mới, mốc kiểm thử mới, UI-8.
+   - khối mới `update_progress` (logic);
+   - `manage_commission`: Q19-3;
+   - `kit`: component mới, nếu có;
+   - `screens`: hai trang mới, phần Tiến độ của `commission_detail`, UI-9, tự kiểm I6, **đề xuất** trạng thái của năm trang;
+   - `main`: ráp nối mới, mốc kiểm thử mới.
 
 ## KẾ THỪA TỪ CHECKPOINT — vấn đề tồn đọng
 
-- **Giới hạn R13 đã khai** (đọc qua `any`, qua khóa tính lúc chạy, qua hàm generic): Orchestrator chấp nhận ở V1, không vá.
-- **Khoảng trắng hiếm:** `trim` của JavaScript và `str.strip` của Python khác nhau ở `U+001C..U+001F`, `U+0085` và `U+FEFF`. Backend là bên quyết định; giao diện hiện 400 chung. Áp dụng như nhau cho tiêu đề đơn.
+- **UI-9, Q19-3:** việc 2.
+- **Ô ngày hiện kiểu tháng/ngày/năm** (NOTE ở checkpoint `kit`): việc của Desktop (DSK-15), **không** làm ở phiên này. Giữ NOTE.
+- **Giới hạn R13 đã khai:** Orchestrator chấp nhận ở V1, không vá.
 
 ## RÀNG BUỘC CẦN NHỚ TỪ HỢP ĐỒNG
 
-- `commission_input` (Data Schema 8.0.1): `{ client_id: id, title: string (1..200 characters, not blank), description: string|null, commission_type: string|null, agreed_price: money (amount_minor >= 0; currency in supported_currencies), deadline: date|null, reference_links: list[string] }`. Đủ bảy khóa, không khóa thừa (backend kiểm `extra=forbid`, kiểu chặt).
-- `description` của workflow `manage_commission` ghi: không tạo được đơn cho, hay chuyển đơn sang, khách không tồn tại hoặc đã lưu trữ (404, 409); đơn vị tiền cố định từ lúc tạo, sửa chỉ đổi được số tiền (409). Giữ nguyên khách cũ dù khách đó đã lưu trữ sau khi tạo đơn thì được.
-- `money` = `{ amount_minor: integer (±(2^53−1)), currency: currency_code }`, đơn vị nhỏ nhất ISO 4217; **không bao giờ là số thực**.
-- `commission_list` và `commission_detail`: hình dạng đúng như hợp đồng; hợp đồng không hứa thứ tự.
-- `list_currencies` chỉ có nhãn 200.
-- `error_body.details` không có hình dạng trong hợp đồng: không đọc. Phân biệt lỗi chỉ bằng nhãn (và `code` nếu cần).
+- `stage_change` = `{ to_stage: string (a stage of stage_catalog), note: string|null }`. Thân của `change_stage` là `{ "stage_change": … }` (`endpoint_forms.http`).
+- Mô tả của workflow `update_progress`:
+  - đơn ở giai đoạn có `kind` `finished` hoặc `cancelled` không đổi giai đoạn được;
+  - từ giai đoạn khác, đổi được sang **bất kỳ** giai đoạn nào khác của danh mục, không theo thứ tự;
+  - đổi sang đúng giai đoạn hiện tại bị từ chối (409).
+- `progress_state.updated_at` là `null` khi đơn chưa từng đặt giai đoạn; khi đó `current_stage` là giai đoạn đầu của danh mục.
+- `progress_board` chỉ có đơn đã từng đặt giai đoạn.
+- `progress_history`: cũ nhất trước; `from_stage` là `null` ở lần đổi đầu tiên.
+- `stage_kind` = `'active' | 'on_hold' | 'finished' | 'cancelled'`.
+- `list_stages` chỉ có nhãn 200. `error_body.details` không có hình dạng trong hợp đồng: không đọc.
 
 ## CẢNH BÁO — điều KHÔNG được làm trong phiên này
 
 - ⚠ **Không có màn hình hồ sơ quyền sở hữu** (`/watermark-profiles`, `/watermark-strengths`): không trang, không workflow giao diện, không lời gọi. Watermark thuộc V4 trở đi.
-- Không làm tiến độ (D3), thanh toán (D4) hay bất kỳ lời gọi nào ngoài bảy lời gọi của phần D2. Không thêm lối "Tạo đơn cho khách này" ở `client_detail`; D1 không đổi. Việc nào cần một điều chưa có trong `ui_decomposition.md` thì **dừng và báo**.
-- Không làm liên kết bấm mở được. Desktop chặn điều hướng, và hợp đồng không có lối vào để mở trình duyệt ngoài.
-- Không làm các mục V2: Enter để lưu, chặn rời form, chống tạo trùng khi gửi lại `POST`, lọc hay tìm kiếm đơn, đánh dấu đơn quá hạn.
-- Không gọt giao diện: không animation, không transition, không hiệu ứng trang trí, không giao diện sáng, không thư viện hay component từ nguồn ngoài (kể cả thư viện chọn ngày), không Tailwind.
+- Không làm thanh toán (D4), báo cáo (D5), nhắc việc (D6). Không thêm lời gọi ngoài sáu lời gọi của bảng D3 và các lời gọi D1, D2 đã có. Việc nào cần một điều chưa có trong `ui_decomposition.md` thì **dừng và báo**.
+- Không kéo thả trên bảng tiến độ, không đổi giai đoạn ngay trên bảng: đổi giai đoạn chỉ qua trang `stage_change`.
+- Không dùng `window.confirm`, `alert` hay hộp thoại gốc nào.
+- Không sửa Desktop (kể cả DSK-15), không sửa Backend. Không sửa tệp nào ngoài `UI/`. Được **chạy** Desktop và Backend.
+- Không làm các mục V2: Enter để lưu, chặn rời form, lọc hay tìm kiếm, đánh dấu đơn quá hạn.
+- Không gọt giao diện: không animation, không transition, không hiệu ứng trang trí, không giao diện sáng, không thư viện hay component từ nguồn ngoài, không Tailwind.
 - Không tắt luật, không thêm `eslint-disable`. Ngoại lệ lint mới phải liệt kê trong báo cáo, kèm lý do.
-- Không sửa tệp nào ngoài `UI/`. Được **chạy** Desktop và Backend.
 - Không sửa `.contracts/`, `CLAUDE.md`, `.plan/`, `.design/`. Không đọc, không ghi `.reviews/`.
-- Không chạy `git commit`, `push`, `reset`, `checkout`, `restore` hay lệnh nào đổi trạng thái kho. Chỉ được đọc (`git status`, `git diff`).
+- Không chạy `git commit`, `push`, `reset`, `checkout`, `restore` hay lệnh nào đổi trạng thái kho. Chỉ được đọc.
 - Không kiểm thử nào đụng `%APPDATA%\CommissionTracker` thật.
 - Không tắt, không đổi cấu hình antivirus.
 - Không nhân sub-agent để code song song.
@@ -155,18 +159,23 @@ Phía backend đã sẵn sàng: `manage_client` và `manage_commission` đều `
 
 Phiên xong khi **tất cả** những điều dưới đây đúng, trên Windows:
 
-1. **UI-8:** chạy `npm run e2e` không đặt `CT_WALKTHROUGH_RUNNER` thì `git status --short UI/evidence` rỗng; có đặt thì bằng chứng ghi đúng chỗ và đúng tên người chạy. Có cả hai trong EVIDENCE.
-2. Workflow `manage_commission` có đủ thành phần; Configs ghi Data Schema 8.0.1; bảng ví dụ đọc số tiền được kiểm từng dòng; khứ hồi định dạng rồi đọc lại đúng; ca ngày hạn giao với múi giờ âm; ca tiêu đề khoảng trắng Unicode.
-3. Ba trang chạy đúng đặc tả phần D2; kiểm thử dựng trang phủ mọi nhãn; ba trang D1 không đổi hành vi.
-4. `npm run check` đạt, với số kiểm thử cao hơn mốc 241; tương phản phủ component mới.
-5. `npm run e2e` đạt **5/5 lần liên tiếp**, có dòng tổng kết từng lần; số e2e cao hơn mốc 17.
-6. Sáu kịch bản bấm thử chạy trên hệ thống thật, có ảnh chụp và đúng tên người chạy; ba kịch bản mới thỏa luật phủ D2.
-7. Tự kiểm I6 đủ năm góc cho ba trang mới, đã đối chiếu §7.2.
-8. Checkpoint `manage_commission` (mới), `kit`, `screens`, `main` theo Giao thức 07. Không `UNSOLVED_PROBLEMS`, trừ khi có ghi rõ.
+1. **UI-9:**
+   - hàm nạp mẫu chờ sau lần ghi cuối;
+   - mọi khẳng định vị trí đã rà;
+   - spec `commission_form` đạt 10/10 lần;
+   - có bằng chứng bản sửa có tác dụng, hoặc ghi rõ vì sao không ép được;
+   - Q19-3 đã sửa.
+2. Workflow `update_progress` có đủ thành phần; Configs ghi Data Schema 8.0.1; các ca kiểm thử bắt buộc của việc 3 đều có.
+3. Hai trang mới và phần Tiến độ chạy đúng đặc tả D3. Khung xác nhận nằm trong trang. Kiểm thử dựng trang phủ mọi nhãn. Ba trang D1 không đổi hành vi.
+4. `npm run check` đạt, với số kiểm thử cao hơn mốc 555.
+5. `npm run e2e` đạt **5/5 lần liên tiếp**, có dòng tổng kết từng lần; số e2e cao hơn mốc 32. Một lần chạy không đặt biến để `UI/evidence` nguyên vẹn.
+6. Mọi kịch bản bấm thử (ba D1, ba D2 đã bổ sung, hai D3) chạy trên hệ thống thật, có ảnh chụp và đúng tên người chạy.
+7. Tự kiểm I6 đủ năm góc cho năm trang của D2 và D3.
+8. Checkpoint `update_progress` (mới), `manage_commission`, `screens`, `main`, và `kit` nếu có đổi, theo Giao thức 07. Không `UNSOLVED_PROBLEMS`, trừ khi có ghi rõ.
 9. Mốc `%APPDATA%` không đổi.
 10. `git status --short` cuối phiên chỉ có tệp trong `UI/`. Liệt kê chúng trong báo cáo.
 11. Báo cáo cuối phiên theo `CLAUDE.md` mục 5, kèm:
     - các lệnh để Project Owner tự chạy;
-    - **các bước bấm tay cho ba kịch bản mới**;
-    - đề xuất trạng thái của ba trang;
+    - **các bước bấm tay** cho hai kịch bản mới và các bước mới của `commission_detail`;
+    - đề xuất trạng thái của năm trang;
     - danh sách ngoại lệ lint mới, nếu có.
