@@ -1,0 +1,55 @@
+page: progress_board
+precondition: >
+  Desktop đã build (npm run build trong Desktop/). Bước S1 cần cơ sở dữ liệu trống: trong UI/,
+  npm run walkthrough:app -- --empty. Bước S2 tới S4 cần dữ liệu mẫu D3: đóng ứng dụng, rồi
+  npm run walkthrough:app -- --progress, chờ "ĐÃ NẠP XONG dữ liệu mẫu D3" (dữ liệu mẫu D2 cùng
+  đơn "Phác thảo nhân vật"; "Chân dung bán thân" và "Phác thảo nhân vật" ở giai đoạn Lên nét,
+  "Minh họa bìa sách" đã giao, "Chibi đôi" chưa đặt giai đoạn). Cả hai lệnh mở ứng dụng thật với
+  thư mục dữ liệu tạm (không đụng %APPDATA%) và Backend.py thật sau fixture bật/tắt được.
+  Bật/tắt backend: npm run walkthrough:backend -- down|up (từ UI/, cửa sổ lệnh khác). Trước khi
+  chạy, đặt CT_WALKTHROUGH_RUNNER là tên người chạy.
+steps:
+  - id: S1
+    setup: >
+      Cơ sở dữ liệu trống (npm run walkthrough:app -- --empty).
+    action: >
+      Bấm mục "Tiến độ" ở vùng điều hướng bên trái. Bấm nút "Thêm đơn hàng" trong khung "Chưa có
+      đơn hàng nào.".
+    expect: >
+      Vùng điều hướng có ba mục theo thứ tự "Khách hàng", "Đơn hàng", "Tiến độ"; mục "Tiến độ"
+      được đánh dấu đang mở. Trang "Tiến độ" có hàng nút ngay dưới tiêu đề, chỉ gồm "Tải lại";
+      bên dưới là khung "Chưa có đơn hàng nào." có nút "Thêm đơn hàng" (không phải thông báo lỗi).
+      Bấm nút đó mở trang "Thêm đơn hàng".
+    covers: [ok]
+  - id: S2
+    setup: >
+      Dữ liệu mẫu D3 (npm run walkthrough:app -- --progress).
+    action: >
+      Bấm mục "Tiến độ" ở vùng điều hướng.
+    expect: >
+      Ba nhóm theo thứ tự của danh mục giai đoạn, không có nhóm rỗng: "Chờ bắt đầu (1)" — "Chibi
+      đôi", dòng phụ "Không có hạn"; "Lên nét (2)" — "Phác thảo nhân vật" ("Hạn giao 01/10/2026")
+      rồi "Chân dung bán thân" ("Hạn giao 15/10/2026"), hạn sớm trước; "Đã giao (1)" — "Minh họa
+      bìa sách" ("Hạn giao 01/01/2026"). Không có nút đổi giai đoạn nào trên bảng; không có thông
+      báo lỗi.
+    covers: [ok]
+  - id: S3
+    setup: >
+      Đang ở trang "Tiến độ" với dữ liệu mẫu D3.
+    action: >
+      Bấm đơn "Chân dung bán thân".
+    expect: >
+      Trang "Chi tiết đơn hàng" của "Chân dung bán thân"; mục "Đơn hàng" ở vùng điều hướng được
+      đánh dấu đang mở (trang chi tiết thuộc "Đơn hàng").
+    covers: [ok]
+  - id: S4
+    setup: >
+      Về trang "Tiến độ". Chạy npm run walkthrough:backend -- down (ứng dụng vẫn mở).
+    action: >
+      Bấm "Tải lại". Khi khung báo lỗi hiện ra, chạy npm run walkthrough:backend -- up, rồi bấm
+      "Tải lại" lần nữa.
+    expect: >
+      Lần đầu: khung "Không kết nối được" với câu "Không kết nối được tới phần xử lý của ứng dụng.
+      Vui lòng thử lại."; không còn nhóm nào. Sau lần bấm thứ hai (backend đã chạy lại): bảng
+      hiện lại đúng như ở S2.
+    covers: [unreachable, ok]

@@ -28,6 +28,21 @@ export declare const SAMPLE_ARCHIVED: string[]
 export declare const EXPECTED_ACTIVE: string[]
 export declare const EXPECTED_ARCHIVED: string[]
 export declare function seedSampleData(baseUrl: string): Promise<void>
+export declare const AFTER_LAST_WRITE_MS: number
+export declare function setStage(baseUrl: string, commissionId: string, toStage: string, note: string | null): Promise<unknown>
+export declare const D3_EXTRA: {
+  title: string
+  commission_type: string | null
+  agreed_price: { amount_minor: number; currency: string }
+  deadline: string | null
+  description: string | null
+  reference_links: string[]
+}
+export declare const D3_NOTES: { lineart: string; delivered: string }
+export declare const D3_EXPECTED_BOARD: [string, [string, string][]][]
+export declare function seedProgressSample(
+  baseUrl: string,
+): Promise<{ clients: Record<D2Key, string>; commissions: Record<D2Key | 'extra', string> }>
 type D2Key = 'full' | 'usd' | 'archived'
 export declare const D2_CLIENTS: Record<D2Key, string>
 export declare const D2_COMMISSIONS: Record<

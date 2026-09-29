@@ -2,8 +2,8 @@
 // workflow: main
 // clause: external
 // component: main
-// last_updated_by: coding-agent@2026-09-29#1
-// last_updated_at: 2026-09-29T10:30:00+07:00
+// last_updated_by: coding-agent@2026-09-29#2
+// last_updated_at: 2026-09-29T18:10:00+07:00
 //
 // EXPERIENCES:
 //   - id: main-EXP-001
@@ -205,6 +205,28 @@
 //       dụng 20 giây tới 1,3 phút, so với 4–12 giây ở mốc) rồi tự trở lại bình thường
 //       ở các lần sau (32 test trong khoảng 2 phút). Không tìm ra nguyên nhân trong
 //       UI/; nghi do máy bận (quét của antivirus sau npm ci, ENV-2). Chỉ ghi nhận.
+//   - id: main-EXP-014
+//     content: >
+//       Phiên 20 (D3): bước 4 ráp nối update_progress theo đúng mẫu, sau
+//       manage_commission (thứ tự ui_decomposition §2): createUpdateProgressAdapters(
+//       httpClient, UPDATE_PROGRESS_CONFIGS) → createUpdateProgressServices(adapters,
+//       UPDATE_PROGRESS_CONFIGS, LAYER_CONFIGS.resultMessages) →
+//       createUpdateProgressRouters(services) (Routers không cần giá trị Configs nào),
+//       đặt vào LogicRouters.updateProgress (screens/logic_context.ts). Không đổi giá
+//       trị khởi động, cơ chế kiểm (ESLint, stylelint, check_layer không đổi cấu hình;
+//       check_contrast thêm một cặp — bằng chứng ở kit). tests/main/main.test.tsx không
+//       đổi: trang mở đầu vẫn client_list. Kiểm thử dựng trang: fake_logic.tsx thêm
+//       fakeUpdateProgress và tham số thứ tư của renderWithLogic, renderFirstCommit.
+//       UI-9: hàm nạp mẫu chờ AFTER_LAST_WRITE_MS sau lần ghi cuối (screens-EXP-019).
+//       Chạy tay D3: npm run walkthrough:app -- --progress.
+//   - id: main-EXP-015
+//     content: >
+//       Kinh nghiệm công cụ (phiên 20): trên máy này, heredoc của Git Bash có chữ tiếng
+//       Việt trong thân lệnh (python - <<'EOF' …) hỏng với "unexpected EOF while looking
+//       for matching" dù thẻ có nháy; không tệp nào bị sửa. Viết script bằng công cụ
+//       soạn thảo tệp (scratchpad) hoặc sửa thẳng bằng Edit, đúng lời khuyên của
+//       CLAUDE.md mục 5. Không đặt lệnh đọc stdin (cat, python -) trước lệnh dài: công
+//       cụ Bash không có stdin, lệnh treo tới hết giờ.
 //
 // UNSOLVED_PROBLEMS: []
 //
@@ -526,6 +548,29 @@
 //       nên bằng chứng cắn R1–R14 cũ còn hiệu lực; check_contrast đổi (FIELDS) và có
 //       bằng chứng cắn mới ở kit. Không có eslint-disable, không ngoại lệ lint mới.
 //     recorded_at: 2026-09-29T09:30:00+07:00
+//   - claim: >
+//       Phiên 20: npm run check và npm run e2e đạt với mã cuối phiên; e2e 5/5 lần liên
+//       tiếp có tên người chạy; một lần không đặt biến để UI/evidence nguyên vẹn; mốc
+//       %APPDATA%\CommissionTracker không đổi.
+//     how: >
+//       Node v24.14.1, npm 11.11.0, npm ci; Backend/env/Scripts/python.exe (qua
+//       fixture). Trong UI/: npm run check (sau khi ghi mọi checkpoint); scratchpad
+//       e2e_final.sh: CT_WALKTHROUGH_RUNNER=coding-agent@2026-09-29#2 npm run e2e năm
+//       lần, rồi SHA-256 mọi tệp dưới UI/evidence, npm run e2e KHÔNG biến, SHA-256 lại và
+//       so. %APPDATA%\CommissionTracker: tên, kích thước, giờ ghi, SHA-256 mọi tệp lúc
+//       11:1x đầu phiên và lúc 18:0x cuối phiên.
+//     result: >
+//       check exit 0: tsc -b, eslint --max-warnings 0, stylelint sạch; "check_contrast:
+//       19 text pairs >= 4.5:1 and 12 non-text pairs >= 3:1 checked, all pass.";
+//       "check_layer: 114 files under src/ checked (ZONES, R2, R10), no violation.";
+//       "Test Files 21 passed (21)", "Tests 780 passed (780)" (mốc 555). e2e năm lần
+//       "42 passed" (17:46:00–17:59:31; mốc 32). Lần không biến "42 passed (2.5m)",
+//       "UI/evidence UNCHANGED (71 files hashed)", runner nháp "unknown (Playwright,
+//       tests/e2e/progress_board_walkthrough.spec.ts)". %APPDATA%: data.db 114688 byte và
+//       data.db.lock 0 byte, cùng giờ ghi 2026-09-28 21:09, cùng hash — "UNCHANGED". Cấu
+//       hình ESLint, stylelint, check_layer không đổi; check_contrast thêm một cặp có
+//       bằng chứng cắn ở kit. Không eslint-disable, không ngoại lệ lint mới.
+//     recorded_at: 2026-09-29T18:10:00+07:00
 //
 // NOTES:
 //   - content: >
@@ -549,7 +594,7 @@
 //       $env:CT_WALKTHROUGH_RUNNER = "coding-agent@<ngày>#<số>"; npm run e2e (Git Bash:
 //       CT_WALKTHROUGH_RUNNER='Tên' npm run e2e); bằng chứng vào UI/evidence/ với đúng
 //       tên người chạy. Chạy tay kịch bản: npm run walkthrough:app (dữ liệu mẫu D1),
-//       -- --commissions (D2), -- --empty (trống).
+//       -- --commissions (D2), -- --progress (D3, từ phiên 20), -- --empty (trống).
 //     written_at: 2026-09-29
 //   - content: >
 //       Phiên 12 sửa tests/main/main.test.tsx: ca "valid launch value → main
@@ -590,6 +635,10 @@ import { createManageCommissionAdapters } from './logic/workflows/manage_commiss
 import { MANAGE_COMMISSION_CONFIGS } from './logic/workflows/manage_commission/configs'
 import { createManageCommissionRouters } from './logic/workflows/manage_commission/routers'
 import { createManageCommissionServices } from './logic/workflows/manage_commission/services'
+import { createUpdateProgressAdapters } from './logic/workflows/update_progress/adapters'
+import { UPDATE_PROGRESS_CONFIGS } from './logic/workflows/update_progress/configs'
+import { createUpdateProgressRouters } from './logic/workflows/update_progress/routers'
+import { createUpdateProgressServices } from './logic/workflows/update_progress/services'
 import { createHttpClient } from './logic/workflows/scaffold_ui/adapters'
 import { SCAFFOLD_UI_CONFIGS } from './logic/workflows/scaffold_ui/configs'
 import { AppRoot } from './screens/app_root'
@@ -657,6 +706,8 @@ if (!launch.ok) {
     MANAGE_COMMISSION_CONFIGS,
     LAYER_CONFIGS.resultMessages,
   )
+  const updateProgressAdapters = createUpdateProgressAdapters(httpClient, UPDATE_PROGRESS_CONFIGS)
+  const updateProgressServices = createUpdateProgressServices(updateProgressAdapters, UPDATE_PROGRESS_CONFIGS, LAYER_CONFIGS.resultMessages)
   const routers: LogicRouters = {
     manageClient: createManageClientRouters(manageClientServices, MANAGE_CLIENT_CONFIGS.limits),
     manageCommission: createManageCommissionRouters(manageCommissionServices, {
@@ -664,6 +715,7 @@ if (!launch.ok) {
       currencyDecimals: MANAGE_COMMISSION_CONFIGS.currencyDecimals,
       formats: MANAGE_COMMISSION_CONFIGS.formats,
     }),
+    updateProgress: createUpdateProgressRouters(updateProgressServices),
   }
 
   // Step 5. Hand the Routers to the screens zone and render the root.

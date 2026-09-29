@@ -5,6 +5,7 @@ import { useLayoutEffect, type ReactNode } from 'react'
 import { vi } from 'vitest'
 import type { ManageClientRouters } from '../../logic/workflows/manage_client/routers'
 import type { ManageCommissionRouters } from '../../logic/workflows/manage_commission/routers'
+import type { UpdateProgressRouters } from '../../logic/workflows/update_progress/routers'
 import { LogicContext, type LogicRouters } from '../logic_context'
 
 // A Routers operation answering the queued results in order; a call with
@@ -60,13 +61,27 @@ export function fakeManageCommission(over: Partial<ManageCommissionRouters>): Ma
   }
 }
 
-// Every Routers of the context; a workflow the test does not give fails on any call.
-function logicOf(manageClient: ManageClientRouters, manageCommission: ManageCommissionRouters | undefined): LogicRouters {
-  return { manageClient, manageCommission: manageCommission ?? fakeManageCommission({}) }
+export function fakeUpdateProgress(over: Partial<UpdateProgressRouters>): UpdateProgressRouters {
+  return {
+    loadProgressBoard: unexpected('loadProgressBoard'),
+    loadCommissionProgress: unexpected('loadCommissionProgress'),
+    openStageChange: unexpected('openStageChange'),
+    saveStageChange: unexpected('saveStageChange'),
+    ...over,
+  }
 }
 
-export function renderWithLogic(ui: ReactNode, manageClient: ManageClientRouters, manageCommission?: ManageCommissionRouters) {
-  return render(<LogicContext.Provider value={logicOf(manageClient, manageCommission)}>{ui}</LogicContext.Provider>)
+// Every Routers of the context; a workflow the test does not give fails on any call.
+function logicOf(
+  manageClient: ManageClientRouters,
+  manageCommission: ManageCommissionRouters | undefined,
+  updateProgress: UpdateProgressRouters | undefined,
+): LogicRouters {
+  return { manageClient, manageCommission: manageCommission ?? fakeManageCommission({}), updateProgress: updateProgress ?? fakeUpdateProgress({}) }
+}
+
+export function renderWithLogic(ui: ReactNode, manageClient: ManageClientRouters, manageCommission?: ManageCommissionRouters, updateProgress?: UpdateProgressRouters) {
+  return render(<LogicContext.Provider value={logicOf(manageClient, manageCommission, updateProgress)}>{ui}</LogicContext.Provider>)
 }
 
 // What the page shows at its very first commit (UI-4): the status messages,
@@ -79,11 +94,18 @@ export type FirstCommit = { statuses: string[]; enabledButtons: string[]; router
 // sibling rendered after the page, reads the DOM in its layout effect: the
 // page is committed, and its passive effects (the call to Routers) have not
 // run yet.
-export function renderFirstCommit(ui: ReactNode, manageClient: ManageClientRouters, manageCommission?: ManageCommissionRouters): FirstCommit {
+export function renderFirstCommit(
+  ui: ReactNode,
+  manageClient: ManageClientRouters,
+  manageCommission?: ManageCommissionRouters,
+  updateProgress?: UpdateProgressRouters,
+): FirstCommit {
   let seen: FirstCommit | null = null
-  const logic = logicOf(manageClient, manageCommission)
+  const logic = logicOf(manageClient, manageCommission, updateProgress)
   const calls = () =>
-    [...Object.values(logic.manageClient), ...Object.values(logic.manageCommission)].some((fn) => vi.isMockFunction(fn) && fn.mock.calls.length > 0)
+    [...Object.values(logic.manageClient), ...Object.values(logic.manageCommission), ...Object.values(logic.updateProgress)].some(
+      (fn) => vi.isMockFunction(fn) && fn.mock.calls.length > 0,
+    )
   function Probe() {
     useLayoutEffect(() => {
       seen = {

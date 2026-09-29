@@ -123,7 +123,9 @@ test.describe.serial('walkthrough commission_form', () => {
     const before = await commissionRows(l.page)
     // The comparison after "Hủy" must not pass on an empty list (UI-4).
     expect(before.length).toBe(4)
-    expect(before[0][0]).toBe('Tranh nhóm ba người')
+    // Found by its title, not by its place: this step checks nothing about
+    // the order of the list (commission_list S2 does), UI-9.
+    expect(before.filter(([title]) => title === 'Tranh nhóm ba người')).toHaveLength(1)
     await rec.step(l.page, 'S2', ['rejected_input'], async () => {
       await press('Thêm đơn hàng')
       await field('Khách hàng').selectOption({ label: 'Mai Anh' })

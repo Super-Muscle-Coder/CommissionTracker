@@ -5,8 +5,8 @@
     {
       "step": "S1",
       "passed": true,
-      "runner": "TGN (Playwright, tests/e2e/client_list_walkthrough.spec.ts)",
-      "finished_at": "2026-09-29T03:50:03.836Z",
+      "runner": "coding-agent@2026-09-29#2 (Playwright, tests/e2e/client_list_walkthrough.spec.ts)",
+      "finished_at": "2026-09-29T10:57:33.736Z",
       "screenshot": "evidence/walkthroughs/client_list/client_list-S1.png",
       "covers": [
         "ok"
@@ -15,8 +15,8 @@
     {
       "step": "S2",
       "passed": true,
-      "runner": "TGN (Playwright, tests/e2e/client_list_walkthrough.spec.ts)",
-      "finished_at": "2026-09-29T03:50:07.591Z",
+      "runner": "coding-agent@2026-09-29#2 (Playwright, tests/e2e/client_list_walkthrough.spec.ts)",
+      "finished_at": "2026-09-29T10:57:38.033Z",
       "screenshot": "evidence/walkthroughs/client_list/client_list-S2.png",
       "covers": [
         "ok"
@@ -25,8 +25,8 @@
     {
       "step": "S3",
       "passed": true,
-      "runner": "TGN (Playwright, tests/e2e/client_list_walkthrough.spec.ts)",
-      "finished_at": "2026-09-29T03:50:17.585Z",
+      "runner": "coding-agent@2026-09-29#2 (Playwright, tests/e2e/client_list_walkthrough.spec.ts)",
+      "finished_at": "2026-09-29T10:57:49.273Z",
       "screenshot": "evidence/walkthroughs/client_list/client_list-S3.png",
       "covers": [
         "unreachable",
@@ -36,8 +36,8 @@
     {
       "step": "S4",
       "passed": true,
-      "runner": "TGN (Playwright, tests/e2e/client_list_walkthrough.spec.ts)",
-      "finished_at": "2026-09-29T03:50:20.819Z",
+      "runner": "coding-agent@2026-09-29#2 (Playwright, tests/e2e/client_list_walkthrough.spec.ts)",
+      "finished_at": "2026-09-29T10:57:53.071Z",
       "screenshot": "evidence/walkthroughs/client_list/client_list-S4.png",
       "covers": [
         "ok"
@@ -46,8 +46,8 @@
     {
       "step": "S5",
       "passed": true,
-      "runner": "TGN (Playwright, tests/e2e/client_list_walkthrough.spec.ts)",
-      "finished_at": "2026-09-29T03:50:24.147Z",
+      "runner": "coding-agent@2026-09-29#2 (Playwright, tests/e2e/client_list_walkthrough.spec.ts)",
+      "finished_at": "2026-09-29T10:57:57.305Z",
       "screenshot": "evidence/walkthroughs/client_list/client_list-S5.png",
       "covers": [
         "ok"

@@ -15,7 +15,8 @@ steps:
       Bấm mục "Đơn hàng" ở vùng điều hướng bên trái. Bấm nút "Thêm đơn hàng" nằm trong khung
       "Chưa có đơn hàng nào.".
     expect: >
-      Vùng điều hướng có hai mục theo thứ tự "Khách hàng", "Đơn hàng"; mục "Đơn hàng" được đánh
+      Vùng điều hướng có ba mục theo thứ tự "Khách hàng", "Đơn hàng", "Tiến độ" (mục "Tiến độ"
+      có từ D3; hai mục đầu không đổi chỗ); mục "Đơn hàng" được đánh
       dấu đang mở. Trang "Đơn hàng" có hàng nút "Thêm đơn hàng" (nút chính, màu nhấn, đứng đầu)
       và "Tải lại" ngay dưới tiêu đề; bên dưới là khung "Chưa có đơn hàng nào." có nút "Thêm đơn
       hàng" (không phải thông báo lỗi). Bấm nút đó mở trang "Thêm đơn hàng".

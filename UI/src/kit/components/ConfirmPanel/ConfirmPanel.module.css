@@ -1,0 +1,72 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  padding: var(--space-md);
+  background: var(--color-surface-danger);
+  border: var(--border-width-panel) solid var(--color-border-danger);
+  border-radius: var(--radius-panel);
+}
+
+.title {
+  margin: 0;
+  color: var(--color-text-danger);
+  font-weight: var(--font-weight-heading);
+}
+
+.text {
+  margin: 0;
+  color: var(--color-text);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+
+.confirm,
+.cancel {
+  padding: var(--space-sm) var(--space-md);
+  border-width: var(--border-width-panel);
+  border-style: solid;
+  border-radius: var(--radius-control);
+  font: inherit;
+  cursor: pointer;
+}
+
+.confirm {
+  color: var(--color-action-text);
+  background: var(--color-action);
+  border-color: var(--color-action);
+  font-weight: var(--font-weight-heading);
+}
+
+.confirm:hover:not(:disabled) {
+  background: var(--color-action-hover);
+  border-color: var(--color-action-hover);
+}
+
+.cancel {
+  color: var(--color-action-secondary-text);
+  background: var(--color-action-secondary);
+  border-color: var(--color-border);
+}
+
+.cancel:hover:not(:disabled) {
+  background: var(--color-action-secondary-hover);
+}
+
+.confirm:focus-visible,
+.cancel:focus-visible {
+  outline: var(--border-width-focus) solid var(--color-focus-ring);
+  outline-offset: var(--border-width-focus);
+}
+
+.confirm:disabled,
+.cancel:disabled {
+  color: var(--color-action-text-disabled);
+  background: var(--color-action-disabled);
+  border-color: var(--color-action-disabled);
+  cursor: default;
+}

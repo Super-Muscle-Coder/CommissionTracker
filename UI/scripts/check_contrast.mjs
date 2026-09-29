@@ -38,19 +38,19 @@ const TEXT_PAIRS = [
   ['--color-text', '--color-surface-hover', 'hovered NavMenu item and ItemList row'],
   ['--color-text', '--color-surface-selected', 'current NavMenu item'],
   ['--color-text', '--color-surface-field', 'text typed or chosen in TextField, TextArea, SelectField, DateField'],
-  ['--color-text', '--color-surface-danger', 'InlineAlert text, FatalMessage detail'],
+  ['--color-text', '--color-surface-danger', 'InlineAlert text, FatalMessage detail, ConfirmPanel text'],
   ['--color-text-muted', '--color-surface', 'Section group heading, LoadingIndicator'],
   ['--color-text-muted', '--color-surface-raised', 'DescriptionList terms, ItemList secondary line'],
   ['--color-text-muted', '--color-surface-hover', 'ItemList secondary line of a hovered row'],
   ['--color-text-muted', '--color-surface-muted', 'EmptyState text'],
   ['--color-text-muted', '--color-surface-field', 'text of a disabled TextField, TextArea, SelectField, DateField (while saving; the locked currency)'],
   ['--color-text-danger', '--color-surface', 'field error under a TextField, TextArea, SelectField or DateField'],
-  ['--color-text-danger', '--color-surface-danger', 'InlineAlert title, FatalMessage title'],
+  ['--color-text-danger', '--color-surface-danger', 'InlineAlert title, FatalMessage title, ConfirmPanel title'],
   ['--color-text-success', '--color-surface-success', 'SuccessNotice'],
-  ['--color-action-text', '--color-action', 'primary Button'],
-  ['--color-action-text', '--color-action-hover', 'primary Button, hovered'],
-  ['--color-action-secondary-text', '--color-action-secondary', 'secondary Button'],
-  ['--color-action-secondary-text', '--color-action-secondary-hover', 'secondary Button, hovered'],
+  ['--color-action-text', '--color-action', 'primary Button, ConfirmPanel confirm button'],
+  ['--color-action-text', '--color-action-hover', 'primary Button, ConfirmPanel confirm button, hovered'],
+  ['--color-action-secondary-text', '--color-action-secondary', 'secondary Button, ConfirmPanel cancel button'],
+  ['--color-action-secondary-text', '--color-action-secondary-hover', 'secondary Button, ConfirmPanel cancel button, hovered'],
 ]
 
 // The kit's input fields: each draws its border, error border and focus ring
@@ -83,6 +83,14 @@ const CSS = {
     ['Button/Button.module.css', '.primary:focus-visible', 'outline', 'var(--border-width-focus) solid var(--color-focus-ring)'],
     ['Button/Button.module.css', '.primary:focus-visible', 'outline-offset', 'var(--border-width-focus)'],
     ['Button/Button.module.css', '.secondary:focus-visible', 'outline-offset', 'var(--border-width-focus)'],
+  ],
+  // ConfirmPanel's buttons: ring outside (positive offset, like Button), so
+  // it sits on the panel's background, the danger surface.
+  confirmPanelRingOutside: [
+    ['ConfirmPanel/ConfirmPanel.module.css', '.confirm:focus-visible', 'outline', 'var(--border-width-focus) solid var(--color-focus-ring)'],
+    ['ConfirmPanel/ConfirmPanel.module.css', '.confirm:focus-visible', 'outline-offset', 'var(--border-width-focus)'],
+    ['ConfirmPanel/ConfirmPanel.module.css', '.cancel:focus-visible', 'outline-offset', 'var(--border-width-focus)'],
+    ['ConfirmPanel/ConfirmPanel.module.css', '.panel', 'background', 'var(--color-surface-danger)'],
   ],
   emptyStateRingOutside: [
     ['EmptyState/EmptyState.module.css', '.action:focus-visible', 'outline-offset', 'var(--border-width-focus)'],
@@ -118,6 +126,7 @@ const NON_TEXT_PAIRS = [
   ['--color-border-field-danger', '--color-surface', 'TextField, TextArea, SelectField, DateField border with an error — outer edge, on the page', CSS.fieldErrorBorder],
   ['--color-focus-ring', '--color-surface', 'focus ring of Button (also the DateField clear button) and of TextField, TextArea, SelectField, DateField — drawn outside, on the page', [...CSS.buttonRingOutside, ...CSS.fieldRingOutside]],
   ['--color-focus-ring', '--color-surface-muted', 'focus ring of the EmptyState button — drawn outside, on the EmptyState box', CSS.emptyStateRingOutside],
+  ['--color-focus-ring', '--color-surface-danger', 'focus ring of the ConfirmPanel buttons — drawn outside, on the panel', CSS.confirmPanelRingOutside],
   ['--color-focus-ring', '--color-surface-raised', 'focus ring of a NavMenu item, an ItemList row — drawn inside, on the item', [...CSS.itemRingInside, ...CSS.navItemBackgrounds]],
   ['--color-focus-ring', '--color-surface-hover', 'focus ring of a hovered NavMenu item or ItemList row — drawn inside', [...CSS.itemRingInside, ...CSS.navItemBackgrounds]],
   ['--color-focus-ring', '--color-surface-selected', 'focus ring of the current NavMenu item — drawn inside', [...CSS.itemRingInside, ...CSS.navItemBackgrounds]],

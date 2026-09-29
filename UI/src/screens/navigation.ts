@@ -2,8 +2,8 @@
 // workflow: screens
 // clause: external
 // component: screens
-// last_updated_by: coding-agent@2026-09-29#1
-// last_updated_at: 2026-09-29T10:20:00+07:00
+// last_updated_by: coding-agent@2026-09-29#2
+// last_updated_at: 2026-09-29T18:10:00+07:00
 //
 // EXPERIENCES:
 //   - id: screens-EXP-001
@@ -271,6 +271,118 @@
 //       niệm nghiệp vụ. NGƯỜI DÙNG: ba kịch bản chạy trên hệ thống thật (EVIDENCE),
 //       §7.2 ở screens-EXP-017. CHECKPOINT: manage_commission (mới), kit, screens,
 //       main. BẰNG CHỨNG: đủ ba loại (dưới đây, ở manage_commission, kit, main).
+//   - id: screens-EXP-019
+//     content: >
+//       UI-9 (phiên 20). Nguyên nhân: backend ghi updated_at, changed_at tới GIÂY;
+//       hai lần ghi trong cùng giây có thứ tự theo hai UUID ngẫu nhiên. Sửa nguồn:
+//       mọi hàm nạp mẫu có ghi đơn hoặc giai đoạn (seedCommissionSample,
+//       seedProgressSample ở tests/tools/walkthrough_lib.mjs) chờ AFTER_LAST_WRITE_MS
+//       = 1100 ms SAU lần ghi cuối, nên mọi lần ghi của kịch bản chắc chắn mới hơn
+//       mẫu; các lần ghi của mẫu mà thứ tự có ý nghĩa cũng cách nhau 1100 ms (ba đơn
+//       D2; hai lần đổi giai đoạn của "Chân dung bán thân"). Rà khẳng định vị trí
+//       trong mọi spec: commission_form S2 before[0][0] → tìm theo tên (bước này
+//       không kiểm thứ tự); commission_list S2 D2_EXPECTED_LIST CỐ Ý kiểm thứ tự, có
+//       chú thích; progress_board S2 thứ tự trong nhóm theo HẠN GIAO, không theo thời
+//       điểm ghi; stage_change và commission_detail S5 không khẳng định thứ tự lịch sử
+//       khi hai lần đổi có thể trùng giây (chỉ số dòng, mẫu của dòng); so danh sách
+//       trước–sau trên cùng dữ liệu (commission_form S2, commission_list S3,
+//       progress_board S4) giữ nguyên vì thứ tự ổn định; danh sách khách sắp theo tên
+//       và thứ tự mục của trang chi tiết không phụ thuộc thời gian.
+//   - id: screens-EXP-020
+//     content: >
+//       Chặng D3 (phiên 20). PageParams thêm progress_board: null; stage_change: {
+//       commission_id; title } (title do commission_detail trao, trang không gọi lại
+//       get_commission); hai dòng expect-error mới. NAVIGATION thêm progress_board
+//       (menu "Tiến độ" SAU "Đơn hàng", section progress_board) và stage_change
+//       (section commission_list: là một bước của chi tiết đơn). LogicRouters thêm
+//       updateProgress. progress_board: hàng nút chỉ "Tải lại" (secondary; đặc tả:
+//       không có hành động chính riêng), mỗi nhóm là Section group (h3 = "<tên>
+//       (<số>)") chứa ItemList cùng nhãn; rỗng → EmptyState "Chưa có đơn hàng nào." +
+//       "Thêm đơn hàng"; không có nút đổi giai đoạn trên bảng. stage_change: Section
+//       page "Đổi giai đoạn" > Section group <tiêu đề đơn> > hàng "Lưu" (primary),
+//       "Hủy"; kết quả lưu; DescriptionList "Tiến độ hiện tại"; SelectField "Giai đoạn
+//       mới" (lựa chọn đầu "Chọn giai đoạn"); TextArea "Ghi chú". Lỗi to_stage → focus
+//       tới "Giai đoạn mới" (focusRequest = saveCount). Đã khép lại → không form: hàng
+//       "Quay lại" + EmptyState câu khép lại. 404/500 khi mở → "Không mở được đơn
+//       hàng" + "Quay lại"; unreachable → "Thử lại" + "Hủy". Mọi nút quay lại đi về
+//       commission_detail(commission_id).
+//   - id: screens-EXP-021
+//     content: >
+//       Khung xác nhận (stage_change): hook KHÔNG quyết định có hỏi hay không. "Lưu" gọi
+//       saveStageChange(target, draft, false); Services trả ok needs_confirmation với
+//       giai đoạn khép lại; trang thấy nhánh đó (switch trên outcome) và dựng
+//       ConfirmPanel của kit với câu của Services. "Xác nhận" gọi lại với confirmed =
+//       true; "Quay lại" là dismiss() của hook (giữ: quên kết quả, giữ bản nháp).
+//       Trong lúc khung chờ trả lời: ô chọn, ghi chú, "Lưu" bị khóa (câu hỏi nói về
+//       đúng bản nháp đó); trong lúc gửi: "Xác nhận" và "Quay lại" vô hiệu, không gửi
+//       hai lần (ref saveRunning). Kết quả changed → hook trao (onChanged) → trang điều
+//       hướng tới commission_detail kèm "Đã đổi giai đoạn sang <tên>.".
+//   - id: screens-EXP-022
+//     content: >
+//       commission_detail có HAI hook (plan phiên 20 việc 5; i5 viết một trang một
+//       hook, plan quyết định khác, đã báo đầu phiên): use_commission_detail
+//       (manage_commission) và use_commission_progress (update_progress), mỗi hook
+//       tải riêng, lỗi riêng, cờ tải khởi tạo true (UI-4). Trang chỉ ĐẶT CẠNH NHAU,
+//       không ghép dữ liệu: phần "Tiến độ" (Section group, DescriptionList "Tiến độ
+//       đơn hàng": "Giai đoạn hiện tại" [tên, cập nhật lúc], "Lịch sử" [dòng…]) nằm
+//       dưới "Thông tin đơn hàng", chỉ khi phần đơn ok. Lỗi của phần (404, 500,
+//       unreachable, contract_violation) hiện trong phần, kèm "Thử lại" riêng (chỉ tải
+//       lại phần). "Đổi giai đoạn" (secondary, sau "Sửa") chỉ khi phần đã tải xong, ok
+//       và không khép lại (stageCanChange, switch trên kind); nút trao title của phần
+//       đơn làm tham số điều hướng. Hệ quả nhìn thấy (commission_detail S4): khi
+//       backend tắt lúc mở trang, "Thử lại" của phần đơn chỉ tải lại phần đơn; phần
+//       Tiến độ vẫn báo lỗi của nó tới khi bấm "Thử lại" của nó — đúng đặc tả (tải
+//       riêng), ghi ở kịch bản.
+//   - id: screens-EXP-023
+//     content: >
+//       Kịch bản và e2e D3: progress_board S1..S4, stage_change S1..S5, commission_detail
+//       thêm S5 và bổ sung S1, S4. Mẫu D3 seedProgressSample (D2 + "Phác thảo nhân vật";
+//       stage qua PUT /commissions/{id}/stage); chạy tay npm run walkthrough:app --
+//       --progress. Helper mới ở walkthrough_harness.ts: goToBoard, reloadBoard,
+//       boardGroups, progressEntries, expectProgressLoaded, openStageChange; tín hiệu đã
+//       tải luôn là nội dung (danh sách đầu tiên, trạng thái rỗng, DescriptionList của
+//       phần Tiến độ, ô "Giai đoạn mới"), không phải trạng thái nút (UI-4). Luật phủ D3:
+//       ok mọi thao tác, gồm giai đoạn thường không hỏi (stage_change S2), "Đã giao" qua
+//       khung rồi mất nút "Đổi giai đoạn" (S5), "Quay lại" không gửi gì (S3);
+//       rejected_input khi chưa chọn (S1); unreachable mỗi trang: progress_board S4,
+//       stage_change S4, phần Tiến độ commission_detail S4; không đòi rejected_system.
+//       Vùng điều hướng: commission_list S1 nay có ba mục.
+//   - id: screens-EXP-024
+//     content: >
+//       Tự kiểm I6 phiên 20, năm trang D2 và D3, năm góc. HỢP ĐỒNG: Data Schema 8.0.1,
+//       API Contract 4.0.0 approved, update_progress và manage_commission
+//       đã_hoàn_thiện; Configs của hai workflow trỏ data 8.0.1, api 4.0.0; bảng nhãn
+//       13 lời gọi khớp từng dòng (hai kiểm thử so nguyên bảng); stage_change gửi đúng
+//       hai khóa. Tìm trong src và tests: không lời gọi tới /watermark-profiles,
+//       /watermark-strengths, /artworks, /verifications, /reminders, /payments,
+//       /reports, /backups; đường dẫn trong Configs chỉ /clients…, /commissions…,
+//       /commissions/{commission_id}/stage(/history), /currencies, /progress/board,
+//       /progress/stages; không có confirm(, alert(, prompt( trong src. RANH GIỚI:
+//       npm run check đạt (R1–R14); Services chỉ quyết định trình bày
+//       (update_progress-EXP-003); Routers chỉ kiểm to_stage có mặt (type) cộng ghi
+//       chú [UI-ONLY]; bốn hook mới (use_progress_board, use_stage_change,
+//       use_commission_progress; use_commission_detail không đổi) viết lại được bằng
+//       gọi, giữ, chuyển — switch trên outcome để trao kết quả changed là "chuyển";
+//       stageCanChange và savedState là trình bày của trang (đọc nhánh của ViewResult).
+//       ConfirmPanel không mang khái niệm nghiệp vụ. NGƯỜI DÙNG: tám kịch bản chạy trên
+//       hệ thống thật (EVIDENCE); §7.2 ở screens-EXP-025. CHECKPOINT: update_progress
+//       (mới), manage_commission (Q19-3), kit (ConfirmPanel), screens, main. BẰNG CHỨNG:
+//       đủ ba loại.
+//   - id: screens-EXP-025
+//     content: >
+//       §7.2 cho D3 (và D2 sau D3). (1) Hành động chính: stage_change "Lưu";
+//       commission_detail vẫn "Sửa" ("Đổi giai đoạn" là phụ); progress_board theo đặc
+//       tả không có hành động chính, hàng nút chỉ "Tải lại". Đạt theo đặc tả. (2) Bảng
+//       chỉ tiêu đề và hạn giao; nhóm rỗng không hiện. Đạt. (3) Tên giai đoạn tiếng Việt
+//       ("Chờ bắt đầu", "Lên nét", "Đã giao"…), không mã kỹ thuật. Đạt. (4) Sau đổi
+//       giai đoạn: "Đã đổi giai đoạn sang <tên>." ở chi tiết; lỗi nhập dưới ô và con trỏ
+//       tới "Giai đoạn mới" (e2e stage_change S1, toBeFocused). Đạt. (5) XÁC NHẬN: chuyển
+//       sang giai đoạn khép lại hỏi trong trang, nói rõ hậu quả ("…đơn này không đổi
+//       giai đoạn được nữa."), focus ở "Xác nhận", "Quay lại" không gửi gì; giai đoạn
+//       thường không hỏi (e2e S2, S3, S5). Đạt. (6) Bảng rỗng: "Chưa có đơn hàng nào." +
+//       "Thêm đơn hàng". Đạt. (7) "Tiến độ" thêm SAU "Đơn hàng", hai mục cũ không đổi
+//       chỗ; mọi trang có hàng nút dưới tiêu đề (stage_change đo bằng vị trí thật, S1).
+//       Đạt. Ghi nhận: câu khép lại dùng mẫu khác đặc tả (NOTE ở update_progress).
 //
 // UNSOLVED_PROBLEMS: []
 //
@@ -438,14 +550,81 @@
 //       nút trên ô đầu theo vị trí thật (S1, S3); đơn vị tiền vô hiệu khi sửa; khách đã
 //       lưu trữ giữ nguyên khi sửa (S5); color-scheme dark của select và ô ngày.
 //     recorded_at: 2026-09-29T09:24:00+07:00
+//   - claim: >
+//       Phiên 20: kiểm thử dựng trang phủ mọi kind của mọi thao tác của progress_board,
+//       stage_change và phần Tiến độ của commission_detail; khung xác nhận; ba trang D1
+//       và các ca D2 cũ vẫn đạt.
+//     how: >
+//       Trong UI/: npm run check; npx vitest run src/screens.
+//     result: >
+//       ProgressBoard.test.tsx 9 (lần vẽ đầu; hàng nút chỉ "Tải lại"; nhóm và đơn đúng
+//       thứ tự đã cho, gồm "Giai đoạn khác"; bấm đơn → commission_detail; rỗng + "Thêm
+//       đơn hàng"; 500 của get_board và của list_commissions; unreachable rồi Tải lại;
+//       contract_violation; nút bận). StageChange.test.tsx 22 (mở: lần vẽ đầu, ok hai
+//       tiêu đề, hàng nút trước ô, lựa chọn; Hủy; đã khép lại → không form, chỉ "Quay
+//       lại"; 404, 500; unreachable rồi Thử lại; contract_violation. Lưu: giai đoạn thường
+//       gửi ngay confirmed false → commission_detail kèm câu; rejected input lỗi ở "Giai
+//       đoạn mới", focus ở đó, ghi chú giữ; 400, 404, 409, 500 giữ bản nháp, không tự tải
+//       lại; unreachable rồi lưu lại cùng bản nháp; contract_violation; nút bận. Xác nhận:
+//       hiện với giai đoạn khép lại, câu, focus "Xác nhận", ô và "Lưu" khóa; không hiện
+//       với giai đoạn thường; "Quay lại" không gửi, giữ bản nháp; "Xác nhận" gửi đúng một
+//       lần confirmed true, cả hai nút vô hiệu khi gửi; 409 sau xác nhận).
+//       CommissionDetail.test.tsx 24 (12 ca cũ, nay có "Đổi giai đoạn" giữa "Sửa" và
+//       "Quay lại danh sách"; 12 ca Tiến độ: lần vẽ đầu của phần, không nút đổi khi đang
+//       tải; ok hai mục; chưa đặt; khép lại → không nút, có câu; nút mở stage_change với
+//       id và title; 404, 500, unreachable, contract_violation trong phần, phần đơn vẫn
+//       hiện, không nút đổi; "Thử lại" của phần chỉ tải lại phần; phần đơn lỗi thì không
+//       có phần Tiến độ; thông báo "Đã đổi giai đoạn sang …"). app_root.test.tsx 6 (tám
+//       trang; ba mục điều hướng; "Tiến độ" mở bảng và đánh dấu; chín dòng
+//       expect-error). D1 và D2 khác không đổi số ca. Toàn layer "Test Files 21 passed
+//       (21)", "Tests 780 passed (780)" (mốc 555). Phép thử cắn (bite.py): (f) cho "Đổi
+//       giai đoạn" hiện cả khi phần đang tải → "1 failed | 23 passed (24)"; (g) ở kit.
+//     recorded_at: 2026-09-29T17:45:30+07:00
+//   - claim: >
+//       UI-9: spec commission_form tất định; bản sửa có tác dụng.
+//     how: >
+//       (1) Mốc đầu phiên: npx playwright test -c tests/e2e/playwright.config.ts
+//       commission_form mười lần (không biến). (2) Spec tạm ui9_proof.spec.ts (đã xóa):
+//       một lần mở, mười vòng: điền đơn mới, ghi lại đơn mẫu cuối qua PUT
+//       /commissions/{id} (ép trùng giây), lưu, kiểm khẳng định CŨ "đơn đầu danh sách là
+//       đơn vừa lưu"; UI9_MODE=nopause (không chờ) và pause (chờ AFTER_LAST_WRITE_MS sau
+//       lần ghi ép). (3) Sau khi sửa: lệnh (1) mười lần.
+//     result: >
+//       (1) 8/10 đạt; lần 4 và 10 hỏng ở S2 "Expected: Tranh nhóm ba người, Received:
+//       Minh họa bìa sách". (2) nopause "0/10 pass" (mọi vòng đơn mẫu đứng đầu: trùng
+//       giây thì thứ tự theo UUID); pause "10/10 pass". (3) mười lần "7 passed" liên
+//       tiếp (19.5s–26.7s).
+//     recorded_at: 2026-09-29T17:44:00+07:00
+//   - claim: >
+//       Phiên 20: tám kịch bản bấm thử (ba D1, ba D2 — commission_detail bổ sung S5 và
+//       phần Tiến độ ở S1, S4 —, hai D3 mới) chạy trên ứng dụng thật với Backend.py thật,
+//       mọi bước đạt, có ảnh chụp, đúng tên người chạy, 5 lần liên tiếp.
+//     how: >
+//       Desktop đã build. Trong UI/: CT_WALKTHROUGH_RUNNER=coding-agent@2026-09-29#2,
+//       npm run e2e năm lần liên tiếp (scratchpad e2e_final.sh). Bản ghi
+//       UI/evidence/walkthroughs/<trang>/<trang>-run.json và ảnh cạnh nó.
+//     result: >
+//       Lần 1 "42 passed (2.5m)" (17:46:00–17:48:38), lần 2 "42 passed (2.6m)", lần 3
+//       "42 passed (2.6m)", lần 4 "42 passed (2.6m)", lần 5 "42 passed (2.5m)" (kết thúc
+//       17:59:31) (mốc 32). Tám bản ghi, mọi bước passed true, runner
+//       "coding-agent@2026-09-29#2 (Playwright, …)": client_list 5, client_detail 6,
+//       client_form 5, commission_list 4, commission_detail 5, commission_form 7,
+//       progress_board 4, stage_change 5 bước. Ảnh mới: progress_board-S1..S4, -S1-empty,
+//       -S4-unreachable; stage_change-S1..S5, -S3-confirm, -S4-unreachable;
+//       commission_detail-S5, -S4-progress-unreachable. Một lượt năm lần trước đó
+//       (17:28–17:43) hỏng ở lần 4, tại main_layout.spec.ts (không đổi trong phiên):
+//       "page.screenshot: Timeout 30000ms exceeded", cùng hiện tượng main-EXP-013; không
+//       tính, chạy lại cả năm lần.
+//     recorded_at: 2026-09-29T17:59:31+07:00
 //
 // NOTES:
 //   - content: >
-//       Đề xuất trạng thái (I6, phiên 19): commission_list hoàn_tất,
-//       commission_detail hoàn_tất, commission_form hoàn_tất; chờ Orchestrator
-//       audit và Project Owner tự chạy lại ba kịch bản bằng tay (npm run
-//       walkthrough:app -- --commissions; commission_list S1 với -- --empty). Ba
-//       trang D1 đã hoàn_tất (2026-09-28). Coding agent không sửa ui_decomposition.md.
+//       Đề xuất trạng thái (I6, phiên 20): commission_list hoàn_tất, commission_detail
+//       hoàn_tất, commission_form hoàn_tất (UI-9 đã vá: screens-EXP-019), progress_board
+//       hoàn_tất, stage_change hoàn_tất; chờ Orchestrator audit và Project Owner tự chạy
+//       tay (npm run walkthrough:app -- --progress cho hai trang D3 và các bước mới của
+//       commission_detail; -- --commissions cho D2; -- --empty cho S1 của
+//       commission_list và progress_board). Coding agent không sửa ui_decomposition.md.
 //     written_at: 2026-09-29
 // ===WCA-CHECKPOINT-END===
 /**
@@ -464,6 +643,8 @@ import { ClientList } from './pages/client_list/ClientList'
 import { CommissionDetail } from './pages/commission_detail/CommissionDetail'
 import { CommissionForm } from './pages/commission_form/CommissionForm'
 import { CommissionList } from './pages/commission_list/CommissionList'
+import { ProgressBoard } from './pages/progress_board/ProgressBoard'
+import { StageChange } from './pages/stage_change/StageChange'
 
 // Layouts of .design/ui_decomposition.md §5 that pages live in. The startup
 // error screen is not a navigation target: Main renders it before any page.
@@ -471,7 +652,9 @@ export type LayoutKey = 'main_layout'
 
 // The parameters each page opens with, typed per page
 // (ui_decomposition.md §5, "Điều hướng giữa các trang khách hàng";
-// "Chặng D2", "Điều hướng của D2").
+// "Chặng D2", "Điều hướng của D2"; "Chặng D3", "Điều hướng của D3").
+// stage_change receives the commission's title to show, handed by
+// commission_detail (it does not call get_commission again).
 export type PageParams = {
   client_list: null
   client_detail: { client_id: string }
@@ -479,6 +662,8 @@ export type PageParams = {
   commission_list: null
   commission_detail: { commission_id: string }
   commission_form: { mode: 'create' } | { mode: 'edit'; commission_id: string }
+  progress_board: null
+  stage_change: { commission_id: string; title: string }
 }
 
 // Keys of the pages (ui_decomposition.md §5), one per page that is built.
@@ -516,8 +701,9 @@ export const START_ROUTE: Route = { page: START_PAGE, params: null }
 
 // One entry per page. The type ties each page to the component that takes
 // exactly its parameters. The navigation region lists the entries that have a
-// menu, in this order: "Khách hàng", then "Đơn hàng" (§5); a later stage adds
-// its entries after these, never moving them.
+// menu, in this order: "Khách hàng", "Đơn hàng", then "Tiến độ" (§5); a later
+// stage adds its entries after these, never moving them. stage_change is a
+// step of the commission detail: its item is "Đơn hàng" (D3).
 export const NAVIGATION: { readonly [K in PageKey]: NavigationEntry<K> } = {
   client_list: {
     layout: 'main_layout',
@@ -535,4 +721,11 @@ export const NAVIGATION: { readonly [K in PageKey]: NavigationEntry<K> } = {
   },
   commission_detail: { layout: 'main_layout', component: CommissionDetail, section: 'commission_list', menu: null },
   commission_form: { layout: 'main_layout', component: CommissionForm, section: 'commission_list', menu: null },
+  progress_board: {
+    layout: 'main_layout',
+    component: ProgressBoard,
+    section: 'progress_board',
+    menu: { label: 'Tiến độ', route: { page: 'progress_board', params: null } },
+  },
+  stage_change: { layout: 'main_layout', component: StageChange, section: 'commission_list', menu: null },
 }

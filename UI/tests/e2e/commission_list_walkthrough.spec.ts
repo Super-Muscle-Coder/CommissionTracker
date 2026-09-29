@@ -29,6 +29,8 @@ test.describe.serial('walkthrough commission_list', () => {
         expect(await navItems(l)).toEqual([
           ['Khách hàng', null],
           ['Đơn hàng', 'page'],
+          // From D3, "Tiến độ" after "Đơn hàng"; the places of the first two never change.
+          ['Tiến độ', null],
         ])
         const adds = l.page.getByRole('button', { name: 'Thêm đơn hàng' })
         await expect(adds).toHaveCount(2)
@@ -55,6 +57,10 @@ test.describe.serial('walkthrough commission_list', () => {
     test('S2 — the commissions, most recently updated first, each with its secondary line', async () => {
       await rec.step(l.page, 'S2', ['ok'], async () => {
         await goToCommissions(l.page, 'list')
+        // Deliberately checks the order ("most recently updated first"): the
+        // sample's commissions are written more than a second apart
+        // (seedCommissionSample, AFTER_LAST_WRITE_MS), since the backend writes
+        // updated_at to the second (UI-9).
         expect(await commissionRows(l.page)).toEqual(D2_EXPECTED_LIST)
         expect((await navItems(l))[1]).toEqual(['Đơn hàng', 'page'])
       })

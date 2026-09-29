@@ -1,4 +1,4 @@
-// npm run walkthrough:app [-- --empty | -- --commissions]
+// npm run walkthrough:app [-- --empty | -- --commissions | -- --progress]
 //
 // Starts the real desktop app (built UI/dist, real Backend.py behind the
 // switchable fixture) on a temporary data folder, reads the backend port from
@@ -6,11 +6,12 @@
 // backend off and on. Runs until the app window is closed; then removes the
 // data folder. Sample data: by default the D1 sample (clients); with
 // --commissions the D2 sample (its own clients and three commissions); with
-// --empty none.
+// --progress the D3 sample (the D2 sample, one more commission, stages set);
+// with --empty none.
 //
 // For the Project Owner running the walkthroughs by hand
 // (src/screens/pages/{client_list,client_detail,client_form,commission_list,
-// commission_detail,commission_form}/walkthrough.yaml).
+// commission_detail,commission_form,progress_board,stage_change}/walkthrough.yaml).
 // The runner name printed (and written by the automated run) comes from
 // CT_WALKTHROUGH_RUNNER. Test tooling only.
 import { spawn } from 'node:child_process'
@@ -24,6 +25,7 @@ import {
   baseUrlFor,
   clearSession,
   D2_EXPECTED_LIST,
+  D3_EXPECTED_BOARD,
   electronBinary,
   launchArgs,
   makeDataDir,
@@ -31,13 +33,15 @@ import {
   RUNNER_VARIABLE,
   SAMPLE_DETAILED,
   seedCommissionSample,
+  seedProgressSample,
   seedSampleData,
   walkthroughRunner,
   writeSession,
 } from './walkthrough_lib.mjs'
 
 const empty = process.argv.includes('--empty')
-const commissions = !empty && process.argv.includes('--commissions')
+const progress = !empty && process.argv.includes('--progress')
+const commissions = !empty && !progress && process.argv.includes('--commissions')
 
 if (!fs.existsSync(path.join(DESKTOP_ROOT, 'dist', 'main.js'))) {
   console.error('Desktop is not built: run npm run build in Desktop/ first.')
@@ -69,7 +73,9 @@ app.stderr.on('data', (chunk) => {
 
 async function onReady(baseUrl) {
   writeSession({ dataDir, baseUrl, pid: app.pid ?? null })
-  if (commissions) {
+  if (progress) {
+    await seedProgressSample(baseUrl)
+  } else if (commissions) {
     await seedCommissionSample(baseUrl)
   } else if (!empty) {
     await seedSampleData(baseUrl)
@@ -81,6 +87,13 @@ async function onReady(baseUrl) {
   console.log(`Backend (qua fixture bật/tắt được): ${baseUrl}`)
   if (empty) {
     console.log('Cơ sở dữ liệu TRỐNG.')
+  } else if (progress) {
+    console.log('ĐÃ NẠP XONG dữ liệu mẫu D3 (tiến độ). Mở mục "Tiến độ" để thấy nó.')
+    console.log('  Bảng tiến độ mong đợi:')
+    for (const [group, rows] of D3_EXPECTED_BOARD) {
+      console.log(`    ${group}`)
+      for (const [title, detail] of rows) console.log(`      ${title} — ${detail}`)
+    }
   } else if (commissions) {
     console.log('ĐÃ NẠP XONG dữ liệu mẫu D2 (đơn hàng). Mở mục "Đơn hàng" để thấy nó.')
     console.log('  Đơn hàng, thứ tự mong đợi (mới sửa nhất trước):')

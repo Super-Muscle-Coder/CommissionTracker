@@ -144,12 +144,21 @@ async function call(baseUrl, method, pathname, body, expectedStatus) {
   return JSON.parse(text)
 }
 
+// The backend writes updated_at (and changed_at) to the second. Every seed
+// function that writes commissions or stages waits this long after its LAST
+// write, so that every write a walkthrough makes next is strictly newer than
+// the sample (UI-9 of .plan/open_issues.md): two writes in the same second
+// have an order that depends on two random ids.
+export const AFTER_LAST_WRITE_MS = 1100
+const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+
 // Sample data of the D2 walkthroughs (commission_list, commission_detail,
 // commission_form), with clients of their own — never those of the D1 sample:
 // three clients; three commissions, created more than a second apart so that
 // "most recently updated first" is a fixed order (the backend writes
 // updated_at to the second); then "Lan Chi" is archived (her commission keeps
-// her, which the contract allows).
+// her, which the contract allows). Ends AFTER_LAST_WRITE_MS after the last
+// commission write (UI-9).
 export const D2_CLIENTS = { full: 'Mai Anh', usd: 'Quốc Bảo', archived: 'Lan Chi' }
 export const D2_COMMISSIONS = {
   full: {
@@ -194,13 +203,67 @@ export async function seedCommissionSample(baseUrl) {
   }
   const ids = {}
   for (const [key, c] of Object.entries(D2_COMMISSIONS)) {
-    if (Object.keys(ids).length > 0) await new Promise((resolve) => setTimeout(resolve, 1100))
+    // More than a second between two commissions: their order in the list is fixed.
+    if (Object.keys(ids).length > 0) await pause(AFTER_LAST_WRITE_MS)
     // create_commission: POST /commissions, body { commission_input } (endpoint_forms.http).
     const { client, ...rest } = c
     ids[key] = (await call(baseUrl, 'POST', '/commissions', { commission_input: { client_id: clients[client], ...rest } }, 201)).commission_id
   }
   await call(baseUrl, 'PUT', `/clients/${clients.archived}/archived`, { is_archived: true }, 200)
+  // UI-9: a commission the walkthrough saves next is never in the second of the last sample one.
+  await pause(AFTER_LAST_WRITE_MS)
   return { clients, commissions: ids }
+}
+
+// change_stage: PUT /commissions/{commission_id}/stage, body { stage_change }
+// (api_contract.yaml 4.0.0 update_progress; endpoint_forms.http).
+export async function setStage(baseUrl, commissionId, toStage, note) {
+  return call(baseUrl, 'PUT', `/commissions/${commissionId}/stage`, { stage_change: { to_stage: toStage, note } }, 200)
+}
+
+// Sample data of the D3 walkthroughs (progress_board, stage_change): the D2
+// sample, one more commission, and stages set through the backend's declared
+// endpoint:
+//   "Chân dung bán thân" — sketch, then lineart (two history lines, more than
+//     a second apart: changed_at is written to the second);
+//   "Phác thảo nhân vật" (new, Mai Anh, deadline 01/10/2026) — lineart;
+//   "Minh họa bìa sách" — delivered (a closed stage);
+//   "Chibi đôi" — never set (the first stage, "Chờ bắt đầu").
+// Ends AFTER_LAST_WRITE_MS after its last write (UI-9).
+export const D3_EXTRA = {
+  title: 'Phác thảo nhân vật',
+  commission_type: null,
+  agreed_price: { amount_minor: 300000, currency: 'VND' },
+  deadline: '2026-10-01',
+  description: null,
+  reference_links: [],
+}
+export const D3_NOTES = { lineart: 'Khách duyệt phác thảo', delivered: 'Đã gửi file cuối' }
+// What the board must show: [group heading, [title, secondary line] of each commission].
+export const D3_EXPECTED_BOARD = [
+  ['Chờ bắt đầu (1)', [['Chibi đôi', 'Không có hạn']]],
+  [
+    'Lên nét (2)',
+    [
+      ['Phác thảo nhân vật', 'Hạn giao 01/10/2026'],
+      ['Chân dung bán thân', 'Hạn giao 15/10/2026'],
+    ],
+  ],
+  ['Đã giao (1)', [['Minh họa bìa sách', 'Hạn giao 01/01/2026']]],
+]
+
+export async function seedProgressSample(baseUrl) {
+  const sample = await seedCommissionSample(baseUrl)
+  const extra = (await call(baseUrl, 'POST', '/commissions', { commission_input: { client_id: sample.clients.full, ...D3_EXTRA } }, 201)).commission_id
+  await setStage(baseUrl, sample.commissions.full, 'sketch', null)
+  await setStage(baseUrl, sample.commissions.archived, 'delivered', D3_NOTES.delivered)
+  await setStage(baseUrl, extra, 'lineart', null)
+  // Two changes of one commission more than a second apart: their history order is fixed.
+  await pause(AFTER_LAST_WRITE_MS)
+  await setStage(baseUrl, sample.commissions.full, 'lineart', D3_NOTES.lineart)
+  // UI-9: a stage the walkthrough changes next is never in the second of the last sample one.
+  await pause(AFTER_LAST_WRITE_MS)
+  return { ...sample, commissions: { ...sample.commissions, extra } }
 }
 
 export async function seedSampleData(baseUrl) {

@@ -7,14 +7,32 @@
 // 404 is shown as ok by Services), an archived client; rejected 404 / 500 of
 // either call, unreachable + retry, contract_violation. Reference links are
 // text, never link elements. "Sửa", "Quay lại danh sách", the notice.
-import { act, cleanup, fireEvent, screen } from '@testing-library/react'
+// From D3, the "Tiến độ" part (Routers of update_progress, its own hook): its
+// first frame; every ViewResult kind of loadCommissionProgress (get_stage +
+// get_stage_history: ok, rejected 404 / 500, unreachable + "Thử lại" of the
+// part, contract_violation), each while the commission part stays shown;
+// "Đổi giai đoạn" only once the part has loaded and the stage is not
+// closed, never while it loads or after it failed; it opens stage_change
+// with the id and the title; the notice "Đã đổi giai đoạn sang …".
+import { act, cleanup, fireEvent, screen, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { CommissionDetailView, ViewResult } from '../../../../logic/workflows/manage_commission/routers'
+import type { CommissionProgressView } from '../../../../logic/workflows/update_progress/routers'
 import type { Navigate } from '../../../navigation'
-import { answers, fakeManageClient, fakeManageCommission, pending, renderFirstCommit, renderWithLogic } from '../../../tests/fake_logic'
+import { answers, fakeManageClient, fakeManageCommission, fakeUpdateProgress, pending, renderFirstCommit, renderWithLogic } from '../../../tests/fake_logic'
 import { CommissionDetail } from '../CommissionDetail'
 
 type Loaded = ViewResult<CommissionDetailView>
+type ProgressLoaded = ViewResult<CommissionProgressView>
+const PROGRESS: CommissionProgressView = {
+  stageText: 'Lên nét',
+  updatedText: 'cập nhật lúc 08:05 28/09/2026',
+  historyLines: ['Phác thảo → Lên nét · 08:05 28/09/2026 · Khách duyệt phác', 'Bắt đầu: Phác thảo · 10:00 27/09/2026'],
+  noHistoryText: 'Chưa đổi giai đoạn lần nào',
+  closed: false,
+  closedText: null,
+}
+const PROGRESS_OK: ProgressLoaded = { kind: 'ok', view: PROGRESS }
 const ID = '3f2b8c1e-9a4d-4e6f-8b2a-1c3d5e7f9a0b'
 const VIEW: CommissionDetailView = {
   commissionId: ID,
@@ -30,16 +48,27 @@ const VIEW: CommissionDetailView = {
 }
 const rejected = (code: string, message: string): Loaded => ({ kind: 'rejected', origin: 'system', code, message, fieldErrors: {} })
 
-function renderWith(results: Loaded[], notice: string | null = null) {
+function renderWith(results: Loaded[], notice: string | null = null, progress: ProgressLoaded[] = [PROGRESS_OK]) {
   const loadCommissionDetail = answers<[string], Loaded>(...results)
+  const loadCommissionProgress = answers<[string], ProgressLoaded>(...progress)
   const navigate = vi.fn<Navigate>()
   const { container } = renderWithLogic(
     <CommissionDetail params={{ commission_id: ID }} navigate={navigate} notice={notice} />,
     fakeManageClient({}),
     fakeManageCommission({ loadCommissionDetail }),
+    fakeUpdateProgress({ loadCommissionProgress }),
   )
-  return { loadCommissionDetail, navigate, container }
+  return { loadCommissionDetail, loadCommissionProgress, navigate, container }
 }
+
+// [term, details] of each entry of the "Tiến độ" part.
+function progressEntries(): [string, string[]][] {
+  const dl = screen.getByLabelText('Tiến độ đơn hàng')
+  return [...dl.querySelectorAll(':scope > div')].map((d) => [d.querySelector('dt')?.textContent ?? '', [...d.querySelectorAll('dd')].map((x) => x.textContent ?? '')])
+}
+// The "Tiến độ" part (its region, named by its heading).
+const progressPart = () => screen.getByRole('region', { name: 'Tiến độ' })
+const buttonTexts = () => screen.getAllByRole('button').map((b) => b.textContent)
 
 // [term, details] of each entry of the description list.
 function entries(): [string, string[]][] {
@@ -58,6 +87,7 @@ describe('page commission_detail', () => {
       <CommissionDetail params={{ commission_id: ID }} navigate={vi.fn()} notice={null} />,
       fakeManageClient({}),
       fakeManageCommission({ loadCommissionDetail: load.fn }),
+      fakeUpdateProgress({ loadCommissionProgress: answers<[string], ProgressLoaded>(PROGRESS_OK) }),
     )
     expect(first.routersCalled).toBe(false)
     expect(first.statuses).toEqual(['Đang tải thông tin đơn hàng…'])
@@ -66,12 +96,14 @@ describe('page commission_detail', () => {
     expect(await screen.findByRole('heading', { level: 3, name: VIEW.title })).toBeTruthy()
   })
 
-  it('ok: Routers asked with the id; title; "Sửa" (main action) then "Quay lại danh sách" under it; every entry in order', async () => {
-    const { loadCommissionDetail } = renderWith([{ kind: 'ok', view: VIEW }])
+  it('ok: Routers asked with the id; title; "Sửa" (main action), "Đổi giai đoạn", "Quay lại danh sách" under it; every entry in order', async () => {
+    const { loadCommissionDetail, loadCommissionProgress } = renderWith([{ kind: 'ok', view: VIEW }])
     expect(await screen.findByRole('heading', { level: 3, name: 'Chân dung bán thân' })).toBeTruthy()
+    await screen.findByRole('button', { name: 'Đổi giai đoạn' })
     expect(loadCommissionDetail).toHaveBeenCalledExactlyOnceWith(ID)
+    expect(loadCommissionProgress).toHaveBeenCalledExactlyOnceWith(ID)
     expect(screen.getByRole('heading', { level: 2, name: 'Chi tiết đơn hàng' })).toBeTruthy()
-    expect(screen.getAllByRole('button').map((b) => b.textContent)).toEqual(['Sửa', 'Quay lại danh sách'])
+    expect(buttonTexts()).toEqual(['Sửa', 'Đổi giai đoạn', 'Quay lại danh sách'])
     expect(entries()).toEqual([
       ['Khách hàng', ['Nguyễn Thu Hà']],
       ['Loại tranh', ['bán thân']],
@@ -155,6 +187,112 @@ describe('page commission_detail', () => {
   it('the notice handed over by the form ("Đã lưu thay đổi.") is shown', async () => {
     renderWith([{ kind: 'ok', view: VIEW }], 'Đã lưu thay đổi.')
     await screen.findByRole('heading', { level: 3, name: VIEW.title })
+    await screen.findByLabelText('Tiến độ đơn hàng')
     expect(screen.getByRole('status').textContent).toBe('Đã lưu thay đổi.')
+  })
+
+  it('the notice handed over by stage_change ("Đã đổi giai đoạn sang Lên nét.") is shown', async () => {
+    renderWith([{ kind: 'ok', view: VIEW }], 'Đã đổi giai đoạn sang Lên nét.')
+    await screen.findByLabelText('Tiến độ đơn hàng')
+    expect(screen.getByRole('status').textContent).toBe('Đã đổi giai đoạn sang Lên nét.')
+  })
+})
+
+describe('page commission_detail, part "Tiến độ" (D3)', () => {
+  it('its first frame, the commission shown and the part still loading: its own loading status, no "Đổi giai đoạn"', async () => {
+    const progress = pending<[string], ProgressLoaded>()
+    renderWithLogic(
+      <CommissionDetail params={{ commission_id: ID }} navigate={vi.fn()} notice={null} />,
+      fakeManageClient({}),
+      fakeManageCommission({ loadCommissionDetail: answers<[string], Loaded>({ kind: 'ok', view: VIEW }) }),
+      fakeUpdateProgress({ loadCommissionProgress: progress.fn }),
+    )
+    await screen.findByRole('heading', { level: 3, name: VIEW.title })
+    expect(within(progressPart()).getByRole('status').textContent).toBe('Đang tải tiến độ…')
+    expect(buttonTexts()).toEqual(['Sửa', 'Quay lại danh sách'])
+    expect(progress.fn).toHaveBeenCalledExactlyOnceWith(ID)
+    await act(async () => progress.release(PROGRESS_OK))
+    expect(await screen.findByRole('button', { name: 'Đổi giai đoạn' })).toBeTruthy()
+    expect(within(progressPart()).queryByRole('status')).toBeNull()
+  })
+
+  it('ok: "Giai đoạn hiện tại" (name, when) and "Lịch sử", newest first, below the commission entries', async () => {
+    renderWith([{ kind: 'ok', view: VIEW }])
+    await screen.findByLabelText('Tiến độ đơn hàng')
+    expect(progressEntries()).toEqual([
+      ['Giai đoạn hiện tại', ['Lên nét', 'cập nhật lúc 08:05 28/09/2026']],
+      ['Lịch sử', ['Phác thảo → Lên nét · 08:05 28/09/2026 · Khách duyệt phác', 'Bắt đầu: Phác thảo · 10:00 27/09/2026']],
+    ])
+    // The part comes after the commission's entries.
+    const info = screen.getByLabelText('Thông tin đơn hàng')
+    expect(info.compareDocumentPosition(progressPart()) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
+  it('never set: "chưa cập nhật lần nào", "Chưa đổi giai đoạn lần nào"; "Đổi giai đoạn" offered', async () => {
+    renderWith([{ kind: 'ok', view: VIEW }], null, [
+      { kind: 'ok', view: { ...PROGRESS, stageText: 'Chờ bắt đầu', updatedText: 'chưa cập nhật lần nào', historyLines: [] } },
+    ])
+    await screen.findByLabelText('Tiến độ đơn hàng')
+    expect(progressEntries()).toEqual([
+      ['Giai đoạn hiện tại', ['Chờ bắt đầu', 'chưa cập nhật lần nào']],
+      ['Lịch sử', ['Chưa đổi giai đoạn lần nào']],
+    ])
+    expect(screen.getByRole('button', { name: 'Đổi giai đoạn' })).toBeTruthy()
+  })
+
+  it('a closed stage: no "Đổi giai đoạn"; the part says the commission cannot change stage any more', async () => {
+    const closedText = 'Đơn đang ở giai đoạn "Đã giao", không đổi giai đoạn được nữa.'
+    renderWith([{ kind: 'ok', view: VIEW }], null, [{ kind: 'ok', view: { ...PROGRESS, stageText: 'Đã giao', closed: true, closedText } }])
+    await screen.findByLabelText('Tiến độ đơn hàng')
+    expect(within(progressPart()).getByText(closedText)).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Đổi giai đoạn' })).toBeNull()
+    expect(buttonTexts()).toEqual(['Sửa', 'Quay lại danh sách'])
+  })
+
+  it('"Đổi giai đoạn" opens stage_change with the id and the title of the commission', async () => {
+    const { navigate } = renderWith([{ kind: 'ok', view: VIEW }])
+    fireEvent.click(await screen.findByRole('button', { name: 'Đổi giai đoạn' }))
+    expect(navigate).toHaveBeenCalledExactlyOnceWith({ page: 'stage_change', params: { commission_id: ID, title: 'Chân dung bán thân' } }, null)
+  })
+
+  it.each([
+    ['get_stage 404', { kind: 'rejected', origin: 'system', code: 'ERR_NOT_FOUND', message: 'Không tìm thấy đơn hàng này.', fieldErrors: {} }, 'Không tải được tiến độ', 'Không tìm thấy đơn hàng này.'],
+    ['get_stage_history 500', { kind: 'rejected', origin: 'system', code: 'ERR_STORAGE_IO', message: 'Không đọc được dữ liệu tiến độ trên máy.', fieldErrors: {} }, 'Không tải được tiến độ', 'Không đọc được dữ liệu tiến độ trên máy.'],
+    ['unreachable', { kind: 'unreachable', message: 'Không kết nối được tới phần xử lý.' }, 'Không kết nối được', 'Không kết nối được tới phần xử lý.'],
+    ['contract_violation', { kind: 'contract_violation', message: 'Ứng dụng nhận được một phản hồi không mong đợi.' }, 'Có lỗi không mong đợi', 'Ứng dụng nhận được một phản hồi không mong đợi.'],
+  ] as [string, ProgressLoaded, string, string][])(
+    '%s → the error inside the part, its own "Thử lại"; the commission part stays; no "Đổi giai đoạn"',
+    async (_, failed, title, message) => {
+      renderWith([{ kind: 'ok', view: VIEW }], null, [failed])
+      const alert = await within(await screen.findByRole('region', { name: 'Tiến độ' })).findByRole('alert')
+      expect(alert.textContent).toContain(title)
+      expect(alert.textContent).toContain(message)
+      expect(within(progressPart()).getAllByRole('button').map((b) => b.textContent)).toEqual(['Thử lại'])
+      // The commission part is untouched.
+      expect(screen.getByRole('heading', { level: 3, name: VIEW.title })).toBeTruthy()
+      expect(screen.getByLabelText('Thông tin đơn hàng')).toBeTruthy()
+      expect(screen.queryByLabelText('Tiến độ đơn hàng')).toBeNull()
+      expect(buttonTexts()).toEqual(['Sửa', 'Quay lại danh sách', 'Thử lại'])
+    },
+  )
+
+  it('"Thử lại" of the part loads the part again only; then "Đổi giai đoạn" is offered', async () => {
+    const { loadCommissionDetail, loadCommissionProgress } = renderWith([{ kind: 'ok', view: VIEW }], null, [
+      { kind: 'unreachable', message: 'Không kết nối được tới phần xử lý.' },
+      PROGRESS_OK,
+    ])
+    await within(await screen.findByRole('region', { name: 'Tiến độ' })).findByRole('alert')
+    fireEvent.click(within(progressPart()).getByRole('button', { name: 'Thử lại' }))
+    expect(await screen.findByLabelText('Tiến độ đơn hàng')).toBeTruthy()
+    expect(loadCommissionProgress).toHaveBeenCalledTimes(2)
+    expect(loadCommissionProgress).toHaveBeenLastCalledWith(ID)
+    expect(loadCommissionDetail).toHaveBeenCalledOnce()
+    expect(buttonTexts()).toEqual(['Sửa', 'Đổi giai đoạn', 'Quay lại danh sách'])
+  })
+
+  it('the commission part failing does not show the part (nothing to place it under)', async () => {
+    renderWith([rejected('ERR_NOT_FOUND', 'Không tìm thấy đơn hàng này.')])
+    await screen.findByRole('alert')
+    expect(screen.queryByRole('region', { name: 'Tiến độ' })).toBeNull()
   })
 })

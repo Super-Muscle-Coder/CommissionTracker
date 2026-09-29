@@ -19,9 +19,10 @@ import type {
   ViewResult,
 } from '../../logic/workflows/manage_client/routers'
 import type { CommissionDetailView, CommissionListView } from '../../logic/workflows/manage_commission/routers'
+import type { ProgressBoardView } from '../../logic/workflows/update_progress/routers'
 import { AppRoot } from '../app_root'
 import { NAVIGATION, START_PAGE, type Route } from '../navigation'
-import { answers, fakeManageClient, fakeManageCommission, renderWithLogic } from './fake_logic'
+import { answers, fakeManageClient, fakeManageCommission, fakeUpdateProgress, renderWithLogic } from './fake_logic'
 
 const ID = '3f2b8c1e-9a4d-4e6f-8b2a-1c3d5e7f9a0b'
 const CID = '7a1d2e3f-4b5c-4d6e-9f80-1a2b3c4d5e6f'
@@ -53,25 +54,40 @@ export const WRONG_ROUTES: Route[] = [
   { page: 'commission_form', params: { mode: 'edit' } },
   // @ts-expect-error commission_list takes no parameter
   { page: 'commission_list', params: { commission_id: ID } },
+  // @ts-expect-error stage_change needs the title too
+  { page: 'stage_change', params: { commission_id: ID } },
+  // @ts-expect-error progress_board takes no parameter
+  { page: 'progress_board', params: { commission_id: ID } },
 ]
 
 describe('navigation table', () => {
-  it('has exactly the six pages of ui_decomposition.md §5 (D1 and D2), and opens on client_list', () => {
-    expect(Object.keys(NAVIGATION).sort()).toEqual(['client_detail', 'client_form', 'client_list', 'commission_detail', 'commission_form', 'commission_list'])
+  it('has exactly the eight pages of ui_decomposition.md §5 (D1, D2 and D3), and opens on client_list', () => {
+    expect(Object.keys(NAVIGATION).sort()).toEqual([
+      'client_detail',
+      'client_form',
+      'client_list',
+      'commission_detail',
+      'commission_form',
+      'commission_list',
+      'progress_board',
+      'stage_change',
+    ])
     expect(START_PAGE).toBe('client_list')
   })
 
-  it('the navigation region lists "Khách hàng", then "Đơn hàng"; D2 pages belong to "Đơn hàng"', () => {
+  it('the navigation region lists "Khách hàng", "Đơn hàng", then "Tiến độ"; D2 pages and stage_change belong to "Đơn hàng"', () => {
     const menu = (Object.keys(NAVIGATION) as (keyof typeof NAVIGATION)[]).flatMap((k) => {
       const m = NAVIGATION[k].menu
       return m === null ? [] : [m.label]
     })
-    expect(menu).toEqual(['Khách hàng', 'Đơn hàng'])
-    expect([NAVIGATION.commission_list.section, NAVIGATION.commission_detail.section, NAVIGATION.commission_form.section]).toEqual([
-      'commission_list',
-      'commission_list',
-      'commission_list',
-    ])
+    expect(menu).toEqual(['Khách hàng', 'Đơn hàng', 'Tiến độ'])
+    expect([
+      NAVIGATION.commission_list.section,
+      NAVIGATION.commission_detail.section,
+      NAVIGATION.commission_form.section,
+      NAVIGATION.stage_change.section,
+    ]).toEqual(['commission_list', 'commission_list', 'commission_list', 'commission_list'])
+    expect(NAVIGATION.progress_board.section).toBe('progress_board')
   })
 })
 
@@ -81,9 +97,42 @@ describe('AppRoot', () => {
     expect(await screen.findByRole('heading', { level: 2, name: 'Khách hàng' })).toBeTruthy()
     const nav = screen.getByRole('navigation', { name: 'Điều hướng chính' })
     const items = within(nav).getAllByRole('button')
-    expect(items.map((b) => b.textContent)).toEqual(['Khách hàng', 'Đơn hàng'])
+    expect(items.map((b) => b.textContent)).toEqual(['Khách hàng', 'Đơn hàng', 'Tiến độ'])
     expect(items[0].getAttribute('aria-current')).toBe('page')
     expect(items[1].getAttribute('aria-current')).toBeNull()
+    expect(items[2].getAttribute('aria-current')).toBeNull()
+  })
+
+  it('"Tiến độ" opens progress_board, marked current; a commission of the board → its detail, "Đơn hàng" current', async () => {
+    const loadProgressBoard = answers<[], ViewResult<ProgressBoardView>>({
+      kind: 'ok',
+      view: { groups: [{ key: 'sketch', title: 'Phác thảo (1)', rows: [{ commissionId: CID, title: 'Chân dung', detailText: 'Không có hạn' }] }], isEmpty: false },
+    })
+    const loadCommissionDetail = answers<[string], ViewResult<CommissionDetailView>>({ kind: 'rejected', origin: 'system', code: 'ERR_NOT_FOUND', message: 'Không tìm thấy đơn hàng này.', fieldErrors: {} })
+    renderWithLogic(
+      <AppRoot />,
+      fakeManageClient({ loadClientList: answers<[], ViewResult<ClientListView>>(LIST) }),
+      fakeManageCommission({ loadCommissionDetail }),
+      // The detail's "Tiến độ" part loads too; it never answers here (its own tests cover it).
+      fakeUpdateProgress({ loadProgressBoard, loadCommissionProgress: () => new Promise(() => {}) }),
+    )
+    await screen.findByRole('button', { name: 'An' })
+    fireEvent.click(within(screen.getByRole('navigation')).getByRole('button', { name: 'Tiến độ' }))
+    expect(await screen.findByRole('heading', { level: 2, name: 'Tiến độ' })).toBeTruthy()
+    const current = () => within(screen.getByRole('navigation')).getAllByRole('button').map((b) => [b.textContent, b.getAttribute('aria-current')])
+    expect(current()).toEqual([
+      ['Khách hàng', null],
+      ['Đơn hàng', null],
+      ['Tiến độ', 'page'],
+    ])
+    fireEvent.click(await screen.findByRole('button', { name: /^Chân dung/ }))
+    expect(await screen.findByRole('heading', { level: 2, name: 'Chi tiết đơn hàng' })).toBeTruthy()
+    expect(loadCommissionDetail).toHaveBeenCalledExactlyOnceWith(CID)
+    expect(current()).toEqual([
+      ['Khách hàng', null],
+      ['Đơn hàng', 'page'],
+      ['Tiến độ', null],
+    ])
   })
 
   it('"Đơn hàng" opens commission_list, marked current; a commission → its detail, "Đơn hàng" still current', async () => {
@@ -92,7 +141,13 @@ describe('AppRoot', () => {
       view: { rows: [{ commissionId: CID, title: 'Chân dung', detailText: 'An · 1.500.000 VND · Không có hạn' }], isEmpty: false },
     })
     const loadCommissionDetail = answers<[string], ViewResult<CommissionDetailView>>({ kind: 'rejected', origin: 'system', code: 'ERR_NOT_FOUND', message: 'Không tìm thấy đơn hàng này.', fieldErrors: {} })
-    renderWithLogic(<AppRoot />, fakeManageClient({ loadClientList: answers<[], ViewResult<ClientListView>>(LIST) }), fakeManageCommission({ loadCommissionList, loadCommissionDetail }))
+    renderWithLogic(
+      <AppRoot />,
+      fakeManageClient({ loadClientList: answers<[], ViewResult<ClientListView>>(LIST) }),
+      fakeManageCommission({ loadCommissionList, loadCommissionDetail }),
+      // The detail's "Tiến độ" part loads too; it never answers here (its own tests cover it).
+      fakeUpdateProgress({ loadCommissionProgress: () => new Promise(() => {}) }),
+    )
     await screen.findByRole('button', { name: 'An' })
     fireEvent.click(within(screen.getByRole('navigation')).getByRole('button', { name: 'Đơn hàng' }))
     expect(await screen.findByRole('heading', { level: 2, name: 'Đơn hàng' })).toBeTruthy()
@@ -100,6 +155,7 @@ describe('AppRoot', () => {
     expect(current()).toEqual([
       ['Khách hàng', null],
       ['Đơn hàng', 'page'],
+      ['Tiến độ', null],
     ])
     fireEvent.click(await screen.findByRole('button', { name: /^Chân dung/ }))
     expect(await screen.findByRole('heading', { level: 2, name: 'Chi tiết đơn hàng' })).toBeTruthy()
@@ -107,6 +163,7 @@ describe('AppRoot', () => {
     expect(current()).toEqual([
       ['Khách hàng', null],
       ['Đơn hàng', 'page'],
+      ['Tiến độ', null],
     ])
   })
 

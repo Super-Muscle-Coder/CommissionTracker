@@ -392,12 +392,12 @@ describe('openCommissionForm — edit (get_commission, then list_clients)', () =
     })
   })
 
-  it('the commission\'s client no longer listed → still offered and chosen, marked', async () => {
+  it('the commission\'s client no longer listed → still offered and chosen, "Không tìm thấy khách hàng" (Q19-3: not "(đã lưu trữ)")', async () => {
     const gone = uuid()
     const r = await open(ok({ ...DETAIL, client_id: gone }), ok(CLIENTS))
     const clients = (r as { view: CommissionFormView }).view.clients
     expect(clients.clientId).toBe(gone)
-    expect(clients.choices[0]).toEqual({ value: gone, label: 'Không tìm thấy khách hàng (đã lưu trữ)' })
+    expect(clients.choices[0]).toEqual({ value: gone, label: 'Không tìm thấy khách hàng' })
     expect(clients.choices).toHaveLength(4)
   })
 

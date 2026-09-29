@@ -16,11 +16,14 @@ steps:
       Ctrl+C.
     expect: >
       Trang "Chi tiết đơn hàng", tiêu đề nhóm "Chân dung bán thân"; ngay dưới là hàng nút "Sửa"
-      (nút chính, đứng đầu) và "Quay lại danh sách". Các mục theo thứ tự: Khách hàng "Mai Anh";
+      (nút chính, đứng đầu), "Đổi giai đoạn" (có từ D3, hiện khi phần Tiến độ đã tải xong) và
+      "Quay lại danh sách". Các mục theo thứ tự: Khách hàng "Mai Anh";
       Loại tranh "bán thân"; Giá thỏa thuận "1.500.000 VND"; Hạn giao "15/10/2026"; Mô tả "Nền
       xanh, ánh sáng dịu."; Liên kết tham khảo hai dòng "https://example.com/ref-1",
       "https://example.com/ref-2"; Ngày tạo; Sửa lần cuối. Liên kết là chữ thường (không gạch
-      chân, không đổi con trỏ thành bàn tay), bấm vào không mở gì; chọn và sao chép được.
+      chân, không đổi con trỏ thành bàn tay), bấm vào không mở gì; chọn và sao chép được. Dưới
+      các mục là phần "Tiến độ" (D3): "Giai đoạn hiện tại" là "Chờ bắt đầu" kèm "chưa cập nhật lần
+      nào"; "Lịch sử" là "Chưa đổi giai đoạn lần nào".
     covers: [ok]
   - id: S2
     setup: null
@@ -52,5 +55,21 @@ steps:
       Lần đầu: trang "Chi tiết đơn hàng" có khung "Không kết nối được" với câu "Không kết nối
       được tới phần xử lý của ứng dụng. Vui lòng thử lại.", cùng nút "Thử lại" và "Quay lại danh
       sách"; không có thông tin đơn. Sau "Thử lại" (backend đã chạy lại): chi tiết đầy đủ của
-      "Chân dung bán thân" như ở S1.
+      "Chân dung bán thân" như ở S1, còn phần "Tiến độ" (tải riêng, lần tải của nó đã hỏng khi
+      backend tắt) hiện trong chính nó khung "Không kết nối được" với nút "Thử lại" của riêng
+      phần đó; chưa có nút "Đổi giai đoạn". Bấm "Thử lại" trong phần "Tiến độ": phần đó hiện
+      "Chờ bắt đầu", và nút "Đổi giai đoạn" xuất hiện sau "Sửa"; thông tin đơn không đổi.
     covers: [unreachable, ok]
+  - id: S5
+    setup: >
+      Đặt "Minh họa bìa sách" sang giai đoạn "Đã giao" qua backend (kiểm thử tự động gọi
+      PUT /commissions/{id}/stage; chạy tay thì dùng npm run walkthrough:app -- --progress, trong
+      đó đơn này đã ở "Đã giao"). Về trang "Đơn hàng".
+    action: >
+      Bấm đơn "Minh họa bìa sách".
+    expect: >
+      Phần "Tiến độ": "Giai đoạn hiện tại" là "Đã giao" kèm "cập nhật lúc <ngày giờ>"; "Lịch sử" có
+      dòng "Bắt đầu: Đã giao · <ngày giờ> · Đã gửi file cuối"; dòng "Đơn đang ở giai đoạn "Đã
+      giao", không đổi giai đoạn được nữa."; hàng nút chỉ có "Sửa" và "Quay lại danh sách" (không
+      có "Đổi giai đoạn").
+    covers: [ok]

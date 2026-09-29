@@ -2,8 +2,8 @@
 // workflow: manage_commission
 // clause: external
 // component: services
-// last_updated_by: coding-agent@2026-09-29#1
-// last_updated_at: 2026-09-29T10:00:00+07:00
+// last_updated_by: coding-agent@2026-09-29#2
+// last_updated_at: 2026-09-29T17:45:00+07:00
 //
 // EXPERIENCES:
 //   - id: manage_commission-EXP-001
@@ -119,6 +119,14 @@
 //       vô hại: danh sách chỉ đổi khi khách đã chọn không còn chọn được. Không gây
 //       ra được trên hệ thống thật bằng thao tác bình thường (404, 409 không gây ra
 //       được), nên chỉ được chứng minh ở kiểm thử dựng trang.
+//   - id: manage_commission-EXP-008
+//     content: >
+//       Q19-3 (phiên 20): ở chế độ sửa, khách của đơn KHÔNG CÒN trong client_list
+//       được giữ trong danh sách chọn với nhãn "Không tìm thấy khách hàng" (bỏ
+//       "(đã lưu trữ)": không có gì cho biết khách đó đã lưu trữ); khách còn trong
+//       danh sách mà đã lưu trữ vẫn là "<tên> (đã lưu trữ)". Chỉ đổi clientChoices;
+//       kiểm thử services "the commission's client no longer listed …" khẳng định
+//       nhãn mới. Không gây ra được trên hệ thống thật (không có thao tác xóa khách).
 //
 // UNSOLVED_PROBLEMS: []
 //
@@ -184,6 +192,16 @@
 //       ("hai triệu"; giá không đổi). reloadClientChoices không kích hoạt được trên hệ
 //       thống thật bằng thao tác bình thường (manage_commission-EXP-007).
 //     recorded_at: 2026-09-29T09:24:00+07:00
+//   - claim: >
+//       Phiên 20, Q19-3: nhãn khách vắng mặt ở chế độ sửa là "Không tìm thấy khách
+//       hàng"; mọi kiểm thử khác của workflow không đổi.
+//     how: >
+//       Trong UI/: npx vitest run src/logic/workflows/manage_commission; npm run check.
+//     result: >
+//       "Test Files 3 passed (3)", "Tests 257 passed (257)" (số ca không đổi; ca
+//       "the commission's client no longer listed …" khẳng định nhãn mới). Chạy thật:
+//       ba kịch bản D2 đạt 5/5 lần e2e phiên 20 (EVIDENCE của screens).
+//     recorded_at: 2026-09-29T11:22:10+07:00
 //
 // NOTES: []
 // ===WCA-CHECKPOINT-END===
@@ -364,16 +382,17 @@ export function createManageCommissionServices(
 
   // Presentation decision: the clients offered by the form — the active ones,
   // in Vietnamese order; plus, first, the commission's own client (edit mode)
-  // when it is archived or no longer listed (the contract lets a commission
-  // keep an archived client). The chosen client stays chosen while it is
-  // offered; otherwise nothing is chosen.
+  // when it is archived ("<name> (đã lưu trữ)") or no longer listed ("Không
+  // tìm thấy khách hàng", Q19-3: nothing says it is archived). The contract
+  // lets a commission keep an archived client. The chosen client stays
+  // chosen while it is offered; otherwise nothing is chosen.
   function clientChoices(clients: ClientList, keptClientId: string | null, chosenClientId: string): ClientChoicesView {
     const active = clients.filter((c) => !c.is_archived).map((c): ChoiceView => ({ value: c.client_id, label: c.display_name })).sort(byLabel)
     const kept = keptClientId === null ? undefined : clients.find((c) => c.client_id === keptClientId)
     const extra: ChoiceView[] =
       keptClientId === null || (kept !== undefined && !kept.is_archived)
         ? []
-        : [{ value: keptClientId, label: `${kept === undefined ? cfg.texts.clientNotFound : kept.display_name} ${cfg.texts.archivedSuffix}` }]
+        : [{ value: keptClientId, label: kept === undefined ? cfg.texts.clientNotFound : `${kept.display_name} ${cfg.texts.archivedSuffix}` }]
     const choices = [...extra, ...active]
     return { choices, clientId: choices.some((c) => c.value === chosenClientId) ? chosenClientId : '' }
   }

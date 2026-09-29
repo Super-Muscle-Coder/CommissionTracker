@@ -2,8 +2,8 @@
 // workflow: kit
 // clause: external
 // component: kit
-// last_updated_by: coding-agent@2026-09-29#1
-// last_updated_at: 2026-09-29T10:10:00+07:00
+// last_updated_by: coding-agent@2026-09-29#2
+// last_updated_at: 2026-09-29T17:45:00+07:00
 //
 // EXPERIENCES:
 //   - id: kit-EXP-001
@@ -160,6 +160,24 @@
 //       detail: null, không đổi gì; commission_list dùng nó cho "khách · giá · hạn".
 //       check_contrast thêm cặp chữ phụ trên nền hover (5.79:1); chữ phụ trên nền
 //       bề mặt nổi đã có (6.45:1).
+//   - id: kit-EXP-014
+//     content: >
+//       Phiên 20 (D3): ConfirmPanel — câu hỏi xác nhận NẰM TRONG TRANG trước một
+//       thao tác không quay lại được (§7.2 nguyên tắc 5), không bao giờ là hộp
+//       thoại của hệ thống hay trình duyệt. Không có component sẵn đủ: InlineAlert
+//       không có nút, EmptyState chỉ một nút phụ và không phải cảnh báo. Props
+//       đều là chữ và callback (title, text, confirmLabel, confirmBusyLabel,
+//       cancelLabel, busy, onConfirm, onCancel), không mang khái niệm nghiệp vụ.
+//       section role="group", aria-labelledby = tiêu đề, aria-describedby = câu;
+//       nền --color-surface-danger, viền --color-border-danger, tiêu đề
+//       --color-text-danger (có tiêu đề và câu, không chỉ màu). Hai nút gốc vẽ như
+//       Button (primary rồi secondary, cùng token); busy thì CẢ HAI vô hiệu và nút
+//       xác nhận hiện confirmBusyLabel. Khi khung hiện ra, focus chuyển tới nút
+//       xác nhận (useEffect một lần lúc dựng) — trạng thái trình bày của chính kit.
+//       Không tạo token mới. check_contrast thêm cặp phi văn bản vòng focus trên
+//       --color-surface-danger (6.56:1) cùng khai báo CSS đặt nó ở đó
+//       (confirmPanelRingOutside); các cặp chữ trên nền lỗi và của nút đã có, chỉ
+//       ghi thêm nơi dùng. Dùng ở stage_change.
 //
 // UNSOLVED_PROBLEMS: []
 //
@@ -273,6 +291,22 @@
 //       with outline-offset: calc(-1 * var(--border-width-focus)) (expected 0)";
 //       "check_contrast: 3 of 30 pair(s) fail". Khôi phục: exit 0, "all pass".
 //     recorded_at: 2026-09-29T09:13:10+07:00
+//   - claim: >
+//       Phiên 20: ConfirmPanel được phép kiểm tương phản phủ, và phép kiểm cắn khi
+//       vòng focus của nó bị dời vào trong; focus tự tới nút xác nhận.
+//     how: >
+//       Trong UI/: node scripts/check_contrast.mjs. Scratchpad bite.py (h): tạm đổi
+//       outline-offset của .cancel:focus-visible trong ConfirmPanel.module.css thành 0;
+//       chạy lại; khôi phục. (g): tạm bỏ lời gọi focus() của ConfirmPanel; npx vitest
+//       run src/screens/pages/stage_change; khôi phục.
+//     result: >
+//       "check_contrast: 19 text pairs >= 4.5:1 and 12 non-text pairs >= 3:1 checked,
+//       all pass."; cặp mới 6.56:1 --color-focus-ring (#8fb0e8) on
+//       --color-surface-danger (#3a2422). (h) exit 1 "check_contrast: 1 of 31 pair(s)
+//       fail". (g) "1 failed | 21 passed (22)" (ca focus ở "Xác nhận"). Khôi phục: đạt.
+//       Trên ứng dụng thật: stage_change S3 toBeFocused ở "Xác nhận", ảnh
+//       UI/evidence/walkthroughs/stage_change/stage_change-S3-confirm.png.
+//     recorded_at: 2026-09-29T17:45:30+07:00
 //
 // NOTES:
 //   - content: >
@@ -329,3 +363,5 @@ export { SelectField } from './components/SelectField/SelectField'
 export type { SelectFieldOption, SelectFieldProps } from './components/SelectField/SelectField'
 export { DateField } from './components/DateField/DateField'
 export type { DateFieldProps } from './components/DateField/DateField'
+export { ConfirmPanel } from './components/ConfirmPanel/ConfirmPanel'
+export type { ConfirmPanelProps } from './components/ConfirmPanel/ConfirmPanel'

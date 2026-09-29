@@ -1,0 +1,68 @@
+page: stage_change
+precondition: >
+  Desktop đã build (npm run build trong Desktop/). Trong UI/: npm run walkthrough:app --
+  --progress mở ứng dụng thật với thư mục dữ liệu tạm (không đụng %APPDATA%), Backend.py thật sau
+  fixture bật/tắt được, và nạp dữ liệu mẫu D3. Chờ "ĐÃ NẠP XONG dữ liệu mẫu D3". Bật/tắt backend:
+  npm run walkthrough:backend -- down|up (từ UI/, cửa sổ lệnh khác). Các bước nối tiếp nhau
+  trong cùng một lần mở ứng dụng, trên đơn "Chibi đôi" (chưa đặt giai đoạn). Mở trang: mục "Đơn
+  hàng" ở vùng điều hướng → bấm "Chibi đôi" → chờ phần "Tiến độ" hiện ra → bấm "Đổi giai đoạn".
+  Trước khi chạy, đặt CT_WALKTHROUGH_RUNNER là tên người chạy.
+steps:
+  - id: S1
+    setup: null
+    action: >
+      Mở trang đổi giai đoạn của "Chibi đôi". Không chọn gì, bấm "Lưu".
+    expect: >
+      Trang "Đổi giai đoạn", dưới đó tiêu đề đơn "Chibi đôi"; ngay dưới là hàng nút "Lưu" (nút
+      chính, đứng đầu) và "Hủy". "Giai đoạn hiện tại": "Chờ bắt đầu". Ô "Giai đoạn mới" có lựa chọn
+      đầu "Chọn giai đoạn", rồi mười giai đoạn theo thứ tự, không có "Chờ bắt đầu": Phác thảo, Lên
+      nét, Tô màu, Hoàn thiện chi tiết, Duyệt lần cuối, Sửa theo yêu cầu, Đã vẽ xong, Tạm dừng, Đã
+      giao, Đã hủy. Sau "Lưu": khung "Chưa lưu được" với "Một số ô chưa đúng định dạng. Vui lòng
+      kiểm tra lại."; dưới ô "Giai đoạn mới" là "Chọn giai đoạn mới."; con trỏ nhập ở ô đó; không
+      có gì được gửi đi (vẫn ở trang này).
+    covers: [rejected_input]
+  - id: S2
+    setup: null
+    action: >
+      Chọn "Phác thảo", gõ ghi chú "Bắt đầu phác", bấm "Lưu".
+    expect: >
+      Không có câu hỏi xác nhận. Về trang "Chi tiết đơn hàng" của "Chibi đôi" với thông báo "Đã đổi
+      giai đoạn sang Phác thảo."; phần "Tiến độ": "Giai đoạn hiện tại" là "Phác thảo" kèm "cập nhật
+      lúc <ngày giờ>"; "Lịch sử" một dòng "Bắt đầu: Phác thảo · <ngày giờ> · Bắt đầu phác". Nút "Đổi
+      giai đoạn" vẫn có.
+    covers: [ok]
+  - id: S3
+    setup: null
+    action: >
+      Bấm "Đổi giai đoạn". Chọn "Đã giao", bấm "Lưu". Khi khung xác nhận hiện ra, bấm "Quay lại".
+      Rồi bấm "Hủy".
+    expect: >
+      Sau "Lưu": ngay trong trang (không phải hộp thoại của hệ thống) hiện khung "Xác nhận đổi giai
+      đoạn" với câu "Sau khi chuyển sang "Đã giao", đơn này không đổi giai đoạn được nữa." và hai nút
+      "Xác nhận", "Quay lại"; con trỏ nhập ở nút "Xác nhận"; ô "Giai đoạn mới", ô "Ghi chú" và nút
+      "Lưu" tạm khóa. Sau "Quay lại": khung biến mất, ô vẫn chọn "Đã giao". Sau "Hủy": chi tiết đơn,
+      "Giai đoạn hiện tại" vẫn là "Phác thảo" (không có gì được gửi đi).
+    covers: [ok]
+  - id: S4
+    setup: >
+      Mở trang đổi giai đoạn của "Chibi đôi"; chọn "Lên nét". Chạy npm run walkthrough:backend --
+      down (ứng dụng vẫn mở).
+    action: >
+      Bấm "Lưu". Khi khung báo lỗi hiện ra, chạy npm run walkthrough:backend -- up, rồi bấm "Lưu"
+      lần nữa.
+    expect: >
+      Lần đầu: khung "Không kết nối được" với "Không kết nối được tới phần xử lý của ứng dụng. Vui
+      lòng thử lại."; vẫn ở trang này, ô vẫn chọn "Lên nét", nút "Lưu" bấm được. Lần hai (backend đã
+      chạy lại): về chi tiết đơn với "Đã đổi giai đoạn sang Lên nét."; "Giai đoạn hiện tại" là "Lên
+      nét".
+    covers: [unreachable, ok]
+  - id: S5
+    setup: null
+    action: >
+      Bấm "Đổi giai đoạn". Chọn "Đã giao", gõ ghi chú "Giao file cuối", bấm "Lưu", rồi bấm
+      "Xác nhận" trong khung xác nhận.
+    expect: >
+      Về chi tiết đơn với "Đã đổi giai đoạn sang Đã giao."; "Giai đoạn hiện tại" là "Đã giao"; phần
+      "Tiến độ" ghi "Đơn đang ở giai đoạn "Đã giao", không đổi giai đoạn được nữa."; hàng nút dưới
+      tiêu đề chỉ còn "Sửa" và "Quay lại danh sách" (nút "Đổi giai đoạn" biến mất).
+    covers: [ok]

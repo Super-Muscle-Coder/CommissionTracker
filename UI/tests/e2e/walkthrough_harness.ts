@@ -245,3 +245,78 @@ export async function openCommission(page: Page, title: string): Promise<void> {
   await expect(page.getByRole('heading', { level: 3, name: title })).toBeVisible({ timeout: 30_000 })
   await expect(page.getByRole('status')).toHaveCount(0)
 }
+
+// --- D3: progress ----------------------------------------------------------------
+
+const EMPTY_BOARD_TEXT = 'Chưa có đơn hàng nào.'
+
+// [group heading, [title, secondary line] of each commission] of the board, in the order shown.
+export async function boardGroups(page: Page): Promise<[string, [string, string][]][]> {
+  const headings = await page.getByRole('main').getByRole('heading', { level: 3 }).allInnerTexts()
+  return Promise.all(
+    headings.map(async (h) => {
+      const texts = await page.getByRole('list', { name: h, exact: true }).getByRole('button').allInnerTexts()
+      const rows = texts.map((t): [string, string] => {
+        const [title, ...rest] = t.split('\n').map((s) => s.trim()).filter((s) => s !== '')
+        return [title, rest.join(' ')]
+      })
+      return [h, rows] as [string, [string, string][]]
+    }),
+  )
+}
+
+// The board is loaded: it shows groups ('board') or its empty state ('empty'),
+// with no loading status and no alert. Read from the content (UI-4).
+async function expectBoardLoaded(page: Page, shown: 'board' | 'empty'): Promise<void> {
+  switch (shown) {
+    case 'board':
+      await expect(page.getByRole('main').getByRole('list').first()).toBeVisible({ timeout: 30_000 })
+      break
+    case 'empty':
+      await expect(page.getByText(EMPTY_BOARD_TEXT)).toBeVisible({ timeout: 30_000 })
+      break
+  }
+  await expect(page.getByRole('status')).toHaveCount(0)
+  await expect(page.getByRole('alert')).toHaveCount(0)
+}
+
+// Open the board through the navigation region ("Tiến độ"); the page is built
+// anew, so what it shows once loaded is never a leftover.
+export async function goToBoard(page: Page, shown: 'board' | 'empty'): Promise<void> {
+  await page.getByRole('navigation', { name: 'Điều hướng chính' }).getByRole('button', { name: 'Tiến độ' }).click()
+  await expect(page.getByRole('heading', { level: 2, name: 'Tiến độ' })).toBeVisible()
+  await expectBoardLoaded(page, shown)
+}
+
+// Press "Tải lại" on the board and wait for the content it must end on
+// (board → "không kết nối được", that alert → board).
+export async function reloadBoard(page: Page, outcome: 'board' | 'unreachable'): Promise<void> {
+  await page.getByRole('button', { name: 'Tải lại' }).click()
+  switch (outcome) {
+    case 'board':
+      await expectBoardLoaded(page, 'board')
+      break
+    case 'unreachable':
+      await expect(page.getByRole('alert')).toContainText('Không kết nối được', { timeout: 30_000 })
+      await expect(page.getByRole('main').getByRole('list')).toHaveCount(0)
+      await expect(page.getByRole('status')).toHaveCount(0)
+      break
+  }
+}
+
+// [term, details] of the "Tiến độ" part of commission_detail.
+export const progressEntries = (page: Page) => detailEntries(page, 'Tiến độ đơn hàng')
+
+// The "Tiến độ" part of commission_detail has loaded (its entries are shown).
+export async function expectProgressLoaded(page: Page): Promise<void> {
+  await expect(page.getByLabel('Tiến độ đơn hàng')).toBeVisible({ timeout: 30_000 })
+  await expect(page.getByRole('region', { name: 'Tiến độ' }).getByRole('status')).toHaveCount(0)
+}
+
+// Open stage_change from a loaded commission_detail; wait for its form.
+export async function openStageChange(page: Page): Promise<void> {
+  await page.getByRole('button', { name: 'Đổi giai đoạn' }).click()
+  await expect(page.getByRole('heading', { level: 2, name: 'Đổi giai đoạn' })).toBeVisible()
+  await expect(page.getByLabel('Giai đoạn mới', { exact: true })).toBeVisible({ timeout: 30_000 })
+  await expect(page.getByRole('status')).toHaveCount(0)
+}
