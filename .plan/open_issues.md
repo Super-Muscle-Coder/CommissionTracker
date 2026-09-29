@@ -334,6 +334,8 @@ Thí nghiệm: chờ thêm 1,1 s sau khi nạp mẫu thì 8/8 lần đạt; khô
 
 ### UI-10 — spec e2e khẳng định `getByRole('status')` không lọc (trung bình; chặn `hoàn_tất` của năm trang D2, D3; Q20-1) — **plan phiên 21** (phiên vá ngắn, Project Owner chọn ngày 2026-09-29)
 
+> **ĐÃ ĐÓNG 2026-09-29, phiên 21** (`coding-agent@2026-09-29#3`). 11 khẳng định đã lọc theo chữ; `scripts/check_e2e_status.mjs` nằm trong `npm run check`. Orchestrator: spec `commission_form` 40/40, e2e 6/6 (`.reviews/audits/ui/audit_ui_session21.md`). Giới hạn đã biết (Q21-1): script không bắt locator gán vào biến trước (`const s = page.getByRole('status'); expect(s).toHaveText(…)`); gặp kiểu viết đó thì mở rộng script. Phần theo dõi chụp ảnh chuyển sang UI-11.
+
 **Hiện tượng:** Sau khi lưu đơn, `commission_detail` có hai vùng `role="status"`: thông báo chuyển trang, và "Đang tải tiến độ…" của phần Tiến độ (D3). Spec `commission_form` khẳng định bằng `getByRole('status')` không lọc (dòng 109, 175, 211, 237), nên hỏng "strict mode violation" khi phần Tiến độ chưa tải xong. Trên máy Orchestrator, chạy spec riêng 45 lần thì hỏng 3 lần; toàn bộ e2e thì đạt 6/6.
 
 **Thí nghiệm:** đổi bốn khẳng định sang `getByRole('status').filter({ hasText: '…' })` thì đạt 30/30 lần.
@@ -346,6 +348,31 @@ Thí nghiệm: chờ thêm 1,1 s sau khi nạp mẫu thì 8/8 lần đạt; khô
 **Kèm theo, theo dõi:** `main_layout.spec.ts` hết giờ chụp ảnh (30 s) trên Windows đã ba lần (phiên 19 mốc, `main-EXP-013`, phiên 20). Gặp lần nữa thì điều tra.
 
 **Tiêu chí đóng:** spec `commission_form` chạy riêng đạt ổn định trên máy Orchestrator (ít nhất 30 lần); `npm run e2e` đạt 5/5 trên Windows; phép kiểm tĩnh cắn được (tạm thêm một khẳng định chưa lọc thì `check` hỏng).
+
+## Layer giao diện — sau audit phiên 21
+
+### UI-11 — `page.screenshot` hết 30 s trong e2e, chỉ trên Windows (trung bình; không chặn `hoàn_tất`; audit phiên 21 §5) — cho phiên giao diện kế tiếp
+
+**Dữ liệu:**
+- phiên 19, mốc đầu phiên: `client_detail` S4 (backend tắt), có đặt runner;
+- phiên 20: `main_layout.spec.ts`, có đặt runner;
+- phiên 21: `client_detail` S4 và `stage_change` S4 (đều là bước backend tắt), cùng một lần chưa rõ bước; không đặt runner; 3 trong 8 lần.
+
+Máy Orchestrator (Linux) chưa gặp lần nào trong hơn 20 lần e2e toàn bộ.
+
+**Chưa rõ nguyên nhân.** Các giả thuyết, chưa có dữ liệu để chọn:
+- kết nối tới cổng đóng trên Windows chậm;
+- phần mềm diệt virus quét tệp ảnh vừa ghi;
+- cửa sổ Electron không nhận khung hình mới khi không có tiêu điểm.
+
+**Việc cho phiên giao diện kế tiếp** (thu dữ liệu, không nới thời gian chờ, không `retries`):
+- bật `trace: 'retain-on-failure'` trong `tests/e2e/playwright.config.ts`;
+- ghi thời điểm bắt đầu và kết thúc của mỗi lệnh chụp ảnh ở bước backend tắt;
+- khi có lần hỏng, giữ trace và báo lại.
+
+**Nếu trace cho thấy giao diện thật sự đứng khi backend tắt**, đó là lỗi của sản phẩm: mở lại trạng thái các trang liên quan.
+
+**Tiêu chí đóng:** biết nguyên nhân, sửa đúng chỗ; sau đó 10 lần e2e liên tiếp trên Windows không hết giờ chụp ảnh.
 
 ## Môi trường và vận hành (không phải việc của coding agent)
 
