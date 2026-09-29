@@ -4,7 +4,8 @@ import { render, screen } from '@testing-library/react'
 import { useLayoutEffect, type ReactNode } from 'react'
 import { vi } from 'vitest'
 import type { ManageClientRouters } from '../../logic/workflows/manage_client/routers'
-import { LogicContext } from '../logic_context'
+import type { ManageCommissionRouters } from '../../logic/workflows/manage_commission/routers'
+import { LogicContext, type LogicRouters } from '../logic_context'
 
 // A Routers operation answering the queued results in order; a call with
 // nothing left fails the test (an unexpected call).
@@ -48,8 +49,24 @@ export function fakeManageClient(over: Partial<ManageClientRouters>): ManageClie
   }
 }
 
-export function renderWithLogic(ui: ReactNode, manageClient: ManageClientRouters) {
-  return render(<LogicContext.Provider value={{ manageClient }}>{ui}</LogicContext.Provider>)
+export function fakeManageCommission(over: Partial<ManageCommissionRouters>): ManageCommissionRouters {
+  return {
+    loadCommissionList: unexpected('loadCommissionList'),
+    loadCommissionDetail: unexpected('loadCommissionDetail'),
+    openCommissionForm: unexpected('openCommissionForm'),
+    saveCommission: unexpected('saveCommission'),
+    reloadClientChoices: unexpected('reloadClientChoices'),
+    ...over,
+  }
+}
+
+// Every Routers of the context; a workflow the test does not give fails on any call.
+function logicOf(manageClient: ManageClientRouters, manageCommission: ManageCommissionRouters | undefined): LogicRouters {
+  return { manageClient, manageCommission: manageCommission ?? fakeManageCommission({}) }
+}
+
+export function renderWithLogic(ui: ReactNode, manageClient: ManageClientRouters, manageCommission?: ManageCommissionRouters) {
+  return render(<LogicContext.Provider value={logicOf(manageClient, manageCommission)}>{ui}</LogicContext.Provider>)
 }
 
 // What the page shows at its very first commit (UI-4): the status messages,
@@ -62,9 +79,11 @@ export type FirstCommit = { statuses: string[]; enabledButtons: string[]; router
 // sibling rendered after the page, reads the DOM in its layout effect: the
 // page is committed, and its passive effects (the call to Routers) have not
 // run yet.
-export function renderFirstCommit(ui: ReactNode, manageClient: ManageClientRouters): FirstCommit {
+export function renderFirstCommit(ui: ReactNode, manageClient: ManageClientRouters, manageCommission?: ManageCommissionRouters): FirstCommit {
   let seen: FirstCommit | null = null
-  const calls = () => Object.values(manageClient).some((fn) => vi.isMockFunction(fn) && fn.mock.calls.length > 0)
+  const logic = logicOf(manageClient, manageCommission)
+  const calls = () =>
+    [...Object.values(logic.manageClient), ...Object.values(logic.manageCommission)].some((fn) => vi.isMockFunction(fn) && fn.mock.calls.length > 0)
   function Probe() {
     useLayoutEffect(() => {
       seen = {
@@ -79,7 +98,7 @@ export function renderFirstCommit(ui: ReactNode, manageClient: ManageClientRoute
     return null
   }
   render(
-    <LogicContext.Provider value={{ manageClient }}>
+    <LogicContext.Provider value={logic}>
       {ui}
       <Probe />
     </LogicContext.Provider>,

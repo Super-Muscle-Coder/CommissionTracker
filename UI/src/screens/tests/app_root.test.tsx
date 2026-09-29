@@ -18,11 +18,13 @@ import type {
   SavedClientView,
   ViewResult,
 } from '../../logic/workflows/manage_client/routers'
+import type { CommissionDetailView, CommissionListView } from '../../logic/workflows/manage_commission/routers'
 import { AppRoot } from '../app_root'
 import { NAVIGATION, START_PAGE, type Route } from '../navigation'
-import { answers, fakeManageClient, renderWithLogic } from './fake_logic'
+import { answers, fakeManageClient, fakeManageCommission, renderWithLogic } from './fake_logic'
 
 const ID = '3f2b8c1e-9a4d-4e6f-8b2a-1c3d5e7f9a0b'
+const CID = '7a1d2e3f-4b5c-4d6e-9f80-1a2b3c4d5e6f'
 const LIST: ViewResult<ClientListView> = { kind: 'ok', view: { active: [{ clientId: ID, name: 'An' }], archived: [], isEmpty: false } }
 const DETAIL: ViewResult<ClientDetailView> = {
   kind: 'ok',
@@ -45,12 +47,31 @@ export const WRONG_ROUTES: Route[] = [
   { page: 'client_list', params: { client_id: ID } },
   // @ts-expect-error mode is create or edit
   { page: 'client_form', params: { mode: 'delete', client_id: ID } },
+  // @ts-expect-error commission_detail needs commission_id, not client_id
+  { page: 'commission_detail', params: { client_id: ID } },
+  // @ts-expect-error commission_form in edit mode needs commission_id
+  { page: 'commission_form', params: { mode: 'edit' } },
+  // @ts-expect-error commission_list takes no parameter
+  { page: 'commission_list', params: { commission_id: ID } },
 ]
 
 describe('navigation table', () => {
-  it('has exactly the three pages of ui_decomposition.md §5 for D1, and opens on client_list', () => {
-    expect(Object.keys(NAVIGATION).sort()).toEqual(['client_detail', 'client_form', 'client_list'])
+  it('has exactly the six pages of ui_decomposition.md §5 (D1 and D2), and opens on client_list', () => {
+    expect(Object.keys(NAVIGATION).sort()).toEqual(['client_detail', 'client_form', 'client_list', 'commission_detail', 'commission_form', 'commission_list'])
     expect(START_PAGE).toBe('client_list')
+  })
+
+  it('the navigation region lists "Khách hàng", then "Đơn hàng"; D2 pages belong to "Đơn hàng"', () => {
+    const menu = (Object.keys(NAVIGATION) as (keyof typeof NAVIGATION)[]).flatMap((k) => {
+      const m = NAVIGATION[k].menu
+      return m === null ? [] : [m.label]
+    })
+    expect(menu).toEqual(['Khách hàng', 'Đơn hàng'])
+    expect([NAVIGATION.commission_list.section, NAVIGATION.commission_detail.section, NAVIGATION.commission_form.section]).toEqual([
+      'commission_list',
+      'commission_list',
+      'commission_list',
+    ])
   })
 })
 
@@ -60,8 +81,33 @@ describe('AppRoot', () => {
     expect(await screen.findByRole('heading', { level: 2, name: 'Khách hàng' })).toBeTruthy()
     const nav = screen.getByRole('navigation', { name: 'Điều hướng chính' })
     const items = within(nav).getAllByRole('button')
-    expect(items.map((b) => b.textContent)).toEqual(['Khách hàng'])
+    expect(items.map((b) => b.textContent)).toEqual(['Khách hàng', 'Đơn hàng'])
     expect(items[0].getAttribute('aria-current')).toBe('page')
+    expect(items[1].getAttribute('aria-current')).toBeNull()
+  })
+
+  it('"Đơn hàng" opens commission_list, marked current; a commission → its detail, "Đơn hàng" still current', async () => {
+    const loadCommissionList = answers<[], ViewResult<CommissionListView>>({
+      kind: 'ok',
+      view: { rows: [{ commissionId: CID, title: 'Chân dung', detailText: 'An · 1.500.000 VND · Không có hạn' }], isEmpty: false },
+    })
+    const loadCommissionDetail = answers<[string], ViewResult<CommissionDetailView>>({ kind: 'rejected', origin: 'system', code: 'ERR_NOT_FOUND', message: 'Không tìm thấy đơn hàng này.', fieldErrors: {} })
+    renderWithLogic(<AppRoot />, fakeManageClient({ loadClientList: answers<[], ViewResult<ClientListView>>(LIST) }), fakeManageCommission({ loadCommissionList, loadCommissionDetail }))
+    await screen.findByRole('button', { name: 'An' })
+    fireEvent.click(within(screen.getByRole('navigation')).getByRole('button', { name: 'Đơn hàng' }))
+    expect(await screen.findByRole('heading', { level: 2, name: 'Đơn hàng' })).toBeTruthy()
+    const current = () => within(screen.getByRole('navigation')).getAllByRole('button').map((b) => [b.textContent, b.getAttribute('aria-current')])
+    expect(current()).toEqual([
+      ['Khách hàng', null],
+      ['Đơn hàng', 'page'],
+    ])
+    fireEvent.click(await screen.findByRole('button', { name: /^Chân dung/ }))
+    expect(await screen.findByRole('heading', { level: 2, name: 'Chi tiết đơn hàng' })).toBeTruthy()
+    expect(loadCommissionDetail).toHaveBeenCalledExactlyOnceWith(CID)
+    expect(current()).toEqual([
+      ['Khách hàng', null],
+      ['Đơn hàng', 'page'],
+    ])
   })
 
   it('a client → client_detail with its id (item still current); "Sửa" → client_form edit; saved → detail with the notice, once', async () => {

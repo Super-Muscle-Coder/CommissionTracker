@@ -5,11 +5,13 @@
  */
 import { createContext, useContext } from 'react'
 import type { ManageClientRouters } from '../logic/workflows/manage_client/routers'
+import type { ManageCommissionRouters } from '../logic/workflows/manage_commission/routers'
 
 // The set of Routers, composed from each interface workflow's Routers type
 // (imported as a type from logic/workflows/<name>/routers).
 export type LogicRouters = {
   manageClient: ManageClientRouters
+  manageCommission: ManageCommissionRouters
 }
 
 export const LogicContext = createContext<LogicRouters | null>(null)

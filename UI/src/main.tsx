@@ -2,8 +2,8 @@
 // workflow: main
 // clause: external
 // component: main
-// last_updated_by: coding-agent@2026-09-28#2
-// last_updated_at: 2026-09-28T12:38:00+07:00
+// last_updated_by: coding-agent@2026-09-29#1
+// last_updated_at: 2026-09-29T10:30:00+07:00
 //
 // EXPERIENCES:
 //   - id: main-EXP-001
@@ -171,6 +171,40 @@
 //       chụp và bản ghi của ba spec kịch bản. Năm thư mục ct-ui-e2e-* ngày
 //       2026-09-27 (09:34–09:35) trong %TEMP% là sót lại từ trước bản vá; phiên
 //       này không xóa chúng (ngoài UI/).
+//   - id: main-EXP-011
+//     content: >
+//       Ráp nối thứ hai (phiên 19, D2), đúng mẫu main-EXP-001, theo thứ tự
+//       ui_decomposition §2: createManageCommissionAdapters(httpClient,
+//       MANAGE_COMMISSION_CONFIGS) → createManageCommissionServices(adapters,
+//       MANAGE_COMMISSION_CONFIGS, LAYER_CONFIGS.resultMessages) →
+//       createManageCommissionRouters(services, { limits, currencyDecimals, formats }
+//       của MANAGE_COMMISSION_CONFIGS) (Routers kiểm và đọc bản nháp bằng các giá trị
+//       đó; chỉ Main đọc giá trị Configs, R14), đặt vào LogicRouters.manageCommission
+//       (logic_context.ts). src/screens/tests/fake_logic.tsx có fakeManageCommission,
+//       và renderWithLogic, renderFirstCommit nhận Routers thứ hai tùy chọn (thiếu
+//       thì mọi lời gọi của nó làm kiểm thử hỏng), nên kiểm thử D1 không đổi.
+//       tests/main/main.test.tsx không đổi: trang mở đầu vẫn là client_list, đúng một
+//       GET /clients lúc khởi động.
+//   - id: main-EXP-012
+//     content: >
+//       UI-8 (phiên 19): thư mục gốc của bằng chứng e2e do ĐÚNG MỘT chỗ quyết định,
+//       evidenceRoot() ở tests/tools/walkthrough_lib.mjs, cạnh walkthroughRunner():
+//       CT_WALKTHROUGH_RUNNER khác rỗng → UI/evidence/ (bằng chứng được commit); không
+//       có → UI/test-results/evidence/ (git bỏ qua test-results; Playwright dọn thư mục
+//       này ở đầu mỗi lần chạy, đó là bằng chứng nháp). walkthrough_harness.ts
+//       (walkthroughRecorder) và main_layout.spec.ts (ảnh b2a/main_layout.png) chỉ lấy
+//       thư mục qua hàm này; ba spec D2 dùng harness. Khi không có biến, mọi thứ khác
+//       giữ nguyên: vẫn chụp ảnh, vẫn ghi *-run.json với runner "unknown (…)". Một phiên
+//       của layer khác chạy npm run e2e để kiểm hồi quy không còn ghi đè UI/evidence,
+//       nên không cần git restore UI/evidence nữa.
+//   - id: main-EXP-013
+//     content: >
+//       Quan sát về thời gian e2e (phiên 19). Mốc lần 1 hỏng một lần ở
+//       client_detail S4 vì page.screenshot hết 30 giây (không đổi mã, lần 2 đạt 17);
+//       lần chạy bằng chứng UI-8 lúc 08:54 mất 6,9 phút cho 17 test (mỗi lần mở ứng
+//       dụng 20 giây tới 1,3 phút, so với 4–12 giây ở mốc) rồi tự trở lại bình thường
+//       ở các lần sau (32 test trong khoảng 2 phút). Không tìm ra nguyên nhân trong
+//       UI/; nghi do máy bận (quét của antivirus sau npm ci, ENV-2). Chỉ ghi nhận.
 //
 // UNSOLVED_PROBLEMS: []
 //
@@ -430,6 +464,68 @@
 //       cắn R1–R14 cũ còn hiệu lực; check_contrast đổi và có bằng chứng cắn mới
 //       ở kit. Không có eslint-disable, không ngoại lệ lint mới.
 //     recorded_at: 2026-09-28T12:28:10+07:00
+//   - claim: >
+//       Môi trường và mốc của phiên 19.
+//     how: >
+//       node --version; npm --version; git status --short; trong UI/: npm ci; npm
+//       run check; CT_WALKTHROUGH_RUNNER=coding-agent@2026-09-29#1 npm run e2e (hai
+//       lần); SHA-256 của mọi tệp trong %APPDATA%\CommissionTracker đầu và cuối phiên.
+//     result: >
+//       Node v24.14.1; npm 11.11.0; npm ci "found 0 vulnerabilities" (không thêm gói
+//       nào trong phiên). git status --short đầu phiên: rỗng. Mốc check: "Tests 241
+//       passed (241)", 71 tệp. Mốc e2e: lần 1 "1 failed, 14 passed" (client_detail S4,
+//       "page.screenshot: Timeout 30000ms exceeded", 2 bước sau không chạy), lần 2
+//       "17 passed (1.4m)" không đổi mã (main-EXP-013). %APPDATA%\CommissionTracker
+//       có data.db (114688 byte, SHA-256 B1996554…F390B, ghi 2026-09-28 21:09:42) và
+//       data.db.lock (0 byte) từ trước phiên; lúc 09:2x cuối phiên giống hệt (hash,
+//       kích thước, giờ ghi). Backend: Backend/env/Scripts/python.exe.
+//     recorded_at: 2026-09-29T08:41:11+07:00
+//   - claim: >
+//       UI-8: npm run e2e không đặt CT_WALKTHROUGH_RUNNER không đổi UI/evidence; bằng
+//       chứng nháp vào UI/test-results/evidence với runner "unknown".
+//     how: >
+//       PowerShell (scratchpad ui8_proof.ps1): bỏ biến; SHA-256 mọi tệp dưới
+//       UI/evidence; trong UI/ npm run e2e; SHA-256 lại và so; liệt kê
+//       test-results/evidence; đọc runner trong client_list-run.json ở đó. Hai lần: trước
+//       khi có mã D2 (08:54) và với mã cuối phiên (09:24, sau năm lần có tên).
+//     result: >
+//       Lần 1: "17 passed (6.9m)", "UI/evidence UNCHANGED (27 files hashed)", 27 tệp
+//       nháp (b2a/main_layout.png và ba thư mục walkthroughs). Lần 2: "32 passed
+//       (1.9m)", "UI/evidence UNCHANGED (54 files hashed)", runner "unknown (Playwright,
+//       tests/e2e/client_list_walkthrough.spec.ts)". git status --short UI/evidence
+//       không đổi bởi lần chạy không biến (các dòng còn lại do lần chạy có tên của
+//       phiên này ghi, đúng thiết kế).
+//     recorded_at: 2026-09-29T09:26:26+07:00
+//   - claim: >
+//       UI-8, chiều có biến: năm lần e2e với CT_WALKTHROUGH_RUNNER ghi bằng chứng vào
+//       UI/evidence với đúng tên người chạy.
+//     how: >
+//       Trong UI/: $env:CT_WALKTHROUGH_RUNNER = "coding-agent@2026-09-29#1"; npm run e2e
+//       năm lần liên tiếp (scratchpad e2e5.ps1); đọc mọi
+//       UI/evidence/walkthroughs/*/*-run.json.
+//     result: >
+//       Sáu bản ghi (client_list 5, client_detail 6, client_form 5, commission_list 4,
+//       commission_detail 4, commission_form 7 bước), mọi bước passed true, runner
+//       "coding-agent@2026-09-29#1 (Playwright, tests/e2e/<trang>_walkthrough.spec.ts)".
+//     recorded_at: 2026-09-29T09:24:00+07:00
+//   - claim: >
+//       npm run check và npm run e2e đạt với mã cuối phiên 19; e2e 5/5 lần liên tiếp.
+//     how: >
+//       Trong UI/: npm run check (sau khi ghi mọi checkpoint);
+//       CT_WALKTHROUGH_RUNNER=coding-agent@2026-09-29#1, npm run e2e năm lần liên tiếp;
+//       danh sách ct-ui-* trong %TEMP% trước và sau.
+//     result: >
+//       check exit 0: tsc -b, eslint --max-warnings 0, stylelint sạch;
+//       "check_contrast: 19 text pairs >= 4.5:1 and 11 non-text pairs >= 3:1 checked,
+//       all pass."; "check_layer: 95 files under src/ checked (ZONES, R2, R10), no
+//       violation."; "Test Files 16 passed (16)", "Tests 555 passed (555)" (mốc 241).
+//       e2e: lần 1 "32 passed (2.0m)" (09:13:25–09:15:31), lần 2 "32 passed (2.0m)",
+//       lần 3 "32 passed (2.0m)", lần 4 "32 passed (2.0m)", lần 5 "32 passed (1.9m)"
+//       (kết thúc 09:24:00) (mốc 17). ct-ui-* trước và sau giống hệt (sáu thư mục cũ
+//       ngày 27 và 28). Cấu hình ESLint, stylelint, check_layer không đổi trong phiên,
+//       nên bằng chứng cắn R1–R14 cũ còn hiệu lực; check_contrast đổi (FIELDS) và có
+//       bằng chứng cắn mới ở kit. Không có eslint-disable, không ngoại lệ lint mới.
+//     recorded_at: 2026-09-29T09:30:00+07:00
 //
 // NOTES:
 //   - content: >
@@ -445,6 +541,16 @@
 //       (Desktop/dist/main.js); công cụ báo rõ nếu thiếu. Phiên UI không build
 //       Desktop.
 //     written_at: 2026-09-27
+//   - content: >
+//       Cách chạy e2e từ phiên 19 (UI-8). Kiểm hồi quy (mọi phiên, mọi layer): trong
+//       UI/, npm run e2e KHÔNG đặt CT_WALKTHROUGH_RUNNER; bằng chứng nháp vào
+//       UI/test-results/evidence/, UI/evidence không đổi. Ghi bằng chứng của một phiên
+//       giao diện hoặc của Project Owner: đặt biến trước, PowerShell
+//       $env:CT_WALKTHROUGH_RUNNER = "coding-agent@<ngày>#<số>"; npm run e2e (Git Bash:
+//       CT_WALKTHROUGH_RUNNER='Tên' npm run e2e); bằng chứng vào UI/evidence/ với đúng
+//       tên người chạy. Chạy tay kịch bản: npm run walkthrough:app (dữ liệu mẫu D1),
+//       -- --commissions (D2), -- --empty (trống).
+//     written_at: 2026-09-29
 //   - content: >
 //       Phiên 12 sửa tests/main/main.test.tsx: ca "valid launch value → main
 //       frame" trước khẳng định không có lời gọi nào lúc khởi động. Nay trang
@@ -480,6 +586,10 @@ import { createManageClientAdapters } from './logic/workflows/manage_client/adap
 import { MANAGE_CLIENT_CONFIGS } from './logic/workflows/manage_client/configs'
 import { createManageClientRouters } from './logic/workflows/manage_client/routers'
 import { createManageClientServices } from './logic/workflows/manage_client/services'
+import { createManageCommissionAdapters } from './logic/workflows/manage_commission/adapters'
+import { MANAGE_COMMISSION_CONFIGS } from './logic/workflows/manage_commission/configs'
+import { createManageCommissionRouters } from './logic/workflows/manage_commission/routers'
+import { createManageCommissionServices } from './logic/workflows/manage_commission/services'
 import { createHttpClient } from './logic/workflows/scaffold_ui/adapters'
 import { SCAFFOLD_UI_CONFIGS } from './logic/workflows/scaffold_ui/configs'
 import { AppRoot } from './screens/app_root'
@@ -541,8 +651,19 @@ if (!launch.ok) {
     MANAGE_CLIENT_CONFIGS,
     LAYER_CONFIGS.resultMessages,
   )
+  const manageCommissionAdapters = createManageCommissionAdapters(httpClient, MANAGE_COMMISSION_CONFIGS)
+  const manageCommissionServices = createManageCommissionServices(
+    manageCommissionAdapters,
+    MANAGE_COMMISSION_CONFIGS,
+    LAYER_CONFIGS.resultMessages,
+  )
   const routers: LogicRouters = {
     manageClient: createManageClientRouters(manageClientServices, MANAGE_CLIENT_CONFIGS.limits),
+    manageCommission: createManageCommissionRouters(manageCommissionServices, {
+      limits: MANAGE_COMMISSION_CONFIGS.limits,
+      currencyDecimals: MANAGE_COMMISSION_CONFIGS.currencyDecimals,
+      formats: MANAGE_COMMISSION_CONFIGS.formats,
+    }),
   }
 
   // Step 5. Hand the Routers to the screens zone and render the root.

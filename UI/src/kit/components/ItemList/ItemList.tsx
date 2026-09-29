@@ -4,8 +4,10 @@ import styles from './ItemList.module.css'
 export type ItemListItem = {
   // Stable identity of the item (React key; handed back by onSelect); never shown.
   key: string
-  // Text shown for the item.
+  // Text shown for the item (its main line).
   text: string
+  // A secondary line under the main one, in a quieter colour; null for none.
+  detail: string | null
 }
 
 export type ItemListProps = {
@@ -25,17 +27,25 @@ export function ItemList({ label, items, emptyText, onSelect }: ItemListProps) {
   if (items.length === 0) return <EmptyState text={emptyText} action={null} />
   return (
     <ul className={styles.list} aria-label={label}>
-      {items.map((item) => (
-        <li key={item.key} className={styles.item}>
-          {onSelect === null ? (
-            <span className={styles.text}>{item.text}</span>
-          ) : (
-            <button type="button" className={styles.select} onClick={() => onSelect(item.key)}>
-              {item.text}
-            </button>
-          )}
-        </li>
-      ))}
+      {items.map((item) => {
+        // The space keeps the two lines apart in the accessible name ("title detail").
+        const detail = item.detail === null ? null : <> <span className={styles.detail}>{item.detail}</span></>
+        return (
+          <li key={item.key} className={styles.item}>
+            {onSelect === null ? (
+              <span className={styles.text}>
+                {item.text}
+                {detail}
+              </span>
+            ) : (
+              <button type="button" className={styles.select} onClick={() => onSelect(item.key)}>
+                {item.text}
+                {detail}
+              </button>
+            )}
+          </li>
+        )
+      })}
     </ul>
   )
 }

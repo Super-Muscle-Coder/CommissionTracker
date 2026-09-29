@@ -1,0 +1,56 @@
+page: commission_detail
+precondition: >
+  Desktop đã build (npm run build trong Desktop/). Trong UI/: npm run walkthrough:app --
+  --commissions mở ứng dụng thật với thư mục dữ liệu tạm (không đụng %APPDATA%), Backend.py thật
+  sau fixture bật/tắt được, và nạp dữ liệu mẫu D2 (ba khách riêng: Mai Anh, Quốc Bảo, Lan Chi đã
+  lưu trữ; ba đơn "Chân dung bán thân", "Chibi đôi", "Minh họa bìa sách"). Chờ "ĐÃ NẠP XONG dữ
+  liệu mẫu D2". Bật/tắt backend: npm run walkthrough:backend -- down|up (từ UI/, cửa sổ lệnh
+  khác). Các bước nối tiếp nhau trong cùng một lần mở ứng dụng; mỗi bước bắt đầu ở trang "Đơn
+  hàng" (bấm mục "Đơn hàng" ở vùng điều hướng). Trước khi chạy, đặt CT_WALKTHROUGH_RUNNER là tên
+  người chạy.
+steps:
+  - id: S1
+    setup: null
+    action: >
+      Bấm đơn "Chân dung bán thân". Bấm ba lần vào dòng liên kết "https://example.com/ref-1" rồi
+      Ctrl+C.
+    expect: >
+      Trang "Chi tiết đơn hàng", tiêu đề nhóm "Chân dung bán thân"; ngay dưới là hàng nút "Sửa"
+      (nút chính, đứng đầu) và "Quay lại danh sách". Các mục theo thứ tự: Khách hàng "Mai Anh";
+      Loại tranh "bán thân"; Giá thỏa thuận "1.500.000 VND"; Hạn giao "15/10/2026"; Mô tả "Nền
+      xanh, ánh sáng dịu."; Liên kết tham khảo hai dòng "https://example.com/ref-1",
+      "https://example.com/ref-2"; Ngày tạo; Sửa lần cuối. Liên kết là chữ thường (không gạch
+      chân, không đổi con trỏ thành bàn tay), bấm vào không mở gì; chọn và sao chép được.
+    covers: [ok]
+  - id: S2
+    setup: null
+    action: >
+      Bấm "Quay lại danh sách", rồi bấm đơn "Minh họa bìa sách".
+    expect: >
+      Khách hàng "Lan Chi (đã lưu trữ)"; Loại tranh "minh họa"; Giá thỏa thuận "9.000.000 VND";
+      Hạn giao "01/01/2026" (đúng ngày đã lưu, không lệch sang 31/12/2025); không có mục Mô tả và
+      Liên kết tham khảo.
+    covers: [ok]
+  - id: S3
+    setup: >
+      Về trang "Đơn hàng".
+    action: >
+      Bấm đơn "Chibi đôi". Bấm "Sửa". Bấm "Hủy".
+    expect: >
+      Chi tiết: Khách hàng "Quốc Bảo"; Giá thỏa thuận "12,50 USD"; Hạn giao "Không có hạn";
+      không có mục Loại tranh, Mô tả, Liên kết tham khảo. "Sửa" mở trang "Sửa đơn hàng" với
+      "Chibi đôi", giá "12,50", đơn vị tiền "USD" không chọn được. "Hủy" về lại chi tiết "Chibi
+      đôi".
+    covers: [ok]
+  - id: S4
+    setup: >
+      Về trang "Đơn hàng". Chạy npm run walkthrough:backend -- down (ứng dụng vẫn mở).
+    action: >
+      Bấm đơn "Chân dung bán thân". Khi khung báo lỗi hiện ra, chạy npm run walkthrough:backend --
+      up, rồi bấm "Thử lại".
+    expect: >
+      Lần đầu: trang "Chi tiết đơn hàng" có khung "Không kết nối được" với câu "Không kết nối
+      được tới phần xử lý của ứng dụng. Vui lòng thử lại.", cùng nút "Thử lại" và "Quay lại danh
+      sách"; không có thông tin đơn. Sau "Thử lại" (backend đã chạy lại): chi tiết đầy đủ của
+      "Chân dung bán thân" như ở S1.
+    covers: [unreachable, ok]

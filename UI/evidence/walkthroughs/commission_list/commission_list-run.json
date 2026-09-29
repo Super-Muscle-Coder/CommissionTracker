@@ -1,0 +1,47 @@
+{
+  "page": "commission_list",
+  "walkthrough": "src/screens/pages/commission_list/walkthrough.yaml",
+  "steps": [
+    {
+      "step": "S1",
+      "passed": true,
+      "runner": "TGN (Playwright, tests/e2e/commission_list_walkthrough.spec.ts)",
+      "finished_at": "2026-09-29T03:51:06.854Z",
+      "screenshot": "evidence/walkthroughs/commission_list/commission_list-S1.png",
+      "covers": [
+        "ok"
+      ]
+    },
+    {
+      "step": "S2",
+      "passed": true,
+      "runner": "TGN (Playwright, tests/e2e/commission_list_walkthrough.spec.ts)",
+      "finished_at": "2026-09-29T03:51:12.332Z",
+      "screenshot": "evidence/walkthroughs/commission_list/commission_list-S2.png",
+      "covers": [
+        "ok"
+      ]
+    },
+    {
+      "step": "S3",
+      "passed": true,
+      "runner": "TGN (Playwright, tests/e2e/commission_list_walkthrough.spec.ts)",
+      "finished_at": "2026-09-29T03:51:19.106Z",
+      "screenshot": "evidence/walkthroughs/commission_list/commission_list-S3.png",
+      "covers": [
+        "unreachable",
+        "ok"
+      ]
+    },
+    {
+      "step": "S4",
+      "passed": true,
+      "runner": "TGN (Playwright, tests/e2e/commission_list_walkthrough.spec.ts)",
+      "finished_at": "2026-09-29T03:51:19.269Z",
+      "screenshot": "evidence/walkthroughs/commission_list/commission_list-S4.png",
+      "covers": [
+        "ok"
+      ]
+    }
+  ]
+}

@@ -11,6 +11,7 @@ export declare const desktopConfig: {
 }
 export declare const RUNNER_VARIABLE: string
 export declare function walkthroughRunner(): string
+export declare function evidenceRoot(): string
 export declare function electronBinary(): string
 export declare function makeDataDir(): string
 export declare function launchArgs(dataDir: string, options: { noDialog: boolean }): string[]
@@ -27,3 +28,19 @@ export declare const SAMPLE_ARCHIVED: string[]
 export declare const EXPECTED_ACTIVE: string[]
 export declare const EXPECTED_ARCHIVED: string[]
 export declare function seedSampleData(baseUrl: string): Promise<void>
+type D2Key = 'full' | 'usd' | 'archived'
+export declare const D2_CLIENTS: Record<D2Key, string>
+export declare const D2_COMMISSIONS: Record<
+  D2Key,
+  {
+    client: D2Key
+    title: string
+    commission_type: string | null
+    agreed_price: { amount_minor: number; currency: string }
+    deadline: string | null
+    description: string | null
+    reference_links: string[]
+  }
+>
+export declare const D2_EXPECTED_LIST: [string, string][]
+export declare function seedCommissionSample(baseUrl: string): Promise<{ clients: Record<D2Key, string>; commissions: Record<D2Key, string> }>

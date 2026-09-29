@@ -2,8 +2,8 @@
 // workflow: kit
 // clause: external
 // component: kit
-// last_updated_by: coding-agent@2026-09-28#2
-// last_updated_at: 2026-09-28T12:32:00+07:00
+// last_updated_by: coding-agent@2026-09-29#1
+// last_updated_at: 2026-09-29T10:10:00+07:00
 //
 // EXPERIENCES:
 //   - id: kit-EXP-001
@@ -128,6 +128,38 @@
 //       gọi focus() trên ref của chính phần tử). Kit không biết ô nào là "ô lỗi
 //       đầu tiên": bên gọi quyết định. Nhờ vậy phân khu màn hình không đụng
 //       document hay window (R11, R12). Prop không mang khái niệm nghiệp vụ.
+//   - id: kit-EXP-012
+//     content: >
+//       Phiên 19 (D2), hai component mới, dùng phần tử HTML gốc, không thư viện
+//       ngoài. SelectField (id, label, value, options: { value, label }[],
+//       placeholder: string | null — lựa chọn đầu có value '' nghĩa "chưa chọn",
+//       onChange(value), error, disabled, focusRequest): select gốc; kit chưa có
+//       danh sách chọn nào, và TextField với datalist chỉ GỢI Ý, không buộc chọn
+//       trong danh sách. DateField (id, label, value YYYY-MM-DD hoặc '', onChange,
+//       clearLabel, error, disabled, focusRequest): input type="date" gốc cộng một
+//       Button phụ "xóa" chỉ hiện khi có ngày, vì ô ngày của Chromium không có cách
+//       xóa nhìn thấy được, mà đặc tả đòi "có cách xóa để về không có hạn"; không
+//       gộp vào TextField vì TextField mang datalist và không có nút. Cả hai theo
+//       đúng khuôn của TextField: nhãn gắn ô, lỗi là chữ dưới ô (aria-describedby,
+//       aria-invalid), viền --color-border-field và --color-border-field-danger,
+//       vòng focus ngoài ô (offset 0), chữ vô hiệu --color-text-muted, focusRequest
+//       cùng cơ chế kit-EXP-011. Không prop nào mang khái niệm nghiệp vụ (không có
+//       client, currency, deadline). Giao diện tối của control gốc: :root có
+//       color-scheme: dark (kit-EXP-001), nên select, danh sách thả xuống và bảng
+//       chọn ngày của Chromium cũng tối; e2e commission_form S1 khẳng định
+//       color-scheme dark, nền rgb(45,45,45), chữ rgb(230,230,230) của cả ba ô, ảnh
+//       commission_form-S1-filled.png. Ghi nhận: ô ngày hiện theo NGÔN NGỮ CỦA
+//       ELECTRON (en-US: 11/30/2026, tháng trước), không theo lang của trang; kit
+//       không đổi được (xem NOTE).
+//   - id: kit-EXP-013
+//     content: >
+//       ItemList mở rộng thay vì tạo component mới (I4.1): ItemListItem thêm
+//       detail: string | null, một dòng phụ dưới dòng chính, chữ --color-text-muted
+//       cỡ --font-size-sm, display block. Có một dấu cách giữa hai dòng để tên truy
+//       cập của nút là "tiêu đề dòng-phụ", không dính chữ. client_list truyền
+//       detail: null, không đổi gì; commission_list dùng nó cho "khách · giá · hạn".
+//       check_contrast thêm cặp chữ phụ trên nền hover (5.79:1); chữ phụ trên nền
+//       bề mặt nổi đã có (6.45:1).
 //
 // UNSOLVED_PROBLEMS: []
 //
@@ -210,8 +242,47 @@
 //       client_form-S4-errors.png: vòng focus xanh ở "Tên hiển thị", viền ô nhập
 //       và viền ô lỗi nhìn rõ trên nền tối.
 //     recorded_at: 2026-09-28T12:24:05+07:00
+//   - claim: >
+//       Phiên 19: tương phản phủ SelectField, DateField và dòng phụ của ItemList:
+//       viền, viền lỗi, vòng focus của hai ô mới được kiểm theo đúng vị trí thật
+//       trong CSS; cả nhóm chữ vẫn >= 4.5:1.
+//     how: >
+//       Trong UI/: node scripts/check_contrast.mjs (bước lint:contrast của npm run
+//       check). FIELDS trong script liệt kê bốn CSS module ô nhập; mỗi cặp phi văn
+//       bản của ô nhập kiểm .input, .inputError, :focus-visible của cả bốn.
+//     result: >
+//       "check_contrast: 19 text pairs >= 4.5:1 and 11 non-text pairs >= 3:1
+//       checked, all pass." Cặp chữ mới: --color-text-muted trên
+//       --color-surface-hover 5.79:1 (dòng phụ ItemList khi rê chuột). Các cặp cũ
+//       nay ghi thêm SelectField, DateField: viền ô 3.73 (nền ô), 4.62 (trang); viền
+//       lỗi 3.83, 4.74; vòng focus 7.74; chữ trong ô 11.03; chữ vô hiệu 5.79.
+//     recorded_at: 2026-09-29T09:13:30+07:00
+//   - claim: >
+//       Phép kiểm vị trí cắn với hai component mới.
+//     how: >
+//       Tạm đổi border của .input trong SelectField.module.css sang
+//       var(--color-border) (viền trang trí), và outline-offset của .input:focus-visible,
+//       .inputError:focus-visible trong DateField.module.css sang calc(-1 *
+//       var(--border-width-focus)); node scripts/check_contrast.mjs; khôi phục; chạy lại.
+//     result: >
+//       exit 1: "place [non-text >= 3:1] 3.73:1 --color-border-field … the CSS no
+//       longer puts it there: SelectField/SelectField.module.css .input ends with
+//       border: var(--border-width-panel) solid var(--color-border) (expected …
+//       var(--color-border-field))" (hai cặp viền), và "place … 7.74:1
+//       --color-focus-ring … DateField/DateField.module.css .input:focus-visible ends
+//       with outline-offset: calc(-1 * var(--border-width-focus)) (expected 0)";
+//       "check_contrast: 3 of 30 pair(s) fail". Khôi phục: exit 0, "all pass".
+//     recorded_at: 2026-09-29T09:13:10+07:00
 //
-// NOTES: []
+// NOTES:
+//   - content: >
+//       Cho Orchestrator (không chặn, không phải việc của giao diện): ô ngày gốc
+//       (DateField, "Hạn giao") hiện ngày theo ngôn ngữ của Electron, hiện là en-US
+//       (11/30/2026, tháng trước ngày), khác cách viết dd/mm/yyyy ở mọi chỗ khác
+//       của giao diện. Thuộc tính lang của trang không đổi được điều này; muốn đổi
+//       thì desktop Main đặt ngôn ngữ của ứng dụng (ví dụ app.commandLine
+//       appendSwitch('lang', 'vi') trước ready). Phiên giao diện không sửa Desktop/.
+//     written_at: 2026-09-29
 // ===WCA-CHECKPOINT-END===
 /**
  * Public entry of the kit zone — the only path the screens zone may import
@@ -254,3 +325,7 @@ export { DescriptionList } from './components/DescriptionList/DescriptionList'
 export type { DescriptionListItem, DescriptionListProps } from './components/DescriptionList/DescriptionList'
 export { SuccessNotice } from './components/SuccessNotice/SuccessNotice'
 export type { SuccessNoticeProps } from './components/SuccessNotice/SuccessNotice'
+export { SelectField } from './components/SelectField/SelectField'
+export type { SelectFieldOption, SelectFieldProps } from './components/SelectField/SelectField'
+export { DateField } from './components/DateField/DateField'
+export type { DateFieldProps } from './components/DateField/DateField'

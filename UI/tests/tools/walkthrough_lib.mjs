@@ -36,6 +36,17 @@ export function walkthroughRunner() {
   return value === '' ? 'unknown' : value
 }
 
+// Where the evidence of a run (screenshots, run records) is written — the only
+// place that decides it (UI-8 of .plan/open_issues.md). A named runner writes
+// the evidence kept in git, UI/evidence/. Without CT_WALKTHROUGH_RUNNER (a
+// regression run, e.g. by another layer's session) it goes to draft evidence
+// under UI/test-results/, which git ignores, so committed evidence is never
+// overwritten by a run nobody signed.
+export function evidenceRoot() {
+  const named = (process.env[RUNNER_VARIABLE] ?? '').trim() !== ''
+  return named ? path.join(UI_ROOT, 'evidence') : path.join(UI_ROOT, 'test-results', 'evidence')
+}
+
 // require('electron') from Node answers the path of the Electron binary.
 export function electronBinary() {
   return createRequire(path.join(DESKTOP_ROOT, 'package.json'))('electron')
@@ -131,6 +142,65 @@ async function call(baseUrl, method, pathname, body, expectedStatus) {
     throw new Error(`${method} ${pathname}: expected ${expectedStatus}, got ${response.status} ${text}`)
   }
   return JSON.parse(text)
+}
+
+// Sample data of the D2 walkthroughs (commission_list, commission_detail,
+// commission_form), with clients of their own — never those of the D1 sample:
+// three clients; three commissions, created more than a second apart so that
+// "most recently updated first" is a fixed order (the backend writes
+// updated_at to the second); then "Lan Chi" is archived (her commission keeps
+// her, which the contract allows).
+export const D2_CLIENTS = { full: 'Mai Anh', usd: 'Quốc Bảo', archived: 'Lan Chi' }
+export const D2_COMMISSIONS = {
+  full: {
+    client: 'full',
+    title: 'Chân dung bán thân',
+    commission_type: 'bán thân',
+    agreed_price: { amount_minor: 1500000, currency: 'VND' },
+    deadline: '2026-10-15',
+    description: 'Nền xanh, ánh sáng dịu.',
+    reference_links: ['https://example.com/ref-1', 'https://example.com/ref-2'],
+  },
+  usd: {
+    client: 'usd',
+    title: 'Chibi đôi',
+    commission_type: null,
+    agreed_price: { amount_minor: 1250, currency: 'USD' },
+    deadline: null,
+    description: null,
+    reference_links: [],
+  },
+  archived: {
+    client: 'archived',
+    title: 'Minh họa bìa sách',
+    commission_type: 'minh họa',
+    agreed_price: { amount_minor: 9000000, currency: 'VND' },
+    deadline: '2026-01-01',
+    description: null,
+    reference_links: [],
+  },
+}
+// What the list page must show, most recently updated first: [title, secondary line].
+export const D2_EXPECTED_LIST = [
+  ['Minh họa bìa sách', 'Lan Chi · 9.000.000 VND · Hạn giao 01/01/2026'],
+  ['Chibi đôi', 'Quốc Bảo · 12,50 USD · Không có hạn'],
+  ['Chân dung bán thân', 'Mai Anh · 1.500.000 VND · Hạn giao 15/10/2026'],
+]
+
+export async function seedCommissionSample(baseUrl) {
+  const clients = {}
+  for (const [key, name] of Object.entries(D2_CLIENTS)) {
+    clients[key] = (await call(baseUrl, 'POST', '/clients', { client_input: { display_name: name, contacts: [], note: null } }, 201)).client_id
+  }
+  const ids = {}
+  for (const [key, c] of Object.entries(D2_COMMISSIONS)) {
+    if (Object.keys(ids).length > 0) await new Promise((resolve) => setTimeout(resolve, 1100))
+    // create_commission: POST /commissions, body { commission_input } (endpoint_forms.http).
+    const { client, ...rest } = c
+    ids[key] = (await call(baseUrl, 'POST', '/commissions', { commission_input: { client_id: clients[client], ...rest } }, 201)).commission_id
+  }
+  await call(baseUrl, 'PUT', `/clients/${clients.archived}/archived`, { is_archived: true }, 200)
+  return { clients, commissions: ids }
 }
 
 export async function seedSampleData(baseUrl) {

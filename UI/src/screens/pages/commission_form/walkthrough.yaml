@@ -1,0 +1,101 @@
+page: commission_form
+precondition: >
+  Desktop đã build (npm run build trong Desktop/). Trong UI/: npm run walkthrough:app --
+  --commissions mở ứng dụng thật với thư mục dữ liệu tạm (không đụng %APPDATA%), Backend.py thật
+  sau fixture bật/tắt được, và nạp dữ liệu mẫu D2 (ba khách riêng: Mai Anh, Quốc Bảo đang hoạt
+  động, Lan Chi đã lưu trữ; ba đơn "Chân dung bán thân", "Chibi đôi", "Minh họa bìa sách"). Chờ
+  "ĐÃ NẠP XONG dữ liệu mẫu D2". Bật/tắt backend: npm run walkthrough:backend -- down|up (từ UI/,
+  cửa sổ lệnh khác). Các bước nối tiếp nhau trong cùng một lần mở ứng dụng; mỗi bước bắt đầu ở
+  trang "Đơn hàng" (bấm mục "Đơn hàng" ở vùng điều hướng). Trước khi chạy, đặt
+  CT_WALKTHROUGH_RUNNER là tên người chạy.
+steps:
+  - id: S1
+    setup: null
+    action: >
+      Bấm "Thêm đơn hàng". Ở "Khách hàng" chọn "Quốc Bảo". Gõ "Tranh nhóm ba người" vào "Tiêu
+      đề". Ở "Loại tranh" gõ "toàn" rồi chọn gợi ý "toàn thân". Gõ "45,5" vào "Giá thỏa thuận",
+      chọn "USD" ở "Đơn vị tiền". Ở "Hạn giao" chọn ngày 30/11/2026 bằng ô chọn ngày của hệ thống.
+      Gõ "Ba nhân vật, nền đơn giản." vào "Mô tả". Gõ hai dòng "https://example.com/x" và
+      "https://example.com/y" (có một dòng trống ở giữa) vào "Liên kết tham khảo". Bấm "Lưu".
+    expect: >
+      Trang "Thêm đơn hàng" có hàng nút "Lưu" (nút chính, màu nhấn, đứng đầu) và "Hủy" ngay dưới
+      tiêu đề, phía trên ô "Khách hàng". Danh sách "Khách hàng" có "Chọn khách hàng" đầu tiên, rồi
+      "Mai Anh", "Quốc Bảo" (không có "Lan Chi" đã lưu trữ). "Đơn vị tiền" chọn sẵn "VND", có
+      "VND" và "USD". Ô ngày, danh sách chọn và bảng chọn ngày hiện nền tối, chữ đọc được; có nút
+      "Xóa hạn giao" khi đã có ngày. "Loại tranh" có gợi ý (bán thân, toàn thân, chibi, chân
+      dung, minh họa). Sau khi lưu: trang "Chi tiết đơn hàng" của "Tranh nhóm ba người" với thông
+      báo xanh "Đã thêm đơn hàng."; Khách hàng "Quốc Bảo"; Loại tranh "toàn thân"; Giá thỏa thuận
+      "45,50 USD"; Hạn giao "30/11/2026"; Mô tả; Liên kết tham khảo đúng hai dòng.
+    covers: [ok]
+  - id: S2
+    setup: >
+      Về trang "Đơn hàng".
+    action: >
+      Bấm "Thêm đơn hàng". Chọn khách "Mai Anh". Gõ ba dấu cách vào "Tiêu đề" (tiêu đề chỉ gồm
+      khoảng trắng). Gõ "1,5" vào "Giá thỏa thuận" (đơn vị VND: cách viết sai). Gõ "giữ nguyên"
+      vào "Mô tả". Bấm "Lưu".
+    expect: >
+      Trang vẫn là "Thêm đơn hàng". Ngay dưới hàng nút có khung "Chưa lưu được" với câu "Một số ô
+      chưa đúng định dạng. Vui lòng kiểm tra lại."; dưới "Tiêu đề" có lỗi "Nhập tiêu đề đơn
+      hàng."; dưới "Giá thỏa thuận" có lỗi "Số tiền không hợp lệ.". Con trỏ nhập nằm ở ô lỗi đầu
+      tiên, "Tiêu đề". Những gì đã chọn, đã gõ còn nguyên ("Mai Anh", "1,5", "giữ nguyên"). Bấm
+      "Hủy": danh sách đơn không đổi (không có đơn mới).
+    covers: [rejected_input]
+  - id: S3
+    setup: >
+      Về trang "Đơn hàng".
+    action: >
+      Bấm đơn "Chân dung bán thân", bấm "Sửa". Đổi "Giá thỏa thuận" thành "2.000.000". Bấm "Xóa
+      hạn giao". Bấm "Lưu".
+    expect: >
+      Trang "Sửa đơn hàng" mở với dữ liệu đã lưu: khách "Mai Anh", giá "1.500.000", đơn vị tiền
+      "VND" hiện nhưng không chọn được, hạn giao 15/10/2026; hàng nút "Lưu", "Hủy" ngay dưới tiêu
+      đề. "Xóa hạn giao" làm ô ngày trống. Sau khi lưu: chi tiết "Chân dung bán thân" với thông báo
+      "Đã lưu thay đổi.", Giá thỏa thuận "2.000.000 VND", Hạn giao "Không có hạn".
+    covers: [ok]
+  - id: S4
+    setup: >
+      Đang ở chi tiết "Chân dung bán thân" (sau S3).
+    action: >
+      Bấm "Sửa". Gõ "hai triệu" vào "Giá thỏa thuận" (thay số cũ). Bấm "Lưu".
+    expect: >
+      Trang vẫn là "Sửa đơn hàng"; khung "Chưa lưu được" ngay dưới hàng nút; dưới "Giá thỏa
+      thuận" có lỗi "Số tiền không hợp lệ."; con trỏ nhập nằm ở "Giá thỏa thuận"; "hai triệu" còn
+      nguyên. Bấm "Hủy": về chi tiết, giá vẫn "2.000.000 VND" (không có gì bị lưu).
+    covers: [rejected_input]
+  - id: S5
+    setup: >
+      Về trang "Đơn hàng".
+    action: >
+      Bấm đơn "Minh họa bìa sách", bấm "Sửa". Không đổi khách hàng; đổi "Tiêu đề" thành "Minh họa
+      bìa sách (bản 2)". Bấm "Lưu".
+    expect: >
+      Ô "Khách hàng" chọn sẵn "Lan Chi (đã lưu trữ)" (khách đã lưu trữ vẫn được giữ cho đơn cũ).
+      Sau khi lưu: chi tiết "Minh họa bìa sách (bản 2)" với "Đã lưu thay đổi.", Khách hàng "Lan
+      Chi (đã lưu trữ)".
+    covers: [ok]
+  - id: S6
+    setup: >
+      Về trang "Đơn hàng". Bấm "Thêm đơn hàng", chọn "Mai Anh", gõ "Phác thảo nhân vật" vào "Tiêu
+      đề" và "300.000" vào "Giá thỏa thuận". Rồi npm run walkthrough:backend -- down (ứng dụng vẫn
+      mở).
+    action: >
+      Bấm "Lưu". Khi khung báo lỗi hiện ra, chạy npm run walkthrough:backend -- up, rồi bấm "Lưu"
+      lần nữa.
+    expect: >
+      Lần đầu: khung "Không kết nối được" với câu "Không kết nối được tới phần xử lý của ứng dụng.
+      Vui lòng thử lại."; trang vẫn là "Thêm đơn hàng", "Mai Anh", "Phác thảo nhân vật",
+      "300.000" còn nguyên, nút "Lưu" bấm được. Lần sau (backend đã chạy lại): chi tiết "Phác thảo
+      nhân vật" với "Đã thêm đơn hàng.". Trở về danh sách thì có đúng một "Phác thảo nhân vật".
+    covers: [unreachable, ok]
+  - id: S7
+    setup: >
+      Ở trang "Khách hàng", lưu trữ hai khách đang hoạt động "Mai Anh" và "Quốc Bảo" (bấm từng
+      khách, bấm "Lưu trữ khách hàng"). Về trang "Đơn hàng".
+    action: >
+      Bấm "Thêm đơn hàng". Bấm "Thêm khách hàng" trong khung hiện ra.
+    expect: >
+      Thay cho form là khung "Chưa có khách hàng đang hoạt động. Thêm khách hàng trước khi tạo
+      đơn." có nút "Thêm khách hàng"; hàng nút dưới tiêu đề chỉ còn "Hủy". Bấm "Thêm khách hàng"
+      mở trang "Thêm khách hàng" (form khách hàng trống).
+    covers: [ok]

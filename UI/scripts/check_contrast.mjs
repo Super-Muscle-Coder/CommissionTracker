@@ -32,18 +32,19 @@ const MINIMUM = { text: 4.5, 'non-text': 3 }
 
 // [text token, background token, where the kit uses this pair]
 const TEXT_PAIRS = [
-  ['--color-text', '--color-surface', 'body text and headings on the page (global.css, Section, TextField and TextArea labels, FieldGroup legend)'],
+  ['--color-text', '--color-surface', 'body text and headings on the page (global.css, Section, TextField, TextArea, SelectField and DateField labels, FieldGroup legend)'],
   ['--color-text', '--color-surface-header', 'application title (AppFrame header)'],
   ['--color-text', '--color-surface-raised', 'NavMenu items, ItemList rows, DescriptionList details'],
   ['--color-text', '--color-surface-hover', 'hovered NavMenu item and ItemList row'],
   ['--color-text', '--color-surface-selected', 'current NavMenu item'],
-  ['--color-text', '--color-surface-field', 'text typed in TextField and TextArea'],
+  ['--color-text', '--color-surface-field', 'text typed or chosen in TextField, TextArea, SelectField, DateField'],
   ['--color-text', '--color-surface-danger', 'InlineAlert text, FatalMessage detail'],
   ['--color-text-muted', '--color-surface', 'Section group heading, LoadingIndicator'],
-  ['--color-text-muted', '--color-surface-raised', 'DescriptionList terms'],
+  ['--color-text-muted', '--color-surface-raised', 'DescriptionList terms, ItemList secondary line'],
+  ['--color-text-muted', '--color-surface-hover', 'ItemList secondary line of a hovered row'],
   ['--color-text-muted', '--color-surface-muted', 'EmptyState text'],
-  ['--color-text-muted', '--color-surface-field', 'text of a disabled TextField or TextArea (while saving)'],
-  ['--color-text-danger', '--color-surface', 'field error under a TextField or TextArea'],
+  ['--color-text-muted', '--color-surface-field', 'text of a disabled TextField, TextArea, SelectField, DateField (while saving; the locked currency)'],
+  ['--color-text-danger', '--color-surface', 'field error under a TextField, TextArea, SelectField or DateField'],
   ['--color-text-danger', '--color-surface-danger', 'InlineAlert title, FatalMessage title'],
   ['--color-text-success', '--color-surface-success', 'SuccessNotice'],
   ['--color-action-text', '--color-action', 'primary Button'],
@@ -52,31 +53,28 @@ const TEXT_PAIRS = [
   ['--color-action-secondary-text', '--color-action-secondary-hover', 'secondary Button, hovered'],
 ]
 
+// The kit's input fields: each draws its border, error border and focus ring
+// the same way, from the same selectors (.input, .inputError).
+const FIELDS = [
+  'TextField/TextField.module.css',
+  'TextArea/TextArea.module.css',
+  'SelectField/SelectField.module.css',
+  'DateField/DateField.module.css',
+]
+
 // CSS declarations of the kit that decide where a non-text part is drawn:
 // [CSS module under src/kit/components, selector, property, value].
 const CSS = {
-  fieldBorder: [
-    ['TextField/TextField.module.css', '.input', 'border', 'var(--border-width-panel) solid var(--color-border-field)'],
-    ['TextArea/TextArea.module.css', '.input', 'border', 'var(--border-width-panel) solid var(--color-border-field)'],
-  ],
-  fieldBackground: [
-    ['TextField/TextField.module.css', '.input', 'background', 'var(--color-surface-field)'],
-    ['TextArea/TextArea.module.css', '.input', 'background', 'var(--color-surface-field)'],
-  ],
-  fieldErrorBorder: [
-    ['TextField/TextField.module.css', '.inputError', 'border-color', 'var(--color-border-field-danger)'],
-    ['TextArea/TextArea.module.css', '.inputError', 'border-color', 'var(--color-border-field-danger)'],
-  ],
+  fieldBorder: FIELDS.map((f) => [f, '.input', 'border', 'var(--border-width-panel) solid var(--color-border-field)']),
+  fieldBackground: FIELDS.map((f) => [f, '.input', 'background', 'var(--color-surface-field)']),
+  fieldErrorBorder: FIELDS.map((f) => [f, '.inputError', 'border-color', 'var(--color-border-field-danger)']),
   // Offset 0: the outline starts at the outer edge of the border and goes
   // outward, onto what is around the field.
-  fieldRingOutside: [
-    ['TextField/TextField.module.css', '.input:focus-visible', 'outline', 'var(--border-width-focus) solid var(--color-focus-ring)'],
-    ['TextField/TextField.module.css', '.input:focus-visible', 'outline-offset', '0'],
-    ['TextField/TextField.module.css', '.inputError:focus-visible', 'outline-offset', '0'],
-    ['TextArea/TextArea.module.css', '.input:focus-visible', 'outline', 'var(--border-width-focus) solid var(--color-focus-ring)'],
-    ['TextArea/TextArea.module.css', '.input:focus-visible', 'outline-offset', '0'],
-    ['TextArea/TextArea.module.css', '.inputError:focus-visible', 'outline-offset', '0'],
-  ],
+  fieldRingOutside: FIELDS.flatMap((f) => [
+    [f, '.input:focus-visible', 'outline', 'var(--border-width-focus) solid var(--color-focus-ring)'],
+    [f, '.input:focus-visible', 'outline-offset', '0'],
+    [f, '.inputError:focus-visible', 'outline-offset', '0'],
+  ]),
   // Positive offset: a gap as wide as the ring separates it from the button,
   // so the ring touches only what is around the button — never the button
   // itself. This is why no pair "ring on --color-action" is listed: it would
@@ -114,11 +112,11 @@ const CSS = {
 
 // [part token, adjacent colour token, where, CSS that puts the part there]
 const NON_TEXT_PAIRS = [
-  ['--color-border-field', '--color-surface-field', 'TextField, TextArea border — inner edge, on the field', [...CSS.fieldBorder, ...CSS.fieldBackground]],
-  ['--color-border-field', '--color-surface', 'TextField, TextArea border — outer edge, on the page the form sits on', CSS.fieldBorder],
-  ['--color-border-field-danger', '--color-surface-field', 'TextField, TextArea border with an error — inner edge', [...CSS.fieldErrorBorder, ...CSS.fieldBackground]],
-  ['--color-border-field-danger', '--color-surface', 'TextField, TextArea border with an error — outer edge, on the page', CSS.fieldErrorBorder],
-  ['--color-focus-ring', '--color-surface', 'focus ring of Button and of TextField, TextArea — drawn outside, on the page', [...CSS.buttonRingOutside, ...CSS.fieldRingOutside]],
+  ['--color-border-field', '--color-surface-field', 'TextField, TextArea, SelectField, DateField border — inner edge, on the field', [...CSS.fieldBorder, ...CSS.fieldBackground]],
+  ['--color-border-field', '--color-surface', 'TextField, TextArea, SelectField, DateField border — outer edge, on the page the form sits on', CSS.fieldBorder],
+  ['--color-border-field-danger', '--color-surface-field', 'TextField, TextArea, SelectField, DateField border with an error — inner edge', [...CSS.fieldErrorBorder, ...CSS.fieldBackground]],
+  ['--color-border-field-danger', '--color-surface', 'TextField, TextArea, SelectField, DateField border with an error — outer edge, on the page', CSS.fieldErrorBorder],
+  ['--color-focus-ring', '--color-surface', 'focus ring of Button (also the DateField clear button) and of TextField, TextArea, SelectField, DateField — drawn outside, on the page', [...CSS.buttonRingOutside, ...CSS.fieldRingOutside]],
   ['--color-focus-ring', '--color-surface-muted', 'focus ring of the EmptyState button — drawn outside, on the EmptyState box', CSS.emptyStateRingOutside],
   ['--color-focus-ring', '--color-surface-raised', 'focus ring of a NavMenu item, an ItemList row — drawn inside, on the item', [...CSS.itemRingInside, ...CSS.navItemBackgrounds]],
   ['--color-focus-ring', '--color-surface-hover', 'focus ring of a hovered NavMenu item or ItemList row — drawn inside', [...CSS.itemRingInside, ...CSS.navItemBackgrounds]],

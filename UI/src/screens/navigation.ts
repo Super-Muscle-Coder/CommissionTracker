@@ -2,8 +2,8 @@
 // workflow: screens
 // clause: external
 // component: screens
-// last_updated_by: coding-agent@2026-09-28#2
-// last_updated_at: 2026-09-28T12:35:00+07:00
+// last_updated_by: coding-agent@2026-09-29#1
+// last_updated_at: 2026-09-29T10:20:00+07:00
 //
 // EXPERIENCES:
 //   - id: screens-EXP-001
@@ -36,8 +36,10 @@
 //       main_layout (layouts/main_layout/MainLayout.tsx): AppFrame của kit, tiêu đề
 //       cố định "Commission Tracker", VÙNG ĐIỀU HƯỚNG cố định bên trái là NavMenu
 //       "Điều hướng chính", sinh từ các mục của NAVIGATION có menu (theo thứ tự
-//       của bảng; hiện chỉ "Khách hàng" mở client_list); mục đang mở là section
-//       của trang hiện tại (client_detail và client_form thuộc section client_list)
+//       của bảng; từ phiên 19: "Khách hàng" mở client_list, rồi "Đơn hàng" mở
+//       commission_list); mục đang mở là section của trang hiện tại (client_detail
+//       và client_form thuộc client_list; commission_detail, commission_form thuộc
+//       commission_list)
 //       và được đánh dấu aria-current="page". Phiên sau thêm mục của mình vào
 //       NAVIGATION (menu), không đổi vị trí mục cũ (§7.2 nguyên tắc 7). Vùng nội
 //       dung là Stack gap="lg". Screens không có style (R10); assert_never.ts là
@@ -168,6 +170,107 @@
 //       thử chờ bằng vi.waitFor (khẳng định ngay sau findByRole('alert') hỏng
 //       ngẫu nhiên khi chạy cả bộ; ca "không focus" flush effect bằng act trước
 //       khi nhìn). Không làm V2: Enter để lưu, giữ focus khi nút bận, chặn rời form.
+//   - id: screens-EXP-013
+//     content: >
+//       Chặng D2 (phiên 19): ba trang của manage_commission, mỗi trang một hook chỉ
+//       gọi, giữ, chuyển, cùng mẫu D1 (ref running, mounted; cờ tải khởi tạo true:
+//       use_commission_list.loading, use_commission_detail.loading,
+//       use_commission_form.opening — UI-4). PageParams thêm commission_list: null;
+//       commission_detail: { commission_id }; commission_form: { mode: 'create' } |
+//       { mode: 'edit'; commission_id } (ba dòng expect-error mới trong
+//       app_root.test.tsx). NAVIGATION thêm ba mục SAU các mục D1; mục menu "Đơn
+//       hàng" đứng sau "Khách hàng", section commission_list cho cả ba trang. Lối
+//       sang D1 duy nhất: commission_form (create, không có khách đang hoạt động) →
+//       "Thêm khách hàng" → client_form(create). D1 không đổi hành vi: chỉ
+//       ClientList.tsx thêm detail: null cho ItemList (kiểu mới của kit), kiểm thử
+//       D1 giữ nguyên số ca (11, 19, 27) và đều đạt.
+//   - id: screens-EXP-014
+//     content: >
+//       commission_list: hàng nút "Thêm đơn hàng" (primary), "Tải lại" dưới tiêu đề
+//       "Đơn hàng"; mỗi đơn là một mục ItemList bấm được, dòng chính là tiêu đề, dòng
+//       phụ là detailText của Services (trang không ghép chữ); rỗng → EmptyState
+//       "Chưa có đơn hàng nào." có nút "Thêm đơn hàng". commission_detail: tiêu đề
+//       trang "Chi tiết đơn hàng", tiêu đề nhóm là tiêu đề đơn, hàng nút "Sửa"
+//       (primary), "Quay lại danh sách" ngay dưới (như client_detail); DescriptionList
+//       "Thông tin đơn hàng" theo thứ tự đặc tả, mục Loại tranh, Mô tả, Liên kết tham
+//       khảo chỉ có khi có dữ liệu; liên kết là dd chữ thường (pre-wrap, cắt dòng
+//       bất kỳ), KHÔNG có phần tử a, chọn và sao chép được; không có tiến độ (D3) hay
+//       thanh toán (D4). commission_form: hàng "Lưu" (primary), "Hủy" dưới tiêu đề;
+//       SaveResult, rồi ClientsReloadResult, rồi các ô theo thứ tự đặc tả: Khách hàng
+//       (SelectField, lựa chọn đầu "Chọn khách hàng"), Tiêu đề, Loại tranh (gợi ý),
+//       hàng [Giá thỏa thuận, Đơn vị tiền] (SelectField; chế độ sửa: vô hiệu, chỉ đơn
+//       vị cũ — "không chọn được", vẫn hiện dạng chữ cạnh ô số tiền), Hạn giao
+//       (DateField, nút "Xóa hạn giao"), Mô tả, "Liên kết tham khảo (mỗi dòng một
+//       liên kết)". FIELD_ORDER dùng tên trường của hợp đồng; ô lỗi đầu tiên nhận
+//       focusRequest = saveCount. noActiveClient → thay form bằng EmptyState có nút
+//       "Thêm khách hàng", hàng nút chỉ còn "Hủy".
+//   - id: screens-EXP-015
+//     content: >
+//       Hook commission_form giữ: bản nháp thô (CommissionFormDraft, một setField
+//       chung), danh sách khách đang hiện (từ lúc mở, rồi từ lần tải lại gần nhất),
+//       keptClientId (khách của đơn, chế độ sửa), kết quả mở, lưu, tải lại khách.
+//       KHI NÀO tải lại khách: sau một lần lưu mà phía sau từ chối (switch trên kind,
+//       nhánh rejected, origin === 'system' — so origin, không phải kind, R13 không
+//       áp). Khách nào còn chọn được là của Services; hook chỉ gán
+//       draft.clientId = view.clientId (giữ). Lần lưu mới xóa kết quả tải lại cũ.
+//       Tải lại hỏng → khung riêng "Không tải lại được danh sách khách hàng", bản
+//       nháp giữ nguyên, "Lưu" vẫn bấm được.
+//   - id: screens-EXP-016
+//     content: >
+//       Kịch bản bấm thử D2 và spec e2e: tests/e2e/commission_{list,detail,form}_walkthrough.spec.ts
+//       dùng walkthrough_harness.ts (thêm goToCommissions, reloadCommissions,
+//       openCommission, commissionRows, commissionEntries; detailEntries nhận nhãn).
+//       Dữ liệu mẫu RIÊNG của D2 (seedCommissionSample ở
+//       tests/tools/walkthrough_lib.mjs): khách Mai Anh, Quốc Bảo, Lan Chi (lưu trữ
+//       sau khi tạo đơn); ba đơn tạo cách nhau 1,1 giây vì backend ghi updated_at tới
+//       giây, để thứ tự "mới nhất trước" cố định. Chạy tay: npm run walkthrough:app
+//       -- --commissions (hoặc -- --empty cho commission_list S1). Tín hiệu đã tải
+//       luôn là NỘI DUNG (mục đầu của danh sách, trạng thái rỗng, tiêu đề nhóm của
+//       chi tiết), không phải trạng thái nút (UI-4); mọi phép so "không đổi" khẳng
+//       định giá trị trước khác rỗng (commission_form S2: 4 đơn, đơn đầu là đơn vừa
+//       tạo; commission_list S3). Luật phủ D2: rejected_input ở cả hai chế độ
+//       (commission_form S2 tạo: tiêu đề ba dấu cách và "1,5" VND; S4 sửa: "hai
+//       triệu"); ok cho mọi thao tác, gồm USD có phần lẻ và đơn đủ mọi ô tùy chọn
+//       (commission_form S1: 45,5 USD, loại tranh, hạn giao, mô tả, hai liên kết);
+//       unreachable mỗi trang (commission_list S3, commission_detail S4,
+//       commission_form S6); không đòi rejected_system. Thêm: commission_form S5
+//       (sửa đơn của khách đã lưu trữ, giữ khách) và S7 (không có khách đang hoạt
+//       động). reloadClientChoices không gây ra được bằng thao tác bình thường, chỉ
+//       có ở kiểm thử dựng trang.
+//   - id: screens-EXP-017
+//     content: >
+//       Đối chiếu bảy nguyên tắc §7.2 cho D2 (I6 góc người dùng). (1) Một hành động
+//       chính mỗi trang, màu nhấn: "Thêm đơn hàng", "Sửa", "Lưu" ("Thêm khách hàng"
+//       của EmptyState khi không có khách). Đạt. (2) Không dày: danh sách chỉ tiêu
+//       đề và một dòng phụ ba phần; chi tiết tối đa tám mục, mục trống không hiện.
+//       Đạt. (3) Nhãn tiếng Việt theo lời họa sĩ ("Giá thỏa thuận", "Hạn giao", "Loại
+//       tranh", "Liên kết tham khảo"). Đạt. (4) Sau mỗi lần ghi: "Đã thêm đơn hàng.",
+//       "Đã lưu thay đổi."; lỗi nhập ngay dưới ô, con trỏ tới ô lỗi đầu tiên theo thứ
+//       tự trên màn hình (e2e S2: Tiêu đề; S4: Giá thỏa thuận). Đạt. (5) D2 không có
+//       thao tác khó quay lại (không xóa). Đạt. (6) Trạng thái rỗng chỉ việc tiếp
+//       theo: "Chưa có đơn hàng nào." + "Thêm đơn hàng"; "Chưa có khách hàng đang
+//       hoạt động…" + "Thêm khách hàng". Đạt. (7) Vùng điều hướng cố định, "Khách
+//       hàng" không đổi chỗ, "Đơn hàng" sau nó; hàng nút ngay dưới tiêu đề, hành động
+//       chính đầu (đo bằng vị trí thật: commission_form S1, S3). Đạt. Ghi nhận ngoài
+//       §7.2: ô ngày hiện tháng/ngày/năm theo ngôn ngữ Electron (NOTE ở kit).
+//   - id: screens-EXP-018
+//     content: >
+//       Tự kiểm I6, ba trang D2, năm góc. HỢP ĐỒNG: Data Schema 8.0.1 và API Contract
+//       4.0.0 approved, manage_commission đã_hoàn_thiện; Configs trỏ data 8.0.1, api
+//       4.0.0; bảng nhãn bảy lời gọi khớp từng dòng (có kiểm thử so nguyên bảng);
+//       commission_input gửi đúng bảy khóa; mọi mã có câu (duyệt từ Configs). Tìm
+//       trong src và tests: không có /watermark-profiles, /watermark-strengths,
+//       /artworks, /verifications, /reminders/checks, /payments, /progress,
+//       /commissions/{…}/stage ngoài chú thích; lời gọi mới chỉ tới /commissions,
+//       /commissions/{commission_id}, /currencies, /clients, /clients/{client_id}.
+//       RANH GIỚI: npm run check đạt (R1–R14); Services chỉ quyết định trình bày
+//       (manage_commission-EXP-005); Routers chỉ kiểm điều type ghi (not blank,
+//       1..200, số nguyên >= 0 trong ±(2^53−1), date) cộng các luật [UI-ONLY] của đặc
+//       tả; ba hook viết lại được bằng gọi, giữ, chuyển (so origin để biết KHI NÀO tải
+//       lại là thời điểm, không phải nội dung); SelectField, DateField không mang khái
+//       niệm nghiệp vụ. NGƯỜI DÙNG: ba kịch bản chạy trên hệ thống thật (EVIDENCE),
+//       §7.2 ở screens-EXP-017. CHECKPOINT: manage_commission (mới), kit, screens,
+//       main. BẰNG CHỨNG: đủ ba loại (dưới đây, ở manage_commission, kit, main).
 //
 // UNSOLVED_PROBLEMS: []
 //
@@ -283,13 +386,67 @@
 //       53843. Đóng: fixture "stdin closed: stopping", backend thoát mã 0,
 //       "walkthrough:app: the desktop app exited with code 0; temporary data removed."
 //     recorded_at: 2026-09-28T10:58:00+07:00
+//   - claim: >
+//       Phiên 19: kiểm thử dựng trang phủ mọi kind của mọi thao tác của ba trang D2,
+//       mọi nhãn ở phần D2 cho từng lời gọi, lần vẽ đầu, và các ca riêng của plan
+//       việc 5; ba trang D1 giữ nguyên.
+//     how: >
+//       Trong UI/: npm run check; npx vitest run --reporter=json (số theo tệp).
+//     result: >
+//       CommissionList.test.tsx 12 (lần vẽ đầu; hàng nút; dòng chính và dòng phụ;
+//       bấm đơn → commission_detail; thêm; rỗng có nút; 500 của list_commissions và
+//       của list_clients; unreachable rồi tải lại; contract_violation; nút bận không
+//       gọi lần hai; thông báo). CommissionDetail.test.tsx 12 (lần vẽ đầu; đủ tám mục
+//       đúng thứ tự; liên kết là dd, không có phần tử a hay role link; thiếu mục tùy
+//       chọn; khách không tìm thấy, khách đã lưu trữ; Sửa, Quay lại; 404 và 500 của
+//       get_commission, 500 của get_client; unreachable rồi Thử lại; contract_violation;
+//       thông báo). CommissionForm.test.tsx 31 (lần vẽ đầu hai chế độ; bảy ô đúng thứ
+//       tự; "Chọn khách hàng" đầu; VND chọn sẵn; hàng nút trước ô đầu; gợi ý loại tranh;
+//       KHÔNG có khách đang hoạt động → trạng thái rỗng và "Thêm khách hàng" mở
+//       client_form create; sửa: điền sẵn, khách "(đã lưu trữ)" chọn sẵn, ĐƠN VỊ TIỀN
+//       vô hiệu chỉ một mã; 404, 500 của get_commission, 500 của list_clients, create
+//       500; unreachable rồi Thử lại; contract_violation; bản nháp gửi nguyên như gõ; nút
+//       "Xóa hạn giao"; Hủy hai chế độ; lưu ok hai chế độ (sửa gửi đúng bản nháp cũ gồm
+//       đơn vị tiền cũ); rejected input: lỗi đúng ô, bản nháp giữ, FOCUS tới "Khách
+//       hàng" khi nó lỗi, tới "Giá thỏa thuận" khi chỉ số tiền lỗi, tới "Hạn giao";
+//       rejected system 400, 404, 409, 500 khi tạo và 404 khi sửa, không ô nào có focus,
+//       danh sách khách được tải lại (khách không còn chọn được thì về "Chọn khách
+//       hàng"); tải lại hỏng có khung riêng; unreachable rồi lưu lại cùng bản nháp;
+//       contract_violation; đang lưu). app_root.test.tsx 5 (sáu trang; "Khách hàng" rồi
+//       "Đơn hàng"; "Đơn hàng" mở danh sách và đánh dấu đang mở, cả ở chi tiết; bảy
+//       dòng expect-error). D1: ClientList 11, ClientDetail 19, ClientForm 27, không
+//       đổi. Toàn layer "Tests 555 passed (555)".
+//     recorded_at: 2026-09-29T09:20:00+07:00
+//   - claim: >
+//       Phiên 19: sáu kịch bản bấm thử (ba D1, ba D2 mới) chạy trên ứng dụng thật với
+//       Backend.py thật, mọi bước đạt, có ảnh chụp và đúng tên người chạy, 5 lần liên tiếp.
+//     how: >
+//       Desktop đã build. Trong UI/: CT_WALKTHROUGH_RUNNER=coding-agent@2026-09-29#1,
+//       npm run e2e năm lần liên tiếp (09:13–09:24). Bản ghi
+//       UI/evidence/walkthroughs/<trang>/<trang>-run.json và ảnh cạnh nó.
+//     result: >
+//       Năm lần "32 passed" (2.0m, 2.0m, 2.0m, 2.0m, 1.9m). Bản ghi lần 5: mọi bước
+//       passed true, runner "coding-agent@2026-09-29#1 (Playwright, …)":
+//       client_list S1..S5, client_detail S1..S6, client_form S1..S5 (D1, ảnh chụp lại),
+//       commission_list S1..S4, commission_detail S1..S4, commission_form S1..S7. Ảnh
+//       D2: commission_list-S1..S4, -S1-empty, -S3-unreachable; commission_detail-S1..S4,
+//       -S4-unreachable; commission_form-S1..S7, -S1-filled (ô chọn và ô ngày nền tối),
+//       -S2-errors, -S4-errors, -S6-unreachable, -S6-saved, -S7-empty. Khẳng định trên
+//       ứng dụng thật: thứ tự đơn và dòng phụ đúng D2_EXPECTED_LIST; hạn giao
+//       "01/01/2026" không lệch ngày; liên kết không là phần tử a và chọn được
+//       (getSelection chứa URL); focus ở "Tiêu đề" (S2) và "Giá thỏa thuận" (S4); hàng
+//       nút trên ô đầu theo vị trí thật (S1, S3); đơn vị tiền vô hiệu khi sửa; khách đã
+//       lưu trữ giữ nguyên khi sửa (S5); color-scheme dark của select và ô ngày.
+//     recorded_at: 2026-09-29T09:24:00+07:00
 //
 // NOTES:
 //   - content: >
-//       Đề xuất trạng thái (I6, phiên 17): client_list hoàn_tất, client_detail
-//       hoàn_tất, client_form hoàn_tất; chờ Orchestrator audit và Project Owner tự
-//       chạy lại ba kịch bản bằng tay. Coding agent không sửa ui_decomposition.md.
-//     written_at: 2026-09-28
+//       Đề xuất trạng thái (I6, phiên 19): commission_list hoàn_tất,
+//       commission_detail hoàn_tất, commission_form hoàn_tất; chờ Orchestrator
+//       audit và Project Owner tự chạy lại ba kịch bản bằng tay (npm run
+//       walkthrough:app -- --commissions; commission_list S1 với -- --empty). Ba
+//       trang D1 đã hoàn_tất (2026-09-28). Coding agent không sửa ui_decomposition.md.
+//     written_at: 2026-09-29
 // ===WCA-CHECKPOINT-END===
 /**
  * Navigation table of the screens zone. A page that is not in this table does
@@ -304,17 +461,24 @@ import type { ComponentType } from 'react'
 import { ClientDetail } from './pages/client_detail/ClientDetail'
 import { ClientForm } from './pages/client_form/ClientForm'
 import { ClientList } from './pages/client_list/ClientList'
+import { CommissionDetail } from './pages/commission_detail/CommissionDetail'
+import { CommissionForm } from './pages/commission_form/CommissionForm'
+import { CommissionList } from './pages/commission_list/CommissionList'
 
 // Layouts of .design/ui_decomposition.md §5 that pages live in. The startup
 // error screen is not a navigation target: Main renders it before any page.
 export type LayoutKey = 'main_layout'
 
 // The parameters each page opens with, typed per page
-// (ui_decomposition.md §5, "Điều hướng giữa các trang khách hàng").
+// (ui_decomposition.md §5, "Điều hướng giữa các trang khách hàng";
+// "Chặng D2", "Điều hướng của D2").
 export type PageParams = {
   client_list: null
   client_detail: { client_id: string }
   client_form: { mode: 'create' } | { mode: 'edit'; client_id: string }
+  commission_list: null
+  commission_detail: { commission_id: string }
+  commission_form: { mode: 'create' } | { mode: 'edit'; commission_id: string }
 }
 
 // Keys of the pages (ui_decomposition.md §5), one per page that is built.
@@ -351,7 +515,9 @@ export const START_PAGE = 'client_list' satisfies PageKey
 export const START_ROUTE: Route = { page: START_PAGE, params: null }
 
 // One entry per page. The type ties each page to the component that takes
-// exactly its parameters.
+// exactly its parameters. The navigation region lists the entries that have a
+// menu, in this order: "Khách hàng", then "Đơn hàng" (§5); a later stage adds
+// its entries after these, never moving them.
 export const NAVIGATION: { readonly [K in PageKey]: NavigationEntry<K> } = {
   client_list: {
     layout: 'main_layout',
@@ -361,4 +527,12 @@ export const NAVIGATION: { readonly [K in PageKey]: NavigationEntry<K> } = {
   },
   client_detail: { layout: 'main_layout', component: ClientDetail, section: 'client_list', menu: null },
   client_form: { layout: 'main_layout', component: ClientForm, section: 'client_list', menu: null },
+  commission_list: {
+    layout: 'main_layout',
+    component: CommissionList,
+    section: 'commission_list',
+    menu: { label: 'Đơn hàng', route: { page: 'commission_list', params: null } },
+  },
+  commission_detail: { layout: 'main_layout', component: CommissionDetail, section: 'commission_list', menu: null },
+  commission_form: { layout: 'main_layout', component: CommissionForm, section: 'commission_list', menu: null },
 }

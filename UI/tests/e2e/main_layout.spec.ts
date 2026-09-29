@@ -11,10 +11,13 @@ import { createRequire } from 'node:module'
 import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { evidenceRoot } from '../tools/walkthrough_lib.mjs'
 
 const UI_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..')
 const DESKTOP_ROOT = path.resolve(UI_ROOT, '..', 'Desktop')
-const SCREENSHOT = path.join(UI_ROOT, 'evidence', 'b2a', 'main_layout.png')
+// UI/evidence/ when CT_WALKTHROUGH_RUNNER names the runner, draft evidence
+// under UI/test-results/ otherwise (UI-8).
+const SCREENSHOT = path.join(evidenceRoot(), 'b2a', 'main_layout.png')
 const APP_TITLE = 'Commission Tracker'
 
 type DesktopConfig = {

@@ -4,8 +4,10 @@
 // on a temporary data folder; close it and remove that folder whatever fails;
 // switch the backend through the very command the Project Owner uses
 // (npm run walkthrough:backend -- down|up); take one screenshot per step
-// (UI/evidence/walkthroughs/<page>/<page>-<step>.png) and write the run record
-// (<page>-run.json there: passed or not, runner, time, covers).
+// (<evidence>/walkthroughs/<page>/<page>-<step>.png) and write the run record
+// (<page>-run.json there: passed or not, runner, time, covers). <evidence> is
+// evidenceRoot(): UI/evidence/ when CT_WALKTHROUGH_RUNNER names the runner,
+// UI/test-results/evidence/ (ignored by git) otherwise (UI-8).
 //
 // The runner is CT_WALKTHROUGH_RUNNER ('unknown' when missing; never guessed),
 // plus the tool that drove the app. Never page.reload() before the desktop
@@ -20,6 +22,7 @@ import {
   baseUrlFor,
   clearSession,
   electronBinary,
+  evidenceRoot,
   launchArgs,
   makeDataDir,
   portFromLog,
@@ -89,7 +92,8 @@ type StepRecord = { step: string; passed: boolean; runner: string; finished_at: 
 
 // Records the steps of the walkthrough of one page.
 export function walkthroughRecorder(pageKey: string, specFile: string) {
-  const dir = path.join(UI_ROOT, 'evidence', 'walkthroughs', pageKey)
+  // UI/evidence/ for a named runner, draft evidence under UI/test-results/ otherwise (UI-8).
+  const dir = path.join(evidenceRoot(), 'walkthroughs', pageKey)
   const runner = `${walkthroughRunner()} (Playwright, ${specFile})`
   const records: StepRecord[] = []
 
@@ -171,10 +175,73 @@ export async function goToList(page: Page): Promise<void> {
 }
 
 // [term, details] of the entries of the client detail.
-export async function detailEntries(page: Page): Promise<[string, string[]][]> {
-  const dl = page.getByLabel('Thông tin khách hàng')
+export async function detailEntries(page: Page, label = 'Thông tin khách hàng'): Promise<[string, string[]][]> {
+  const dl = page.getByLabel(label)
   const entries = await dl.locator(':scope > div').all()
   return Promise.all(
     entries.map(async (e) => [await e.locator('dt').innerText(), await e.locator('dd').allInnerTexts()] as [string, string[]]),
   )
+}
+
+// --- D2: commissions ------------------------------------------------------------
+
+const COMMISSION_LIST = 'Danh sách đơn hàng'
+const EMPTY_COMMISSIONS_TEXT = 'Chưa có đơn hàng nào.'
+
+export const commissionEntries = (page: Page) => detailEntries(page, 'Thông tin đơn hàng')
+
+// [title, secondary line] of each commission of the list, in the order shown.
+export async function commissionRows(page: Page): Promise<[string, string][]> {
+  const texts = await page.getByRole('list', { name: COMMISSION_LIST }).getByRole('button').allInnerTexts()
+  return texts.map((t) => {
+    const [title, ...rest] = t.split('\n').map((s) => s.trim()).filter((s) => s !== '')
+    return [title, rest.join(' ')]
+  })
+}
+
+// The commission list is loaded: it shows commissions ('list') or its empty
+// state ('empty'), with no loading status and no alert. Read from the content.
+async function expectCommissionsLoaded(page: Page, shown: 'list' | 'empty'): Promise<void> {
+  switch (shown) {
+    case 'list':
+      await expect(page.getByRole('list', { name: COMMISSION_LIST }).getByRole('listitem').first()).toBeVisible({ timeout: 30_000 })
+      break
+    case 'empty':
+      await expect(page.getByText(EMPTY_COMMISSIONS_TEXT)).toBeVisible({ timeout: 30_000 })
+      break
+  }
+  await expect(page.getByRole('status')).toHaveCount(0)
+  await expect(page.getByRole('alert')).toHaveCount(0)
+}
+
+// Open the commission list through the navigation region ("Đơn hàng"); the
+// page is built anew, so what it shows once loaded is never a leftover.
+export async function goToCommissions(page: Page, shown: 'list' | 'empty'): Promise<void> {
+  await page.getByRole('navigation', { name: 'Điều hướng chính' }).getByRole('button', { name: 'Đơn hàng' }).click()
+  await expect(page.getByRole('heading', { level: 2, name: 'Đơn hàng' })).toBeVisible()
+  await expectCommissionsLoaded(page, shown)
+}
+
+// Press "Tải lại" on the commission list and wait for the content it must end
+// on; every caller moves between two different contents (list → "không kết
+// nối được", that alert → list).
+export async function reloadCommissions(page: Page, outcome: 'list' | 'unreachable'): Promise<void> {
+  await page.getByRole('button', { name: 'Tải lại' }).click()
+  switch (outcome) {
+    case 'list':
+      await expectCommissionsLoaded(page, 'list')
+      break
+    case 'unreachable':
+      await expect(page.getByRole('alert')).toContainText('Không kết nối được', { timeout: 30_000 })
+      await expect(page.getByRole('list', { name: COMMISSION_LIST })).toHaveCount(0)
+      await expect(page.getByRole('status')).toHaveCount(0)
+      break
+  }
+}
+
+// Open one commission of the list by its title; wait for its detail.
+export async function openCommission(page: Page, title: string): Promise<void> {
+  await page.getByRole('list', { name: COMMISSION_LIST }).getByRole('button', { name: new RegExp(`^${title}(\\s|$)`) }).click()
+  await expect(page.getByRole('heading', { level: 3, name: title })).toBeVisible({ timeout: 30_000 })
+  await expect(page.getByRole('status')).toHaveCount(0)
 }

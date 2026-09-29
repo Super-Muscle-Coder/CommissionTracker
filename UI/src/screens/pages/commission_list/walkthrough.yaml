@@ -1,0 +1,53 @@
+page: commission_list
+precondition: >
+  Desktop đã build (npm run build trong Desktop/). Bước S1 cần cơ sở dữ liệu trống: trong UI/,
+  npm run walkthrough:app -- --empty. Bước S2 tới S4 cần dữ liệu mẫu D2: đóng ứng dụng, rồi
+  npm run walkthrough:app -- --commissions, chờ "ĐÃ NẠP XONG dữ liệu mẫu D2" (ba khách riêng của
+  D2: Mai Anh, Quốc Bảo, Lan Chi đã lưu trữ; ba đơn hàng). Cả hai lệnh mở ứng dụng thật với thư
+  mục dữ liệu tạm (không đụng %APPDATA%) và Backend.py thật sau fixture bật/tắt được. Bật/tắt
+  backend: npm run walkthrough:backend -- down|up (từ UI/, cửa sổ lệnh khác). Trước khi chạy,
+  đặt CT_WALKTHROUGH_RUNNER là tên người chạy.
+steps:
+  - id: S1
+    setup: >
+      Cơ sở dữ liệu trống (npm run walkthrough:app -- --empty).
+    action: >
+      Bấm mục "Đơn hàng" ở vùng điều hướng bên trái. Bấm nút "Thêm đơn hàng" nằm trong khung
+      "Chưa có đơn hàng nào.".
+    expect: >
+      Vùng điều hướng có hai mục theo thứ tự "Khách hàng", "Đơn hàng"; mục "Đơn hàng" được đánh
+      dấu đang mở. Trang "Đơn hàng" có hàng nút "Thêm đơn hàng" (nút chính, màu nhấn, đứng đầu)
+      và "Tải lại" ngay dưới tiêu đề; bên dưới là khung "Chưa có đơn hàng nào." có nút "Thêm đơn
+      hàng" (không phải thông báo lỗi). Bấm nút đó mở trang "Thêm đơn hàng".
+    covers: [ok]
+  - id: S2
+    setup: >
+      Dữ liệu mẫu D2 (npm run walkthrough:app -- --commissions).
+    action: >
+      Bấm mục "Đơn hàng" ở vùng điều hướng.
+    expect: >
+      Danh sách có ba đơn, đơn sửa gần nhất đứng trước. Mỗi đơn có tiêu đề ở dòng chính, và một
+      dòng phụ gồm tên khách, giá thỏa thuận, hạn giao: "Minh họa bìa sách" — "Lan Chi · 9.000.000
+      VND · Hạn giao 01/01/2026"; "Chibi đôi" — "Quốc Bảo · 12,50 USD · Không có hạn"; "Chân dung
+      bán thân" — "Mai Anh · 1.500.000 VND · Hạn giao 15/10/2026". Mục "Đơn hàng" được đánh dấu
+      đang mở; không có thông báo lỗi.
+    covers: [ok]
+  - id: S3
+    setup: >
+      Đang ở trang "Đơn hàng" với dữ liệu mẫu D2. Chạy npm run walkthrough:backend -- down (ứng
+      dụng vẫn mở).
+    action: >
+      Bấm "Tải lại". Khi khung báo lỗi hiện ra, chạy npm run walkthrough:backend -- up, rồi bấm
+      "Tải lại" lần nữa.
+    expect: >
+      Lần đầu: khung "Không kết nối được" với câu "Không kết nối được tới phần xử lý của ứng
+      dụng. Vui lòng thử lại.", không có danh sách. Lần sau (backend đã chạy lại): danh sách ba
+      đơn như ở S2, không còn khung lỗi.
+    covers: [unreachable, ok]
+  - id: S4
+    setup: null
+    action: >
+      Bấm đơn "Chibi đôi".
+    expect: >
+      Trang "Chi tiết đơn hàng" của "Chibi đôi" mở ra; mục "Đơn hàng" vẫn được đánh dấu đang mở.
+    covers: [ok]

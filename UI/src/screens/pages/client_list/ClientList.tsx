@@ -27,7 +27,7 @@ export function ClientList({ navigate, notice }: PageProps<'client_list'>) {
   )
 }
 
-const toItems = (rows: ClientRowView[]) => rows.map((row) => ({ key: row.clientId, text: row.name }))
+const toItems = (rows: ClientRowView[]) => rows.map((row) => ({ key: row.clientId, text: row.name, detail: null }))
 
 function ClientListResult({ result, onAdd, onOpen }: { result: ViewResult<ClientListView>; onAdd: () => void; onOpen: (clientId: string) => void }) {
   switch (result.kind) {
