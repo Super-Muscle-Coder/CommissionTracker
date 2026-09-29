@@ -309,6 +309,8 @@ Plan phiên 19 chọn hướng thứ nhất: không có biến thì ghi vào `UI
 
 ### UI-9 — e2e `commission_form` S2 không tất định (trung bình; chặn `hoàn_tất` của ba trang D2; Q19-1) — **plan phiên 20** (việc 2)
 
+> **ĐÃ ĐÓNG 2026-09-29, phiên 20** (`coding-agent@2026-09-29#2`). Hàm nạp mẫu chờ 1,1 s sau lần ghi cuối; S2 tìm đơn theo tên. Q19-3 đã sửa. Orchestrator chạy spec `commission_form` 45 lần: không lần nào hỏng ở chỗ cũ (`.reviews/audits/ui/audit_ui_session20.md`). Có một lỗi không tất định **khác**: UI-10.
+
 > Project Owner chạy tay ba kịch bản D2 ngày 2026-09-29, không thấy bất thường; e2e trên máy Project Owner đạt 32/32. Quyết định: gộp UI-9 vào phiên 20 (D3), chốt `hoàn_tất` cả năm trang D2 và D3 ở cuối phiên đó.
 
 **Hiện tượng:** S2 khẳng định đơn đứng đầu danh sách là đơn vừa tạo ở S1. Trên máy Orchestrator (Linux), khẳng định này hỏng khoảng 1/6 số lần: đơn mẫu tạo cuối lại đứng đầu.
@@ -327,6 +329,23 @@ Thí nghiệm: chờ thêm 1,1 s sau khi nạp mẫu thì 8/8 lần đạt; khô
 **Tiêu chí đóng:** `npm run e2e` đạt 5/5 trên Windows, và Orchestrator chạy lại trên Linux đạt ổn định (ít nhất 10 lần spec `commission_form`, 5 lần toàn bộ e2e).
 
 **Ghi nhận về sản phẩm, không vá ở V1:** hai đơn lưu trong cùng một giây có thứ tự ổn định nhưng tùy ý trong danh sách.
+
+## Layer giao diện — sau audit phiên 20
+
+### UI-10 — spec e2e khẳng định `getByRole('status')` không lọc (trung bình; chặn `hoàn_tất` của năm trang D2, D3; Q20-1)
+
+**Hiện tượng:** Sau khi lưu đơn, `commission_detail` có hai vùng `role="status"`: thông báo chuyển trang, và "Đang tải tiến độ…" của phần Tiến độ (D3). Spec `commission_form` khẳng định bằng `getByRole('status')` không lọc (dòng 109, 175, 211, 237), nên hỏng "strict mode violation" khi phần Tiến độ chưa tải xong. Trên máy Orchestrator, chạy spec riêng 45 lần thì hỏng 3 lần; toàn bộ e2e thì đạt 6/6.
+
+**Thí nghiệm:** đổi bốn khẳng định sang `getByRole('status').filter({ hasText: '…' })` thì đạt 30/30 lần.
+
+**Việc sửa:**
+1. sửa bốn khẳng định của `commission_form`;
+2. rà mọi `getByRole('status')` không lọc trong `tests/e2e` (`client_detail`, `client_form`, `commission_form`, harness). Chỗ nào trang có thể có nhiều vùng `status` và spec khẳng định chữ thì lọc theo chữ. Các `toHaveCount(0)` của harness dùng để chờ mọi chỉ báo tải biến mất, nên đúng như hiện nay;
+3. thêm vào `npm run check` một phép kiểm tĩnh: trong `tests/e2e`, không được khẳng định chữ (`toHaveText`, `toContainText`) trực tiếp trên `getByRole('status')` chưa lọc.
+
+**Kèm theo, theo dõi:** `main_layout.spec.ts` hết giờ chụp ảnh (30 s) trên Windows đã ba lần (phiên 19 mốc, `main-EXP-013`, phiên 20). Gặp lần nữa thì điều tra.
+
+**Tiêu chí đóng:** spec `commission_form` chạy riêng đạt ổn định trên máy Orchestrator (ít nhất 30 lần); `npm run e2e` đạt 5/5 trên Windows; phép kiểm tĩnh cắn được (tạm thêm một khẳng định chưa lọc thì `check` hỏng).
 
 ## Môi trường và vận hành (không phải việc của coding agent)
 

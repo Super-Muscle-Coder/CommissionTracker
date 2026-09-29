@@ -327,6 +327,7 @@ Mọi lời gọi còn phải xử lý "không tới được" và "vi phạm h�
 - **Đơn chưa từng đặt giai đoạn** (`updated_at: null`, hoặc không có trong `progress_board`) được tính là giai đoạn đầu của danh mục, đúng hợp đồng.
 - **Ngày giờ** (`changed_at`, `updated_at`): như `client_detail`. **Hạn giao:** như D2 (`dd/mm/yyyy`, cắt từ chuỗi). Workflow này giữ bản riêng của các cách định dạng đó (R2).
 - **Lịch sử giai đoạn:** hợp đồng trả cũ nhất trước; giao diện hiện **mới nhất trước**.
+- **`list_stages` rỗng** là vi phạm hợp đồng (chốt ngày 2026-09-29, audit phiên 20): hợp đồng luôn nói tới "giai đoạn đầu của danh mục", nên danh mục phải có ít nhất một giai đoạn.
 
 ### Chi tiết trang `progress_board` (D3)
 
@@ -349,7 +350,7 @@ Trang có thêm một phần **"Tiến độ"**, nằm dưới các thông tin c
   - "Giai đoạn hiện tại": tên giai đoạn; kèm "cập nhật lúc <ngày giờ>", hoặc "chưa cập nhật lần nào" khi `updated_at` là `null`;
   - "Lịch sử": mỗi dòng là "<từ> → <đến>" (dòng đầu tiên của đơn, khi `from_stage` là `null`: "Bắt đầu: <đến>"), ngày giờ đổi, và ghi chú nếu có; mới nhất trước. Lịch sử rỗng: "Chưa đổi giai đoạn lần nào".
 - **Thao tác:** "Đổi giai đoạn" là hành động **phụ** (hành động chính vẫn là "Sửa"), đặt trong hàng nút dưới tiêu đề trang, sau "Sửa". Nút mở `stage_change(commission_id)`.
-  - Giai đoạn hiện tại đã khép lại: không có nút "Đổi giai đoạn"; phần Tiến độ ghi "Đơn đã <tên giai đoạn>, không đổi giai đoạn được nữa."
+  - Giai đoạn hiện tại đã khép lại: không có nút "Đổi giai đoạn"; phần Tiến độ ghi `Đơn đang ở giai đoạn "<tên>", không đổi giai đoạn được nữa.` (sửa ngày 2026-09-29, audit phiên 20: câu cũ "Đơn đã <tên>" ghép với tên "Đã giao" thành "Đơn đã Đã giao")
   - Trong lúc phần Tiến độ chưa tải xong hoặc tải lỗi: không có nút "Đổi giai đoạn".
 - **Lỗi của phần Tiến độ** (500, không tới được, vi phạm hợp đồng, 404): hiện trong chính phần đó, kèm nút "Thử lại" của riêng phần đó. Phần thông tin đơn không bị ảnh hưởng.
 - Trang nhận thêm **thông báo chuyển trang** "Đã đổi giai đoạn sang <tên>." khi quay về từ `stage_change`.
@@ -359,7 +360,7 @@ Trang có thêm một phần **"Tiến độ"**, nằm dưới các thông tin c
 - **Tham số:** `commission_id`, và `title` (tiêu đề đơn, để hiện, do `commission_detail` trao; không gọi lại `get_commission`).
 - **Tiêu đề trang:** "Đổi giai đoạn"; dưới đó là tiêu đề đơn.
 - **Khi mở:** `list_stages` và `get_stage`, là một thao tác. 404: "Không tìm thấy đơn hàng này", kèm nút quay lại.
-  - Giai đoạn hiện tại đã khép lại: không có form; hiện "Đơn đã <tên>, không đổi giai đoạn được nữa." kèm nút quay lại.
+  - Giai đoạn hiện tại đã khép lại: không có form; hiện `Đơn đang ở giai đoạn "<tên>", không đổi giai đoạn được nữa.` kèm nút quay lại.
 - **Các ô:**
   1. "Giai đoạn hiện tại": chữ, không sửa được;
   2. "Giai đoạn mới": chọn từ `list_stages`, theo đúng thứ tự, **trừ** giai đoạn hiện tại (hợp đồng: đổi sang chính giai đoạn hiện tại bị từ chối); có lựa chọn đầu "Chọn giai đoạn" nghĩa là chưa chọn; bắt buộc;
@@ -447,6 +448,7 @@ Kịch bản bấm thử và audit kiểm các điều sau.
 - 2026-09-28: sau audit phiên 16. `client_form` ghi rõ luật nào sao từ hợp đồng (Data Schema 7.0.0, CT-2: not blank) và luật nào `[UI-ONLY]`. Hàng nút của form nằm dưới tiêu đề, và focus chuyển tới ô lỗi đầu tiên. §7.1 thêm luật tương phản 3:1 cho thành phần tương tác. §7.2 bổ sung nguyên tắc 4 và 7. Ba trang giữ `đang_làm`, vá ở phiên 17.
 - 2026-09-28: audit phiên 17 đạt (`.reviews/audits/ui/audit_ui_session17.md`). Ba trang D1 chờ Project Owner chạy tay ba kịch bản, rồi chuyển `hoàn_tất`.
 - 2026-09-28: `client_list`, `client_detail`, `client_form` → `hoàn_tất`. Project Owner đã tự chạy tay ba kịch bản và xác nhận chức năng chạy đúng. Chặng D1 xong về phía giao diện.
+- 2026-09-29: audit phiên 20 (`.reviews/audits/ui/audit_ui_session20.md`): D3 đúng đặc tả; sửa câu khép lại ("Đơn đang ở giai đoạn …"); chốt `list_stages` rỗng là vi phạm hợp đồng. E2e không tất định (UI-10), nên năm trang D2 và D3 giữ `đang_làm`.
 - 2026-09-29: làm lại I1 cho D3: trang `progress_board`, `stage_change` → `đang_làm` (plan phiên 20); `commission_detail` thêm phần Tiến độ; mục điều hướng "Tiến độ"; tên tiếng Việt của giai đoạn; xác nhận trong trang khi chuyển sang giai đoạn khép lại; luật phủ D3.
 - 2026-09-29: audit phiên 19 (`.reviews/audits/ui/audit_ui_session19.md`): D2 đúng đặc tả, nhưng e2e không tất định (UI-9). Ba trang D2 giữ `đang_làm`. Ghi nhận: hai đơn lưu trong cùng một giây có thứ tự tùy ý (backend ghi `updated_at` tới giây).
 - 2026-09-28: làm lại I1 cho D2, căn cứ Data Schema 8.0.1: ba trang `commission_list`, `commission_detail`, `commission_form` → `đang_làm` (plan phiên 19); mục điều hướng "Đơn hàng"; lời gọi, luật trình bày tiền và ngày, luật kiểm form (tiêu đề not blank theo CT-3; văn bản tùy chọn để trống gửi `null`), luật phủ của D2.
