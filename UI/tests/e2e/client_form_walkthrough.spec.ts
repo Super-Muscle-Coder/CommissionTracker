@@ -78,7 +78,7 @@ test.describe.serial('walkthrough client_form', () => {
       await field('Ghi chú').fill('Khách quen')
       await l.page.getByRole('button', { name: 'Lưu' }).click()
       await expect(l.page.getByRole('heading', { level: 3, name: 'Chi Mai' })).toBeVisible()
-      await expect(l.page.getByRole('status')).toHaveText('Đã thêm khách hàng.')
+      await expect(l.page.getByRole('status').filter({ hasText: 'Đã thêm khách hàng.' })).toHaveCount(1)
       const entries = await detailEntries(l.page)
       expect(entries.slice(0, 3)).toEqual([
         ['Trạng thái', ['Đang hoạt động']],
@@ -133,7 +133,7 @@ test.describe.serial('walkthrough client_form', () => {
       await field('Giá trị 1').fill('an@example.com')
       await l.page.getByRole('button', { name: 'Lưu' }).click()
       await expect(l.page.getByRole('heading', { level: 3, name: 'An Nhiên' })).toBeVisible()
-      await expect(l.page.getByRole('status')).toHaveText('Đã lưu thay đổi.')
+      await expect(l.page.getByRole('status').filter({ hasText: 'Đã lưu thay đổi.' })).toHaveCount(1)
       expect((await detailEntries(l.page))[1]).toEqual(['Liên hệ', ['email: an@example.com']])
     })
   })
@@ -178,7 +178,7 @@ test.describe.serial('walkthrough client_form', () => {
       setBackend('up')
       await l.page.getByRole('button', { name: 'Lưu' }).click()
       await expect(l.page.getByRole('heading', { level: 3, name: 'Dạ Thảo' })).toBeVisible()
-      await expect(l.page.getByRole('status')).toHaveText('Đã thêm khách hàng.')
+      await expect(l.page.getByRole('status').filter({ hasText: 'Đã thêm khách hàng.' })).toHaveCount(1)
       await rec.screenshot(l.page, `${PAGE}-S5-saved`)
       await l.page.getByRole('button', { name: 'Quay lại danh sách' }).click()
       await expectListLoaded(l.page)

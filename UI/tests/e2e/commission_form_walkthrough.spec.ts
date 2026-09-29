@@ -106,7 +106,7 @@ test.describe.serial('walkthrough commission_form', () => {
       await rec.screenshot(l.page, `${PAGE}-S1-filled`)
       await press('Lưu')
       await expect(l.page.getByRole('heading', { level: 3, name: 'Tranh nhóm ba người' })).toBeVisible()
-      await expect(l.page.getByRole('status')).toHaveText('Đã thêm đơn hàng.')
+      await expect(l.page.getByRole('status').filter({ hasText: 'Đã thêm đơn hàng.' })).toHaveCount(1)
       expect((await commissionEntries(l.page)).slice(0, 6)).toEqual([
         ['Khách hàng', ['Quốc Bảo']],
         ['Loại tranh', ['toàn thân']],
@@ -172,7 +172,7 @@ test.describe.serial('walkthrough commission_form', () => {
       await expect(l.page.getByRole('button', { name: 'Xóa hạn giao' })).toHaveCount(0)
       await press('Lưu')
       await expect(l.page.getByRole('heading', { level: 3, name: 'Chân dung bán thân' })).toBeVisible()
-      await expect(l.page.getByRole('status')).toHaveText('Đã lưu thay đổi.')
+      await expect(l.page.getByRole('status').filter({ hasText: 'Đã lưu thay đổi.' })).toHaveCount(1)
       expect((await commissionEntries(l.page)).slice(2, 4)).toEqual([
         ['Giá thỏa thuận', ['2.000.000 VND']],
         ['Hạn giao', ['Không có hạn']],
@@ -208,7 +208,7 @@ test.describe.serial('walkthrough commission_form', () => {
       await field('Tiêu đề').fill('Minh họa bìa sách (bản 2)')
       await press('Lưu')
       await expect(l.page.getByRole('heading', { level: 3, name: 'Minh họa bìa sách (bản 2)' })).toBeVisible()
-      await expect(l.page.getByRole('status')).toHaveText('Đã lưu thay đổi.')
+      await expect(l.page.getByRole('status').filter({ hasText: 'Đã lưu thay đổi.' })).toHaveCount(1)
       expect((await commissionEntries(l.page))[0]).toEqual(['Khách hàng', ['Lan Chi (đã lưu trữ)']])
     })
   })
@@ -234,7 +234,7 @@ test.describe.serial('walkthrough commission_form', () => {
       setBackend('up')
       await press('Lưu')
       await expect(l.page.getByRole('heading', { level: 3, name: 'Phác thảo nhân vật' })).toBeVisible({ timeout: 30_000 })
-      await expect(l.page.getByRole('status')).toHaveText('Đã thêm đơn hàng.')
+      await expect(l.page.getByRole('status').filter({ hasText: 'Đã thêm đơn hàng.' })).toHaveCount(1)
       await rec.screenshot(l.page, `${PAGE}-S6-saved`)
       await press('Quay lại danh sách')
       await expect(l.page.getByRole('list', { name: 'Danh sách đơn hàng' }).getByRole('listitem').first()).toBeVisible()
@@ -250,7 +250,7 @@ test.describe.serial('walkthrough commission_form', () => {
       await l.page.getByRole('button', { name, exact: true }).click()
       await expect(l.page.getByRole('heading', { level: 3, name })).toBeVisible()
       await press('Lưu trữ khách hàng')
-      await expect(l.page.getByRole('status')).toContainText('Đã lưu trữ.')
+      await expect(l.page.getByRole('status').filter({ hasText: 'Đã lưu trữ.' })).toHaveCount(1)
     }
     await goToCommissions(l.page, 'list')
     await rec.step(l.page, 'S7', ['ok'], async () => {

@@ -2,8 +2,8 @@
 // workflow: screens
 // clause: external
 // component: screens
-// last_updated_by: coding-agent@2026-09-29#2
-// last_updated_at: 2026-09-29T18:10:00+07:00
+// last_updated_by: coding-agent@2026-09-29#3
+// last_updated_at: 2026-09-29T21:30:29+07:00
 //
 // EXPERIENCES:
 //   - id: screens-EXP-001
@@ -383,6 +383,27 @@
 //       "Thêm đơn hàng". Đạt. (7) "Tiến độ" thêm SAU "Đơn hàng", hai mục cũ không đổi
 //       chỗ; mọi trang có hàng nút dưới tiêu đề (stage_change đo bằng vị trí thật, S1).
 //       Đạt. Ghi nhận: câu khép lại dùng mẫu khác đặc tả (NOTE ở update_progress).
+//   - id: screens-EXP-026
+//     content: >
+//       UI-10 (phiên 21, chỉ đổi tests/ và scripts/). Nguyên nhân: sau khi lưu đơn,
+//       commission_detail có hai vùng role="status" cùng lúc (thông báo chuyển trang và
+//       "Đang tải tiến độ…" của phần Tiến độ), nên getByRole('status') không lọc vi phạm
+//       strict mode khi phần Tiến độ chưa tải xong. Cách sửa: mọi khẳng định CHỮ trên
+//       vùng status chuyển thành getByRole('status').filter({ hasText }) kèm toHaveCount(1)
+//       (cách của stage_change), không phụ thuộc phần Tiến độ đã tải hay chưa. Đã rà
+//       12 chỗ getByRole('status') không lọc trong tests/e2e (không tính harness): SỬA 11 —
+//       client_detail 56, 65, 83; client_form 81, 136, 181; commission_form 109, 175, 211,
+//       237, 253 (253 là toContainText trên trang khách hàng, ngoài danh sách plan; sửa
+//       cùng nhóm; trang D1 hiện một vùng status nhưng lọc để spec không phụ thuộc số vùng);
+//       GIỮ 1 — commission_form 241, toHaveCount(0) ở trang danh sách, ý đúng là "không
+//       còn vùng status nào". walkthrough_harness.ts, 10 chỗ toHaveCount(0) (dòng 58, 147,
+//       164, 213, 237, 246, 279, 302, 313, 321): GIỮ, ý là chờ mọi chỉ báo tải biến mất;
+//       dòng 313 đã giới hạn trong vùng "Tiến độ". Không đổi bước nào của walkthrough.yaml.
+//       Phép kiểm tĩnh scripts/check_e2e_status.mjs (AST của TypeScript) nằm trong npm run
+//       check qua lint:e2e: báo toHaveText/toContainText có chủ thể trực tiếp là
+//       getByRole('status') một đối số; chỗ đã lọc có chủ thể là lời gọi .filter nên không
+//       bị báo. Ghi nhận không sửa (ngoài UI-10): page.screenshot hết 30 s ở bước
+//       "backend down" (xem EVIDENCE); main_layout.spec.ts không hỏng lần nào.
 //
 // UNSOLVED_PROBLEMS: []
 //
@@ -616,15 +637,49 @@
 //       "page.screenshot: Timeout 30000ms exceeded", cùng hiện tượng main-EXP-013; không
 //       tính, chạy lại cả năm lần.
 //     recorded_at: 2026-09-29T17:59:31+07:00
+//   - claim: >
+//       UI-10 (phiên 21): spec commission_form đạt 30/30 lần riêng; e2e 5/5 lần có tên
+//       người chạy; phép kiểm tĩnh cắn được; mốc %APPDATA% không đổi.
+//     how: >
+//       Node v24.14.1, npm 11.11.1, npm ci. Mốc: npx playwright test -c
+//       tests/e2e/playwright.config.ts commission_form 30 lần, không biến. Sau khi sửa:
+//       cùng lệnh 30 lần; CT_WALKTHROUGH_RUNNER=coding-agent@2026-09-29#3 npm run e2e 5
+//       lần; npm run e2e không biến (SHA-256 mọi tệp UI/evidence trước và sau). Bằng
+//       chứng cắn: tạm đổi client_form_walkthrough.spec.ts dòng 136 về
+//       getByRole('status')).toHaveText('Đã lưu thay đổi.'), chạy npm run check, rồi khôi
+//       phục và chạy lại. %APPDATA%\CommissionTracker: tên, kích thước, giờ ghi, SHA-256
+//       đầu (20:2x) và cuối (21:30) phiên.
+//     result: >
+//       Mốc: check "Tests 780 passed (780)"; e2e "42 passed (2.6m)"; commission_form 30/30
+//       đạt, 0 lần hỏng (máy này không tái hiện được UI-10 trước khi sửa). Sau sửa:
+//       commission_form 30/30 đạt (FAILS=0); e2e 5/5 lần "42 passed" (2.6m, 2.5m, 2.5m,
+//       2.5m, 2.7m). Bằng chứng cắn: "STATUS tests/e2e/client_form_walkthrough.spec.ts:136:
+//       toHaveText on getByRole('status') without a filter; a page may have several status
+//       regions. Narrow it: …", chỉ đúng dòng đó, npm run check hỏng; khôi phục thì
+//       "check_e2e_status: no unfiltered text assertion on getByRole('status')." và check
+//       đạt, 780 kiểm thử (bằng mốc). Không biến: lần đầu "1 failed | 39 passed" (không
+//       lưu tên bài), rồi "42 passed (2.5m)" với UI/evidence không đổi (diff SHA-256
+//       rỗng); thêm 5 lần không biến có lưu log: lần 1 "1 failed, 2 did not run, 39
+//       passed (3.0m)" ở client_detail S4, lần 2 "1 failed, 1 did not run, 40 passed
+//       (3.0m)" ở stage_change S4, cả hai "TimeoutError: page.screenshot: Timeout 30000ms
+//       exceeded"; lần 3, 4, 5 "42 passed". Tức 3 trong 8 lần không biến hỏng vì chụp ảnh
+//       hết giờ ở bước backend down (cùng loại main-EXP-013), trong khi 6 lần có biến
+//       (1 mốc và 5 sau sửa) đều đạt; không tìm ra nguyên nhân, không sửa.
+//       main_layout.spec.ts: 0 lần hỏng trong 14 lần e2e của phiên. %APPDATA%: data.db
+//       114688 byte, data.db.lock 0 byte, cùng giờ ghi 2026-09-28 21:09:42, cùng hash
+//       B1996554…F390B đầu và cuối phiên — không đổi.
+//     recorded_at: 2026-09-29T21:30:29+07:00
 //
 // NOTES:
 //   - content: >
-//       Đề xuất trạng thái (I6, phiên 20): commission_list hoàn_tất, commission_detail
-//       hoàn_tất, commission_form hoàn_tất (UI-9 đã vá: screens-EXP-019), progress_board
-//       hoàn_tất, stage_change hoàn_tất; chờ Orchestrator audit và Project Owner tự chạy
-//       tay (npm run walkthrough:app -- --progress cho hai trang D3 và các bước mới của
-//       commission_detail; -- --commissions cho D2; -- --empty cho S1 của
+//       Đề xuất trạng thái (I6, phiên 21): commission_list, commission_detail,
+//       commission_form, progress_board, stage_change đều hoàn_tất (UI-10 đã vá:
+//       screens-EXP-026; UI-9: screens-EXP-019); chờ Orchestrator audit và Project Owner
+//       tự chạy tay (npm run walkthrough:app -- --progress cho hai trang D3 và các bước
+//       mới của commission_detail; -- --commissions cho D2; -- --empty cho S1 của
 //       commission_list và progress_board). Coding agent không sửa ui_decomposition.md.
+//       Cảnh báo cho audit: chụp ảnh hết 30 s ở bước backend down khi chạy không biến
+//       (client_detail S4, stage_change S4) không tất định trên máy Windows này.
 //     written_at: 2026-09-29
 // ===WCA-CHECKPOINT-END===
 /**

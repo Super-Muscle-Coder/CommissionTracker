@@ -53,7 +53,7 @@ test.describe.serial('walkthrough client_detail', () => {
   test('S2 — archive: no confirmation, the message says what it changes', async () => {
     await rec.step(l.page, 'S2', ['ok'], async () => {
       await l.page.getByRole('button', { name: 'Lưu trữ khách hàng' }).click()
-      await expect(l.page.getByRole('status')).toHaveText(ARCHIVED_MSG)
+      await expect(l.page.getByRole('status').filter({ hasText: ARCHIVED_MSG })).toHaveCount(1)
       await expect(l.page.getByRole('button', { name: 'Bỏ lưu trữ' })).toBeEnabled()
       expect((await detailEntries(l.page))[0]).toEqual(['Trạng thái', ['Đã lưu trữ']])
     })
@@ -62,7 +62,7 @@ test.describe.serial('walkthrough client_detail', () => {
   test('S3 — unarchive', async () => {
     await rec.step(l.page, 'S3', ['ok'], async () => {
       await l.page.getByRole('button', { name: 'Bỏ lưu trữ' }).click()
-      await expect(l.page.getByRole('status')).toHaveText(UNARCHIVED_MSG)
+      await expect(l.page.getByRole('status').filter({ hasText: UNARCHIVED_MSG })).toHaveCount(1)
       await expect(l.page.getByRole('button', { name: 'Lưu trữ khách hàng' })).toBeEnabled()
       expect((await detailEntries(l.page))[0]).toEqual(['Trạng thái', ['Đang hoạt động']])
     })
@@ -80,7 +80,7 @@ test.describe.serial('walkthrough client_detail', () => {
       await rec.screenshot(l.page, `${PAGE}-S4-unreachable`)
       setBackend('up')
       await l.page.getByRole('button', { name: 'Lưu trữ khách hàng' }).click()
-      await expect(l.page.getByRole('status')).toHaveText(ARCHIVED_MSG)
+      await expect(l.page.getByRole('status').filter({ hasText: ARCHIVED_MSG })).toHaveCount(1)
       await expect(l.page.getByRole('alert')).toHaveCount(0)
       expect((await detailEntries(l.page))[0]).toEqual(['Trạng thái', ['Đã lưu trữ']])
     })

@@ -12,7 +12,8 @@
     "lint:layer": "node scripts/check_layer.mjs",
     "lint:contrast": "node scripts/check_contrast.mjs",
     "test": "vitest run",
-    "check": "npm run typecheck && npm run lint && npm run lint:style && npm run lint:contrast && npm run lint:layer && npm run test",
+    "lint:e2e": "node scripts/check_e2e_status.mjs",
+    "check": "npm run typecheck && npm run lint && npm run lint:style && npm run lint:contrast && npm run lint:layer && npm run lint:e2e && npm run test",
     "e2e": "npm run build && playwright test -c tests/e2e/playwright.config.ts",
     "walkthrough:app": "npm run build && node tests/tools/walkthrough_app.mjs",
     "walkthrough:backend": "node tests/tools/walkthrough_backend.mjs"

@@ -2,8 +2,8 @@
 // workflow: main
 // clause: external
 // component: main
-// last_updated_by: coding-agent@2026-09-29#2
-// last_updated_at: 2026-09-29T18:10:00+07:00
+// last_updated_by: coding-agent@2026-09-29#3
+// last_updated_at: 2026-09-29T21:30:29+07:00
 //
 // EXPERIENCES:
 //   - id: main-EXP-001
@@ -227,6 +227,16 @@
 //       soạn thảo tệp (scratchpad) hoặc sửa thẳng bằng Edit, đúng lời khuyên của
 //       CLAUDE.md mục 5. Không đặt lệnh đọc stdin (cat, python -) trước lệnh dài: công
 //       cụ Bash không có stdin, lệnh treo tới hết giờ.
+//   - id: main-EXP-016
+//     content: >
+//       Phiên 21 (UI-10): npm run check có thêm một bước, lint:e2e (node
+//       scripts/check_e2e_status.mjs), đứng sau lint:layer và trước test; đây là thay đổi
+//       duy nhất của script check (package.json thêm dòng lint:e2e). Không đổi cấu hình
+//       ESLint, stylelint, check_layer, check_contrast; không thêm kiểm thử vitest (mốc
+//       780 giữ nguyên). Chi tiết và bằng chứng cắn ở screens-EXP-026. Ghi nhận công cụ:
+//       chạy e2e không đặt biến thì bước "backend down" (client_detail S4, stage_change
+//       S4) hỏng vì page.screenshot hết 30 s ở 3 trong 8 lần; main_layout.spec.ts không
+//       hỏng lần nào (theo dõi của main-EXP-013).
 //
 // UNSOLVED_PROBLEMS: []
 //
@@ -571,6 +581,20 @@
 //       hình ESLint, stylelint, check_layer không đổi; check_contrast thêm một cặp có
 //       bằng chứng cắn ở kit. Không eslint-disable, không ngoại lệ lint mới.
 //     recorded_at: 2026-09-29T18:10:00+07:00
+//   - claim: >
+//       Phiên 21: npm run check (có lint:e2e) và npm run e2e đạt với mã cuối phiên.
+//     how: >
+//       Node v24.14.1, npm 11.11.1, npm ci "found 0 vulnerabilities". Trong UI/: npm run
+//       check (sau khi ghi checkpoint); CT_WALKTHROUGH_RUNNER=coding-agent@2026-09-29#3 npm
+//       run e2e 5 lần; lần không biến với SHA-256 UI/evidence trước và sau.
+//     result: >
+//       check exit 0, "check_e2e_status: no unfiltered text assertion on
+//       getByRole('status')."; "Tests 780 passed (780)" (bằng mốc). e2e 5/5 "42 passed";
+//       lần không biến "42 passed (2.5m)", UI/evidence không đổi. Phần còn lại (30 lần
+//       commission_form, bằng chứng cắn, %APPDATA%, lỗi chụp ảnh không biến) ở EVIDENCE
+//       của screens. Backend: Backend/env/Scripts/python.exe (qua fixture). Không
+//       eslint-disable, không ngoại lệ lint mới.
+//     recorded_at: 2026-09-29T21:30:29+07:00
 //
 // NOTES:
 //   - content: >
