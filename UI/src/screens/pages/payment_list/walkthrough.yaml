@@ -1,0 +1,73 @@
+page: payment_list
+precondition: >
+  Desktop đã build (npm run build trong Desktop/). Trong UI/: npm run walkthrough:app -- --payments
+  mở ứng dụng thật với thư mục dữ liệu tạm (không đụng %APPDATA%), Backend.py thật sau fixture
+  bật/tắt được, và nạp dữ liệu mẫu D4: ba khách (Mai Anh, Quốc Bảo, Lan Chi đã lưu trữ), ba đơn
+  "Chân dung bán thân" (1.500.000 VND, chưa có khoản nào), "Chibi đôi" (12,50 USD, một khoản
+  15,00 USD) và "Minh họa bìa sách" (9.000.000 VND, năm khoản, một khoản đã hủy). Chờ "ĐÃ NẠP
+  XONG dữ liệu mẫu D4". Bật/tắt backend: npm run walkthrough:backend -- down|up (từ UI/, cửa sổ
+  lệnh khác). Các bước nối tiếp nhau trong cùng một lần mở ứng dụng. Từ trang "Đơn hàng" (bấm mục
+  "Đơn hàng" ở vùng điều hướng), bấm một đơn rồi bấm "Thanh toán" để tới trang này. Trước khi chạy,
+  đặt CT_WALKTHROUGH_RUNNER là tên người chạy.
+steps:
+  - id: S1
+    setup: null
+    action: >
+      Mở "Chân dung bán thân" rồi bấm "Thanh toán". Bấm "Ghi khoản thanh toán" ở dưới cùng (trong
+      khung trống), rồi bấm "Hủy". Bấm "Quay lại đơn hàng".
+    expect: >
+      Trang "Thanh toán", tiêu đề nhóm "Chân dung bán thân"; ngay dưới là hàng nút "Ghi khoản
+      thanh toán" (nút chính, đứng đầu), "Quay lại đơn hàng", "Tải lại". Số dư ba dòng: Giá thỏa
+      thuận "1.500.000 VND"; Đã nhận "0 VND"; Còn phải thu "1.500.000 VND". Không có danh sách;
+      có dòng "Chưa có khoản thanh toán nào" kèm nút "Ghi khoản thanh toán". Nút ở khung trống mở
+      trang "Ghi khoản thanh toán"; "Hủy" về lại trang "Thanh toán", không có thông báo. "Quay lại
+      đơn hàng" về "Chi tiết đơn hàng".
+    covers: [ok]
+  - id: S2
+    setup: null
+    action: >
+      Về trang "Đơn hàng", mở "Minh họa bìa sách", bấm "Thanh toán".
+    expect: >
+      Số dư: Giá thỏa thuận "9.000.000 VND"; Đã nhận "4.600.000 VND"; Còn phải thu "4.500.000
+      VND" (tiền tip có tính vào "Đã nhận" nhưng không làm giảm "Còn phải thu"; khoản đã hủy không
+      tính). Năm khoản, mới nhất trước (theo ngày giờ nhận tiền): "Nhận tiền 250.000 VND · Khác" ·
+      "<ngày giờ> · MoMo · Nhập nhầm · Đã hủy" (không có nút "Hủy khoản này"); "Hoàn tiền cho khách
+      500.000 VND · Khác" · "… · Chuyển khoản · Hoàn một phần"; "Nhận tiền 100.000 VND · Tiền tip" ·
+      "… · Tiền mặt"; "Nhận tiền 2.000.000 VND · Thanh toán theo đợt" · "… · MoMo · Đợt hai"; "Nhận
+      tiền 3.000.000 VND · Tiền cọc" · "… · Chuyển khoản". Ngày giờ theo giờ của máy, dạng HH:mm
+      dd/mm/yyyy. Bốn khoản chưa hủy mỗi khoản có nút "Hủy khoản này".
+    covers: [ok]
+  - id: S3
+    setup: null
+    action: >
+      Ở khoản "Nhận tiền 100.000 VND · Tiền tip" bấm "Hủy khoản này". Bấm "Quay lại". Bấm lại "Hủy
+      khoản này" ở khoản đó, rồi bấm "Xác nhận".
+    expect: >
+      Lần đầu: hiện ngay trong trang (không phải hộp thoại của hệ thống) khung "Xác nhận hủy khoản"
+      với câu "Khoản đã hủy không khôi phục được. Số dư sẽ được tính lại không có khoản này.", hai nút
+      "Xác nhận" (đang có con trỏ) và "Quay lại"; các nút "Hủy khoản này" còn lại bị vô hiệu. "Quay
+      lại" đóng khung, không gửi gì: danh sách và số dư y như cũ. Lần hai, "Xác nhận": thông báo "Đã
+      hủy khoản thanh toán."; khoản tip hiện "Đã hủy" và mất nút; Đã nhận "4.500.000 VND"; Còn phải
+      thu vẫn "4.500.000 VND" (tip không làm đổi số còn phải thu).
+    covers: [ok]
+  - id: S4
+    setup: null
+    action: >
+      Bấm "Quay lại đơn hàng", về trang "Đơn hàng", mở "Chibi đôi", bấm "Thanh toán".
+    expect: >
+      Số dư: Giá thỏa thuận "12,50 USD"; Đã nhận "15,00 USD"; Còn phải thu "Đã thu dư 2,50 USD". Một
+      khoản "Nhận tiền 15,00 USD · Thanh toán cuối" · "<ngày giờ> · PayPal", có nút "Hủy khoản này".
+    covers: [ok]
+  - id: S5
+    setup: >
+      Đang ở trang "Thanh toán" của "Chibi đôi". Chạy npm run walkthrough:backend -- down (ứng dụng
+      vẫn mở).
+    action: >
+      Bấm "Tải lại". Khi khung báo lỗi hiện ra, chạy npm run walkthrough:backend -- up, rồi bấm "Tải
+      lại".
+    expect: >
+      Lần đầu: khung "Không kết nối được" với câu "Không kết nối được tới phần xử lý của ứng dụng.
+      Vui lòng thử lại."; không có số dư, không có danh sách; hàng nút chỉ còn "Quay lại đơn hàng",
+      "Tải lại" (không có "Ghi khoản thanh toán"). Sau "Tải lại" (backend đã chạy lại): số dư và một
+      khoản như ở S4, đủ ba nút của hàng nút.
+    covers: [unreachable, ok]

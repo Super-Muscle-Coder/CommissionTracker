@@ -36,9 +36,10 @@ function CommissionListResult({ result, onAdd, onOpen }: { result: ViewResult<Co
       return (
         <ItemList
           label="Danh sách đơn hàng"
-          items={result.view.rows.map((row) => ({ key: row.commissionId, text: row.title, detail: row.detailText }))}
+          items={result.view.rows.map((row) => ({ key: row.commissionId, text: row.title, detail: row.detailText, action: null }))}
           emptyText="Chưa có đơn hàng nào."
           onSelect={onOpen}
+          onAction={null}
         />
       )
     case 'rejected':

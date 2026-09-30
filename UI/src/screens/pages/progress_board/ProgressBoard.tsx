@@ -39,9 +39,10 @@ function BoardResult({ result, onAdd, onOpen }: { result: ViewResult<ProgressBoa
             <Section key={group.key} title={group.title} level="group" gap="sm">
               <ItemList
                 label={group.title}
-                items={group.rows.map((row) => ({ key: row.commissionId, text: row.title, detail: row.detailText }))}
+                items={group.rows.map((row) => ({ key: row.commissionId, text: row.title, detail: row.detailText, action: null }))}
                 emptyText=""
                 onSelect={onOpen}
+                onAction={null}
               />
             </Section>
           ))}

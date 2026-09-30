@@ -12,4 +12,6 @@ export default defineConfig({
   fullyParallel: false,
   timeout: 120_000,
   reporter: [['list']],
+  // UI-11: keep the trace of a failed test (data only; no retry, no longer timeout).
+  use: { trace: 'retain-on-failure' },
 })

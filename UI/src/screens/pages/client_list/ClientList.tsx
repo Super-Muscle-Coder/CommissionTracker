@@ -27,7 +27,7 @@ export function ClientList({ navigate, notice }: PageProps<'client_list'>) {
   )
 }
 
-const toItems = (rows: ClientRowView[]) => rows.map((row) => ({ key: row.clientId, text: row.name, detail: null }))
+const toItems = (rows: ClientRowView[]) => rows.map((row) => ({ key: row.clientId, text: row.name, detail: null, action: null }))
 
 function ClientListResult({ result, onAdd, onOpen }: { result: ViewResult<ClientListView>; onAdd: () => void; onOpen: (clientId: string) => void }) {
   switch (result.kind) {
@@ -37,10 +37,10 @@ function ClientListResult({ result, onAdd, onOpen }: { result: ViewResult<Client
       return (
         <Stack gap="lg">
           <Section title="Đang hoạt động" level="group" gap="sm">
-            <ItemList label="Khách hàng đang hoạt động" items={toItems(result.view.active)} emptyText="Chưa có khách hàng nào đang hoạt động." onSelect={onOpen} />
+            <ItemList label="Khách hàng đang hoạt động" items={toItems(result.view.active)} emptyText="Chưa có khách hàng nào đang hoạt động." onSelect={onOpen} onAction={null} />
           </Section>
           <Section title="Đã lưu trữ" level="group" gap="sm">
-            <ItemList label="Khách hàng đã lưu trữ" items={toItems(result.view.archived)} emptyText="Không có khách hàng nào đã lưu trữ." onSelect={onOpen} />
+            <ItemList label="Khách hàng đã lưu trữ" items={toItems(result.view.archived)} emptyText="Không có khách hàng nào đã lưu trữ." onSelect={onOpen} onAction={null} />
           </Section>
         </Stack>
       )

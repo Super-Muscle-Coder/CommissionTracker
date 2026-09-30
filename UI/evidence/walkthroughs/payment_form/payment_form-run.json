@@ -1,0 +1,67 @@
+{
+  "page": "payment_form",
+  "walkthrough": "src/screens/pages/payment_form/walkthrough.yaml",
+  "steps": [
+    {
+      "step": "S1",
+      "passed": true,
+      "runner": "coding-agent@2026-09-30#1 (Playwright, tests/e2e/payment_form_walkthrough.spec.ts)",
+      "finished_at": "2026-09-30T02:06:30.534Z",
+      "screenshot": "evidence/walkthroughs/payment_form/payment_form-S1.png",
+      "covers": [
+        "rejected_input"
+      ]
+    },
+    {
+      "step": "S2",
+      "passed": true,
+      "runner": "coding-agent@2026-09-30#1 (Playwright, tests/e2e/payment_form_walkthrough.spec.ts)",
+      "finished_at": "2026-09-30T02:06:30.860Z",
+      "screenshot": "evidence/walkthroughs/payment_form/payment_form-S2.png",
+      "covers": [
+        "ok"
+      ]
+    },
+    {
+      "step": "S3",
+      "passed": true,
+      "runner": "coding-agent@2026-09-30#1 (Playwright, tests/e2e/payment_form_walkthrough.spec.ts)",
+      "finished_at": "2026-09-30T02:06:31.174Z",
+      "screenshot": "evidence/walkthroughs/payment_form/payment_form-S3.png",
+      "covers": [
+        "ok"
+      ]
+    },
+    {
+      "step": "S4",
+      "passed": true,
+      "runner": "coding-agent@2026-09-30#1 (Playwright, tests/e2e/payment_form_walkthrough.spec.ts)",
+      "finished_at": "2026-09-30T02:06:34.004Z",
+      "screenshot": "evidence/walkthroughs/payment_form/payment_form-S4.png",
+      "covers": [
+        "ok"
+      ]
+    },
+    {
+      "step": "S5",
+      "passed": true,
+      "runner": "coding-agent@2026-09-30#1 (Playwright, tests/e2e/payment_form_walkthrough.spec.ts)",
+      "finished_at": "2026-09-30T02:06:34.665Z",
+      "screenshot": "evidence/walkthroughs/payment_form/payment_form-S5.png",
+      "covers": [
+        "ok"
+      ]
+    },
+    {
+      "step": "S6",
+      "passed": true,
+      "runner": "coding-agent@2026-09-30#1 (Playwright, tests/e2e/payment_form_walkthrough.spec.ts)",
+      "finished_at": "2026-09-30T02:06:41.591Z",
+      "screenshot": "evidence/walkthroughs/payment_form/payment_form-S6.png",
+      "covers": [
+        "unreachable",
+        "ok"
+      ]
+    }
+  ]
+}

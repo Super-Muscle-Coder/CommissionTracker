@@ -20,6 +20,9 @@ export type SelectFieldProps = {
   // Text of a first option of value '' meaning "nothing chosen yet"; null for none.
   placeholder: string | null
   onChange: (value: string) => void
+  // A fixed line of help under the select, in a quieter colour (tied to the
+  // select); null for none.
+  hint: string | null
   // The error message ready to show, or null when there is none.
   error: string | null
   disabled: boolean
@@ -28,9 +31,10 @@ export type SelectFieldProps = {
   focusRequest: number
 }
 
-// A native select with its label and, when there is one, its error right
-// under it (tied to the select, not only a colour).
-export function SelectField({ id, label, value, options, placeholder, onChange, error, disabled, focusRequest }: SelectFieldProps) {
+// A native select with its label, its line of help when there is one, and,
+// when there is one, its error right under it (tied to the select, not only
+// a colour).
+export function SelectField({ id, label, value, options, placeholder, onChange, hint, error, disabled, focusRequest }: SelectFieldProps) {
   const ref = useRef<HTMLSelectElement>(null)
   const handled = useRef(0)
   useEffect(() => {
@@ -39,6 +43,8 @@ export function SelectField({ id, label, value, options, placeholder, onChange, 
     ref.current?.focus()
   }, [focusRequest, disabled])
   const errorId = `${id}-error`
+  const hintId = `${id}-hint`
+  const describedBy = [...(hint === null ? [] : [hintId]), ...(error === null ? [] : [errorId])].join(' ')
   return (
     <div className={styles.field}>
       <label htmlFor={id} className={styles.label}>
@@ -51,7 +57,7 @@ export function SelectField({ id, label, value, options, placeholder, onChange, 
         value={value}
         disabled={disabled}
         aria-invalid={error !== null}
-        aria-describedby={error === null ? undefined : errorId}
+        aria-describedby={describedBy === '' ? undefined : describedBy}
         onChange={(e) => onChange(e.target.value)}
       >
         {placeholder === null ? null : <option value="">{placeholder}</option>}
@@ -61,6 +67,11 @@ export function SelectField({ id, label, value, options, placeholder, onChange, 
           </option>
         ))}
       </select>
+      {hint === null ? null : (
+        <p id={hintId} className={styles.hint}>
+          {hint}
+        </p>
+      )}
       {error === null ? null : (
         <p id={errorId} className={styles.error}>
           {error}

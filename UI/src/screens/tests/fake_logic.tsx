@@ -5,6 +5,7 @@ import { useLayoutEffect, type ReactNode } from 'react'
 import { vi } from 'vitest'
 import type { ManageClientRouters } from '../../logic/workflows/manage_client/routers'
 import type { ManageCommissionRouters } from '../../logic/workflows/manage_commission/routers'
+import type { RecordPaymentRouters } from '../../logic/workflows/record_payment/routers'
 import type { UpdateProgressRouters } from '../../logic/workflows/update_progress/routers'
 import { LogicContext, type LogicRouters } from '../logic_context'
 
@@ -71,17 +72,40 @@ export function fakeUpdateProgress(over: Partial<UpdateProgressRouters>): Update
   }
 }
 
+export function fakeRecordPayment(over: Partial<RecordPaymentRouters>): RecordPaymentRouters {
+  return {
+    loadCommissionBalance: unexpected('loadCommissionBalance'),
+    loadPaymentList: unexpected('loadPaymentList'),
+    openPaymentForm: unexpected('openPaymentForm'),
+    savePayment: unexpected('savePayment'),
+    voidPayment: unexpected('voidPayment'),
+    ...over,
+  }
+}
+
 // Every Routers of the context; a workflow the test does not give fails on any call.
 function logicOf(
   manageClient: ManageClientRouters,
   manageCommission: ManageCommissionRouters | undefined,
   updateProgress: UpdateProgressRouters | undefined,
+  recordPayment: RecordPaymentRouters | undefined,
 ): LogicRouters {
-  return { manageClient, manageCommission: manageCommission ?? fakeManageCommission({}), updateProgress: updateProgress ?? fakeUpdateProgress({}) }
+  return {
+    manageClient,
+    manageCommission: manageCommission ?? fakeManageCommission({}),
+    updateProgress: updateProgress ?? fakeUpdateProgress({}),
+    recordPayment: recordPayment ?? fakeRecordPayment({}),
+  }
 }
 
-export function renderWithLogic(ui: ReactNode, manageClient: ManageClientRouters, manageCommission?: ManageCommissionRouters, updateProgress?: UpdateProgressRouters) {
-  return render(<LogicContext.Provider value={logicOf(manageClient, manageCommission, updateProgress)}>{ui}</LogicContext.Provider>)
+export function renderWithLogic(
+  ui: ReactNode,
+  manageClient: ManageClientRouters,
+  manageCommission?: ManageCommissionRouters,
+  updateProgress?: UpdateProgressRouters,
+  recordPayment?: RecordPaymentRouters,
+) {
+  return render(<LogicContext.Provider value={logicOf(manageClient, manageCommission, updateProgress, recordPayment)}>{ui}</LogicContext.Provider>)
 }
 
 // What the page shows at its very first commit (UI-4): the status messages,
@@ -99,13 +123,17 @@ export function renderFirstCommit(
   manageClient: ManageClientRouters,
   manageCommission?: ManageCommissionRouters,
   updateProgress?: UpdateProgressRouters,
+  recordPayment?: RecordPaymentRouters,
 ): FirstCommit {
   let seen: FirstCommit | null = null
-  const logic = logicOf(manageClient, manageCommission, updateProgress)
+  const logic = logicOf(manageClient, manageCommission, updateProgress, recordPayment)
   const calls = () =>
-    [...Object.values(logic.manageClient), ...Object.values(logic.manageCommission), ...Object.values(logic.updateProgress)].some(
-      (fn) => vi.isMockFunction(fn) && fn.mock.calls.length > 0,
-    )
+    [
+      ...Object.values(logic.manageClient),
+      ...Object.values(logic.manageCommission),
+      ...Object.values(logic.updateProgress),
+      ...Object.values(logic.recordPayment),
+    ].some((fn) => vi.isMockFunction(fn) && fn.mock.calls.length > 0)
   function Probe() {
     useLayoutEffect(() => {
       seen = {

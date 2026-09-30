@@ -14,16 +14,43 @@
 // "Đổi giai đoạn" only once the part has loaded and the stage is not
 // closed, never while it loads or after it failed; it opens stage_change
 // with the id and the title; the notice "Đã đổi giai đoạn sang …".
+// From D4, the "Thanh toán" part (Routers of record_payment, its own third
+// hook): its first frame; the three lines of the balance ("Đã thu đủ", "Đã thu
+// dư …" as Services wrote them); every ViewResult kind of
+// loadCommissionBalance (ok, rejected 404 / 409 / 500, unreachable + "Thử lại"
+// of the part, contract_violation), each while the other two parts stay
+// shown; "Thanh toán" always in the button row (after "Đổi giai đoạn", before
+// "Quay lại danh sách"), also while the part loads and after it failed; it
+// opens payment_list with the id and the title.
 import { act, cleanup, fireEvent, screen, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { CommissionDetailView, ViewResult } from '../../../../logic/workflows/manage_commission/routers'
+import type { BalanceView } from '../../../../logic/workflows/record_payment/routers'
 import type { CommissionProgressView } from '../../../../logic/workflows/update_progress/routers'
 import type { Navigate } from '../../../navigation'
-import { answers, fakeManageClient, fakeManageCommission, fakeUpdateProgress, pending, renderFirstCommit, renderWithLogic } from '../../../tests/fake_logic'
+import {
+  answers,
+  fakeManageClient,
+  fakeManageCommission,
+  fakeRecordPayment,
+  fakeUpdateProgress,
+  pending,
+  renderFirstCommit,
+  renderWithLogic,
+} from '../../../tests/fake_logic'
 import { CommissionDetail } from '../CommissionDetail'
 
 type Loaded = ViewResult<CommissionDetailView>
 type ProgressLoaded = ViewResult<CommissionProgressView>
+type BalanceLoaded = ViewResult<BalanceView>
+const BALANCE: BalanceView = {
+  lines: [
+    { key: 'agreed', term: 'Giá thỏa thuận', text: '1.500.000 VND' },
+    { key: 'received', term: 'Đã nhận', text: '500.000 VND' },
+    { key: 'outstanding', term: 'Còn phải thu', text: '1.000.000 VND' },
+  ],
+}
+const BALANCE_OK: BalanceLoaded = { kind: 'ok', view: BALANCE }
 const PROGRESS: CommissionProgressView = {
   stageText: 'Lên nét',
   updatedText: 'cập nhật lúc 08:05 28/09/2026',
@@ -48,17 +75,19 @@ const VIEW: CommissionDetailView = {
 }
 const rejected = (code: string, message: string): Loaded => ({ kind: 'rejected', origin: 'system', code, message, fieldErrors: {} })
 
-function renderWith(results: Loaded[], notice: string | null = null, progress: ProgressLoaded[] = [PROGRESS_OK]) {
+function renderWith(results: Loaded[], notice: string | null = null, progress: ProgressLoaded[] = [PROGRESS_OK], balance: BalanceLoaded[] = [BALANCE_OK]) {
   const loadCommissionDetail = answers<[string], Loaded>(...results)
   const loadCommissionProgress = answers<[string], ProgressLoaded>(...progress)
+  const loadCommissionBalance = answers<[string], BalanceLoaded>(...balance)
   const navigate = vi.fn<Navigate>()
   const { container } = renderWithLogic(
     <CommissionDetail params={{ commission_id: ID }} navigate={navigate} notice={notice} />,
     fakeManageClient({}),
     fakeManageCommission({ loadCommissionDetail }),
     fakeUpdateProgress({ loadCommissionProgress }),
+    fakeRecordPayment({ loadCommissionBalance }),
   )
-  return { loadCommissionDetail, loadCommissionProgress, navigate, container }
+  return { loadCommissionDetail, loadCommissionProgress, loadCommissionBalance, navigate, container }
 }
 
 // [term, details] of each entry of the "Tiến độ" part.
@@ -88,6 +117,7 @@ describe('page commission_detail', () => {
       fakeManageClient({}),
       fakeManageCommission({ loadCommissionDetail: load.fn }),
       fakeUpdateProgress({ loadCommissionProgress: answers<[string], ProgressLoaded>(PROGRESS_OK) }),
+      fakeRecordPayment({ loadCommissionBalance: answers<[string], BalanceLoaded>(BALANCE_OK) }),
     )
     expect(first.routersCalled).toBe(false)
     expect(first.statuses).toEqual(['Đang tải thông tin đơn hàng…'])
@@ -96,14 +126,15 @@ describe('page commission_detail', () => {
     expect(await screen.findByRole('heading', { level: 3, name: VIEW.title })).toBeTruthy()
   })
 
-  it('ok: Routers asked with the id; title; "Sửa" (main action), "Đổi giai đoạn", "Quay lại danh sách" under it; every entry in order', async () => {
-    const { loadCommissionDetail, loadCommissionProgress } = renderWith([{ kind: 'ok', view: VIEW }])
+  it('ok: Routers asked with the id; title; "Sửa" (main action), "Đổi giai đoạn", "Thanh toán", "Quay lại danh sách" under it; every entry in order', async () => {
+    const { loadCommissionDetail, loadCommissionProgress, loadCommissionBalance } = renderWith([{ kind: 'ok', view: VIEW }])
     expect(await screen.findByRole('heading', { level: 3, name: 'Chân dung bán thân' })).toBeTruthy()
     await screen.findByRole('button', { name: 'Đổi giai đoạn' })
     expect(loadCommissionDetail).toHaveBeenCalledExactlyOnceWith(ID)
     expect(loadCommissionProgress).toHaveBeenCalledExactlyOnceWith(ID)
+    expect(loadCommissionBalance).toHaveBeenCalledExactlyOnceWith(ID)
     expect(screen.getByRole('heading', { level: 2, name: 'Chi tiết đơn hàng' })).toBeTruthy()
-    expect(buttonTexts()).toEqual(['Sửa', 'Đổi giai đoạn', 'Quay lại danh sách'])
+    expect(buttonTexts()).toEqual(['Sửa', 'Đổi giai đoạn', 'Thanh toán', 'Quay lại danh sách'])
     expect(entries()).toEqual([
       ['Khách hàng', ['Nguyễn Thu Hà']],
       ['Loại tranh', ['bán thân']],
@@ -188,12 +219,14 @@ describe('page commission_detail', () => {
     renderWith([{ kind: 'ok', view: VIEW }], 'Đã lưu thay đổi.')
     await screen.findByRole('heading', { level: 3, name: VIEW.title })
     await screen.findByLabelText('Tiến độ đơn hàng')
+    await screen.findByLabelText('Số dư đơn hàng')
     expect(screen.getByRole('status').textContent).toBe('Đã lưu thay đổi.')
   })
 
   it('the notice handed over by stage_change ("Đã đổi giai đoạn sang Lên nét.") is shown', async () => {
     renderWith([{ kind: 'ok', view: VIEW }], 'Đã đổi giai đoạn sang Lên nét.')
     await screen.findByLabelText('Tiến độ đơn hàng')
+    await screen.findByLabelText('Số dư đơn hàng')
     expect(screen.getByRole('status').textContent).toBe('Đã đổi giai đoạn sang Lên nét.')
   })
 })
@@ -206,10 +239,11 @@ describe('page commission_detail, part "Tiến độ" (D3)', () => {
       fakeManageClient({}),
       fakeManageCommission({ loadCommissionDetail: answers<[string], Loaded>({ kind: 'ok', view: VIEW }) }),
       fakeUpdateProgress({ loadCommissionProgress: progress.fn }),
+      fakeRecordPayment({ loadCommissionBalance: answers<[string], BalanceLoaded>(BALANCE_OK) }),
     )
     await screen.findByRole('heading', { level: 3, name: VIEW.title })
     expect(within(progressPart()).getByRole('status').textContent).toBe('Đang tải tiến độ…')
-    expect(buttonTexts()).toEqual(['Sửa', 'Quay lại danh sách'])
+    expect(buttonTexts()).toEqual(['Sửa', 'Thanh toán', 'Quay lại danh sách'])
     expect(progress.fn).toHaveBeenCalledExactlyOnceWith(ID)
     await act(async () => progress.release(PROGRESS_OK))
     expect(await screen.findByRole('button', { name: 'Đổi giai đoạn' })).toBeTruthy()
@@ -246,7 +280,7 @@ describe('page commission_detail, part "Tiến độ" (D3)', () => {
     await screen.findByLabelText('Tiến độ đơn hàng')
     expect(within(progressPart()).getByText(closedText)).toBeTruthy()
     expect(screen.queryByRole('button', { name: 'Đổi giai đoạn' })).toBeNull()
-    expect(buttonTexts()).toEqual(['Sửa', 'Quay lại danh sách'])
+    expect(buttonTexts()).toEqual(['Sửa', 'Thanh toán', 'Quay lại danh sách'])
   })
 
   it('"Đổi giai đoạn" opens stage_change with the id and the title of the commission', async () => {
@@ -272,7 +306,7 @@ describe('page commission_detail, part "Tiến độ" (D3)', () => {
       expect(screen.getByRole('heading', { level: 3, name: VIEW.title })).toBeTruthy()
       expect(screen.getByLabelText('Thông tin đơn hàng')).toBeTruthy()
       expect(screen.queryByLabelText('Tiến độ đơn hàng')).toBeNull()
-      expect(buttonTexts()).toEqual(['Sửa', 'Quay lại danh sách', 'Thử lại'])
+      expect(buttonTexts()).toEqual(['Sửa', 'Thanh toán', 'Quay lại danh sách', 'Thử lại'])
     },
   )
 
@@ -287,12 +321,129 @@ describe('page commission_detail, part "Tiến độ" (D3)', () => {
     expect(loadCommissionProgress).toHaveBeenCalledTimes(2)
     expect(loadCommissionProgress).toHaveBeenLastCalledWith(ID)
     expect(loadCommissionDetail).toHaveBeenCalledOnce()
-    expect(buttonTexts()).toEqual(['Sửa', 'Đổi giai đoạn', 'Quay lại danh sách'])
+    expect(buttonTexts()).toEqual(['Sửa', 'Đổi giai đoạn', 'Thanh toán', 'Quay lại danh sách'])
   })
 
   it('the commission part failing does not show the part (nothing to place it under)', async () => {
     renderWith([rejected('ERR_NOT_FOUND', 'Không tìm thấy đơn hàng này.')])
     await screen.findByRole('alert')
     expect(screen.queryByRole('region', { name: 'Tiến độ' })).toBeNull()
+  })
+})
+
+// The "Thanh toán" part (D4).
+const paymentPart = () => screen.getByRole('region', { name: 'Thanh toán' })
+// [term, details] of each entry of the balance.
+function balanceEntries(): [string, string[]][] {
+  const dl = screen.getByLabelText('Số dư đơn hàng')
+  return [...dl.querySelectorAll(':scope > div')].map((d) => [d.querySelector('dt')?.textContent ?? '', [...d.querySelectorAll('dd')].map((x) => x.textContent ?? '')])
+}
+const balanceOf = (outstanding: string): BalanceLoaded => ({
+  kind: 'ok',
+  view: { lines: [BALANCE.lines[0], BALANCE.lines[1], { key: 'outstanding', term: 'Còn phải thu', text: outstanding }] },
+})
+
+describe('page commission_detail, part "Thanh toán" (D4)', () => {
+  it('its first frame, the commission shown and the part still loading: its own loading status; "Thanh toán" already in the row', async () => {
+    const balance = pending<[string], BalanceLoaded>()
+    renderWithLogic(
+      <CommissionDetail params={{ commission_id: ID }} navigate={vi.fn()} notice={null} />,
+      fakeManageClient({}),
+      fakeManageCommission({ loadCommissionDetail: answers<[string], Loaded>({ kind: 'ok', view: VIEW }) }),
+      fakeUpdateProgress({ loadCommissionProgress: answers<[string], ProgressLoaded>(PROGRESS_OK) }),
+      fakeRecordPayment({ loadCommissionBalance: balance.fn }),
+    )
+    await screen.findByRole('heading', { level: 3, name: VIEW.title })
+    expect(within(paymentPart()).getByRole('status').textContent).toBe('Đang tải số dư…')
+    expect(screen.queryByLabelText('Số dư đơn hàng')).toBeNull()
+    expect(buttonTexts()).toContain('Thanh toán')
+    expect(balance.fn).toHaveBeenCalledExactlyOnceWith(ID)
+    await act(async () => balance.release(BALANCE_OK))
+    expect(await screen.findByLabelText('Số dư đơn hàng')).toBeTruthy()
+    expect(within(paymentPart()).queryByRole('status')).toBeNull()
+  })
+
+  it('ok: three lines "Giá thỏa thuận", "Đã nhận", "Còn phải thu", below the "Tiến độ" part', async () => {
+    renderWith([{ kind: 'ok', view: VIEW }])
+    await screen.findByLabelText('Số dư đơn hàng')
+    expect(balanceEntries()).toEqual([
+      ['Giá thỏa thuận', ['1.500.000 VND']],
+      ['Đã nhận', ['500.000 VND']],
+      ['Còn phải thu', ['1.000.000 VND']],
+    ])
+    expect(progressPart().compareDocumentPosition(paymentPart()) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(within(paymentPart()).queryByRole('button')).toBeNull()
+  })
+
+  it.each(['Đã thu đủ', 'Đã thu dư 100.000 VND'])('"Còn phải thu" shown as Services wrote it: %s', async (text) => {
+    renderWith([{ kind: 'ok', view: VIEW }], null, [PROGRESS_OK], [balanceOf(text)])
+    await screen.findByLabelText('Số dư đơn hàng')
+    expect(balanceEntries()[2]).toEqual(['Còn phải thu', [text]])
+  })
+
+  it('"Thanh toán" opens payment_list with the id and the title of the commission', async () => {
+    const { navigate } = renderWith([{ kind: 'ok', view: VIEW }])
+    fireEvent.click(await screen.findByRole('button', { name: 'Thanh toán' }))
+    expect(navigate).toHaveBeenCalledExactlyOnceWith({ page: 'payment_list', params: { commission_id: ID, title: 'Chân dung bán thân' } }, null)
+  })
+
+  it.each([
+    ['get_balance 404', { kind: 'rejected', origin: 'system', code: 'ERR_NOT_FOUND', message: 'Không tìm thấy đơn hàng này.', fieldErrors: {} }, 'Không tải được số dư', 'Không tìm thấy đơn hàng này.'],
+    [
+      'get_balance 409 (out of range)',
+      { kind: 'rejected', origin: 'system', code: 'ERR_OUT_OF_RANGE', message: 'Số dư của đơn này vượt giới hạn tính toán.', fieldErrors: {} },
+      'Không tải được số dư',
+      'Số dư của đơn này vượt giới hạn tính toán.',
+    ],
+    ['get_balance 500', { kind: 'rejected', origin: 'system', code: 'ERR_STORAGE_IO', message: 'Không đọc được dữ liệu thanh toán trên máy.', fieldErrors: {} }, 'Không tải được số dư', 'Không đọc được dữ liệu thanh toán trên máy.'],
+    ['unreachable', { kind: 'unreachable', message: 'Không kết nối được tới phần xử lý.' }, 'Không kết nối được', 'Không kết nối được tới phần xử lý.'],
+    ['contract_violation', { kind: 'contract_violation', message: 'Ứng dụng nhận được một phản hồi không mong đợi.' }, 'Có lỗi không mong đợi', 'Ứng dụng nhận được một phản hồi không mong đợi.'],
+  ] as [string, BalanceLoaded, string, string][])(
+    '%s → the error inside the part, its own "Thử lại"; the other two parts stay; "Thanh toán" is still in the row',
+    async (_, failed, title, message) => {
+      renderWith([{ kind: 'ok', view: VIEW }], null, [PROGRESS_OK], [failed])
+      const alert = await within(await screen.findByRole('region', { name: 'Thanh toán' })).findByRole('alert')
+      expect(alert.textContent).toContain(title)
+      expect(alert.textContent).toContain(message)
+      expect(within(paymentPart()).getAllByRole('button').map((b) => b.textContent)).toEqual(['Thử lại'])
+      // The other parts are untouched.
+      expect(screen.getByRole('heading', { level: 3, name: VIEW.title })).toBeTruthy()
+      expect(screen.getByLabelText('Thông tin đơn hàng')).toBeTruthy()
+      expect(await screen.findByLabelText('Tiến độ đơn hàng')).toBeTruthy()
+      expect(screen.queryByLabelText('Số dư đơn hàng')).toBeNull()
+      expect(buttonTexts()).toEqual(['Sửa', 'Đổi giai đoạn', 'Thanh toán', 'Quay lại danh sách', 'Thử lại'])
+    },
+  )
+
+  it('"Thử lại" of the part loads the part again only', async () => {
+    const { loadCommissionDetail, loadCommissionProgress, loadCommissionBalance } = renderWith([{ kind: 'ok', view: VIEW }], null, [PROGRESS_OK], [
+      { kind: 'unreachable', message: 'Không kết nối được tới phần xử lý.' },
+      BALANCE_OK,
+    ])
+    await within(await screen.findByRole('region', { name: 'Thanh toán' })).findByRole('alert')
+    fireEvent.click(within(paymentPart()).getByRole('button', { name: 'Thử lại' }))
+    expect(await screen.findByLabelText('Số dư đơn hàng')).toBeTruthy()
+    expect(loadCommissionBalance).toHaveBeenCalledTimes(2)
+    expect(loadCommissionBalance).toHaveBeenLastCalledWith(ID)
+    expect(loadCommissionDetail).toHaveBeenCalledOnce()
+    expect(loadCommissionProgress).toHaveBeenCalledOnce()
+    expect(buttonTexts()).toEqual(['Sửa', 'Đổi giai đoạn', 'Thanh toán', 'Quay lại danh sách'])
+  })
+
+  it('the "Tiến độ" part failing and the "Thanh toán" part failing are independent: each has its own alert and "Thử lại"', async () => {
+    renderWith([{ kind: 'ok', view: VIEW }], null, [{ kind: 'unreachable', message: 'Không kết nối được tới phần xử lý.' }], [BALANCE_OK])
+    await within(await screen.findByRole('region', { name: 'Tiến độ' })).findByRole('alert')
+    expect(await screen.findByLabelText('Số dư đơn hàng')).toBeTruthy()
+    expect(within(paymentPart()).queryByRole('alert')).toBeNull()
+    expect(screen.getAllByRole('alert')).toHaveLength(1)
+    // The balance still shown, and "Thanh toán" in the row, while the stage part is in error.
+    expect(buttonTexts()).toEqual(['Sửa', 'Thanh toán', 'Quay lại danh sách', 'Thử lại'])
+  })
+
+  it('the commission part failing does not show the part, nor "Thanh toán" (nothing to open it for)', async () => {
+    renderWith([rejected('ERR_NOT_FOUND', 'Không tìm thấy đơn hàng này.')])
+    await screen.findByRole('alert')
+    expect(screen.queryByRole('region', { name: 'Thanh toán' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Thanh toán' })).toBeNull()
   })
 })

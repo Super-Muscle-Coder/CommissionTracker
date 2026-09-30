@@ -2,8 +2,8 @@
 // workflow: kit
 // clause: external
 // component: kit
-// last_updated_by: coding-agent@2026-09-29#2
-// last_updated_at: 2026-09-29T17:45:00+07:00
+// last_updated_by: coding-agent@2026-09-30#1
+// last_updated_at: 2026-09-30T09:00:00+07:00
 //
 // EXPERIENCES:
 //   - id: kit-EXP-001
@@ -178,6 +178,38 @@
 //       --color-surface-danger (6.56:1) cùng khai báo CSS đặt nó ở đó
 //       (confirmPanelRingOutside); các cặp chữ trên nền lỗi và của nút đã có, chỉ
 //       ghi thêm nơi dùng. Dùng ở stage_change.
+//   - id: kit-EXP-015
+//     content: >
+//       Phiên 22 (D4), DateTimeField: ô ngày giờ gốc (input type="datetime-local", giá trị
+//       YYYY-MM-DDTHH:mm hoặc ''), theo đúng khuôn của DateField mà KHÔNG có nút xóa
+//       (id, label, value, onChange, error, disabled, focusRequest): nhãn gắn ô, lỗi là chữ
+//       dưới ô (aria-describedby, aria-invalid), viền --color-border-field và
+//       --color-border-field-danger, vòng focus ngoài ô (offset 0), chữ vô hiệu
+//       --color-text-muted, focusRequest cùng cơ chế kit-EXP-011. Không gộp vào DateField vì
+//       DateField mang nút xóa (hạn giao có thể trống) còn ô này luôn cần một giá trị; không
+//       prop nào mang khái niệm nghiệp vụ. Dùng ở payment_form ("Ngày giờ nhận tiền").
+//   - id: kit-EXP-016
+//     content: >
+//       Phiên 22 (D4), ItemList MỞ RỘNG thay vì tạo component mới (I4.1; lý do: cùng khung,
+//       cùng token, cùng phép kiểm tương phản, chỉ thêm một nút): ItemListItem thêm action:
+//       { label, disabled } | null; ItemListProps thêm onAction: ((key) => void) | null. Mục
+//       có action hiện một nút phụ (component Button, variant secondary) cạnh mục, trong cùng li
+//       (li thành flex; nội dung mục flex: 1 nên ba trang cũ không đổi diện mạo); nút trả lại
+//       key của mục qua onAction. Mục không có action (null) không có nút: khoản đã hủy của
+//       payment_list dùng đúng điều đó. Ba trang cũ (client_list, commission_list,
+//       progress_board) chỉ thêm action: null và onAction={null}, không đổi hành vi. Nút là
+//       Button nên vòng focus nằm NGOÀI nút (offset dương) trên nền hàng (--color-surface-raised):
+//       check_contrast thêm một cặp phi văn bản (6.97:1) cùng CSS đặt nó ở đó
+//       (itemListRowBackground + buttonRingOutside).
+//   - id: kit-EXP-017
+//     content: >
+//       Phiên 22 (D4), SelectField thêm hint: string | null (bắt buộc, null là không có), một
+//       dòng gợi ý cố định dưới ô, chữ --color-text-muted cỡ --font-size-sm, gắn vào ô bằng
+//       aria-describedby (cùng với lỗi nếu có: hint trước, lỗi sau; spec e2e đọc lỗi là id
+//       cuối). Lý do: đặc tả D4 đòi dòng "Tiền tip không làm giảm số còn phải thu." dưới ô
+//       "Khoản"; một component chữ rời sẽ mất liên kết với ô. Hai trang cũ dùng SelectField
+//       (commission_form, stage_change) chỉ thêm hint={null}. Cặp chữ phụ trên nền trang đã có
+//       (7.17:1), chỉ ghi thêm nơi dùng.
 //
 // UNSOLVED_PROBLEMS: []
 //
@@ -307,6 +339,45 @@
 //       Trên ứng dụng thật: stage_change S3 toBeFocused ở "Xác nhận", ảnh
 //       UI/evidence/walkthroughs/stage_change/stage_change-S3-confirm.png.
 //     recorded_at: 2026-09-29T17:45:30+07:00
+//   - claim: >
+//       Phiên 22: DateTimeField, hành động của ItemList và hint của SelectField được phép kiểm
+//       tương phản phủ; nhóm chữ vẫn >= 4.5:1, nhóm phi văn bản >= 3:1 (13 cặp).
+//     how: >
+//       Trong UI/: node scripts/check_contrast.mjs (bước lint:contrast của npm run check).
+//       FIELDS thêm DateTimeField/DateTimeField.module.css; NON_TEXT_PAIRS thêm cặp vòng focus
+//       của nút hành động trong hàng ItemList; TEXT_PAIRS ghi thêm nơi dùng (DateTimeField,
+//       hint của SelectField, nút hành động của ItemList).
+//     result: >
+//       "check_contrast: 19 text pairs >= 4.5:1 and 13 non-text pairs >= 3:1 checked, all
+//       pass." (mốc phiên 21: 12 cặp phi văn bản). Cặp mới: 6.97:1 --color-focus-ring
+//       (#8fb0e8) on --color-surface-raised (#252525) — vòng focus của nút hành động trong hàng
+//       ItemList, ngoài nút. Các cặp viền ô, viền lỗi, vòng focus của ô nay ghi thêm
+//       DateTimeField: 3.73 và 4.62 (viền), 3.83 và 4.74 (viền lỗi), 7.74 (vòng focus).
+//     recorded_at: 2026-09-30T08:24:00+07:00
+//   - claim: >
+//       Phép kiểm cắn với hai phần mới: đổi CSS khỏi chỗ đã khai thì check hỏng.
+//     how: >
+//       Tạm đổi border của .input trong DateTimeField.module.css sang var(--color-border) (viền
+//       trang trí), và background của .list trong ItemList.module.css sang
+//       var(--color-surface-hover); node scripts/check_contrast.mjs; khôi phục cả hai; chạy lại.
+//     result: >
+//       exit 1, "place [non-text >= 3:1] 3.73:1 --color-border-field (#858585) on
+//       --color-surface-field … the CSS no longer puts it there" và "… 4.62:1 … outer edge",
+//       "place … 6.97:1 --color-focus-ring … focus ring of the action button of an ItemList row",
+//       "check_contrast: 3 of 32 pair(s) fail". Khôi phục: "all pass", 13 cặp phi văn bản.
+//     recorded_at: 2026-09-30T08:24:30+07:00
+//   - claim: >
+//       Ba component mới hoặc mở rộng dựng đúng trên ứng dụng thật, nền tối, và ba trang cũ dùng
+//       ItemList, SelectField không đổi.
+//     how: >
+//       npm run e2e (ảnh chụp các kịch bản bấm thử); npm run check (kiểm thử dựng trang của ba
+//       trang cũ giữ nguyên số ca: ClientList 11, ClientDetail 19, ClientForm 27, CommissionList 12,
+//       CommissionForm 31, ProgressBoard 9, StageChange 22).
+//     result: >
+//       Xem EVIDENCE của screens. Ảnh: UI/evidence/walkthroughs/payment_form/payment_form-S1-errors.png
+//       (SelectField có hint và lỗi, ô số tiền lỗi, ô đơn vị tiền vô hiệu, DateTimeField),
+//       payment_list/payment_list-S3-confirm.png (ItemList có nút "Hủy khoản này", ConfirmPanel).
+//     recorded_at: 2026-09-30T09:00:00+07:00
 //
 // NOTES:
 //   - content: >
@@ -317,6 +388,13 @@
 //       thì desktop Main đặt ngôn ngữ của ứng dụng (ví dụ app.commandLine
 //       appendSwitch('lang', 'vi') trước ready). Phiên giao diện không sửa Desktop/.
 //     written_at: 2026-09-29
+//   - content: >
+//       Cho Orchestrator (không chặn, không phải việc của giao diện; DSK-15): từ phiên 22, ô ngày
+//       giờ gốc (DateTimeField, "Ngày giờ nhận tiền") cũng hiện theo ngôn ngữ của Electron
+//       (en-US: tháng/ngày/năm, giờ AM/PM), khác cách viết HH:mm dd/mm/yyyy ở mọi chỗ khác. Giá
+//       trị của ô luôn là YYYY-MM-DDTHH:mm, nên logic không bị ảnh hưởng; chỉ cách hiện. Không sửa
+//       ở phiên này (Desktop/).
+//     written_at: 2026-09-30
 // ===WCA-CHECKPOINT-END===
 /**
  * Public entry of the kit zone — the only path the screens zone may import
@@ -338,7 +416,7 @@ export type { SectionProps } from './components/Section/Section'
 export { Button } from './components/Button/Button'
 export type { ButtonProps } from './components/Button/Button'
 export { ItemList } from './components/ItemList/ItemList'
-export type { ItemListItem, ItemListProps } from './components/ItemList/ItemList'
+export type { ItemListAction, ItemListItem, ItemListProps } from './components/ItemList/ItemList'
 export { EmptyState } from './components/EmptyState/EmptyState'
 export type { EmptyStateAction, EmptyStateProps } from './components/EmptyState/EmptyState'
 export { InlineAlert } from './components/InlineAlert/InlineAlert'
@@ -363,5 +441,7 @@ export { SelectField } from './components/SelectField/SelectField'
 export type { SelectFieldOption, SelectFieldProps } from './components/SelectField/SelectField'
 export { DateField } from './components/DateField/DateField'
 export type { DateFieldProps } from './components/DateField/DateField'
+export { DateTimeField } from './components/DateTimeField/DateTimeField'
+export type { DateTimeFieldProps } from './components/DateTimeField/DateTimeField'
 export { ConfirmPanel } from './components/ConfirmPanel/ConfirmPanel'
 export type { ConfirmPanelProps } from './components/ConfirmPanel/ConfirmPanel'

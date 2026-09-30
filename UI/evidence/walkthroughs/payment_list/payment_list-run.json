@@ -1,0 +1,57 @@
+{
+  "page": "payment_list",
+  "walkthrough": "src/screens/pages/payment_list/walkthrough.yaml",
+  "steps": [
+    {
+      "step": "S1",
+      "passed": true,
+      "runner": "coding-agent@2026-09-30#1 (Playwright, tests/e2e/payment_list_walkthrough.spec.ts)",
+      "finished_at": "2026-09-30T02:06:50.474Z",
+      "screenshot": "evidence/walkthroughs/payment_list/payment_list-S1.png",
+      "covers": [
+        "ok"
+      ]
+    },
+    {
+      "step": "S2",
+      "passed": true,
+      "runner": "coding-agent@2026-09-30#1 (Playwright, tests/e2e/payment_list_walkthrough.spec.ts)",
+      "finished_at": "2026-09-30T02:06:50.936Z",
+      "screenshot": "evidence/walkthroughs/payment_list/payment_list-S2.png",
+      "covers": [
+        "ok"
+      ]
+    },
+    {
+      "step": "S3",
+      "passed": true,
+      "runner": "coding-agent@2026-09-30#1 (Playwright, tests/e2e/payment_list_walkthrough.spec.ts)",
+      "finished_at": "2026-09-30T02:06:51.587Z",
+      "screenshot": "evidence/walkthroughs/payment_list/payment_list-S3.png",
+      "covers": [
+        "ok"
+      ]
+    },
+    {
+      "step": "S4",
+      "passed": true,
+      "runner": "coding-agent@2026-09-30#1 (Playwright, tests/e2e/payment_list_walkthrough.spec.ts)",
+      "finished_at": "2026-09-30T02:06:52.030Z",
+      "screenshot": "evidence/walkthroughs/payment_list/payment_list-S4.png",
+      "covers": [
+        "ok"
+      ]
+    },
+    {
+      "step": "S5",
+      "passed": true,
+      "runner": "coding-agent@2026-09-30#1 (Playwright, tests/e2e/payment_list_walkthrough.spec.ts)",
+      "finished_at": "2026-09-30T02:06:58.511Z",
+      "screenshot": "evidence/walkthroughs/payment_list/payment_list-S5.png",
+      "covers": [
+        "unreachable",
+        "ok"
+      ]
+    }
+  ]
+}

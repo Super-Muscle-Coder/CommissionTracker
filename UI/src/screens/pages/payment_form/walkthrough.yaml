@@ -1,0 +1,85 @@
+page: payment_form
+precondition: >
+  Desktop đã build (npm run build trong Desktop/). Trong UI/: npm run walkthrough:app --
+  --commissions mở ứng dụng thật với thư mục dữ liệu tạm (không đụng %APPDATA%), Backend.py thật
+  sau fixture bật/tắt được, và nạp dữ liệu mẫu D2 (ba đơn "Chân dung bán thân" 1.500.000 VND,
+  "Chibi đôi" 12,50 USD, "Minh họa bìa sách"; chưa có khoản thanh toán nào). Chờ "ĐÃ NẠP XONG dữ
+  liệu mẫu D2". Bật/tắt backend: npm run walkthrough:backend -- down|up (từ UI/, cửa sổ lệnh
+  khác). Các bước nối tiếp nhau trong cùng một lần mở ứng dụng. Từ trang "Đơn hàng" (bấm mục "Đơn
+  hàng" ở vùng điều hướng), mở một đơn, bấm "Thanh toán", rồi "Ghi khoản thanh toán" để tới trang
+  này. Trước khi chạy, đặt CT_WALKTHROUGH_RUNNER là tên người chạy.
+steps:
+  - id: S1
+    setup: null
+    action: >
+      Mở "Chân dung bán thân" → "Thanh toán" → "Ghi khoản thanh toán". Bấm "Lưu" khi chưa nhập gì.
+      Rồi nhập số tiền "0", nhập phương thức là vài dấu cách, xóa ô "Ngày giờ nhận tiền", bấm "Lưu"
+      lần nữa. Cuối cùng bấm "Hủy".
+    expect: >
+      Trang "Ghi khoản thanh toán", tiêu đề nhóm "Chân dung bán thân"; ngay dưới là hàng nút "Lưu"
+      (nút chính, đứng đầu) và "Hủy", trên ô đầu tiên. Các ô theo thứ tự: "Loại giao dịch" ("Nhận
+      tiền" chọn sẵn, còn "Hoàn tiền cho khách"); "Khoản" (chưa chọn, "Chọn khoản" ở đầu; dưới ô có
+      dòng "Tiền tip không làm giảm số còn phải thu."); "Số tiền" và "Đơn vị tiền" "VND" (không chọn
+      được); "Phương thức" (gợi ý Chuyển khoản, MoMo, PayPal, Tiền mặt); "Ngày giờ nhận tiền" (là
+      phút hiện tại, giờ của máy); "Ghi chú". Lần "Lưu" đầu: khung "Chưa lưu được" kèm câu "Một số ô
+      chưa đúng định dạng. Vui lòng kiểm tra lại."; lỗi ngay dưới ô: "Khoản" — "Chọn khoản thanh
+      toán."; "Số tiền" — "Nhập số tiền."; "Phương thức" — "Nhập phương thức thanh toán."; con trỏ
+      nhập nằm ở ô "Khoản". Lần hai: "Số tiền" — "Số tiền phải lớn hơn 0.", "Phương thức" vẫn "Nhập
+      phương thức thanh toán.", "Ngày giờ nhận tiền" — "Chọn ngày giờ nhận tiền.", "Khoản" vẫn lỗi;
+      con trỏ vẫn ở "Khoản"; số "0" vẫn còn trong ô. Không có gì được gửi đi. "Hủy" về trang "Thanh
+      toán", không có thông báo, vẫn "Chưa có khoản thanh toán nào".
+    covers: [rejected_input]
+  - id: S2
+    setup: null
+    action: >
+      Bấm "Ghi khoản thanh toán". Chọn "Khoản" là "Tiền cọc", số tiền "500.000", phương thức
+      "Chuyển khoản", ngày giờ 10/09/2026 09:00. Bấm "Lưu".
+    expect: >
+      Về trang "Thanh toán" với thông báo "Đã ghi khoản thanh toán." (chỉ hiện ở trang này, một
+      lần). Số dư: Giá thỏa thuận "1.500.000 VND"; Đã nhận "500.000 VND"; Còn phải thu "1.000.000
+      VND". Một khoản "Nhận tiền 500.000 VND · Tiền cọc" · "09:00 10/09/2026 · Chuyển khoản".
+    covers: [ok]
+  - id: S3
+    setup: null
+    action: >
+      Bấm "Ghi khoản thanh toán". Chọn "Khoản" là "Tiền tip", số tiền "50000", phương thức "Tiền
+      mặt", ngày giờ 11/09/2026 09:00, ghi chú "Khách boa". Bấm "Lưu".
+    expect: >
+      Thông báo "Đã ghi khoản thanh toán.". Đã nhận "550.000 VND"; Còn phải thu vẫn "1.000.000 VND"
+      (tip không làm giảm số còn phải thu). Khoản mới đứng đầu: "Nhận tiền 50.000 VND · Tiền tip" ·
+      "09:00 11/09/2026 · Tiền mặt · Khách boa".
+    covers: [ok]
+  - id: S4
+    setup: null
+    action: >
+      Bấm "Ghi khoản thanh toán". Chọn "Loại giao dịch" là "Hoàn tiền cho khách", "Khoản" là
+      "Khác", số tiền "20.000", phương thức "Chuyển khoản", ngày giờ 12/09/2026 09:00. Bấm "Lưu".
+    expect: >
+      Đã nhận "530.000 VND" (nhận trừ hoàn, tính cả tip); Còn phải thu "1.020.000 VND". Ba khoản,
+      mới nhất trước: "Hoàn tiền cho khách 20.000 VND · Khác", "Nhận tiền 50.000 VND · Tiền tip",
+      "Nhận tiền 500.000 VND · Tiền cọc".
+    covers: [ok]
+  - id: S5
+    setup: null
+    action: >
+      Bấm "Quay lại đơn hàng", về trang "Đơn hàng", mở "Chibi đôi" → "Thanh toán" → "Ghi khoản thanh
+      toán". Chọn "Khoản" là "Tiền cọc", số tiền "5,05", phương thức "PayPal"; để nguyên ngày giờ. Bấm
+      "Lưu".
+    expect: >
+      "Đơn vị tiền" là "USD", không chọn được. Về trang "Thanh toán": Giá thỏa thuận "12,50 USD"; Đã
+      nhận "5,05 USD"; Còn phải thu "7,45 USD". Một khoản "Nhận tiền 5,05 USD · Tiền cọc" với ngày
+      giờ là phút mà ô đã hiện lúc mở form.
+    covers: [ok]
+  - id: S6
+    setup: >
+      Bấm "Ghi khoản thanh toán". Chọn "Khoản" là "Thanh toán cuối", số tiền "7,45", phương thức
+      "PayPal", ngày giờ 01/01/2099 00:00 (ngày trong tương lai được phép). Chạy npm run
+      walkthrough:backend -- down (ứng dụng vẫn mở).
+    action: >
+      Bấm "Lưu". Khi khung báo lỗi hiện ra, chạy npm run walkthrough:backend -- up, rồi bấm "Lưu".
+    expect: >
+      Lần đầu: khung "Không kết nối được" với câu "Không kết nối được tới phần xử lý của ứng dụng.
+      Vui lòng thử lại."; vẫn ở trang "Ghi khoản thanh toán", các ô giữ nguyên (7,45; PayPal; Thanh
+      toán cuối), "Lưu" bấm được. Sau "Lưu" lần hai: về trang "Thanh toán" với thông báo; Đã nhận
+      "12,50 USD"; Còn phải thu "Đã thu đủ". Khoản mới đứng đầu: "Nhận tiền 7,45 USD · Thanh toán cuối".
+    covers: [unreachable, ok]

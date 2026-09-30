@@ -166,7 +166,8 @@ test.describe.serial('walkthrough stage_change', () => {
       await expectChanged('Đã đổi giai đoạn sang Đã giao.', 'Đã giao')
       await expect(l.page.getByRole('region', { name: 'Tiến độ' })).toContainText('Đơn đang ở giai đoạn "Đã giao", không đổi giai đoạn được nữa.')
       await expect(button('Đổi giai đoạn')).toHaveCount(0)
-      expect(await l.page.getByRole('main').getByRole('button').allInnerTexts()).toEqual(['Sửa', 'Quay lại danh sách'])
+      // From D4 the row also has "Thanh toán", always there.
+      expect(await l.page.getByRole('main').getByRole('button').allInnerTexts()).toEqual(['Sửa', 'Thanh toán', 'Quay lại danh sách'])
     })
   })
 })

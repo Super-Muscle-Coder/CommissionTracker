@@ -9,15 +9,21 @@
  * its own hook, load and errors (a failure there leaves the commission part
  * as it is); the two parts are only placed side by side, never joined.
  * "Đổi giai đoạn" (secondary, after "Sửa") opens stage_change, only once the
- * part has loaded and the stage is not closed. No payment (D4). Built with
- * kit components only, no style (R10). Every kind of every ViewResult is
- * shown (i5-screens.md, Step I5.2).
+ * part has loaded and the stage is not closed. From D4, a "Thanh toán" part
+ * under "Tiến độ": the balance, from the Routers of record_payment, with its
+ * own (third) hook, load and errors, placed beside the other two and never
+ * joined with them. "Thanh toán" (secondary, after "Đổi giai đoạn", before
+ * "Quay lại danh sách") opens payment_list and is always there, even when the
+ * part failed to load. Built with kit components only, no style (R10). Every
+ * kind of every ViewResult is shown (i5-screens.md, Step I5.2).
  */
 import { Button, DescriptionList, EmptyState, Inline, InlineAlert, LoadingIndicator, Section, Stack, SuccessNotice } from '../../../kit'
 import type { CommissionDetailView, ViewResult } from '../../../logic/workflows/manage_commission/routers'
+import type { BalanceView } from '../../../logic/workflows/record_payment/routers'
 import type { CommissionProgressView } from '../../../logic/workflows/update_progress/routers'
 import { assertNever } from '../../assert_never'
 import type { PageProps } from '../../navigation'
+import { useCommissionBalance, type CommissionBalanceState } from './use_commission_balance'
 import { useCommissionDetail } from './use_commission_detail'
 import { useCommissionProgress, type CommissionProgressState } from './use_commission_progress'
 
@@ -25,9 +31,11 @@ export function CommissionDetail({ params, navigate, notice }: PageProps<'commis
   const commissionId = params.commission_id
   const { detail, loading, reload } = useCommissionDetail(commissionId)
   const progress = useCommissionProgress(commissionId)
+  const payments = useCommissionBalance(commissionId)
   const back = () => navigate({ page: 'commission_list', params: null }, null)
   const edit = () => navigate({ page: 'commission_form', params: { mode: 'edit', commission_id: commissionId } }, null)
   const changeStage = (title: string) => navigate({ page: 'stage_change', params: { commission_id: commissionId, title } }, null)
+  const openPayments = (title: string) => navigate({ page: 'payment_list', params: { commission_id: commissionId, title } }, null)
 
   return (
     <Section title="Chi tiết đơn hàng" level="page" gap="md">
@@ -35,7 +43,17 @@ export function CommissionDetail({ params, navigate, notice }: PageProps<'commis
       {notice === null ? null : <SuccessNotice text={notice} />}
       {loading ? <LoadingIndicator label="Đang tải thông tin đơn hàng…" /> : null}
       {detail === null ? null : (
-        <DetailResult result={detail} progress={progress} onEdit={edit} onChangeStage={changeStage} onBack={back} onRetry={reload} retrying={loading} />
+        <DetailResult
+          result={detail}
+          progress={progress}
+          payments={payments}
+          onEdit={edit}
+          onChangeStage={changeStage}
+          onOpenPayments={openPayments}
+          onBack={back}
+          onRetry={reload}
+          retrying={loading}
+        />
       )}
     </Section>
   )
@@ -44,8 +62,10 @@ export function CommissionDetail({ params, navigate, notice }: PageProps<'commis
 type DetailResultProps = {
   result: ViewResult<CommissionDetailView>
   progress: CommissionProgressState
+  payments: CommissionBalanceState
   onEdit: () => void
   onChangeStage: (title: string) => void
+  onOpenPayments: (title: string) => void
   onBack: () => void
   onRetry: () => void
   retrying: boolean
@@ -67,7 +87,7 @@ function stageCanChange(progress: CommissionProgressState): boolean {
   }
 }
 
-function DetailResult({ result, progress, onEdit, onChangeStage, onBack, onRetry, retrying }: DetailResultProps) {
+function DetailResult({ result, progress, payments, onEdit, onChangeStage, onOpenPayments, onBack, onRetry, retrying }: DetailResultProps) {
   const backButton = <Button label="Quay lại danh sách" busyLabel="Quay lại danh sách" busy={false} disabled={false} variant="secondary" onClick={onBack} />
   switch (result.kind) {
     case 'ok': {
@@ -79,6 +99,8 @@ function DetailResult({ result, progress, onEdit, onChangeStage, onBack, onRetry
             {stageCanChange(progress) ? (
               <Button label="Đổi giai đoạn" busyLabel="Đổi giai đoạn" busy={false} disabled={false} variant="secondary" onClick={() => onChangeStage(v.title)} />
             ) : null}
+            {/* Always there: the payments page loads (and reports) on its own, whatever the part below did. */}
+            <Button label="Thanh toán" busyLabel="Thanh toán" busy={false} disabled={false} variant="secondary" onClick={() => onOpenPayments(v.title)} />
             {backButton}
           </Inline>
           <DescriptionList
@@ -95,6 +117,7 @@ function DetailResult({ result, progress, onEdit, onChangeStage, onBack, onRetry
             ]}
           />
           <ProgressPart state={progress} />
+          <PaymentPart state={payments} />
         </Section>
       )
     }
@@ -165,6 +188,52 @@ function ProgressResult({ result, onRetry, retrying }: { result: ViewResult<Comm
       return (
         <Stack gap="sm">
           <InlineAlert title="Không tải được tiến độ" text={result.message} />
+          {retry}
+        </Stack>
+      )
+    case 'unreachable':
+      return (
+        <Stack gap="sm">
+          <InlineAlert title="Không kết nối được" text={result.message} />
+          {retry}
+        </Stack>
+      )
+    case 'contract_violation':
+      return (
+        <Stack gap="sm">
+          <InlineAlert title="Có lỗi không mong đợi" text={result.message} />
+          {retry}
+        </Stack>
+      )
+    default:
+      return assertNever(result)
+  }
+}
+
+// The "Thanh toán" part (D4): loaded on its own; its errors stay inside it,
+// with its own "Thử lại" (404, 409, 500, unreachable, contract violation).
+function PaymentPart({ state }: { state: CommissionBalanceState }) {
+  return (
+    <Section title="Thanh toán" level="group" gap="sm">
+      {state.loading ? <LoadingIndicator label="Đang tải số dư…" /> : null}
+      {state.balance === null ? null : <PaymentResult result={state.balance} onRetry={state.reload} retrying={state.loading} />}
+    </Section>
+  )
+}
+
+function PaymentResult({ result, onRetry, retrying }: { result: ViewResult<BalanceView>; onRetry: () => void; retrying: boolean }) {
+  const retry = (
+    <Inline gap="sm">
+      <Button label="Thử lại" busyLabel="Đang tải…" busy={retrying} disabled={false} variant="secondary" onClick={onRetry} />
+    </Inline>
+  )
+  switch (result.kind) {
+    case 'ok':
+      return <DescriptionList label="Số dư đơn hàng" items={result.view.lines.map((l) => ({ key: l.key, term: l.term, details: [l.text] }))} />
+    case 'rejected':
+      return (
+        <Stack gap="sm">
+          <InlineAlert title="Không tải được số dư" text={result.message} />
           {retry}
         </Stack>
       )

@@ -150,6 +150,7 @@ function FormBody({ view, form, cancelButton }: { view: CommissionFormView; form
         options={clients.choices}
         placeholder={view.chooseClientLabel}
         onChange={(v) => setField('clientId', v)}
+        hint={null}
         error={error('client_id')}
         disabled={saving}
         focusRequest={focusRequest('client_id')}
@@ -193,6 +194,7 @@ function FormBody({ view, form, cancelButton }: { view: CommissionFormView; form
           options={view.currencies}
           placeholder={null}
           onChange={(v) => setField('currency', v)}
+          hint={null}
           error={error('agreed_price.currency')}
           disabled={saving || view.currencyLocked}
           focusRequest={focusRequest('agreed_price.currency')}

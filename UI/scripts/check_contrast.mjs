@@ -32,25 +32,25 @@ const MINIMUM = { text: 4.5, 'non-text': 3 }
 
 // [text token, background token, where the kit uses this pair]
 const TEXT_PAIRS = [
-  ['--color-text', '--color-surface', 'body text and headings on the page (global.css, Section, TextField, TextArea, SelectField and DateField labels, FieldGroup legend)'],
+  ['--color-text', '--color-surface', 'body text and headings on the page (global.css, Section, TextField, TextArea, SelectField, DateField and DateTimeField labels, FieldGroup legend)'],
   ['--color-text', '--color-surface-header', 'application title (AppFrame header)'],
   ['--color-text', '--color-surface-raised', 'NavMenu items, ItemList rows, DescriptionList details'],
   ['--color-text', '--color-surface-hover', 'hovered NavMenu item and ItemList row'],
   ['--color-text', '--color-surface-selected', 'current NavMenu item'],
-  ['--color-text', '--color-surface-field', 'text typed or chosen in TextField, TextArea, SelectField, DateField'],
+  ['--color-text', '--color-surface-field', 'text typed or chosen in TextField, TextArea, SelectField, DateField, DateTimeField'],
   ['--color-text', '--color-surface-danger', 'InlineAlert text, FatalMessage detail, ConfirmPanel text'],
-  ['--color-text-muted', '--color-surface', 'Section group heading, LoadingIndicator'],
+  ['--color-text-muted', '--color-surface', 'Section group heading, LoadingIndicator, SelectField hint'],
   ['--color-text-muted', '--color-surface-raised', 'DescriptionList terms, ItemList secondary line'],
   ['--color-text-muted', '--color-surface-hover', 'ItemList secondary line of a hovered row'],
   ['--color-text-muted', '--color-surface-muted', 'EmptyState text'],
-  ['--color-text-muted', '--color-surface-field', 'text of a disabled TextField, TextArea, SelectField, DateField (while saving; the locked currency)'],
-  ['--color-text-danger', '--color-surface', 'field error under a TextField, TextArea, SelectField or DateField'],
+  ['--color-text-muted', '--color-surface-field', 'text of a disabled TextField, TextArea, SelectField, DateField, DateTimeField (while saving; the locked currency)'],
+  ['--color-text-danger', '--color-surface', 'field error under a TextField, TextArea, SelectField, DateField or DateTimeField'],
   ['--color-text-danger', '--color-surface-danger', 'InlineAlert title, FatalMessage title, ConfirmPanel title'],
   ['--color-text-success', '--color-surface-success', 'SuccessNotice'],
   ['--color-action-text', '--color-action', 'primary Button, ConfirmPanel confirm button'],
   ['--color-action-text', '--color-action-hover', 'primary Button, ConfirmPanel confirm button, hovered'],
-  ['--color-action-secondary-text', '--color-action-secondary', 'secondary Button, ConfirmPanel cancel button'],
-  ['--color-action-secondary-text', '--color-action-secondary-hover', 'secondary Button, ConfirmPanel cancel button, hovered'],
+  ['--color-action-secondary-text', '--color-action-secondary', 'secondary Button (also the action button of an ItemList row), ConfirmPanel cancel button'],
+  ['--color-action-secondary-text', '--color-action-secondary-hover', 'secondary Button (also the action button of an ItemList row), ConfirmPanel cancel button, hovered'],
 ]
 
 // The kit's input fields: each draws its border, error border and focus ring
@@ -60,6 +60,7 @@ const FIELDS = [
   'TextArea/TextArea.module.css',
   'SelectField/SelectField.module.css',
   'DateField/DateField.module.css',
+  'DateTimeField/DateTimeField.module.css',
 ]
 
 // CSS declarations of the kit that decide where a non-text part is drawn:
@@ -92,6 +93,8 @@ const CSS = {
     ['ConfirmPanel/ConfirmPanel.module.css', '.cancel:focus-visible', 'outline-offset', 'var(--border-width-focus)'],
     ['ConfirmPanel/ConfirmPanel.module.css', '.panel', 'background', 'var(--color-surface-danger)'],
   ],
+  // The list, and so the row that holds an action button, is drawn on the raised surface.
+  itemListRowBackground: [['ItemList/ItemList.module.css', '.list', 'background', 'var(--color-surface-raised)']],
   emptyStateRingOutside: [
     ['EmptyState/EmptyState.module.css', '.action:focus-visible', 'outline-offset', 'var(--border-width-focus)'],
     ['EmptyState/EmptyState.module.css', '.empty', 'background', 'var(--color-surface-muted)'],
@@ -120,11 +123,13 @@ const CSS = {
 
 // [part token, adjacent colour token, where, CSS that puts the part there]
 const NON_TEXT_PAIRS = [
-  ['--color-border-field', '--color-surface-field', 'TextField, TextArea, SelectField, DateField border — inner edge, on the field', [...CSS.fieldBorder, ...CSS.fieldBackground]],
-  ['--color-border-field', '--color-surface', 'TextField, TextArea, SelectField, DateField border — outer edge, on the page the form sits on', CSS.fieldBorder],
-  ['--color-border-field-danger', '--color-surface-field', 'TextField, TextArea, SelectField, DateField border with an error — inner edge', [...CSS.fieldErrorBorder, ...CSS.fieldBackground]],
-  ['--color-border-field-danger', '--color-surface', 'TextField, TextArea, SelectField, DateField border with an error — outer edge, on the page', CSS.fieldErrorBorder],
-  ['--color-focus-ring', '--color-surface', 'focus ring of Button (also the DateField clear button) and of TextField, TextArea, SelectField, DateField — drawn outside, on the page', [...CSS.buttonRingOutside, ...CSS.fieldRingOutside]],
+  ['--color-border-field', '--color-surface-field', 'TextField, TextArea, SelectField, DateField, DateTimeField border — inner edge, on the field', [...CSS.fieldBorder, ...CSS.fieldBackground]],
+  ['--color-border-field', '--color-surface', 'TextField, TextArea, SelectField, DateField, DateTimeField border — outer edge, on the page the form sits on', CSS.fieldBorder],
+  ['--color-border-field-danger', '--color-surface-field', 'TextField, TextArea, SelectField, DateField, DateTimeField border with an error — inner edge', [...CSS.fieldErrorBorder, ...CSS.fieldBackground]],
+  ['--color-border-field-danger', '--color-surface', 'TextField, TextArea, SelectField, DateField, DateTimeField border with an error — outer edge, on the page', CSS.fieldErrorBorder],
+  ['--color-focus-ring', '--color-surface', 'focus ring of Button (also the DateField clear button) and of TextField, TextArea, SelectField, DateField, DateTimeField — drawn outside, on the page', [...CSS.buttonRingOutside, ...CSS.fieldRingOutside]],
+  // The action button of an ItemList row is a Button: its ring sits outside it (positive offset), on the row, whose background is the list's.
+  ['--color-focus-ring', '--color-surface-raised', 'focus ring of the action button of an ItemList row — drawn outside the button, on the row', [...CSS.buttonRingOutside, ...CSS.itemListRowBackground]],
   ['--color-focus-ring', '--color-surface-muted', 'focus ring of the EmptyState button — drawn outside, on the EmptyState box', CSS.emptyStateRingOutside],
   ['--color-focus-ring', '--color-surface-danger', 'focus ring of the ConfirmPanel buttons — drawn outside, on the panel', CSS.confirmPanelRingOutside],
   ['--color-focus-ring', '--color-surface-raised', 'focus ring of a NavMenu item, an ItemList row — drawn inside, on the item', [...CSS.itemRingInside, ...CSS.navItemBackgrounds]],

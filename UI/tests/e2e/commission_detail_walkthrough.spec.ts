@@ -1,19 +1,23 @@
 // Automated run of the walkthrough of the page commission_detail
 // (src/screens/pages/commission_detail/walkthrough.yaml, iWCA I6.3) on the
 // real app, with the D2 sample. Steps S1 → S5 follow each other in one app
-// launch; from D3 they also check the "Tiến độ" part (S1, S4, S5).
+// launch; from D3 they also check the "Tiến độ" part (S1, S4, S5); from D4 the
+// "Thanh toán" part and its button (S1, S4, S5, S6).
 // Screenshots and the run record: <evidence>/walkthroughs/commission_detail/.
 import { expect, test } from '@playwright/test'
-import { D3_NOTES, seedCommissionSample, setStage } from '../tools/walkthrough_lib.mjs'
+import { D3_NOTES, D4_PAYMENTS, recordPayment, seedCommissionSample, setStage } from '../tools/walkthrough_lib.mjs'
 import {
+  balanceEntries,
   close,
   commissionEntries,
+  expectPaymentPartLoaded,
   expectProgressLoaded,
   goToCommissions,
   launch,
   openCommission,
   progressEntries,
   setBackend,
+  shownAt,
   walkthroughRecorder,
   type Launched,
 } from './walkthrough_harness.js'
@@ -45,12 +49,23 @@ test.describe.serial('walkthrough commission_detail', () => {
       // The button row under the title: "Sửa" (main action) first; "Đổi giai
       // đoạn" once the "Tiến độ" part has loaded (D3) — read from the content.
       await expectProgressLoaded(l.page)
+      await expectPaymentPartLoaded(l.page)
+      // From D4: "Thanh toán" after "Đổi giai đoạn", before "Quay lại danh sách".
       const buttons = l.page.getByRole('main').getByRole('button')
-      expect(await buttons.allInnerTexts()).toEqual(['Sửa', 'Đổi giai đoạn', 'Quay lại danh sách'])
+      expect(await buttons.allInnerTexts()).toEqual(['Sửa', 'Đổi giai đoạn', 'Thanh toán', 'Quay lại danh sách'])
       expect(await progressEntries(l.page)).toEqual([
         ['Giai đoạn hiện tại', ['Chờ bắt đầu', 'chưa cập nhật lần nào']],
         ['Lịch sử', ['Chưa đổi giai đoạn lần nào']],
       ])
+      // The "Thanh toán" part, under "Tiến độ": no payment yet.
+      expect(await balanceEntries(l.page)).toEqual([
+        ['Giá thỏa thuận', ['1.500.000 VND']],
+        ['Đã nhận', ['0 VND']],
+        ['Còn phải thu', ['1.500.000 VND']],
+      ])
+      const progressTop = (await l.page.getByRole('region', { name: 'Tiến độ' }).boundingBox())?.y ?? Number.NaN
+      const paymentTop = (await l.page.getByRole('region', { name: 'Thanh toán', exact: true }).boundingBox())?.y ?? Number.NaN
+      expect(progressTop).toBeLessThan(paymentTop)
       const entries = await commissionEntries(l.page)
       expect(entries.slice(0, 6)).toEqual([
         ['Khách hàng', ['Mai Anh']],
@@ -130,14 +145,25 @@ test.describe.serial('walkthrough commission_detail', () => {
       const part = l.page.getByRole('region', { name: 'Tiến độ' })
       const partAlert = part.getByRole('alert')
       await expect(partAlert).toContainText('Không kết nối được')
-      await expect(l.page.getByRole('alert')).toHaveCount(1)
+      // The "Thanh toán" part loaded on its own, and failed on its own (D4): its own alert and its own "Thử lại".
+      const payments = l.page.getByRole('region', { name: 'Thanh toán', exact: true })
+      await expect(payments.getByRole('alert')).toContainText('Không kết nối được')
+      await expect(l.page.getByRole('alert')).toHaveCount(2)
       await expect(l.page.getByRole('button', { name: 'Đổi giai đoạn' })).toHaveCount(0)
+      // "Thanh toán" is in the row all the same: it opens a page that loads (and reports) on its own.
+      await expect(l.page.getByRole('main').getByRole('button', { name: 'Thanh toán', exact: true })).toBeEnabled()
       await rec.screenshot(l.page, `${PAGE}-S4-progress-unreachable`)
       await part.getByRole('button', { name: 'Thử lại' }).click()
       await expectProgressLoaded(l.page)
+      // Only the "Tiến độ" part came back; the "Thanh toán" part still shows its error.
+      await expect(l.page.getByRole('alert')).toHaveCount(1)
+      await expect(payments.getByRole('alert')).toContainText('Không kết nối được')
+      await payments.getByRole('button', { name: 'Thử lại' }).click()
+      await expectPaymentPartLoaded(l.page)
       await expect(l.page.getByRole('alert')).toHaveCount(0)
       expect((await progressEntries(l.page))[0]).toEqual(['Giai đoạn hiện tại', ['Chờ bắt đầu', 'chưa cập nhật lần nào']])
-      expect(await l.page.getByRole('main').getByRole('button').allInnerTexts()).toEqual(['Sửa', 'Đổi giai đoạn', 'Quay lại danh sách'])
+      expect((await balanceEntries(l.page))[2]).toEqual(['Còn phải thu', ['1.500.000 VND']])
+      expect(await l.page.getByRole('main').getByRole('button').allInnerTexts()).toEqual(['Sửa', 'Đổi giai đoạn', 'Thanh toán', 'Quay lại danh sách'])
       expect((await commissionEntries(l.page))[2]).toEqual(['Giá thỏa thuận', ['1.500.000 VND']])
     })
   })
@@ -155,7 +181,33 @@ test.describe.serial('walkthrough commission_detail', () => {
       expect(entries[1][1]).toHaveLength(1)
       expect(entries[1][1][0]).toMatch(/^Bắt đầu: Đã giao · .+ · Đã gửi file cuối$/)
       await expect(l.page.getByRole('region', { name: 'Tiến độ' })).toContainText('Đơn đang ở giai đoạn "Đã giao", không đổi giai đoạn được nữa.')
-      expect(await l.page.getByRole('main').getByRole('button').allInnerTexts()).toEqual(['Sửa', 'Quay lại danh sách'])
+      expect(await l.page.getByRole('main').getByRole('button').allInnerTexts()).toEqual(['Sửa', 'Thanh toán', 'Quay lại danh sách'])
+    })
+  })
+
+  test('S6 — the "Thanh toán" part with a payment (an overpaid USD commission); "Thanh toán" opens the payments page, "Quay lại đơn hàng" comes back', async () => {
+    // Setup outside the interface: a final payment of 15,00 USD on "Chibi đôi" (12,50 USD), through the backend's declared endpoint.
+    await recordPayment(l.baseUrl, sample.commissions.usd, D4_PAYMENTS.overpaid)
+    await goToCommissions(l.page, 'list')
+    await rec.step(l.page, 'S6', ['ok'], async () => {
+      await openCommission(l.page, 'Chibi đôi')
+      await expectPaymentPartLoaded(l.page)
+      expect(await balanceEntries(l.page)).toEqual([
+        ['Giá thỏa thuận', ['12,50 USD']],
+        ['Đã nhận', ['15,00 USD']],
+        ['Còn phải thu', ['Đã thu dư 2,50 USD']],
+      ])
+      await l.page.getByRole('main').getByRole('button', { name: 'Thanh toán', exact: true }).click()
+      await expect(l.page.getByRole('heading', { level: 2, name: 'Thanh toán', exact: true })).toBeVisible()
+      await expect(l.page.getByRole('heading', { level: 3, name: 'Chibi đôi' })).toBeVisible()
+      const item = l.page.getByRole('list', { name: 'Danh sách khoản thanh toán' }).getByRole('listitem')
+      await expect(item).toHaveCount(1, { timeout: 30_000 })
+      await expect(item.first()).toContainText(`Nhận tiền 15,00 USD · Thanh toán cuối`)
+      await expect(item.first()).toContainText(`${shownAt(D4_PAYMENTS.overpaid.paid_at)} · PayPal`)
+      await l.page.getByRole('button', { name: 'Quay lại đơn hàng', exact: true }).click()
+      await expect(l.page.getByRole('heading', { level: 3, name: 'Chibi đôi' })).toBeVisible()
+      await expectPaymentPartLoaded(l.page)
+      expect((await balanceEntries(l.page))[1]).toEqual(['Đã nhận', ['15,00 USD']])
     })
   })
 })

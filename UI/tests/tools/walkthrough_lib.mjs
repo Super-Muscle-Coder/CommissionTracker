@@ -266,6 +266,68 @@ export async function seedProgressSample(baseUrl) {
   return { ...sample, commissions: { ...sample.commissions, extra } }
 }
 
+// record: POST /payments, body { commission_id, payment_input }; void_payment:
+// PUT /payments/{payment_id}/void (api_contract.yaml 4.0.0 record_payment;
+// endpoint_forms.http).
+export async function recordPayment(baseUrl, commissionId, paymentInput) {
+  return call(baseUrl, 'POST', '/payments', { commission_id: commissionId, payment_input: paymentInput }, 201)
+}
+export async function voidPayment(baseUrl, paymentId) {
+  const response = await fetch(`${baseUrl}/payments/${paymentId}/void`, { method: 'PUT' })
+  const text = await response.text()
+  if (response.status !== 200) throw new Error(`PUT /payments/${paymentId}/void: expected 200, got ${response.status} ${text}`)
+  return JSON.parse(text)
+}
+
+// Sample data of the D4 walkthrough payment_list (and the manual run
+// npm run walkthrough:app -- --payments): the D2 sample (three commissions,
+// none of them touched by the interface yet), and payments written through the
+// backend's declared endpoints:
+//   "Minh họa bìa sách" (9.000.000 VND) — five payments whose paid_at are far
+//     apart (the list is sorted by paid_at, newest first, never by the time of
+//     writing): a deposit of 3.000.000 (2026-09-01), a milestone of 2.000.000
+//     (2026-09-10), a tip of 100.000 (2026-09-12), a refund of 500.000
+//     (2026-09-15), and one of 250.000 (2026-09-20) that is then voided;
+//     balance: received 4.600.000, still owed 4.500.000 (a tip never changes
+//     what is owed; the voided payment counts for nothing);
+//   "Chibi đôi" (12,50 USD) — one final payment of 15,00 USD: overpaid,
+//     "Đã thu dư 2,50 USD";
+//   "Chân dung bán thân" (1.500.000 VND) — no payment (the empty state).
+// paid_at carries the +07:00 offset; the interface shows it in the machine's
+// time zone, so the walkthrough computes what it expects with the same Intl
+// call. Ends AFTER_LAST_WRITE_MS after the last write (UI-9), though the order
+// of the payments never depends on the time they were written.
+const pay = (direction, kind, amountMinor, currency, method, paidAt, note) => ({
+  direction,
+  kind,
+  amount: { amount_minor: amountMinor, currency },
+  method,
+  paid_at: paidAt,
+  note,
+})
+export const D4_PAYMENTS = {
+  deposit: pay('incoming', 'deposit', 3000000, 'VND', 'Chuyển khoản', '2026-09-01T09:00:00+07:00', null),
+  milestone: pay('incoming', 'milestone', 2000000, 'VND', 'MoMo', '2026-09-10T10:30:00+07:00', 'Đợt hai'),
+  tip: pay('incoming', 'tip', 100000, 'VND', 'Tiền mặt', '2026-09-12T08:00:00+07:00', null),
+  refund: pay('refund', 'other', 500000, 'VND', 'Chuyển khoản', '2026-09-15T16:45:00+07:00', 'Hoàn một phần'),
+  mistaken: pay('incoming', 'other', 250000, 'VND', 'MoMo', '2026-09-20T12:00:00+07:00', 'Nhập nhầm'),
+  overpaid: pay('incoming', 'final', 1500, 'USD', 'PayPal', '2026-09-05T20:15:00+07:00', null),
+}
+
+export async function seedPaymentSample(baseUrl) {
+  const sample = await seedCommissionSample(baseUrl)
+  const book = sample.commissions.archived
+  await recordPayment(baseUrl, book, D4_PAYMENTS.deposit)
+  await recordPayment(baseUrl, book, D4_PAYMENTS.milestone)
+  await recordPayment(baseUrl, book, D4_PAYMENTS.tip)
+  await recordPayment(baseUrl, book, D4_PAYMENTS.refund)
+  const mistaken = await recordPayment(baseUrl, book, D4_PAYMENTS.mistaken)
+  await voidPayment(baseUrl, mistaken.payment_id)
+  await recordPayment(baseUrl, sample.commissions.usd, D4_PAYMENTS.overpaid)
+  await pause(AFTER_LAST_WRITE_MS)
+  return sample
+}
+
 export async function seedSampleData(baseUrl) {
   // create_client: POST /clients, input [client_input]. endpoint_forms.http:
   // a JSON body whose keys are the input NAMES, so { client_input: {...} }.

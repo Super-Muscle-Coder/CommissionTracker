@@ -84,8 +84,23 @@ export async function close(l: Launched): Promise<void> {
   expect(l.log()).toMatch(/backend \(pid \d+\) exited with code 0/)
 }
 
+// Whether the backend is switched off right now, for the screenshot timing log
+// (UI-11 of .plan/open_issues.md): one app launch per spec, so one flag per process.
+let backendDown = false
+
 export function setBackend(wanted: 'down' | 'up'): void {
   execSync(`npm run walkthrough:backend -- ${wanted}`, { cwd: UI_ROOT, stdio: 'inherit' })
+  backendDown = wanted === 'down'
+}
+
+// UI-11, data only: one line per screenshot of the harness in
+// test-results/screenshot-timing.log (git ignores test-results; Playwright
+// empties it at the start of every run, so a run's log is read after that run):
+// start time, spec, step, milliseconds, whether the backend was down, outcome.
+function logScreenshotTiming(spec: string, step: string, startedAt: Date, ms: number, outcome: 'ok' | 'error'): void {
+  const file = path.join(UI_ROOT, 'test-results', 'screenshot-timing.log')
+  fs.mkdirSync(path.dirname(file), { recursive: true })
+  fs.appendFileSync(file, `${startedAt.toISOString()}\t${spec}\t${step}\t${ms}\tbackend=${backendDown ? 'down' : 'up'}\t${outcome}\n`)
 }
 
 type StepRecord = { step: string; passed: boolean; runner: string; finished_at: string; screenshot: string; covers: string[] }
@@ -100,7 +115,15 @@ export function walkthroughRecorder(pageKey: string, specFile: string) {
   async function screenshot(page: Page, name: string): Promise<string> {
     fs.mkdirSync(dir, { recursive: true })
     const file = path.join(dir, `${name}.png`)
-    await page.screenshot({ path: file })
+    const startedAt = new Date()
+    const t0 = performance.now()
+    try {
+      await page.screenshot({ path: file })
+    } catch (e) {
+      logScreenshotTiming(specFile, name, startedAt, Math.round(performance.now() - t0), 'error')
+      throw e
+    }
+    logScreenshotTiming(specFile, name, startedAt, Math.round(performance.now() - t0), 'ok')
     return path.relative(UI_ROOT, file).split(path.sep).join('/')
   }
 
@@ -319,4 +342,75 @@ export async function openStageChange(page: Page): Promise<void> {
   await expect(page.getByRole('heading', { level: 2, name: 'Đổi giai đoạn' })).toBeVisible()
   await expect(page.getByLabel('Giai đoạn mới', { exact: true })).toBeVisible({ timeout: 30_000 })
   await expect(page.getByRole('status')).toHaveCount(0)
+}
+
+// --- D4: payments ------------------------------------------------------------------
+
+const PAYMENT_LIST = 'Danh sách khoản thanh toán'
+
+// "HH:mm dd/mm/yyyy" of an instant in the machine's time zone, as the app
+// shows it (the same Intl call as the app: this process and Electron share the
+// machine's time zone).
+export const shownAt = (iso: string) =>
+  new Intl.DateTimeFormat('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }).format(new Date(iso))
+
+// [term, details] of the balance (on payment_list, and in the "Thanh toán" part of commission_detail).
+export const balanceEntries = (page: Page) => detailEntries(page, 'Số dư đơn hàng')
+
+// The "Thanh toán" part of commission_detail has loaded (its balance is shown).
+export async function expectPaymentPartLoaded(page: Page): Promise<void> {
+  const part = page.getByRole('region', { name: 'Thanh toán', exact: true })
+  await expect(part.getByLabel('Số dư đơn hàng')).toBeVisible({ timeout: 30_000 })
+  await expect(part.getByRole('status')).toHaveCount(0)
+}
+
+// payment_list is loaded: the balance is shown, and no loading status is left. Read from the content (UI-4).
+export async function expectPaymentsLoaded(page: Page): Promise<void> {
+  await expect(page.getByLabel('Số dư đơn hàng')).toBeVisible({ timeout: 30_000 })
+  await expect(page.getByRole('status').filter({ hasText: 'Đang tải' })).toHaveCount(0)
+}
+
+// Open payment_list from a loaded commission_detail; wait for it.
+export async function openPayments(page: Page): Promise<void> {
+  await page.getByRole('main').getByRole('button', { name: 'Thanh toán', exact: true }).click()
+  await expect(page.getByRole('heading', { level: 2, name: 'Thanh toán', exact: true })).toBeVisible()
+  await expectPaymentsLoaded(page)
+}
+
+// From the commission list (through the navigation region) to the payments of one commission.
+export async function goToPaymentsOf(page: Page, title: string): Promise<void> {
+  await goToCommissions(page, 'list')
+  await openCommission(page, title)
+  await expectPaymentPartLoaded(page)
+  await openPayments(page)
+}
+
+// [main line, secondary line, has "Hủy khoản này"] of each payment of the list, in the order shown.
+export async function paymentRows(page: Page): Promise<[string, string, boolean][]> {
+  const items = page.getByRole('list', { name: PAYMENT_LIST }).getByRole('listitem')
+  const count = await items.count()
+  const rows: [string, string, boolean][] = []
+  for (let i = 0; i < count; i += 1) {
+    const item = items.nth(i)
+    const lines = (await item.locator(':scope > span').innerText()).split('\n').map((s) => s.trim()).filter((s) => s !== '')
+    rows.push([lines[0], lines.slice(1).join(' '), (await item.getByRole('button', { name: 'Hủy khoản này' }).count()) > 0])
+  }
+  return rows
+}
+
+// Press "Tải lại" on payment_list and wait for the content it must end on
+// (list → "không kết nối được", that alert → list).
+export async function reloadPayments(page: Page, outcome: 'list' | 'unreachable'): Promise<void> {
+  await page.getByRole('button', { name: 'Tải lại' }).click()
+  switch (outcome) {
+    case 'list':
+      await expectPaymentsLoaded(page)
+      await expect(page.getByRole('alert')).toHaveCount(0)
+      break
+    case 'unreachable':
+      await expect(page.getByRole('alert')).toContainText('Không kết nối được', { timeout: 30_000 })
+      await expect(page.getByLabel('Số dư đơn hàng')).toHaveCount(0)
+      await expect(page.getByRole('status').filter({ hasText: 'Đang tải' })).toHaveCount(0)
+      break
+  }
 }

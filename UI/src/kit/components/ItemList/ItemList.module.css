@@ -11,12 +11,23 @@
   border-top: var(--border-width-panel) solid var(--color-border);
 }
 
+.item {
+  display: flex;
+  align-items: center;
+}
+
 .text,
 .select {
   display: block;
-  width: 100%;
+  flex: 1;
+  min-width: 0;
   padding: var(--space-sm) var(--space-md);
   color: var(--color-text);
+}
+
+.action {
+  flex: none;
+  padding: var(--space-sm) var(--space-md) var(--space-sm) 0;
 }
 
 .detail {

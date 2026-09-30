@@ -145,6 +145,7 @@ function FormBody({ view, form, onCancel }: { view: StageChangeView; form: Stage
         options={view.choices}
         placeholder={view.chooseLabel}
         onChange={(v) => setField('toStage', v)}
+        hint={null}
         error={fieldErrors.to_stage ?? null}
         disabled={locked}
         // The only field that can be in error: it gets the text cursor once per save result (principle 4).

@@ -2,8 +2,8 @@
 // workflow: main
 // clause: external
 // component: main
-// last_updated_by: coding-agent@2026-09-29#3
-// last_updated_at: 2026-09-29T21:30:29+07:00
+// last_updated_by: coding-agent@2026-09-30#1
+// last_updated_at: 2026-09-30T09:25:00+07:00
 //
 // EXPERIENCES:
 //   - id: main-EXP-001
@@ -237,6 +237,45 @@
 //       chạy e2e không đặt biến thì bước "backend down" (client_detail S4, stage_change
 //       S4) hỏng vì page.screenshot hết 30 s ở 3 trong 8 lần; main_layout.spec.ts không
 //       hỏng lần nào (theo dõi của main-EXP-013).
+//   - id: main-EXP-017
+//     content: >
+//       Phiên 22 (D4): bước 4 ráp nối record_payment theo mẫu, sau update_progress (thứ tự
+//       ui_decomposition §2): createRecordPaymentAdapters(httpClient, RECORD_PAYMENT_CONFIGS) →
+//       createRecordPaymentServices(adapters, RECORD_PAYMENT_CONFIGS, LAYER_CONFIGS.resultMessages,
+//       () => new Date()) → createRecordPaymentRouters(services, { limits, currencyDecimals,
+//       directions, paymentKinds } của RECORD_PAYMENT_CONFIGS) (Routers kiểm và đọc bản nháp bằng
+//       các giá trị đó; chỉ Main đọc giá trị Configs, R14), đặt vào LogicRouters.recordPayment
+//       (screens/logic_context.ts). NGUỒN "BÂY GIỜ": tham số thứ tư của Services là hàm now: () =>
+//       Date do Main tạo (() => new Date()); Services chỉ gọi nó lúc mở form để dựng ngày giờ mặc
+//       định, không nơi nào khác gọi new Date() cho "bây giờ" (R4 không cấm Date, nhưng đặc tả D4 đòi
+//       một nguồn để kiểm thử cố định được). Không đổi giá trị khởi động, cơ chế kiểm ESLint,
+//       stylelint, check_layer; check_contrast đổi (xem kit-EXP-015, 016, 017). tests/main/main.test.tsx
+//       không đổi: trang mở đầu vẫn client_list. Kiểm thử dựng trang: fake_logic.tsx thêm
+//       fakeRecordPayment và tham số thứ năm của renderWithLogic, renderFirstCommit. Chạy tay D4:
+//       npm run walkthrough:app -- --payments.
+//   - id: main-EXP-018
+//     content: >
+//       UI-11 (phiên 22), CHỈ THU DỮ LIỆU, không sửa: (1) tests/e2e/playwright.config.ts có use: {
+//       trace: 'retain-on-failure' } (thay đổi duy nhất của tệp); đã chứng minh trace được giữ với
+//       Electron: một spec tạm cố ý hỏng (đã xóa) để lại test-results/<tên bài>/trace.zip (9 KB) và
+//       error-context.md. (2) walkthroughRecorder.screenshot (mọi lệnh chụp ảnh của harness, cả
+//       rec.step lẫn rec.screenshot) ghi một dòng vào UI/test-results/screenshot-timing.log: thời
+//       điểm bắt đầu (ISO), tên spec, tên ảnh, số ms, backend=down|up (cờ backendDown của harness,
+//       đặt trong setBackend), ok|error (đúng cả khi chụp ảnh ném lỗi). Playwright xóa cả
+//       test-results/ ở đầu mỗi lần chạy, nên log của một lần chạy phải được đọc hoặc chép ra sau
+//       lần đó. main_layout.spec.ts tự gọi page.screenshot (không qua harness) nên không có dòng
+//       nào. Không nới thời gian chờ, không retries, không đổi cách chụp ảnh. Kết quả tổng hợp ở
+//       EVIDENCE.
+//   - id: main-EXP-019
+//     content: >
+//       Kinh nghiệm công cụ (phiên 22): (1) PowerShell 5.1 Get-Content/Set-Content làm hỏng tệp UTF-8
+//       có tiếng Việt (đọc bằng bảng mã ANSI, ghi thêm BOM; một hook bị mojibake phải viết lại bằng
+//       công cụ soạn thảo tệp): không dùng chúng để sửa mã nguồn, đúng lời khuyên của CLAUDE.md mục
+//       5; chỉ dùng để ĐỌC log ASCII. (2) Hệ thống phân quyền của công cụ đôi lúc không trả lời (Bash
+//       và PowerShell "no verdict") ở vài lần đầu; thử lại sau là được. (3) Nó từ chối chạy kiểm thử
+//       trên cây mã đã bị sửa tạm để tắt một kiểm tra ("Security Test Removal"): phép sửa kiểu "&&
+//       false" bị coi là gỡ kiểm tra; phép sửa đổi một giá trị (đổi tham số, đổi token) thì chạy
+//       được. Bằng chứng cắn ghi rõ phép nào có kết quả.
 //
 // UNSOLVED_PROBLEMS: []
 //
@@ -595,6 +634,24 @@
 //       của screens. Backend: Backend/env/Scripts/python.exe (qua fixture). Không
 //       eslint-disable, không ngoại lệ lint mới.
 //     recorded_at: 2026-09-29T21:30:29+07:00
+//   - claim: >
+//       Phiên 22: môi trường, mốc, và kết quả cuối; mốc %APPDATA% không đổi.
+//     how: >
+//       node --version; npm --version; git status --short; Backend/env/Scripts/python.exe --version; trong
+//       UI/: npm ci; npm run check (mốc và cuối); CT_WALKTHROUGH_RUNNER=coding-agent@2026-09-30#1 npm run
+//       e2e (mốc; 5 lần liên tiếp cuối); một lần không biến với SHA-256 UI/evidence trước và sau; tên,
+//       kích thước, giờ ghi, SHA-256 mọi tệp trong %APPDATA%\CommissionTracker đầu (07:40) và cuối phiên.
+//     result: >
+//       Node v24.14.1; npm 11.11.0; Python 3.13.12; git status đầu phiên rỗng; npm ci "found 0
+//       vulnerabilities". Mốc: check "Tests 780 passed (780)" (21 tệp), e2e "42 passed (3.1m)". Cuối:
+//       check exit 0 (tsc -b, eslint --max-warnings 0, stylelint, "check_contrast: 19 text pairs >= 4.5:1
+//       and 13 non-text pairs >= 3:1 checked, all pass.", "check_layer: 131 files under src/ checked", "check_e2e_status: no unfiltered
+//       text assertion", "Test Files 26 passed (26)", "Tests 1100 passed (1100)"); e2e 5/5 "54 passed"
+//       (mốc 42); lần không biến "54 passed", UI/evidence không đổi (89 tệp). %APPDATA%: data.db 114688 byte
+//       và data.db.lock 0 byte, cùng giờ ghi 2026-09-28 21:09, cùng hash B1996554… — không đổi. Không
+//       eslint-disable, không ngoại lệ lint mới, không phụ thuộc mới. Backend: Backend/env/Scripts/python.exe
+//       (qua fixture).
+//     recorded_at: 2026-09-30T09:25:00+07:00
 //
 // NOTES:
 //   - content: >
@@ -663,6 +720,10 @@ import { createUpdateProgressAdapters } from './logic/workflows/update_progress/
 import { UPDATE_PROGRESS_CONFIGS } from './logic/workflows/update_progress/configs'
 import { createUpdateProgressRouters } from './logic/workflows/update_progress/routers'
 import { createUpdateProgressServices } from './logic/workflows/update_progress/services'
+import { createRecordPaymentAdapters } from './logic/workflows/record_payment/adapters'
+import { RECORD_PAYMENT_CONFIGS } from './logic/workflows/record_payment/configs'
+import { createRecordPaymentRouters } from './logic/workflows/record_payment/routers'
+import { createRecordPaymentServices } from './logic/workflows/record_payment/services'
 import { createHttpClient } from './logic/workflows/scaffold_ui/adapters'
 import { SCAFFOLD_UI_CONFIGS } from './logic/workflows/scaffold_ui/configs'
 import { AppRoot } from './screens/app_root'
@@ -732,6 +793,10 @@ if (!launch.ok) {
   )
   const updateProgressAdapters = createUpdateProgressAdapters(httpClient, UPDATE_PROGRESS_CONFIGS)
   const updateProgressServices = createUpdateProgressServices(updateProgressAdapters, UPDATE_PROGRESS_CONFIGS, LAYER_CONFIGS.resultMessages)
+  // record_payment also gets the clock: the one place "now" comes from
+  // (ui_decomposition.md D4), so a test can fix the instant.
+  const recordPaymentAdapters = createRecordPaymentAdapters(httpClient, RECORD_PAYMENT_CONFIGS)
+  const recordPaymentServices = createRecordPaymentServices(recordPaymentAdapters, RECORD_PAYMENT_CONFIGS, LAYER_CONFIGS.resultMessages, () => new Date())
   const routers: LogicRouters = {
     manageClient: createManageClientRouters(manageClientServices, MANAGE_CLIENT_CONFIGS.limits),
     manageCommission: createManageCommissionRouters(manageCommissionServices, {
@@ -740,6 +805,12 @@ if (!launch.ok) {
       formats: MANAGE_COMMISSION_CONFIGS.formats,
     }),
     updateProgress: createUpdateProgressRouters(updateProgressServices),
+    recordPayment: createRecordPaymentRouters(recordPaymentServices, {
+      limits: RECORD_PAYMENT_CONFIGS.limits,
+      currencyDecimals: RECORD_PAYMENT_CONFIGS.currencyDecimals,
+      directions: RECORD_PAYMENT_CONFIGS.directions,
+      paymentKinds: RECORD_PAYMENT_CONFIGS.paymentKinds,
+    }),
   }
 
   // Step 5. Hand the Routers to the screens zone and render the root.

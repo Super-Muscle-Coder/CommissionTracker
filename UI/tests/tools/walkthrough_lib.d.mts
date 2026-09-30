@@ -59,3 +59,15 @@ export declare const D2_COMMISSIONS: Record<
 >
 export declare const D2_EXPECTED_LIST: [string, string][]
 export declare function seedCommissionSample(baseUrl: string): Promise<{ clients: Record<D2Key, string>; commissions: Record<D2Key, string> }>
+export type PaymentInputSample = {
+  direction: 'incoming' | 'refund'
+  kind: 'deposit' | 'milestone' | 'final' | 'tip' | 'other'
+  amount: { amount_minor: number; currency: string }
+  method: string
+  paid_at: string
+  note: string | null
+}
+export declare function recordPayment(baseUrl: string, commissionId: string, paymentInput: PaymentInputSample): Promise<{ payment_id: string }>
+export declare function voidPayment(baseUrl: string, paymentId: string): Promise<unknown>
+export declare const D4_PAYMENTS: Record<'deposit' | 'milestone' | 'tip' | 'refund' | 'mistaken' | 'overpaid', PaymentInputSample>
+export declare function seedPaymentSample(baseUrl: string): Promise<{ clients: Record<D2Key, string>; commissions: Record<D2Key, string> }>

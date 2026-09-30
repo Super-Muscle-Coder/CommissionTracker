@@ -2,8 +2,8 @@
 // workflow: screens
 // clause: external
 // component: screens
-// last_updated_by: coding-agent@2026-09-29#3
-// last_updated_at: 2026-09-29T21:30:29+07:00
+// last_updated_by: coding-agent@2026-09-30#1
+// last_updated_at: 2026-09-30T09:20:00+07:00
 //
 // EXPERIENCES:
 //   - id: screens-EXP-001
@@ -404,6 +404,133 @@
 //       getByRole('status') một đối số; chỗ đã lọc có chủ thể là lời gọi .filter nên không
 //       bị báo. Ghi nhận không sửa (ngoài UI-10): page.screenshot hết 30 s ở bước
 //       "backend down" (xem EVIDENCE); main_layout.spec.ts không hỏng lần nào.
+//   - id: screens-EXP-027
+//     content: >
+//       Chặng D4 (phiên 22), điều hướng. PageParams thêm payment_list: { commission_id; title }
+//       và payment_form: { commission_id; title } (title do commission_detail rồi payment_list
+//       trao, trang không gọi lại get_commission); hai dòng expect-error mới trong
+//       app_root.test.tsx (thiếu title; commission_id sai tên). NAVIGATION thêm hai trang, section
+//       commission_list (là một bước của chi tiết đơn: mục "Đơn hàng" đang mở). LogicRouters thêm
+//       recordPayment. Luồng: commission_detail → "Thanh toán" → payment_list → "Ghi khoản thanh
+//       toán" → payment_form → "Lưu" → payment_list kèm "Đã ghi khoản thanh toán."; "Hủy" → payment_list
+//       không thông báo; "Quay lại đơn hàng" → commission_detail. app_root.test.tsx có ca đi hết
+//       luồng đó (thông báo hiện một lần, "Đơn hàng" đang mở suốt).
+//   - id: screens-EXP-028
+//     content: >
+//       payment_list: Section page "Thanh toán" > Section group <tiêu đề đơn> > hàng nút ngay dưới
+//       tiêu đề (đặc tả: "Ghi khoản thanh toán" primary, "Quay lại đơn hàng"; "Tải lại" thêm ở
+//       cuối vì đặc tả nói "khi bấm Tải lại", giống progress_board) > thông báo chuyển trang >
+//       kết quả hủy > khung xác nhận > chỉ báo tải > DescriptionList "Số dư đơn hàng" (ba dòng)
+//       > ItemList "Danh sách khoản thanh toán" (rỗng: EmptyState có nút "Ghi khoản thanh
+//       toán"). "Ghi khoản thanh toán" của hàng nút chỉ hiện khi danh sách đã tải ok (switch trên
+//       kind như stageCanChange); khi lỗi hàng nút chỉ còn "Quay lại đơn hàng", "Tải lại". Nút "Hủy
+//       khoản này" là action của ItemList (row.canVoid do Services quyết định; khoản đã hủy không
+//       có). Hai quyết định của TRANG (không phải nghiệp vụ): trong lúc khung xác nhận chờ hoặc
+//       lúc đang gửi, mọi "Hủy khoản này" bị vô hiệu (câu hỏi nói về đúng một khoản mà khung
+//       không nêu tên; đặc tả chỉ đòi vô hiệu lúc gửi, nên đây là phần thêm, ghi ở NOTES).
+//   - id: screens-EXP-029
+//     content: >
+//       Hook use_payment_list (gọi, giữ, chuyển): giữ list (kết quả tải gần nhất), question
+//       ({ paymentId, result } của lần hỏi confirmed = false; trang dựng ConfirmPanel khi
+//       result là ok needs_confirmation, nên hook KHÔNG quyết định có hỏi hay không: Services
+//       quyết, như D3), voiding, voided (kết quả lần gửi confirmed = true). "Xác nhận" gọi
+//       voidPayment(paymentId, true) đúng một lần (cờ voidRunning, nút vô hiệu); "Quay lại" là
+//       dismissVoid (quên câu hỏi, không gọi gì). KHI NÀO tải lại sau khi gửi (một quyết định về
+//       thời điểm, switch trên kind): ok → load() (tải lại và thay danh sách); rejected → tải lại
+//       LẶNG LẼ (refreshQuietly: kết quả ok thì thay danh sách, còn lại thì giữ danh sách cũ);
+//       unreachable, contract_violation → không tải lại. Lý do: đặc tả đòi tải lại sau 404 và 409
+//       nhưng "danh sách giữ nguyên" sau 500, còn bảng I3.4 gộp mọi lỗi khai báo thành rejected
+//       (chỉ có code để phân biệt, mà hook không đọc mã); tải lại lặng lẽ làm cả hai đúng: 404 và
+//       409 thì danh sách mới hiện, 500 thì tải lại hỏng theo và danh sách vẫn như cũ. Kiểm thử
+//       dựng trang chứng minh cả bốn nhánh (số lần gọi loadPaymentList và hàng hiện ra).
+//   - id: screens-EXP-030
+//     content: >
+//       payment_form: Section page "Ghi khoản thanh toán" > Section group <tiêu đề đơn> > hàng "Lưu"
+//       (primary, busy khi gửi), "Hủy" > kết quả lưu > sáu ô theo thứ tự đặc tả: "Loại giao dịch"
+//       (SelectField, không có lựa chọn đầu; mặc định của view), "Khoản" (SelectField, lựa chọn
+//       đầu "Chọn khoản", hint "Tiền tip không làm giảm số còn phải thu."), hàng ["Số tiền"
+//       (TextField), "Đơn vị tiền" (SelectField vô hiệu, đúng một lựa chọn là đơn vị tiền của
+//       đơn)], "Phương thức" (TextField có gợi ý), "Ngày giờ nhận tiền" (DateTimeField), "Ghi chú"
+//       (TextArea). FIELD_ORDER dùng tên trường của hợp đồng ('direction', 'kind',
+//       'amount.amount_minor', 'method', 'paid_at', 'note'); ô lỗi đầu tiên nhận focusRequest =
+//       saveCount. Khóa 'kind' chỉ xuất hiện dưới dạng CHUỖI (fail('kind', …), 'kind' trong
+//       FIELD_ORDER, error('kind')), không bao giờ là truy cập thuộc tính .kind, nên R13 không
+//       bị đụng (payment_record có trường tên kind: Services đọc nó qua switch, xem
+//       record_payment-EXP-004). Bản nháp thô (PaymentFormDraft, một setField chung). Đơn vị tiền
+//       lạ (view.supported = false): không form, hàng nút chỉ "Quay lại". Mọi nút quay lại và "Hủy"
+//       về payment_list, kể cả khi lỗi mở (404 cũng vậy: đơn không còn thì trang thanh toán hiện
+//       lỗi của nó).
+//   - id: screens-EXP-031
+//     content: >
+//       commission_detail có BA hook (use_commission_detail, use_commission_progress, và từ D4
+//       use_commission_balance của record_payment), mỗi hook tải riêng, lỗi riêng, cờ tải khởi tạo
+//       true (UI-4); trang chỉ đặt cạnh nhau, không ghép dữ liệu. Phần "Thanh toán" (Section
+//       group, DescriptionList "Số dư đơn hàng", ba dòng do Services viết: "Đã thu đủ", "Đã thu dư …")
+//       nằm dưới "Tiến độ", chỉ khi phần đơn ok; lỗi của phần (404, 409, 500, unreachable,
+//       contract_violation) hiện trong phần kèm "Thử lại" của riêng nó. Nút "Thanh toán" (secondary)
+//       đứng sau "Đổi giai đoạn" và trước "Quay lại danh sách", LUÔN có khi phần đơn ok (kể cả lúc
+//       phần Thanh toán đang tải hoặc đã lỗi, vì trang thanh toán tự tải và tự báo lỗi), khác "Đổi
+//       giai đoạn" (chỉ khi phần Tiến độ ok và chưa khép lại). Kiểm thử dựng trang (24 → 37 ca) đổi
+//       mọi khẳng định hàng nút cũ thêm "Thanh toán" (đó là chính đặc tả D4, không phải nới).
+//   - id: screens-EXP-032
+//     content: >
+//       Kịch bản và e2e D4: payment_list S1..S5, payment_form S1..S6, commission_detail bổ sung S1,
+//       S4, S5 và thêm S6; stage_change S5 chỉ sửa danh sách nút (thêm "Thanh toán"). Dữ liệu mẫu
+//       riêng của D4 (seedPaymentSample ở tests/tools/walkthrough_lib.mjs; chạy tay npm run
+//       walkthrough:app -- --payments): mẫu D2 cộng năm khoản cho "Minh họa bìa sách" (một khoản
+//       đã hủy ngay lúc nạp), một khoản 15,00 USD cho "Chibi đôi" (thu dư), "Chân dung bán thân"
+//       trống. paid_at của mẫu cách nhau nhiều ngày: danh sách khoản sắp theo paid_at, không theo
+//       lúc ghi, nên UI-9 không đụng tới, nhưng hàm nạp vẫn chờ AFTER_LAST_WRITE_MS sau lần ghi
+//       cuối. BẪY: hai khoản trong cùng một phút có cùng paid_at thì thứ tự hợp đồng không hứa;
+//       payment_form gõ ngày giờ khác nhau cho mỗi bước (10, 11, 12/09/2026) và đặt 01/01/2099
+//       cho khoản cuối (ngày tương lai được phép), còn S5 để mặc định là bước duy nhất dùng ngày
+//       giờ mặc định và chỉ so với giá trị ô đã hiện lúc mở. Ngày giờ hiển thị của bước so bằng
+//       shownAt() (cùng lời gọi Intl với ứng dụng, cùng múi giờ máy). Gõ phương thức (ô có
+//       datalist) rồi bấm Escape, theo kit-EXP-008. Tín hiệu đã tải luôn là nội dung (Số dư đơn
+//       hàng hiện, không còn status "Đang tải"), mọi khẳng định chữ trên status đều lọc theo chữ
+//       (lint:e2e đạt). Luật phủ D4 (ui_decomposition §5): ok cho mọi thao tác (cọc payment_form
+//       S2; tip S3; hoàn tiền S4; USD có phần lẻ S5; hủy qua khung payment_list S3; "Quay lại" ở
+//       khung không gửi gì payment_list S3; thu dư payment_list S4, commission_detail S6);
+//       rejected_input payment_form S1 (chưa chọn khoản, số 0, phương thức chỉ dấu cách, ô ngày
+//       giờ trống); unreachable mỗi trang (payment_list S5, payment_form S6, phần Thanh toán của
+//       commission_detail S4); không đòi rejected_system.
+//   - id: screens-EXP-033
+//     content: >
+//       §7.2 cho D4. (1) Hành động chính: payment_list "Ghi khoản thanh toán" (đứng đầu hàng nút),
+//       payment_form "Lưu"; commission_detail vẫn "Sửa" ("Thanh toán" là phụ). Đạt. (2) Không dày:
+//       danh sách khoản chỉ hai dòng (chiều tiền, số tiền, loại; ngày giờ, phương thức, ghi chú);
+//       số dư ba dòng; form sáu ô. Đạt. (3) Nhãn tiếng Việt theo lời họa sĩ ("Nhận tiền", "Hoàn tiền
+//       cho khách", "Tiền cọc", "Thanh toán theo đợt", "Đã thu đủ", "Đã thu dư …"), không mã kỹ
+//       thuật. Đạt. (4) Sau khi ghi: "Đã ghi khoản thanh toán."; sau khi hủy: "Đã hủy khoản thanh
+//       toán."; lỗi nhập ngay dưới ô, con trỏ tới ô lỗi đầu tiên theo thứ tự trên màn hình (e2e
+//       payment_form S1, toBeFocused ở "Khoản"). Đạt. (5) XÁC NHẬN: hủy khoản hỏi trong trang, nói
+//       rõ hậu quả ("Khoản đã hủy không khôi phục được. Số dư sẽ được tính lại không có khoản
+//       này."), focus ở "Xác nhận", "Quay lại" không gửi gì (e2e payment_list S3, đo trên ứng
+//       dụng thật: sau "Quay lại" danh sách và số dư y như cũ); ghi khoản thì không hỏi (có thể hủy
+//       sau). Đạt. (6) Rỗng: "Chưa có khoản thanh toán nào" kèm "Ghi khoản thanh toán". Đạt. (7)
+//       Điều hướng ổn định: ba mục vùng điều hướng không đổi chỗ, "Đơn hàng" đang mở ở cả hai trang
+//       mới; hàng nút ngay dưới tiêu đề (payment_form đo bằng vị trí thật, S1; payment_list S1).
+//       Đạt.
+//   - id: screens-EXP-034
+//     content: >
+//       Tự kiểm I6 phiên 22, ba trang (payment_list, payment_form, commission_detail), năm góc.
+//       HỢP ĐỒNG: Data Schema 9.0.0 và API Contract 4.0.0 approved; record_payment ở
+//       đang_triển_khai là việc của backend (BE-7), không của giao diện; Configs của record_payment
+//       trỏ data 9.0.0, api 4.0.0; bảng nhãn bốn lời gọi khớp từng dòng (kiểm thử so nguyên bảng, hai
+//       nhãn 409 phân biệt theo lời gọi); payment_input gửi đúng sáu khóa; luật phương thức
+//       not blank là bản sao [CONTRACT] (phiên 22 giao diện chặn trước khi gửi, không dựa vào việc
+//       backend từ chối). Tìm trong src và tests: không có lời gọi tới /watermark-profiles,
+//       /watermark-strengths, /artworks, /verifications, /reminders, /reports, /backups; đường dẫn
+//       mới chỉ /payments, /payments/balance/{commission_id}, /payments/{payment_id}/void; không có
+//       confirm(, alert(, prompt( trong src. RANH GIỚI: npm run check đạt (R1–R14); Services chỉ
+//       quyết định trình bày (record_payment-EXP-003: tự không cộng trừ số nào, số dư là số của
+//       backend); Routers chỉ kiểm điều type ghi (số nguyên > 0 trong ±(2^53−1), not blank,
+//       timestamp, liệt kê) cộng luật [UI-ONLY] của đặc tả (trim, ghi chú → null, cách ghép
+//       paid_at); ba hook mới (use_payment_list, use_payment_form, use_commission_balance) viết lại
+//       được bằng gọi, giữ, chuyển (switch trên kind để chọn KHI NÀO tải lại là thời điểm, không phải
+//       nội dung). NGƯỜI DÙNG: ba kịch bản của D4 (payment_list, payment_form, commission_detail)
+//       chạy trên hệ thống thật (EVIDENCE); §7.2 ở screens-EXP-033. CHECKPOINT: record_payment (mới), kit, screens, main. BẰNG CHỨNG: đủ ba
+//       loại (dưới đây, ở record_payment, kit, main).
 //
 // UNSOLVED_PROBLEMS: []
 //
@@ -669,8 +796,101 @@
 //       114688 byte, data.db.lock 0 byte, cùng giờ ghi 2026-09-28 21:09:42, cùng hash
 //       B1996554…F390B đầu và cuối phiên — không đổi.
 //     recorded_at: 2026-09-29T21:30:29+07:00
+//   - claim: >
+//       Phiên 22: kiểm thử dựng trang của payment_list, payment_form và phần Thanh toán của
+//       commission_detail phủ mọi nhãn của bảng D4 cho từng lời gọi, lần vẽ đầu, hàng nút, khung xác
+//       nhận hủy, và các ca riêng của plan việc 5; các trang cũ giữ nguyên số ca.
+//     how: >
+//       Trong UI/: npm run check; npx vitest run src/screens --reporter=verbose (đếm theo tệp).
+//     result: >
+//       PaymentList.test.tsx 22 (lần vẽ đầu; hàng nút; số dư; khoản đã hủy đánh dấu, không nút;
+//       rỗng có nút; thông báo; rejected get_balance 404/409 và list 500; unreachable rồi Tải lại;
+//       contract_violation; nút bận. Hủy: hỏi trước với confirmed=false, câu hậu quả, focus "Xác nhận",
+//       các nút khác chờ; "Quay lại" không gửi (gọi đúng một lần, không bao giờ với true); "Xác nhận" gửi
+//       đúng một lần, nút vô hiệu lúc gửi, rồi thông báo và tải lại; 404 và 409 → thông báo và tải lại;
+//       500, unreachable, contract_violation → thông báo, danh sách y như cũ, số lần tải lại đúng; hỏi lại
+//       xóa kết quả cũ). PaymentForm.test.tsx 28 (lần vẽ đầu; sáu ô đúng thứ tự, nút trước ô; mặc định;
+//       hint gắn vào ô; đơn vị tiền vô hiệu; datalist; đơn vị lạ không form; rejected 404/409/500,
+//       unreachable rồi Thử lại, contract_violation; Hủy. Lưu: nháp gửi nguyên như gõ, ok → payment_list
+//       kèm thông báo; rejected input lỗi đúng ô, nháp giữ, focus ô lỗi đầu tiên (bốn tổ hợp) và lần
+//       hai; system 400/404/409/422/500 không ô nào có focus; unreachable rồi lưu lại cùng bản nháp;
+//       contract_violation; bận). CommissionDetail.test.tsx 37 (24 cũ với nút "Thanh toán" thêm, cộng 13
+//       ca phần Thanh toán: lần vẽ đầu, ba dòng, "Đã thu đủ", "Đã thu dư", mở payment_list, 404/409/500,
+//       unreachable, contract_violation, "Thử lại" riêng, độc lập với phần Tiến độ, phần đơn lỗi thì
+//       không có phần và không có nút). app_root.test.tsx 7 (mười trang; ca đi hết luồng D4).
+//       Toàn layer "Test Files 26 passed (26)", "Tests 1100 passed (1100)" (mốc 780).
+//     recorded_at: 2026-09-30T09:15:00+07:00
+//   - claim: >
+//       Phiên 22: ba kịch bản D4 (payment_list S1..S5, payment_form S1..S6, commission_detail thêm S6 và
+//       bổ sung S1, S4, S5) chạy trên ứng dụng thật với Backend.py thật, mọi bước đạt, có ảnh chụp, đúng
+//       tên người chạy; e2e 5/5 lần liên tiếp; mỗi spec mới và commission_detail chạy riêng 10/10.
+//     how: >
+//       Desktop đã build. Trong UI/: CT_WALKTHROUGH_RUNNER=coding-agent@2026-09-30#1, npm run e2e năm lần
+//       liên tiếp (scratchpad e2e_final.ps1, không chạy gì song song); npm run e2e KHÔNG biến một lần với
+//       SHA-256 mọi tệp UI/evidence trước và sau; npx playwright test -c tests/e2e/playwright.config.ts
+//       payment_list, payment_form, commission_detail mỗi cái 10 lần liên tiếp (scratchpad e2e_loop.ps1).
+//     result: >
+//       Mốc: "42 passed (3.1m)". Sau D4: năm lần "54 passed" (2.9m, 3.1m, 3.0m, 3.2m, 2.9m; 08:51–09:07);
+//       lần không biến "54 passed (2.9m)", "UI/evidence UNCHANGED (89 files hashed)". payment_list 10/10
+//       ("5 passed"), commission_detail 10/10 ("6 passed"), payment_form 10/10 ("6 passed") sau khi thêm
+//       một cú bấm vào tiêu đề trước ảnh -S1-errors (xem dưới). Ảnh mới: payment_list-S1..S5,
+//       -S3-confirm, -S5-unreachable; payment_form-S1..S6, -S1-errors, -S6-unreachable;
+//       commission_detail-S6. Khẳng định trên ứng dụng thật: thứ tự khoản và dòng phụ đúng
+//       D4_PAYMENTS (ngày giờ so bằng cùng lời gọi Intl); số dư 4.600.000/4.500.000 VND, sau khi hủy
+//       tip 4.500.000/4.500.000; "Đã thu dư 2,50 USD"; "Đã thu đủ"; khung xác nhận có focus ở "Xác
+//       nhận", các nút khác vô hiệu, "Quay lại" không đổi gì; focus ở "Khoản" (payment_form S1, hai
+//       lần); ô đơn vị tiền vô hiệu; hàng nút trên ô đầu theo vị trí thật. Hai lần hỏng KHÔNG tính (xem
+//       NOTES): lần 5 của lượt đầu (chụp ảnh hết giờ ở payment_form-S1-errors, backend đang bật), và một
+//       lượt bị hỏng vì chạy TRÙNG (xem NOTES).
+//     recorded_at: 2026-09-30T09:12:00+07:00
+//   - claim: >
+//       Phiên 22, UI-11 (thu dữ liệu): thời gian chụp ảnh của harness, tổng hợp từ nhật ký.
+//     how: >
+//       tests/e2e/walkthrough_harness.ts ghi UI/test-results/screenshot-timing.log; chép ra sau mỗi lần
+//       chạy; scratchpad aggregate.ps1 tính max, trung bình, riêng bước backend tắt.
+//     result: >
+//       Năm lần e2e đầy đủ (FINAL2): 390 lần chụp, lớn nhất 155 ms, trung bình 92 ms; 50 lần ở bước
+//       backend tắt: lớn nhất 128 ms, trung bình 87 ms; không lần lỗi. Mốc e2e (62 lần chụp): lớn nhất
+//       298 ms (commission_form-S1), trung bình 113 ms; backend tắt (8 lần): lớn nhất 138 ms, trung bình
+//       110 ms. Mười lần payment_form (80 lần chụp): lớn nhất 224 ms. MỘT lần hết giờ trong cả phiên: lượt
+//       đầu, lần 5, tests/e2e/payment_form_walkthrough.spec.ts, ảnh payment_form-S1-errors, "page.screenshot:
+//       Timeout 30000ms exceeded" (30004 ms trong nhật ký), BACKEND ĐANG BẬT (backend=up), lúc 08:39, lúc
+//       không có tiến trình e2e nào khác. Trace giữ ở scratchpad traces_FINAL_5/
+//       payment_form_walkthrough-w-e9789-…-back-to-the-list.zip (chưa mở xem). Bước ngay trước ảnh là gõ
+//       phương thức (ô có datalist) rồi xóa ô ngày giờ: nghi popup gốc còn mở (kit-EXP-008) chứ không phải
+//       backend tắt; đã thêm một cú bấm vào tiêu đề trang trước ảnh này và 16 lần chạy sạch sau đó (10 lần
+//       payment_form, 5 lần e2e có tên, 1 lần không biến). Không nới thời gian chờ, không retries. KHÔNG kết luận được nguyên nhân của
+//       UI-11 (các lần cũ đều ở bước backend tắt, lần này backend bật): để Orchestrator xét.
+//     recorded_at: 2026-09-30T09:20:00+07:00
 //
 // NOTES:
+//   - content: >
+//       Đề xuất trạng thái (I6, phiên 22): payment_list, payment_form và commission_detail (có phần Thanh
+//       toán) đều hoàn_tất; chờ Orchestrator audit và Project Owner tự chạy tay (npm run
+//       walkthrough:app -- --payments cho payment_list S1..S5 và commission_detail S6; -- --commissions
+//       cho payment_form S1..S6 và commission_detail S1..S5). record_payment còn đang_triển_khai ở hợp
+//       đồng do BE-7 (backend chưa từ chối phương thức trống), việc của phiên backend, không chặn giao diện.
+//       Coding agent không sửa ui_decomposition.md.
+//     written_at: 2026-09-30
+//   - content: >
+//       Cho Orchestrator (không chặn): (1) đặc tả D4 nói tải lại sau 404 và 409 của void_payment nhưng
+//       giữ danh sách sau 500, còn I3.4 gộp mọi lỗi khai báo thành rejected; phiên 22 chọn tải lại lặng lẽ
+//       sau mọi rejected (screens-EXP-029). Nếu muốn khác, chỉ sửa use_payment_list.ts. (2) Trong lúc khung
+//       xác nhận chờ, các "Hủy khoản này" còn lại bị vô hiệu: phần thêm ngoài đặc tả (screens-EXP-028).
+//       (3) "Làm tròn tới phút" của ngày giờ mặc định làm là cắt giây. (4) Số 0 dùng
+//       violates_type_constraint, sai cú pháp not_number, quá lớn not_integer (record_payment-EXP-005).
+//       (5) Kiểm thử StageChange "focus ở Xác nhận" hỏng đúng một lần khi chạy cả bộ vitest lúc đang thêm
+//       tệp mới (isFocused false), các lần khác đạt (bộ 1100 đạt nhiều lần liên tiếp); không tái hiện,
+//       ghi nhận.
+//     written_at: 2026-09-30
+//   - content: >
+//       Sự cố quy trình của phiên (không phải của sản phẩm): trong lúc lượt e2e đầu chạy nền, một
+//       vòng lặp thứ hai (payment_form ×10) được khởi chạy cùng lúc; lượt nền không dừng sau lần hỏng
+//       thứ năm mà tiếp tục lần 6, nên hai lượt dùng chung một tệp phiên, thư mục test-results và cổng,
+//       và 7 lần của vòng thứ hai cùng lần 6 hỏng ("element(s) not found" ở nhiều bước). Đã dừng lượt
+//       nền, không tính các lần đó, và chạy lại từng lượt một, không song song. Bài học: một lượt nền có
+//       vòng lặp tự thử tiếp thì không được chạy thêm e2e khác.
+//     written_at: 2026-09-30
 //   - content: >
 //       Đề xuất trạng thái (I6, phiên 21): commission_list, commission_detail,
 //       commission_form, progress_board, stage_change đều hoàn_tất (UI-10 đã vá:
@@ -698,6 +918,8 @@ import { ClientList } from './pages/client_list/ClientList'
 import { CommissionDetail } from './pages/commission_detail/CommissionDetail'
 import { CommissionForm } from './pages/commission_form/CommissionForm'
 import { CommissionList } from './pages/commission_list/CommissionList'
+import { PaymentForm } from './pages/payment_form/PaymentForm'
+import { PaymentList } from './pages/payment_list/PaymentList'
 import { ProgressBoard } from './pages/progress_board/ProgressBoard'
 import { StageChange } from './pages/stage_change/StageChange'
 
@@ -707,9 +929,11 @@ export type LayoutKey = 'main_layout'
 
 // The parameters each page opens with, typed per page
 // (ui_decomposition.md §5, "Điều hướng giữa các trang khách hàng";
-// "Chặng D2", "Điều hướng của D2"; "Chặng D3", "Điều hướng của D3").
+// "Chặng D2", "Điều hướng của D2"; "Chặng D3", "Điều hướng của D3";
+// "Chặng D4", "Điều hướng của D4").
 // stage_change receives the commission's title to show, handed by
-// commission_detail (it does not call get_commission again).
+// commission_detail (it does not call get_commission again); so do
+// payment_list and payment_form (D4).
 export type PageParams = {
   client_list: null
   client_detail: { client_id: string }
@@ -719,6 +943,8 @@ export type PageParams = {
   commission_form: { mode: 'create' } | { mode: 'edit'; commission_id: string }
   progress_board: null
   stage_change: { commission_id: string; title: string }
+  payment_list: { commission_id: string; title: string }
+  payment_form: { commission_id: string; title: string }
 }
 
 // Keys of the pages (ui_decomposition.md §5), one per page that is built.
@@ -783,4 +1009,7 @@ export const NAVIGATION: { readonly [K in PageKey]: NavigationEntry<K> } = {
     menu: { label: 'Tiến độ', route: { page: 'progress_board', params: null } },
   },
   stage_change: { layout: 'main_layout', component: StageChange, section: 'commission_list', menu: null },
+  // Payments are a step of the commission detail (D4): the "Đơn hàng" item is the current one.
+  payment_list: { layout: 'main_layout', component: PaymentList, section: 'commission_list', menu: null },
+  payment_form: { layout: 'main_layout', component: PaymentForm, section: 'commission_list', menu: null },
 }

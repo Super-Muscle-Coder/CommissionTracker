@@ -16,14 +16,16 @@ steps:
       Ctrl+C.
     expect: >
       Trang "Chi tiết đơn hàng", tiêu đề nhóm "Chân dung bán thân"; ngay dưới là hàng nút "Sửa"
-      (nút chính, đứng đầu), "Đổi giai đoạn" (có từ D3, hiện khi phần Tiến độ đã tải xong) và
-      "Quay lại danh sách". Các mục theo thứ tự: Khách hàng "Mai Anh";
+      (nút chính, đứng đầu), "Đổi giai đoạn" (có từ D3, hiện khi phần Tiến độ đã tải xong),
+      "Thanh toán" (có từ D4, luôn có mặt) và "Quay lại danh sách". Các mục theo thứ tự: Khách
+      hàng "Mai Anh";
       Loại tranh "bán thân"; Giá thỏa thuận "1.500.000 VND"; Hạn giao "15/10/2026"; Mô tả "Nền
       xanh, ánh sáng dịu."; Liên kết tham khảo hai dòng "https://example.com/ref-1",
       "https://example.com/ref-2"; Ngày tạo; Sửa lần cuối. Liên kết là chữ thường (không gạch
       chân, không đổi con trỏ thành bàn tay), bấm vào không mở gì; chọn và sao chép được. Dưới
       các mục là phần "Tiến độ" (D3): "Giai đoạn hiện tại" là "Chờ bắt đầu" kèm "chưa cập nhật lần
-      nào"; "Lịch sử" là "Chưa đổi giai đoạn lần nào".
+      nào"; "Lịch sử" là "Chưa đổi giai đoạn lần nào". Dưới phần Tiến độ là phần "Thanh toán" (D4):
+      Giá thỏa thuận "1.500.000 VND"; Đã nhận "0 VND"; Còn phải thu "1.500.000 VND".
     covers: [ok]
   - id: S2
     setup: null
@@ -55,10 +57,13 @@ steps:
       Lần đầu: trang "Chi tiết đơn hàng" có khung "Không kết nối được" với câu "Không kết nối
       được tới phần xử lý của ứng dụng. Vui lòng thử lại.", cùng nút "Thử lại" và "Quay lại danh
       sách"; không có thông tin đơn. Sau "Thử lại" (backend đã chạy lại): chi tiết đầy đủ của
-      "Chân dung bán thân" như ở S1, còn phần "Tiến độ" (tải riêng, lần tải của nó đã hỏng khi
-      backend tắt) hiện trong chính nó khung "Không kết nối được" với nút "Thử lại" của riêng
-      phần đó; chưa có nút "Đổi giai đoạn". Bấm "Thử lại" trong phần "Tiến độ": phần đó hiện
-      "Chờ bắt đầu", và nút "Đổi giai đoạn" xuất hiện sau "Sửa"; thông tin đơn không đổi.
+      "Chân dung bán thân" như ở S1, còn phần "Tiến độ" và phần "Thanh toán" (mỗi phần tải riêng,
+      lần tải của chúng đã hỏng khi backend tắt) hiện trong chính chúng khung "Không kết nối
+      được" với nút "Thử lại" của riêng từng phần (hai khung báo lỗi); chưa có nút "Đổi giai
+      đoạn", còn nút "Thanh toán" vẫn có trong hàng nút. Bấm "Thử lại" trong phần "Tiến độ":
+      phần đó hiện "Chờ bắt đầu", và nút "Đổi giai đoạn" xuất hiện sau "Sửa"; phần "Thanh toán"
+      vẫn báo lỗi của nó. Bấm "Thử lại" trong phần "Thanh toán": phần đó hiện ba dòng số dư như
+      ở S1; thông tin đơn không đổi.
     covers: [unreachable, ok]
   - id: S5
     setup: >
@@ -70,6 +75,19 @@ steps:
     expect: >
       Phần "Tiến độ": "Giai đoạn hiện tại" là "Đã giao" kèm "cập nhật lúc <ngày giờ>"; "Lịch sử" có
       dòng "Bắt đầu: Đã giao · <ngày giờ> · Đã gửi file cuối"; dòng "Đơn đang ở giai đoạn "Đã
-      giao", không đổi giai đoạn được nữa."; hàng nút chỉ có "Sửa" và "Quay lại danh sách" (không
-      có "Đổi giai đoạn").
+      giao", không đổi giai đoạn được nữa."; hàng nút chỉ có "Sửa", "Thanh toán" và "Quay lại danh
+      sách" (không có "Đổi giai đoạn").
+    covers: [ok]
+  - id: S6
+    setup: >
+      Ghi một khoản 15,00 USD "Thanh toán cuối" cho "Chibi đôi" (12,50 USD): kiểm thử tự động gọi
+      POST /payments; chạy tay thì dùng npm run walkthrough:app -- --payments (đơn này đã có khoản
+      đó), hoặc ghi qua trang "Ghi khoản thanh toán". Về trang "Đơn hàng".
+    action: >
+      Bấm đơn "Chibi đôi". Bấm "Thanh toán". Bấm "Quay lại đơn hàng".
+    expect: >
+      Phần "Thanh toán" (dưới phần Tiến độ): Giá thỏa thuận "12,50 USD"; Đã nhận "15,00 USD"; Còn
+      phải thu "Đã thu dư 2,50 USD". "Thanh toán" mở trang "Thanh toán" (tiêu đề nhóm "Chibi đôi")
+      với một khoản "Nhận tiền 15,00 USD · Thanh toán cuối". "Quay lại đơn hàng" về lại chi tiết
+      "Chibi đôi", phần "Thanh toán" vẫn như trên.
     covers: [ok]

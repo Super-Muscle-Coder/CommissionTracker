@@ -5,8 +5,8 @@
     {
       "step": "S1",
       "passed": true,
-      "runner": "coding-agent@2026-09-29#3 (Playwright, tests/e2e/commission_detail_walkthrough.spec.ts)",
-      "finished_at": "2026-09-29T14:07:34.304Z",
+      "runner": "coding-agent@2026-09-30#1 (Playwright, tests/e2e/commission_detail_walkthrough.spec.ts)",
+      "finished_at": "2026-09-30T02:05:37.073Z",
       "screenshot": "evidence/walkthroughs/commission_detail/commission_detail-S1.png",
       "covers": [
         "ok"
@@ -15,8 +15,8 @@
     {
       "step": "S2",
       "passed": true,
-      "runner": "coding-agent@2026-09-29#3 (Playwright, tests/e2e/commission_detail_walkthrough.spec.ts)",
-      "finished_at": "2026-09-29T14:07:35.180Z",
+      "runner": "coding-agent@2026-09-30#1 (Playwright, tests/e2e/commission_detail_walkthrough.spec.ts)",
+      "finished_at": "2026-09-30T02:05:37.398Z",
       "screenshot": "evidence/walkthroughs/commission_detail/commission_detail-S2.png",
       "covers": [
         "ok"
@@ -25,8 +25,8 @@
     {
       "step": "S3",
       "passed": true,
-      "runner": "coding-agent@2026-09-29#3 (Playwright, tests/e2e/commission_detail_walkthrough.spec.ts)",
-      "finished_at": "2026-09-29T14:07:35.648Z",
+      "runner": "coding-agent@2026-09-30#1 (Playwright, tests/e2e/commission_detail_walkthrough.spec.ts)",
+      "finished_at": "2026-09-30T02:05:37.894Z",
       "screenshot": "evidence/walkthroughs/commission_detail/commission_detail-S3.png",
       "covers": [
         "ok"
@@ -35,8 +35,8 @@
     {
       "step": "S4",
       "passed": true,
-      "runner": "coding-agent@2026-09-29#3 (Playwright, tests/e2e/commission_detail_walkthrough.spec.ts)",
-      "finished_at": "2026-09-29T14:07:43.300Z",
+      "runner": "coding-agent@2026-09-30#1 (Playwright, tests/e2e/commission_detail_walkthrough.spec.ts)",
+      "finished_at": "2026-09-30T02:05:44.584Z",
       "screenshot": "evidence/walkthroughs/commission_detail/commission_detail-S4.png",
       "covers": [
         "unreachable",
@@ -46,9 +46,19 @@
     {
       "step": "S5",
       "passed": true,
-      "runner": "coding-agent@2026-09-29#3 (Playwright, tests/e2e/commission_detail_walkthrough.spec.ts)",
-      "finished_at": "2026-09-29T14:07:43.732Z",
+      "runner": "coding-agent@2026-09-30#1 (Playwright, tests/e2e/commission_detail_walkthrough.spec.ts)",
+      "finished_at": "2026-09-30T02:05:44.902Z",
       "screenshot": "evidence/walkthroughs/commission_detail/commission_detail-S5.png",
+      "covers": [
+        "ok"
+      ]
+    },
+    {
+      "step": "S6",
+      "passed": true,
+      "runner": "coding-agent@2026-09-30#1 (Playwright, tests/e2e/commission_detail_walkthrough.spec.ts)",
+      "finished_at": "2026-09-30T02:05:45.412Z",
+      "screenshot": "evidence/walkthroughs/commission_detail/commission_detail-S6.png",
       "covers": [
         "ok"
       ]
