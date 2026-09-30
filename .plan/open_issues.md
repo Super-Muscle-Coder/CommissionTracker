@@ -168,6 +168,12 @@ Desktop thử lại ba lần trên cổng khác, rồi báo một thông báo ch
 
 *Rà soát 2026-09-28:* **không rẻ như vẻ ngoài.** Mã thoát 3 là giá trị trong `Backend/configs/backend.yaml`, còn hợp đồng (Data Schema 6.2.0) ghi rõ "The mechanism belongs to the backend; no other layer relies on how it is done". Muốn desktop hiểu mã này thì phải đưa nó vào hợp đồng trước. Giữ nguyên: không làm ở V1.
 
+### BE-7 — Backend áp dụng CT-4: `payment_input.method` not blank (trung bình; Data Schema 9.0.0) — phiên backend ngắn, sau phiên 22
+
+Cùng cách làm với BE-5 và BE-6 (phiên 18): trong `record_payment/routers.py`, `method` có `StringConstraints(min_length=1)` và một hàm `_not_blank` riêng của workflow (không `Backend/shared/`, không import chéo), gắn bằng `AfterValidator`; giá trị hợp lệ được lưu nguyên văn.
+
+Kiểm thử: `""`, khoảng trắng ASCII, `U+00A0`, `U+3000` bị 400 và không ghi gì; phương thức có khoảng trắng hai đầu được lưu nguyên văn; `note` không đổi; có kiểm thử cắn. Sau đó đề xuất đưa `record_payment` về `đã_hoàn_thiện` (Data Schema 9.0.1).
+
 ## Hợp đồng — chờ Project Owner duyệt
 
 ### CT-1 — Luật "một backend cho một `db_file_path`" (đề xuất của Orchestrator, 2026-09-27)
@@ -209,6 +215,20 @@ Chi tiết: `.reviews/audits/ui/audit_ui_session16.md` §4.
 **Lý do:** cùng chỗ hở với CT-2. Hai tên bắt buộc còn lại của hợp đồng nhận chuỗi chỉ gồm dấu cách.
 
 **Các trường tùy chọn (`string|null`) không đổi:** một văn bản tùy chọn để trống là một quyết định riêng (rỗng hay `null`), chưa đặt ra ở đây.
+
+### CT-4 — `payment_input.method` not blank (đề xuất của Orchestrator, 2026-09-29, khi làm I1 cho D4)
+
+> **ĐÃ DUYỆT VÀ GHI 2026-09-30: Data Schema 9.0.0.** `record_payment` chuyển `đã_hoàn_thiện` → `đang_triển_khai`. Phía giao diện: D4 (phiên 22). Phía backend: BE-7.
+
+**Lý do:** cùng chỗ hở với CT-2 và CT-3. `method` là chuỗi bắt buộc ("free label, e.g. bank_transfer, momo, paypal, cash"), nhưng hợp đồng không ghi not blank. Backend hiện kiểm `method: str`, nên nhận `""` và `"   "`: một khoản thanh toán không có phương thức, mà họa sĩ không biết đã nhận tiền qua đâu.
+
+**Thay đổi đề xuất (Data Schema 8.0.1 → 9.0.0):**
+- `record_payment.input_expected.payment_input`: `method: string (free label, …)` → `method: string (1.. characters, not blank; free label, …)`.
+- Thay đổi phá vỡ, vì thu hẹp giá trị đầu vào được chấp nhận (tiền lệ v5.0.0, v7.0.0, v8.0.0). Nhãn lỗi không đổi (400 `ERR_VALIDATION`), nên `api_contract.yaml` không đổi.
+- `record_payment` chuyển `đã_hoàn_thiện` → `đang_triển_khai` cho tới khi backend áp dụng (một phiên backend ngắn, BE-7). Dữ liệu cũ không bị chuyển đổi.
+- `note` giữ `string|null`, không đổi.
+
+**Phía giao diện:** D4 (phiên 22) đã kiểm "phương thức không rỗng" như một luật `[UI-ONLY]`. Nếu CT-4 được duyệt, luật đó thành bản sao của hợp đồng; hành vi không đổi.
 
 ## Layer giao diện — gộp vào đầu phiên D1 (phiên 16, plan ở `.plan/ui_plan.md`)
 
@@ -365,7 +385,7 @@ Máy Orchestrator (Linux) chưa gặp lần nào trong hơn 20 lần e2e toàn b
 - phần mềm diệt virus quét tệp ảnh vừa ghi;
 - cửa sổ Electron không nhận khung hình mới khi không có tiêu điểm.
 
-**Việc cho phiên giao diện kế tiếp** (thu dữ liệu, không nới thời gian chờ, không `retries`):
+**Việc cho phiên giao diện kế tiếp** (thu dữ liệu, không nới thời gian chờ, không `retries`) — **đưa vào plan phiên 22** (việc 2):
 - bật `trace: 'retain-on-failure'` trong `tests/e2e/playwright.config.ts`;
 - ghi thời điểm bắt đầu và kết thúc của mỗi lệnh chụp ảnh ở bước backend tắt;
 - khi có lần hỏng, giữ trace và báo lại.

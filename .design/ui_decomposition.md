@@ -62,7 +62,7 @@ Mặc định của iWCA: mỗi workflow hệ thống mà giao diện dùng có 
 | `manage_client` | `nghiệp_vụ` | `manage_client` | Sắp danh sách khách hàng theo thứ tự chữ cái tiếng Việt (backend trả theo `casefold`, nên "Ánh" đứng sau "z"); tách khách đang hoạt động và khách đã lưu trữ; chọn câu thông báo cho từng nhãn lỗi. **Từ D1:** kiểm dữ liệu form trước khi gửi (§5, trang `client_form`); định dạng ngày giờ để hiển thị. | B2b, D1 |
 | `manage_commission` | `nghiệp_vụ` | `manage_commission` | Ghép tên khách hàng vào danh sách và chi tiết đơn. Adapters của workflow này gọi luôn `GET /clients` và `GET /clients/{client_id}`: đây là trùng lặp có chủ đích theo I1.3, không đi qua `manage_client` của giao diện. Sắp danh sách đơn (hợp đồng không hứa thứ tự). Đọc và định dạng số tiền theo `currency_code`; định dạng ngày hạn giao. Kiểm dữ liệu form trước khi gửi (§5, trang `commission_form`). Chi tiết từ D2 ở §5. | D2 |
 | `update_progress` | `nghiệp_vụ` | `update_progress` | Nhóm bảng tiến độ theo giai đoạn, theo thứ tự của `list_stages`; ghép tiêu đề và hạn giao của đơn vào bảng (Adapters gọi luôn `GET /commissions`, trùng lặp có chủ đích theo I1.3). Đặt tên tiếng Việt cho từng giai đoạn. Kiểm form đổi giai đoạn. Chi tiết từ D3 ở §5. | D3 |
-| `record_payment` | `nghiệp_vụ` | `record_payment` | Trình bày số dư và các khoản đã hủy. | D4 |
+| `record_payment` | `nghiệp_vụ` | `record_payment` | Trình bày số dư (gồm cả trường hợp thu dư) và các khoản đã hủy; tên tiếng Việt của chiều tiền và loại khoản; đọc số tiền và ngày giờ nhận tiền; kiểm form. Chi tiết từ D4 ở §5. | D4 |
 | `view_income_report` | `nghiệp_vụ` | `view_income_report` | Trình bày báo cáo theo tháng và theo tiền tệ. Không quy đổi tiền tệ (hợp đồng). | D5 |
 | `send_reminder` | `nghiệp_vụ` | `send_reminder` | Trình bày danh sách nhắc việc đang chờ và phần cài đặt. | D6 |
 | `backup_data` | `nghiệp_vụ` | `backup_data` | Để chi tiết ở lần làm lại I1 trước chặng E. | E |
@@ -97,12 +97,13 @@ Layout: `main_layout` (khung chính có điều hướng) — layout duy nhất.
 | `client_list` | Xem danh sách khách hàng; lối vào thêm khách và xem chi tiết | `manage_client` | `main_layout` | `hoàn_tất` (2026-09-28: phiên 16 và 17, audit phiên 17 đạt, Project Owner tự chạy tay. Trước đó `hoàn_tất` ngày 2026-09-27 với phạm vi chỉ đọc) |
 | `client_detail` | Xem một khách hàng; lưu trữ, bỏ lưu trữ; lối vào sửa | `manage_client` | `main_layout` | `hoàn_tất` (2026-09-28: phiên 16 và 17, audit phiên 17 đạt, Project Owner tự chạy tay) |
 | `client_form` | Thêm khách hàng mới, hoặc sửa một khách hàng | `manage_client` | `main_layout` | `hoàn_tất` (2026-09-28: phiên 16 và 17, audit phiên 17 đạt, Project Owner tự chạy tay) |
-| `commission_list` | Xem danh sách đơn hàng; lối vào thêm đơn và xem chi tiết | `manage_commission` | `main_layout` | `đang_làm` (2026-09-28: plan phiên 19) |
-| `commission_detail` | Xem một đơn hàng; lối vào sửa; **từ D3:** phần "Tiến độ" (giai đoạn hiện tại, lịch sử, lối vào đổi giai đoạn) | `manage_commission`; từ D3 thêm `update_progress` | `main_layout` | `đang_làm` (2026-09-28: plan phiên 19; phiên 20 sửa thêm) |
-| `commission_form` | Thêm đơn hàng mới, hoặc sửa một đơn | `manage_commission` | `main_layout` | `đang_làm` (2026-09-28: plan phiên 19) |
-| `progress_board` | Xem mọi đơn hàng nhóm theo giai đoạn; lối vào chi tiết đơn | `update_progress` | `main_layout` | `đang_làm` (2026-09-29: plan phiên 20) |
-| `stage_change` | Đổi giai đoạn của một đơn, kèm ghi chú | `update_progress` | `main_layout` | `đang_làm` (2026-09-29: plan phiên 20) |
-| *(D4)* thanh toán của một đơn | — | `record_payment` | `main_layout` | `chưa_làm` |
+| `commission_list` | Xem danh sách đơn hàng; lối vào thêm đơn và xem chi tiết | `manage_commission` | `main_layout` | `hoàn_tất` (2026-09-29: audit phiên 21 đạt, Project Owner tự chạy tay) |
+| `commission_detail` | Xem một đơn hàng; lối vào sửa; **từ D3:** phần "Tiến độ"; **từ D4:** phần "Thanh toán" (số dư, lối vào danh sách thanh toán) | `manage_commission`; từ D3 thêm `update_progress`; từ D4 thêm `record_payment` | `main_layout` | `đang_làm` (2026-09-29: plan phiên 22 sửa thêm phần Thanh toán; trước đó `hoàn_tất` cùng ngày, sau audit phiên 21 và Project Owner chạy tay) |
+| `commission_form` | Thêm đơn hàng mới, hoặc sửa một đơn | `manage_commission` | `main_layout` | `hoàn_tất` (2026-09-29: audit phiên 21 đạt, Project Owner tự chạy tay) |
+| `progress_board` | Xem mọi đơn hàng nhóm theo giai đoạn; lối vào chi tiết đơn | `update_progress` | `main_layout` | `hoàn_tất` (2026-09-29: audit phiên 21 đạt, Project Owner tự chạy tay) |
+| `stage_change` | Đổi giai đoạn của một đơn, kèm ghi chú | `update_progress` | `main_layout` | `hoàn_tất` (2026-09-29: audit phiên 21 đạt, Project Owner tự chạy tay) |
+| `payment_list` | Xem số dư và mọi khoản thanh toán của một đơn; hủy một khoản; lối vào ghi khoản mới | `record_payment` | `main_layout` | `đang_làm` (2026-09-29: plan phiên 22) |
+| `payment_form` | Ghi một khoản nhận tiền hoặc hoàn tiền cho một đơn | `record_payment` | `main_layout` | `đang_làm` (2026-09-29: plan phiên 22) |
 | *(D5)* báo cáo thu nhập | — | `view_income_report` | `main_layout` | `chưa_làm` |
 | *(D6)* nhắc việc | — | `send_reminder` | `main_layout` | `chưa_làm` |
 | *(E, F)* sao lưu, khôi phục | — | `backup_data`, `restore_data` | `main_layout` | `chưa_làm` |
@@ -401,6 +402,116 @@ Trang có thêm một phần **"Tiến độ"**, nằm dưới các thông tin c
 - Không đòi `rejected_system`: 404 và 409 không gây ra được bằng thao tác bình thường; kiểm thử dựng trang chứng minh chúng hiện đúng.
 - Kịch bản `commission_detail` (D2) được bổ sung các bước của phần Tiến độ; ba kịch bản D2 chạy lại đủ.
 
+## Chặng D4 — Thanh toán (làm lại I1 ngày 2026-09-29, trước phiên 22)
+
+Căn cứ: Data Schema **9.0.0** (`record_payment`: `payment_input`, `payment_record`, `payment_list`, `commission_balance`; `formats.not_blank`, `types.money`, `formats.timestamp`), API Contract 4.0.0 (`record_payment`). Bản 9.0.0 (CT-4, duyệt 2026-09-30) thêm luật `method` not blank. `record_payment` tạm ở `đang_triển_khai` cho tới khi backend áp dụng (BE-7). Giao diện đã kiểm luật này từ D4, nên không phải chờ backend.
+
+### Lời gọi của workflow giao diện `record_payment`
+
+| Lời gọi | Dùng ở | Nhãn phải xử lý (hợp đồng) |
+|---|---|---|
+| `get_balance` (`GET /payments/balance/{commission_id}`) | `commission_detail` (phần Thanh toán), `payment_list`, `payment_form` | 200, 404, 409 (`ERR_OUT_OF_RANGE`), 500 |
+| `list_for_commission` (`GET /payments?commission_id=…`) | `payment_list` | 200, 404, 500 |
+| `record` (`POST /payments`, thân `{ "commission_id": …, "payment_input": … }`) | `payment_form` | 201, 400, 404, 409 (`ERR_OUT_OF_RANGE`), 422 (`ERR_CURRENCY_MISMATCH`), 500 |
+| `void_payment` (`PUT /payments/{payment_id}/void`) | `payment_list` | 200, 404, 409 (`ERR_CONFLICT`), 500 |
+
+Mọi lời gọi còn phải xử lý "không tới được" và "vi phạm hợp đồng". Một thao tác nhiều lời gọi là **một** thao tác với **một** kết quả, như D2, D3.
+
+### Luật trình bày chung của D4 (quyết định của `record_payment`, đều `[UI-ONLY]`)
+
+- **Số tiền:** đọc và hiện đúng luật của D2 (mục "Số tiền"). Workflow này giữ **bản riêng** của bảng chữ số lẻ và của cách đọc, cách hiện (R2). Số âm (chỉ có ở `outstanding`) hiện với dấu trừ.
+- **Chiều tiền** (`direction`): `incoming` "Nhận tiền", `refund` "Hoàn tiền cho khách".
+- **Loại khoản** (`kind`): `deposit` "Tiền cọc", `milestone` "Thanh toán theo đợt", `final` "Thanh toán cuối", `tip` "Tiền tip", `other` "Khác".
+- **Số dư** (`commission_balance`), ba dòng:
+  - "Giá thỏa thuận": `agreed`;
+  - "Đã nhận": `received_net`, tức tiền nhận trừ tiền hoàn, gồm cả tiền tip;
+  - "Còn phải thu": `outstanding`. Bằng 0 thì hiện "Đã thu đủ". Âm thì hiện "Đã thu dư <số tiền dương>".
+- **Ngày giờ nhận tiền** (`paid_at`): hiện `HH:mm dd/mm/yyyy` theo giờ của máy, như các ngày giờ khác.
+- **Danh sách khoản:** giữ đúng thứ tự hợp đồng hứa (mới nhất trước theo `paid_at`).
+- **Khoản đã hủy:** vẫn hiện, đánh dấu "Đã hủy", chữ phụ; không có nút hủy.
+
+### Sửa trang `commission_detail` (D4)
+
+Thêm phần **"Thanh toán"** dưới phần "Tiến độ", cùng cách làm với phần Tiến độ:
+- dùng Routers của `record_payment`, với hook riêng;
+- tải riêng bằng `get_balance`, lỗi riêng, "Thử lại" riêng;
+- không ghép dữ liệu với phần khác.
+
+Phần này hiện ba dòng số dư. Hàng nút dưới tiêu đề trang thêm "Thanh toán" (hành động phụ), đứng sau "Đổi giai đoạn" và trước "Quay lại danh sách". Nút mở `payment_list(commission_id, title)` và luôn có mặt, kể cả khi phần Thanh toán tải lỗi.
+
+`get_balance` trả 409 (`ERR_OUT_OF_RANGE`) thì phần này hiện "Số dư của đơn này vượt giới hạn tính toán." Trong dùng bình thường điều này không xảy ra.
+
+### Chi tiết trang `payment_list` (D4)
+
+- **Tham số:** `commission_id`, `title`. **Tiêu đề trang:** "Thanh toán"; dưới đó là tiêu đề đơn.
+- **Hàng nút:** "Ghi khoản thanh toán" (hành động chính) mở `payment_form`; "Quay lại đơn hàng" về `commission_detail`.
+- **Khi mở, và khi bấm "Tải lại":** `get_balance` và `list_for_commission`, là một thao tác. 404: "Không tìm thấy đơn hàng này", kèm nút quay lại.
+- **Hiện:** ba dòng số dư; rồi danh sách khoản.
+  - Mỗi khoản: dòng chính "<chiều tiền> <số tiền> · <loại khoản>"; dòng phụ "<ngày giờ> · <phương thức>", thêm " · <ghi chú>" nếu có.
+  - Khoản đã hủy thêm "Đã hủy".
+  - Danh sách rỗng: "Chưa có khoản thanh toán nào", kèm nút "Ghi khoản thanh toán".
+- **Hủy một khoản:** mỗi khoản chưa hủy có nút phụ "Hủy khoản này".
+  - Bấm nút thì **chưa gửi**, mà hiện khung xác nhận trong trang (`ConfirmPanel`): "Khoản đã hủy không khôi phục được. Số dư sẽ được tính lại không có khoản này." kèm "Xác nhận" và "Quay lại" (§7.2, nguyên tắc 5: hủy không quay lại được). Focus tới "Xác nhận".
+  - "Xác nhận" gửi `void_payment`.
+    - 200: tải lại số dư và danh sách, hiện "Đã hủy khoản thanh toán."
+    - 409: "Khoản này đã được hủy trước đó.", và tải lại.
+    - 404: "Không tìm thấy khoản thanh toán này.", và tải lại.
+    - 500, không tới được: thông báo, danh sách giữ nguyên.
+  - Trong lúc gửi, mọi nút "Hủy khoản này" và "Xác nhận" bị vô hiệu.
+- Trang nhận thông báo chuyển trang "Đã ghi khoản thanh toán." khi quay về từ `payment_form`.
+
+### Chi tiết trang `payment_form` (D4)
+
+- **Tham số:** `commission_id`, `title`. **Tiêu đề trang:** "Ghi khoản thanh toán"; dưới đó là tiêu đề đơn.
+- **Khi mở:** `get_balance`, để biết đơn vị tiền của đơn (`agreed.currency`) và biết đơn còn tồn tại. 404: "Không tìm thấy đơn hàng này", kèm nút quay lại. Mã tiền không có trong bảng chữ số lẻ: không có form, hiện "Đơn vị tiền <mã> chưa được hỗ trợ ở giao diện."
+- **Các ô**, theo thứ tự trên màn hình:
+  1. "Loại giao dịch": chọn chiều tiền; mặc định "Nhận tiền".
+  2. "Khoản": chọn loại khoản, có lựa chọn đầu "Chọn khoản"; bắt buộc. Dưới ô có dòng gợi ý cố định: "Tiền tip không làm giảm số còn phải thu."
+  3. "Số tiền": ô chữ, đọc theo luật của D2; đơn vị tiền của đơn hiện dạng chữ cạnh ô, **không** chọn được (hợp đồng: đơn vị tiền phải bằng đơn vị tiền của đơn).
+  4. "Phương thức": chữ tự do, có gợi ý "Chuyển khoản", "MoMo", "PayPal", "Tiền mặt"; bắt buộc.
+  5. "Ngày giờ nhận tiền": ô ngày giờ của hệ thống (`<input type="datetime-local">`); mặc định là thời điểm mở form, làm tròn tới phút; bắt buộc.
+  6. "Ghi chú": tùy chọn, nhiều dòng.
+- **Kiểm trước khi gửi**, trong phân khu logic:
+  - chưa chọn khoản: "Chọn khoản thanh toán";
+  - số tiền: luật đọc của D2. Thêm luật hợp đồng `amount_minor > 0`: số 0 thì lỗi "Số tiền phải lớn hơn 0";
+  - phương thức rỗng sau khi bỏ khoảng trắng: "Nhập phương thức thanh toán" (Data Schema 9.0.0: `method` not blank);
+  - ngày giờ rỗng: "Chọn ngày giờ nhận tiền";
+  - `[UI-ONLY]` bỏ khoảng trắng hai đầu mọi ô chữ; ghi chú rỗng thì gửi `null`;
+  - `[UI-ONLY]` **`paid_at`** ghép từ giá trị ô (`YYYY-MM-DDTHH:mm`), thêm `:00`, và **độ lệch múi giờ của máy tại đúng ngày giờ đó** (ví dụ `+07:00`), đúng `formats.timestamp`. Không đổi sang UTC. Ngày trong tương lai được phép, vì hợp đồng không cấm.
+  - Thời điểm "bây giờ" dùng cho giá trị mặc định lấy qua một nguồn do Main trao cho workflow, để kiểm thử cố định được. Không gọi đồng hồ rải rác trong Services.
+- **Vị trí nút và focus:** như các form khác.
+- **Gửi:** `record`, thân `{ "commission_id": …, "payment_input": { direction, kind, amount: { amount_minor, currency }, method, paid_at, note } }`. Trong lúc gửi, "Lưu" bị vô hiệu.
+  - 201: về `payment_list` kèm "Đã ghi khoản thanh toán."
+  - 400: "Máy chủ không nhận dữ liệu này", giữ dữ liệu. Không đọc `details`.
+  - 404: "Không tìm thấy đơn hàng này."
+  - 409 (`ERR_OUT_OF_RANGE`): "Không ghi được: với khoản này, số dư của đơn vượt giới hạn tính toán."
+  - 422 (`ERR_CURRENCY_MISMATCH`): "Đơn vị tiền không khớp với đơn hàng." Đường bình thường không gây ra, vì form luôn gửi đúng đơn vị tiền của đơn.
+  - 500, không tới được: thông báo, giữ dữ liệu, cho gửi lại.
+- **"Hủy"** về `payment_list`.
+
+### Điều hướng của D4
+
+- Tham số có kiểu: `payment_list` và `payment_form` cùng nhận `commission_id` và `title`.
+- Luồng:
+  - `commission_detail` → "Thanh toán" → `payment_list` → "Ghi khoản thanh toán" → `payment_form` → lưu → `payment_list` kèm thông báo;
+  - "Hủy" ở form → `payment_list`; "Quay lại đơn hàng" → `commission_detail`.
+- Ở cả hai trang, mục điều hướng "Đơn hàng" được đánh dấu đang mở.
+
+### Luật phủ của kịch bản bấm thử ở D4 (iWCA I6.3)
+
+- `ok` cho mọi thao tác, gồm:
+  - ghi một khoản cọc;
+  - ghi một khoản tip (số còn phải thu không giảm);
+  - ghi một khoản hoàn tiền;
+  - ghi khoản USD có phần lẻ;
+  - hủy một khoản qua khung xác nhận (số dư tính lại);
+  - bấm "Quay lại" ở khung xác nhận (không gửi gì);
+  - đơn thu dư ("Đã thu dư …").
+- `rejected_input`: số tiền 0, phương thức chỉ gồm khoảng trắng, chưa chọn khoản.
+- Ít nhất một bước `unreachable` cho `payment_list`, `payment_form` và phần Thanh toán của `commission_detail`.
+- Không đòi `rejected_system`: 404, 409, 422 không gây ra được bằng thao tác bình thường. Kiểm thử dựng trang chứng minh chúng hiện đúng.
+- Kịch bản `commission_detail` bổ sung các bước của phần Thanh toán.
+
 ## 6. Đối chiếu độ phủ (Bước I1.6)
 
 - Mọi lối vào ở §1, hoặc có workflow giao diện đối ứng ở §2, hoặc nằm trong bảng loại trừ ở §4. Không lối vào nào ở trạng thái "chưa rõ".
@@ -448,6 +559,9 @@ Kịch bản bấm thử và audit kiểm các điều sau.
 - 2026-09-28: sau audit phiên 16. `client_form` ghi rõ luật nào sao từ hợp đồng (Data Schema 7.0.0, CT-2: not blank) và luật nào `[UI-ONLY]`. Hàng nút của form nằm dưới tiêu đề, và focus chuyển tới ô lỗi đầu tiên. §7.1 thêm luật tương phản 3:1 cho thành phần tương tác. §7.2 bổ sung nguyên tắc 4 và 7. Ba trang giữ `đang_làm`, vá ở phiên 17.
 - 2026-09-28: audit phiên 17 đạt (`.reviews/audits/ui/audit_ui_session17.md`). Ba trang D1 chờ Project Owner chạy tay ba kịch bản, rồi chuyển `hoàn_tất`.
 - 2026-09-28: `client_list`, `client_detail`, `client_form` → `hoàn_tất`. Project Owner đã tự chạy tay ba kịch bản và xác nhận chức năng chạy đúng. Chặng D1 xong về phía giao diện.
+- 2026-09-30: CT-4 được duyệt (Data Schema 9.0.0): luật phương thức not blank của D4 là bản sao của hợp đồng, không còn `[UI-ONLY]`. Hành vi không đổi.
+- 2026-09-29: làm lại I1 cho D4: trang `payment_list`, `payment_form` → `đang_làm` (plan phiên 22); `commission_detail` thêm phần Thanh toán nên trở lại `đang_làm`; tên tiếng Việt của chiều tiền và loại khoản; cách ghép `paid_at`; xác nhận khi hủy khoản; luật phủ D4.
+- 2026-09-29: `commission_list`, `commission_detail`, `commission_form`, `progress_board`, `stage_change` → `hoàn_tất`: audit phiên 21 đạt (`.reviews/audits/ui/audit_ui_session21.md`), Project Owner tự chạy tay các kịch bản D2 và D3, không có vấn đề. Chặng D2 và D3 xong về phía giao diện.
 - 2026-09-29: audit phiên 20 (`.reviews/audits/ui/audit_ui_session20.md`): D3 đúng đặc tả; sửa câu khép lại ("Đơn đang ở giai đoạn …"); chốt `list_stages` rỗng là vi phạm hợp đồng. E2e không tất định (UI-10), nên năm trang D2 và D3 giữ `đang_làm`.
 - 2026-09-29: làm lại I1 cho D3: trang `progress_board`, `stage_change` → `đang_làm` (plan phiên 20); `commission_detail` thêm phần Tiến độ; mục điều hướng "Tiến độ"; tên tiếng Việt của giai đoạn; xác nhận trong trang khi chuyển sang giai đoạn khép lại; luật phủ D3.
 - 2026-09-29: audit phiên 19 (`.reviews/audits/ui/audit_ui_session19.md`): D2 đúng đặc tả, nhưng e2e không tất định (UI-9). Ba trang D2 giữ `đang_làm`. Ghi nhận: hai đơn lưu trong cùng một giây có thứ tự tùy ý (backend ghi `updated_at` tới giây).
