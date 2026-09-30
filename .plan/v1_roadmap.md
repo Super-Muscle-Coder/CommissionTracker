@@ -171,7 +171,7 @@ Phần lớn nhất của V1. Chia thành nhiều phiên, mỗi phiên một nh�
 | D1 | Khách hàng: danh sách, thêm, sửa, lưu trữ — **phiên 16** xong 2026-09-28 (`client_list`, `client_detail`, `client_form`; kèm UI-1..3 và token giao diện tối); **phiên 17** vá sau audit (UI-4, CT-2 phía giao diện, tương phản 3:1, hàng nút và focus của form), xong 2026-09-28. Phần backend của CT-2 (BE-5) xong ở phiên 18 | `manage_client` |
 | D2 | Đơn hàng: danh sách, thêm, sửa, xem chi tiết — **phiên 19**, vá ở phiên 20 (UI-9) và 21 (UI-10); **`hoàn_tất` 2026-09-29** | `manage_commission` |
 | D3 | Tiến độ: đổi giai đoạn, xem lịch sử, bảng tiến độ — **phiên 20**, vá ở phiên 21 (UI-10); **`hoàn_tất` 2026-09-29** | `update_progress` |
-| D4 | Thanh toán: ghi khoản, hủy khoản, xem số dư — **phiên 22** (`payment_list`, `payment_form`, phần Thanh toán của `commission_detail`); **`hoàn_tất` 2026-09-30**. Phần backend của CT-4 (BE-7): **phiên 23** (backend) xong 2026-09-30, audit đạt; đề xuất Data Schema 9.0.1 chờ duyệt | `record_payment` |
+| D4 | Thanh toán: ghi khoản, hủy khoản, xem số dư — **phiên 22** (`payment_list`, `payment_form`, phần Thanh toán của `commission_detail`); **`hoàn_tất` 2026-09-30**. Phần backend của CT-4 (BE-7): **phiên 23** (backend) xong 2026-09-30, audit đạt; Data Schema 9.0.1 duyệt 2026-09-30 | `record_payment` |
 | D5 | Báo cáo thu nhập | `view_income_report` |
 | D6 | Nhắc việc: cài đặt, danh sách chờ, xác nhận; `reminder_ticker` | `send_reminder` |
 

@@ -170,7 +170,7 @@ Desktop thử lại ba lần trên cổng khác, rồi báo một thông báo ch
 
 ### BE-7 — Backend áp dụng CT-4: `payment_input.method` not blank (trung bình; Data Schema 9.0.0) — **plan phiên 23** (`.plan/backend_plan.md`, phát hành 2026-09-30)
 
-> **ĐÃ ĐÓNG 2026-09-30, phiên 23** (`coding-agent@2026-09-30#1`). Orchestrator: backend 460/460 hai lần, `record_payment` 84/84, ba phép cắn đạt, dữ liệu cũ có `method` trống vẫn dùng được, UI e2e 54/54 với backend mới (`.reviews/audits/backend/audit_backend_session23.md`). Đề xuất Data Schema 9.0.1 (`record_payment` → `đã_hoàn_thiện`), chờ Project Owner duyệt.
+> **ĐÃ ĐÓNG 2026-09-30, phiên 23** (`coding-agent@2026-09-30#1`). Orchestrator: backend 460/460 hai lần, `record_payment` 84/84, ba phép cắn đạt, dữ liệu cũ có `method` trống vẫn dùng được, UI e2e 54/54 với backend mới (`.reviews/audits/backend/audit_backend_session23.md`). Data Schema 9.0.1 (`record_payment` → `đã_hoàn_thiện`) được Project Owner duyệt và ghi 2026-09-30.
 
 Cùng cách làm với BE-5 và BE-6 (phiên 18): trong `record_payment/routers.py`, `method` có `StringConstraints(min_length=1)` và một hàm `_not_blank` riêng của workflow (không `Backend/shared/`, không import chéo), gắn bằng `AfterValidator`; giá trị hợp lệ được lưu nguyên văn.
 

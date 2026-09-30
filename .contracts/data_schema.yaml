@@ -284,9 +284,18 @@
 #            is written.
 #   v9.0.0 — [Clause B, SỬA] status of record_payment: đã_hoàn_thiện ->
 #            đang_triển_khai (must apply the narrowed payment_input).
+#   v9.0.1 — [Clause B, SỬA] status of record_payment: đang_triển_khai ->
+#            đã_hoàn_thiện — Stage-6 proposal of backend session #23 (BE-7)
+#            verified by the Orchestrator (08, Part 5; .reviews/audits/
+#            backend/audit_backend_session23.md): independent re-run 460/460
+#            twice on another machine; bite tests reproduced (8) and two more
+#            added by the Orchestrator (verbatim storage: 2; Unicode
+#            whitespace: 4); the not_blank rule applies to method only,
+#            valid values are stored verbatim, stored data is not migrated;
+#            no unsolved problem. Approved by the Project Owner on 2026-09-30.
 # =============================================================================
 
-schema_version: 9.0.0
+schema_version: 9.0.1
 contract_state: approved
 
 # -----------------------------------------------------------------------------
@@ -472,7 +481,7 @@ clause_b_backend:
   record_payment:
     tag: "[Clause B]"
     workflow_type: nghiệp_vụ
-    status: đang_triển_khai
+    status: đã_hoàn_thiện
     description: "Records money received or refunded for a commission, any number of times and in any split. A payment's currency must equal the commission's agreed currency. Entries are voided, never deleted or edited. A payment is refused if, with it, received_net or outstanding of its commission would fall outside the integer range of clause_a_common."
     input_expected:
       db_connection: { type: resource, from: scaffold_backend }
