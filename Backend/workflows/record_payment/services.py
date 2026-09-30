@@ -2,8 +2,8 @@
 # workflow: record_payment
 # clause: clause_b_backend
 # component: services
-# last_updated_by: coding-agent@2026-09-27#5
-# last_updated_at: 2026-09-27T22:20:00+07:00
+# last_updated_by: coding-agent@2026-09-30#1
+# last_updated_at: 2026-09-30T23:40:00+07:00
 #
 # EXPERIENCES:
 #   - id: record_payment-EXP-001
@@ -49,7 +49,8 @@
 #       Phút của độ lệch phải chặn bằng regex: datetime.fromisoformat của
 #       Python 3.13 đọc +07:60 thành +08:00 và +07:99 thành +08:39 mà không báo
 #       lỗi (độ lệch từ 24 giờ trở lên thì nó tự từ chối). method là
-#       chuỗi tự do (kể cả rỗng). Ba điểm GET/PUT không khai báo 400: id thiếu
+#       chuỗi tự do nhưng không trống (từ Data Schema 9.0.0, xem
+#       record_payment-EXP-007; trước đó nhận cả chuỗi rỗng). Ba điểm GET/PUT không khai báo 400: id thiếu
 #       hoặc sai định dạng -> 404 (GET /payments không có commission_id cũng
 #       404). Gọi sang manage_commission nằm trong Adapter CommissionDirectory
 #       theo main-EXP-004: label 404 -> None, label 500 -> StorageIOError của
@@ -95,6 +96,35 @@
 #       khoản vẫn được ghi theo giá cũ và số dư có thể vượt khoảng; khi đó
 #       get_balance vẫn trả 409 (giống như sửa giá sau khi ghi). Hai lời record
 #       đồng thời thì luôn đúng (record_payment-EXP-004).
+#   - id: record_payment-EXP-007
+#     content: >
+#       Luật not blank (clause_a_common.formats.not_blank; Data Schema 9.0.0,
+#       CT-4 / BE-7) cho payment_input.method là ràng buộc của kiểu, nên nằm ở
+#       Routers: hàm _not_blank trong routers.py, gắn bằng AfterValidator sau
+#       StringConstraints(min_length=1) trong _PaymentInputFormat. Khoảng trắng
+#       theo str.isspace (value.strip() không đối số). Luật chỉ kiểm, không đổi
+#       giá trị: method hợp lệ được lưu và trả lại nguyên văn (" MoMo " giữ hai
+#       dấu cách), vì hợp đồng ghi "It is a check only"; không bỏ khoảng trắng
+#       trước khi lưu. Hợp đồng không đặt độ dài tối đa cho method: không thêm.
+#       note (string|null) không thuộc luật. Vi phạm -> 400 ERR_VALIDATION,
+#       details.errors đúng một mục loc [payment_input, method] (msg "Value
+#       error, must not be blank"; chuỗi rỗng: "String should have at least 1
+#       character"). Thứ tự kiểm không đổi: định dạng trước, tra commission_id
+#       sau, nên method trống kèm đơn không tồn tại vẫn 400, không 404. Hàm
+#       _not_blank là bản riêng của workflow này, giống hệt bản của
+#       manage_client, manage_commission, manage_watermark_profile (quyết định
+#       của Project Owner 2026-09-28: không tạo Backend/shared/, không import
+#       chéo); sửa định nghĩa thì sửa cả bốn. Ca kiểm thử cũ
+#       test_method_is_free_text khẳng định record(method="") trả 201, trái
+#       Data Schema 9.0.0: đã bỏ dòng đó, giữ dòng "Ví MoMo 🙂", và chuyển ""
+#       sang các ca bị từ chối mới; đó là ca cũ duy nhất được sửa. Giới hạn đã
+#       biết, không vá ở V1: (1) str.strip() của Python và String.prototype.trim
+#       của JavaScript khác nhau ở vài ký tự hiếm (U+001C..U+001F, U+FEFF);
+#       backend là bên quyết định. (2) Ký tự vô hình không phải khoảng trắng
+#       (ví dụ U+200B) vẫn qua luật; hợp đồng không cấm. (3) Dữ liệu cũ không
+#       bị chuyển đổi: khoản đã ghi trước phiên 23 với method trống vẫn còn
+#       nguyên, vẫn được đọc, liệt kê, tính số dư, hủy bình thường; luật chỉ
+#       áp khi ghi.
 #
 # UNSOLVED_PROBLEMS: []
 #
@@ -235,8 +265,49 @@
 #     result: >
 #       69 passed.
 #     recorded_at: 2026-09-24T21:55:00+07:00
+#   - claim: >
+#       Data Schema 9.0.0 (BE-7): POST /payments trả 400 ERR_VALIDATION khi
+#       payment_input.method trống theo formats.not_blank, loc [payment_input,
+#       method], không ghi gì, kể cả khi commission_id không tồn tại (vẫn 400,
+#       không 404); method hợp lệ có khoảng trắng hai đầu được lưu và trả lại
+#       nguyên văn; note không bị ảnh hưởng. Kiểm thử cũ không đổi, trừ đúng một
+#       ca viết lại (record_payment-EXP-007).
+#     how: >
+#       cd Backend; env\Scripts\python.exe -m pytest -q workflows/record_payment
+#       rồi env\Scripts\python.exe -m pytest -q (Python 3.13.12 của
+#       Backend/env, Windows 11); cd Desktop; npm test (Node v24.14.1, npm
+#       11.11.0); cd UI; npm run e2e (không đặt CT_WALKTHROUGH_RUNNER).
+#       Bằng chứng cắn: tạm bỏ AfterValidator(_not_blank) khỏi method trong
+#       _PaymentInputFormat, chạy lại workflows/record_payment, rồi khôi phục.
+#       Phản hồi lỗi thật (TestClient trên DB tạm, ráp nối như Main): method ""
+#       và "  ".
+#     result: >
+#       workflows/record_payment: 84 passed (69 cũ, đã tính ca viết lại, + 15
+#       ca mới: 5 bị từ chối và không ghi gì, 5 method trống kèm đơn không tồn
+#       tại vẫn 400, 3 method hợp lệ lưu nguyên văn, 2 note "   " và null).
+#       Toàn bộ backend: 460 passed (445 + 15), 7 phút 30 giây. Desktop npm
+#       test: 14 passed. UI npm run e2e: 54 passed; git status --short
+#       UI/evidence trống. Bằng chứng cắn: bỏ AfterValidator -> 8 failed, 76
+#       passed (4 ca "spaces", "tab_newline", "nbsp", "ideographic_space" ở
+#       mỗi nhóm trong hai nhóm ca bị từ chối; ca "empty" không hỏng vì
+#       min_length=1 vẫn chặn chuỗi rỗng); khôi phục -> 84 passed. Phản hồi:
+#       method "" -> 400 {"errors":[{"loc":["payment_input","method"],"msg":
+#       "String should have at least 1 character"}]}; method "  " -> 400
+#       {"errors":[{"loc":["payment_input","method"],"msg":"Value error, must
+#       not be blank"}]}. Dữ liệu cũ: một khoản có method "" ghi trực tiếp vào
+#       bảng vẫn được GET /payments trả về với method "", get_balance 200, hủy
+#       200. %APPDATA%\CommissionTracker\data.db trước và sau giống hệt: 114688
+#       byte, ghi lúc 2026-09-28T21:09:42+07:00, SHA-256 B1996554...F390B.
+#     recorded_at: 2026-09-30T23:40:00+07:00
 #
-# NOTES: []
+# NOTES:
+#   - id: record_payment-NOTE-001
+#     written_at: 2026-09-30
+#     content: >
+#       Đề xuất theo Giai đoạn 6, Bước 6.6: record_payment chuyển
+#       đang_triển_khai -> đã_hoàn_thiện ở Data Schema 9.0.0 (BE-7 đã áp dụng,
+#       không còn UNSOLVED_PROBLEMS). Không tự sửa hợp đồng; Orchestrator xác
+#       nhận theo 08 Phần 5 rồi đề xuất Data Schema 9.0.1.
 # ===WCA-CHECKPOINT-END===
 """Services of record_payment: every business decision of the workflow."""
 

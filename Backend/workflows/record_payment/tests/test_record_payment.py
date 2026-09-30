@@ -178,10 +178,61 @@ def test_record_currency_mismatch_is_422(wired):
 
 
 def test_method_is_free_text(wired):
+    # Data Schema 9.0.0: method is free text but not blank; "" moved to the
+    # rejected cases below.
     http, *_ = wired
     mid = new_commission(http)
-    assert record(http, mid, method="")["method"] == ""
     assert record(http, mid, method="Ví MoMo 🙂")["method"] == "Ví MoMo 🙂"
+
+
+# --- method not blank (Data Schema 9.0.0, clause_a_common.formats.not_blank) ----
+# Empty, or only whitespace in the sense of str.isspace: ASCII (space, tab,
+# newline) and Unicode (U+00A0 no-break space, U+3000 ideographic space).
+
+BLANKS = ["", "   ", "\t\n", " ", "　"]
+BLANK_IDS = ["empty", "spaces", "tab_newline", "nbsp", "ideographic_space"]
+METHOD_LOC = ["payment_input", "method"]
+
+
+def assert_rejected_at(r, loc):
+    assert_error(r, 400, "ERR_VALIDATION")
+    assert [e["loc"] for e in r.json()["details"]["errors"]] == [loc]
+
+
+@pytest.mark.parametrize("blank", BLANKS, ids=BLANK_IDS)
+def test_record_rejects_blank_method_and_writes_nothing(wired, blank):
+    http, *_ = wired
+    mid = new_commission(http)
+    record(http, mid)
+    before_list = http.get(f"/payments?commission_id={mid}").json()
+    before_balance = balance(http, mid)
+    r = http.post("/payments", json={"commission_id": mid, "payment_input": payment_input(method=blank)})
+    assert_rejected_at(r, METHOD_LOC)
+    assert http.get(f"/payments?commission_id={mid}").json() == before_list
+    assert balance(http, mid) == before_balance
+
+
+@pytest.mark.parametrize("blank", BLANKS, ids=BLANK_IDS)
+def test_blank_method_with_unknown_commission_is_still_400(wired, blank):
+    # format is checked before the commission is looked up
+    http, *_ = wired
+    assert_rejected_at(http.post("/payments", json=_body(method=blank)), METHOD_LOC)
+
+
+@pytest.mark.parametrize("method", [" MoMo ", "　Chuyển khoản\t", "Chuyển khoản"])
+def test_valid_method_is_stored_and_returned_verbatim(wired, method):
+    http, *_ = wired
+    mid = new_commission(http)
+    assert record(http, mid, method=method)["method"] == method
+    assert [p["method"] for p in http.get(f"/payments?commission_id={mid}").json()] == [method]
+
+
+@pytest.mark.parametrize("note", ["   ", None])
+def test_note_is_not_subject_to_the_not_blank_rule(wired, note):
+    http, *_ = wired
+    mid = new_commission(http)
+    assert record(http, mid, note=note)["note"] == note
+    assert http.get(f"/payments?commission_id={mid}").json()[0]["note"] == note
 
 
 # --- balance --------------------------------------------------------------------

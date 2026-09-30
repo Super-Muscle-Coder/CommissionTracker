@@ -25,7 +25,7 @@ from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Body
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, ConfigDict, Field, StringConstraints, ValidationError, field_validator
+from pydantic import AfterValidator, BaseModel, ConfigDict, Field, StringConstraints, ValidationError, field_validator
 
 from .entities import CommissionBalance, LedgerEntry, Money, Payment, PaymentInput
 from .services import (
@@ -57,6 +57,15 @@ _MAX_BOUNDARY_INTEGER = 2**53 - 1
 
 # --- format models (input_expected.payment_input) ---------------------------
 
+def _not_blank(value: str) -> str:
+    # clause_a_common.formats.not_blank: at least one character is left once
+    # leading and trailing whitespace (str.isspace) is removed. A check only:
+    # the value is returned unchanged, never stripped.
+    if not value.strip():
+        raise ValueError("must not be blank")
+    return value
+
+
 class _MoneyFormat(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
     # payment_input: amount_minor > 0
@@ -69,7 +78,8 @@ class _PaymentInputFormat(BaseModel):
     direction: Literal["incoming", "refund"]
     kind: Literal["deposit", "milestone", "final", "tip", "other"]
     amount: _MoneyFormat
-    method: str
+    # payment_input: method is 1.. characters and not blank (Data Schema 9.0.0)
+    method: Annotated[str, StringConstraints(min_length=1), AfterValidator(_not_blank)]
     paid_at: str
     note: str | None
 
