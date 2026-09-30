@@ -168,11 +168,13 @@ Desktop thử lại ba lần trên cổng khác, rồi báo một thông báo ch
 
 *Rà soát 2026-09-28:* **không rẻ như vẻ ngoài.** Mã thoát 3 là giá trị trong `Backend/configs/backend.yaml`, còn hợp đồng (Data Schema 6.2.0) ghi rõ "The mechanism belongs to the backend; no other layer relies on how it is done". Muốn desktop hiểu mã này thì phải đưa nó vào hợp đồng trước. Giữ nguyên: không làm ở V1.
 
-### BE-7 — Backend áp dụng CT-4: `payment_input.method` not blank (trung bình; Data Schema 9.0.0) — phiên backend ngắn, sau phiên 22
+### BE-7 — Backend áp dụng CT-4: `payment_input.method` not blank (trung bình; Data Schema 9.0.0) — **plan phiên 23** (`.plan/backend_plan.md`, phát hành 2026-09-30)
 
 Cùng cách làm với BE-5 và BE-6 (phiên 18): trong `record_payment/routers.py`, `method` có `StringConstraints(min_length=1)` và một hàm `_not_blank` riêng của workflow (không `Backend/shared/`, không import chéo), gắn bằng `AfterValidator`; giá trị hợp lệ được lưu nguyên văn.
 
 Kiểm thử: `""`, khoảng trắng ASCII, `U+00A0`, `U+3000` bị 400 và không ghi gì; phương thức có khoảng trắng hai đầu được lưu nguyên văn; `note` không đổi; có kiểm thử cắn. Sau đó đề xuất đưa `record_payment` về `đã_hoàn_thiện` (Data Schema 9.0.1).
+
+Lúc lập plan (2026-09-30), Orchestrator thấy kiểm thử `test_method_is_free_text` của `record_payment` khẳng định `method=""` trả 201, trái với 9.0.0. Plan phiên 23 cho phép viết lại đúng ca đó.
 
 ## Hợp đồng — chờ Project Owner duyệt
 

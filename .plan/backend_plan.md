@@ -1,108 +1,106 @@
 # ===WCA-PLAN===
 # session_for: backend
 # drafted_by: Orchestrator + Project Owner
-# drafted_at: 2026-09-28T20:40:00+07:00
-# contract: data_schema 8.0.0, api_contract 4.0.0 (approved)
+# drafted_at: 2026-09-30T22:30:00+07:00
+# contract: data_schema 9.0.0, api_contract 4.0.0 (approved)
 
 ## MỤC TIÊU PHIÊN NÀY
 
-Phiên 18 của dự án, phiên backend thứ mười một. Đây là **phiên ngắn, gom mọi việc còn mở của layer backend có thể làm ngay**. Nội dung: áp luật "not blank" (`formats.not_blank`) mà Data Schema 7.0.0 và 8.0.0 đã thêm vào hợp đồng, cho **năm trường tên bắt buộc** thuộc ba workflow:
+Phiên 23 của dự án, phiên backend thứ mười hai. Đây là **phiên ngắn, một việc: BE-7**. Workflow `record_payment` áp luật "not blank" (`formats.not_blank`) mà Data Schema 9.0.0 (CT-4) đã thêm cho **một trường**:
 
-| Mục | Workflow | Trường | Hợp đồng |
-|---|---|---|---|
-| **BE-5** | `manage_client` | `client_input.display_name`, `client_input.contacts[].channel`, `client_input.contacts[].value` | 7.0.0 (CT-2) |
-| **BE-6** | `manage_commission` | `commission_input.title` | 8.0.0 (CT-3) |
-| **BE-6** | `manage_watermark_profile` | `profile_input.display_name` (bút danh) | 8.0.0 (CT-3) |
+| Mục | Workflow | Trường | Endpoint nhận trường này | Hợp đồng |
+|---|---|---|---|---|
+| **BE-7** | `record_payment` | `payment_input.method` | chỉ `record` (`POST /payments`); workflow không có endpoint sửa khoản | 9.0.0 (CT-4) |
 
-Cả ba workflow đang ở `đang_triển_khai`. Cuối phiên, đề xuất đưa cả ba về `đã_hoàn_thiện`.
+`record_payment` đang ở `đang_triển_khai`. Cuối phiên, đề xuất đưa về `đã_hoàn_thiện`.
 
 **Điểm dừng:**
-- năm trường từ chối giá trị trống theo đúng hợp đồng;
-- **381 kiểm thử cũ** cộng các kiểm thử mới đều đạt;
-- giao diện và desktop vẫn chạy đúng với backend mới;
-- checkpoint ba workflow có EVIDENCE và đề xuất trạng thái.
+- `method` trống bị từ chối theo đúng hợp đồng;
+- **445 kiểm thử cũ** (trừ đúng một ca phải viết lại, xem việc 3) cộng các ca mới đều đạt;
+- desktop và giao diện vẫn chạy đúng với backend mới;
+- checkpoint `record_payment` có EVIDENCE và NOTE đề xuất trạng thái.
 
 Không có workflow mới, không có điểm giao tiếp mới, không đổi nhãn nào.
 
-**Không thuộc phiên này:** BE-4 (tệp `data.db.lock` khi sao lưu và khôi phục). Việc đó chờ tới lúc làm `backup_data` và `restore_data` ở chặng E và F.
-
 ## BỐI CẢNH — vì sao có việc này
 
-Chi tiết ở các mục changelog `v7.0.0` và `v8.0.0` đầu `data_schema.yaml`. Tóm tắt:
-- Phiên giao diện 16 phát hiện backend nhận tên khách chỉ gồm dấu cách, và liên hệ có ô rỗng.
-- Lúc lập plan phiên này, Orchestrator thấy cùng chỗ hở ở tiêu đề đơn hàng và bút danh.
-- Nếu luật chỉ nằm ở giao diện, dữ liệu rác vẫn vào được qua mọi đường khác: công cụ kiểm thử, khôi phục một bản sao lưu cũ, các bên gọi sau này. Project Owner đã duyệt đưa luật vào hợp đồng (CT-2, CT-3, 2026-09-28).
-- Giao diện đã áp dụng luật cho khách hàng ở phiên 17. Tiêu đề đơn hàng sẽ áp dụng ở chặng D2. Giao diện V1 **không có** màn hình hồ sơ bút danh. Backend là bên quyết định cuối cùng.
-- Các trường tùy chọn (`string|null`) **không đổi** trong phiên này.
+Chi tiết ở các mục changelog `v9.0.0` đầu `data_schema.yaml` và mục **CT-4**, **BE-7** của `.plan/open_issues.md`. Tóm tắt:
+- Lúc làm I1 cho chặng D4 (thanh toán), Orchestrator thấy `method` là chuỗi bắt buộc nhưng hợp đồng không cấm trống. Backend kiểm `method: str`, nên nhận `""` và `"   "`: một khoản tiền không biết đã nhận qua đâu.
+- Project Owner duyệt CT-4 ngày 2026-09-30 (Data Schema 9.0.0). Giao diện đã chặn phương thức trống ở phiên 22. Backend là bên quyết định cuối cùng: dữ liệu rác vẫn vào được qua mọi đường khác (công cụ kiểm thử, khôi phục bản sao lưu, bên gọi sau này).
+- Đây là việc **giống hệt BE-5 và BE-6** của phiên 18, đã audit đạt. Ba workflow `manage_client`, `manage_commission`, `manage_watermark_profile` là mẫu để làm theo.
 
 ## VIỆC CẦN LÀM, THEO THỨ TỰ
 
 0. **Đọc tài liệu** theo `08-operating-protocol.md`, Phần 1:
    - `CLAUDE.md`: mục 5 (Backend) và mục 6;
-   - `.plan/open_issues.md`: mục **BE-5**, **BE-6**, **CT-2**, **CT-3**;
+   - `.plan/open_issues.md`: mục **BE-7**, **CT-4**;
    - hợp đồng:
-     - `data_schema.yaml`: **các mục changelog `v7.0.0` và `v8.0.0`**; `clause_a_common.formats.not_blank`; `input_expected` và `status` của `manage_client`, `manage_commission`, `manage_watermark_profile`;
-     - `api_contract.yaml`: ba workflow đó (không đổi);
-   - checkpoint của ba workflow, ở đầu `services.py` của mỗi workflow: đọc hết;
-   - code: `routers.py` của ba workflow (các model định dạng có `StringConstraints`), `entities.py`, và tệp kiểm thử trong `tests/` của từng workflow;
-   - `Backend/tests/test_backend_process.py`: đã có một ca `display_name: ""` → 400;
+     - `data_schema.yaml`: **các mục changelog `v9.0.0`**; `clause_a_common.formats.not_blank`; `input_expected.payment_input` và `status` của `record_payment`;
+     - `api_contract.yaml`: `record_payment` (không đổi);
+   - checkpoint của `record_payment`, ở đầu `services.py` và các tệp khác của workflow: đọc hết;
+   - code:
+     - `Backend/workflows/record_payment/routers.py` (`_PaymentInputFormat`, `_validation_details`), `entities.py`, `tests/test_record_payment.py`;
+     - **mẫu đã audit đạt:** hàm `_not_blank` và cách gắn nó trong `Backend/workflows/manage_commission/routers.py`, cùng các ca not blank trong `manage_commission/tests/`;
    - plan này sau cùng.
 
-   Xác nhận Data Schema **`8.0.0`**, API Contract **`4.0.0`**, cả hai `approved`, và ba workflow đang ở `đang_triển_khai`. Sai thì dừng lại và báo.
+   Xác nhận Data Schema **`9.0.0`**, API Contract **`4.0.0`**, cả hai `approved`, và `record_payment` đang ở `đang_triển_khai`. Sai thì dừng lại và báo.
 
 1. **Môi trường và mốc.**
    - Ghi phiên bản Python (`Backend\env\Scripts\python.exe --version`).
-   - Chạy toàn bộ kiểm thử **trước khi sửa gì**: `cd Backend; env\Scripts\python.exe -m pytest -q`. Phải đạt **381/381**; khác thì dừng lại và báo.
-   - Chụp mốc `%APPDATA%\CommissionTracker`. Không kiểm thử nào được đụng vào đó.
+   - Chạy toàn bộ kiểm thử **trước khi sửa gì**: `cd Backend; env\Scripts\python.exe -m pytest -q`. Phải đạt **445/445**; khác thì dừng lại và báo.
+   - Chụp mốc `%APPDATA%\CommissionTracker` (tồn tại hay không; nếu có: kích thước và SHA-256 của `data.db`, thời điểm ghi). Không kiểm thử nào được đụng vào đó.
+   - `git status --short`: ghi lại.
 
-2. **Áp dụng "not blank" ở Routers của ba workflow.**
-   - **Vị trí:** đây là một ràng buộc của **kiểu** trong hợp đồng, nên nó là phép kiểm định dạng ở **Routers** (`04-implement.md`), cùng chỗ với `min_length`/`max_length` hiện có. Không đặt vào Services hay Adapters.
-   - **Định nghĩa**, theo `formats.not_blank`: chuỗi còn **ít nhất một ký tự** sau khi bỏ khoảng trắng ở **hai đầu**. Dùng `str.strip()` không đối số của Python, tức khoảng trắng theo `str.isspace()`.
-   - **Mỗi workflow tự có một hàm kiểm ngắn của riêng nó** (quyết định của Project Owner, 2026-09-28). Không tạo `Backend/shared/`, không import code giữa các workflow. Lý do: đây là tiền lệ sẵn có của dự án, vì mỗi workflow đã tự giữ `_ID_PATTERN` của mình dù cùng lấy từ `formats.id`. Một thư mục `shared/` đầu tiên chỉ để tiết kiệm vài dòng thì phá tiền lệ cấu trúc. Ba hàm phải có cùng định nghĩa; ghi rõ điều đó trong EXPERIENCES của từng workflow.
-   - **Áp cho năm trường** ở bảng mục tiêu. `channel` và `value` cũng thành `1..` ký tự; not blank đã bao hàm điều đó.
+2. **Áp dụng "not blank" cho `method` ở Routers của `record_payment`.**
+   - **Vị trí:** ràng buộc của **kiểu** trong hợp đồng, nên nó là phép kiểm định dạng ở **Routers** (`04-implement.md`), trong `_PaymentInputFormat`. Không đặt vào Services hay Adapters.
+   - **Cách làm, theo đúng mẫu phiên 18:** `method: Annotated[str, StringConstraints(min_length=1), AfterValidator(_not_blank)]`, với `_not_blank` là **hàm riêng của `record_payment`**, cùng định nghĩa với ba workflow kia. Không tạo `Backend/shared/`, không import code từ workflow khác (quyết định của Project Owner, 2026-09-28).
+   - **Định nghĩa**, theo `formats.not_blank`: chuỗi còn ít nhất một ký tự sau khi bỏ khoảng trắng ở hai đầu, bằng `str.strip()` không đối số (khoảng trắng theo `str.isspace()`).
    - **Giữ nguyên:**
-     - các giới hạn độ dài hiện có (120, 200, 80 ký tự), đếm trên giá trị **gốc**, không phải giá trị đã bỏ khoảng trắng;
-     - mọi trường `string|null` (`note`, `description`, `commission_type`, `legal_name`, `contact`, `ownership_statement`) và `reference_links` **không** thuộc luật này;
-     - mọi luật `strict`/`extra="forbid"` hiện có.
-   - **Lưu đúng như nhận:** giá trị hợp lệ được lưu và trả lại **nguyên văn**, không bỏ khoảng trắng. Ví dụ `"  An  "` được lưu là `"  An  "`. Hợp đồng ghi rõ: "It is a check only".
-   - **Khi vi phạm:** `400` + `ERR_VALIDATION`, như mọi lỗi định dạng khác của input đó. `details` theo đúng hình dạng hiện có của workflow và phải chỉ ra trường vi phạm. Không thêm mã lỗi, không đổi nhãn.
-   - **Thứ tự kiểm không đổi:** nếu endpoint hiện kiểm định dạng trước khi tra `client_id` hay `commission_id`, thì giữ nguyên thứ tự đó.
-   - Cách hiện thực do bạn chọn, ví dụ `StringConstraints` kèm `AfterValidator`, hoặc `field_validator` của Pydantic. Yêu cầu: FastAPI không bao giờ tự trả `422`, như luật đang có ở đầu mỗi `routers.py`.
+     - hợp đồng không đặt độ dài tối đa cho `method`: không thêm;
+     - `note` (`string|null`) **không** thuộc luật này;
+     - `strict=True`, `extra="forbid"` và mọi phép kiểm hiện có (`amount_minor > 0`, `currency`, `paid_at`).
+   - **Lưu đúng như nhận:** giá trị hợp lệ được lưu và trả lại **nguyên văn**, không bỏ khoảng trắng. `" MoMo "` được lưu là `" MoMo "`.
+   - **Khi vi phạm:** `400` + `ERR_VALIDATION`, như mọi lỗi định dạng khác của `record`. `details` giữ hình dạng hiện có (`errors[].loc`, `errors[].msg`), và `loc` phải là `["payment_input", "method"]`. Không thêm mã lỗi, không đổi nhãn.
+   - **Thứ tự kiểm không đổi:** `record` kiểm định dạng trước khi tra `commission_id`. Một `method` trống kèm `commission_id` không tồn tại vẫn là 400, không phải 404.
+   - FastAPI không bao giờ được tự trả `422`, như luật đang có ở đầu `routers.py`.
 
-3. **Kiểm thử**, trong `tests/` của từng workflow, gọi qua HTTP như các ca hiện có.
-   - **Với mỗi trường trong năm trường, trên cả endpoint tạo lẫn endpoint sửa của workflow đó**, đều trả 400 `ERR_VALIDATION`, `details` chỉ ra trường vi phạm, và **không ghi gì**:
+3. **Kiểm thử**, trong `Backend/workflows/record_payment/tests/`, gọi qua HTTP như các ca hiện có.
+   - ⚠ **Một ca cũ trái với hợp đồng mới, phải viết lại:** `test_method_is_free_text` hiện khẳng định `record(http, mid, method="")` trả 201. Theo Data Schema 9.0.0, ca này phải thành **400**.
+     - Giữ phần khẳng định `"Ví MoMo 🙂"` được lưu nguyên văn.
+     - Chuyển phần `""` sang các ca bị từ chối bên dưới.
+     - Ghi rõ trong báo cáo: tên ca, dòng cũ, dòng mới, lý do (Data Schema 9.0.0). Đây là ca **duy nhất** được sửa; sửa ca cũ nào khác thì dừng lại và báo.
+   - **Ca bị từ chối**, mỗi ca trả 400 `ERR_VALIDATION`, `loc` là `["payment_input", "method"]`, và **không ghi gì** (sau lệnh bị từ chối, `GET /payments?commission_id=…` không đổi và số dư không đổi):
      - chuỗi rỗng `""`;
-     - chỉ khoảng trắng ASCII, ví dụ `"   "`, `"\t\n"`;
-     - chỉ khoảng trắng Unicode: `" "` và `"　"`.
+     - chỉ khoảng trắng ASCII: `"   "`, `"\t\n"`;
+     - chỉ khoảng trắng Unicode: `" "` và `"　"`;
+     - `method` trống kèm `commission_id` không tồn tại → vẫn 400 (thứ tự kiểm).
+   - **Ca hợp lệ:**
+     - `" MoMo "` → 201, lưu và trả lại nguyên văn (đọc lại qua `GET /payments` để kiểm);
+     - `"Chuyển khoản"` có dấu tiếng Việt → 201;
+     - `note: "   "` → 201, lưu nguyên văn, vì `note` không thuộc luật;
+     - `note: null` → 201.
+   - **Kiểm thử của workflow khác vẫn đạt, không sửa.** `view_income_report` tạo khoản thanh toán trong kiểm thử của nó (hiện dùng `"cash"`). Nếu một kiểm thử ngoài `record_payment` hỏng vì luật mới, **dừng lại và báo**.
+   - **Chứng minh kiểm thử cắn:** tạm bỏ `AfterValidator(_not_blank)`. Các ca "chỉ khoảng trắng" phải **hỏng**. Ghi số ca hỏng, rồi khôi phục và chạy lại cho đạt.
+     - Nếu công cụ phân quyền của bạn chặn bước này thì không tìm cách vòng: khôi phục ngay, ghi lại, Orchestrator sẽ tự làm.
 
-     Endpoint tạo và sửa lấy đúng theo `api_contract.yaml`.
-   - **Không ghi gì** nghĩa là: sau lệnh tạo bị từ chối, danh sách không đổi; sau lệnh sửa bị từ chối, lệnh đọc trả đúng dữ liệu cũ.
-   - **Ca hợp lệ, cho mỗi workflow:**
-     - giá trị có khoảng trắng ở hai đầu → thành công, và lưu **nguyên văn** (đọc lại để kiểm);
-     - giá trị dài đúng giới hạn, có dấu tiếng Việt → thành công;
-     - một trường tùy chọn là `"   "` (ví dụ `note`, `description`, `legal_name`) → thành công, lưu nguyên văn, vì trường tùy chọn không thuộc luật;
-     - `contacts: []` → thành công (`manage_client`).
-   - **Ca biên:** giá trị dài đúng giới hạn, **cộng** khoảng trắng hai đầu → 400, vì độ dài đếm trên giá trị gốc. Project Owner đã xác nhận giữ cách đọc này (2026-09-28): giao diện tự bỏ khoảng trắng trước khi gửi, nên họa sĩ không gặp ca này. Ghi rõ đây là hành vi theo hợp đồng.
-   - **Kiểm thử của workflow khác vẫn đạt.** Ví dụ `update_progress`, `record_payment`, `view_income_report`, `send_reminder` tạo khách và đơn trong kiểm thử của chúng. Nếu một kiểm thử cũ đang dùng tên hay tiêu đề trống làm dữ liệu mẫu hợp lệ, **dừng lại và báo**; không tự sửa kiểm thử của workflow ngoài ba workflow này.
-   - **Chứng minh kiểm thử cắn:** tạm bỏ phép kiểm not blank ở từng workflow. Các ca "chỉ khoảng trắng" của workflow đó phải **hỏng**. Ghi số ca hỏng, rồi khôi phục.
-
-4. **Checkpoint của ba workflow** (Giao thức 07):
-   - Cập nhật các chỗ trích hợp đồng lên Data Schema 8.0.0.
+4. **Checkpoint của `record_payment`** (Giao thức 07):
+   - Cập nhật các chỗ trích hợp đồng lên Data Schema 9.0.0.
    - Thêm EXPERIENCES:
      - định nghĩa khoảng trắng đã dùng (`str.isspace`);
      - "lưu nguyên văn", và vì sao;
-     - độ dài đếm trên giá trị gốc;
-     - mỗi workflow tự có hàm kiểm, giống hệt nhau, theo quyết định của Project Owner (việc 2).
+     - hàm kiểm riêng của workflow, giống hệt ba workflow đã làm ở phiên 18, theo quyết định của Project Owner;
+     - ca `test_method_is_free_text` đã viết lại, vì sao.
    - Thêm EVIDENCE: lệnh chạy, số ca, bằng chứng cắn.
    - **Giới hạn đã biết**, ghi vào EXPERIENCES, không đòi vá ở V1:
-     - `str.strip()` của Python và `String.prototype.trim` của JavaScript khác nhau ở vài ký tự hiếm. Python coi `\x1c`–`\x1f` là khoảng trắng còn JS thì không; với `﻿` thì ngược lại. Backend là bên quyết định. Giao diện hiện thông báo 400 chung khi backend từ chối.
-     - Ký tự vô hình không phải khoảng trắng (ví dụ `​`) vẫn qua được luật này. Hợp đồng không cấm.
-   - **Đề xuất trạng thái:** mỗi checkpoint ghi một NOTE đề xuất workflow đó chuyển `đang_triển_khai` → `đã_hoàn_thiện` (Giai đoạn 6). Không tự sửa hợp đồng.
+     - `str.strip()` của Python và `String.prototype.trim` của JavaScript khác nhau ở vài ký tự hiếm (`\x1c`–`\x1f`; `﻿`). Backend là bên quyết định;
+     - ký tự vô hình không phải khoảng trắng (ví dụ `​`) vẫn qua được luật; hợp đồng không cấm;
+     - **dữ liệu cũ không bị chuyển đổi:** khoản đã ghi trước phiên này với `method` trống vẫn còn nguyên và vẫn được đọc, liệt kê, tính số dư, hủy bình thường. Luật chỉ áp khi ghi.
+   - **Đề xuất trạng thái:** NOTE đề xuất `record_payment` chuyển `đang_triển_khai` → `đã_hoàn_thiện` (Giai đoạn 6). Không tự sửa hợp đồng.
 
 5. **Chạy toàn bộ trên Windows:**
-   - `cd Backend; env\Scripts\python.exe -m pytest -q`: **381 + số ca mới**, đều đạt;
+   - `cd Backend; env\Scripts\python.exe -m pytest -q`: **445 + số ca mới**, đều đạt;
    - `cd Desktop; npm test`: đạt đủ, dùng backend thật;
-   - `cd UI; npm run e2e`: 17/17. Giao diện không bao giờ gửi giá trị trống, nên không có gì đổi hành vi;
+   - `cd UI; npm run e2e`: **54/54**, **không** đặt `CT_WALKTHROUGH_RUNNER`. Giao diện không bao giờ gửi phương thức trống, nên hành vi không đổi. Sau đó `git status --short UI/evidence` phải trống. Lần hỏng chỉ vì chụp ảnh hết giờ (UI-11) thì ghi tên bước, chạy lại, và không tính;
    - chụp lại mốc `%APPDATA%`: phải giống mốc ở việc 1.
 
    Không cần chạy `npm run dist`, vì phiên này không đổi phụ thuộc hay Main.
@@ -110,35 +108,34 @@ Chi tiết ở các mục changelog `v7.0.0` và `v8.0.0` đầu `data_schema.ya
 ## RÀNG BUỘC CẦN NHỚ TỪ HỢP ĐỒNG
 
 - `formats.not_blank`, nguyên văn: *"Constraint written in a string type as (not blank): the string still has at least one character after its leading and trailing whitespace is removed. It is a check only: the value is stored and returned exactly as given."*
-- Kiểu input sau khi sửa (Data Schema 8.0.0):
-  - `client_input`: `display_name: string (1..120 characters, not blank)`; `contacts: list[object { channel: string (1.. characters, not blank; …), value: string (1.. characters, not blank) }]`; `note: string|null`;
-  - `commission_input`: `title: string (1..200 characters, not blank)`; các trường khác không đổi;
-  - `profile_input`: `display_name: string (pen name, 1..80 characters, not blank)`; các trường khác không đổi.
-- Nhãn không đổi (API Contract 4.0.0). Vi phạm → `400 ERR_VALIDATION`.
-- Dữ liệu đã lưu **không** được chuyển đổi hay sửa: luật chỉ áp khi ghi.
-- Hình dạng output (`client_detail`, `commission_detail`, các bản ghi `*_record`…) không đổi.
+- `payment_input.method` (Data Schema 9.0.0): `string (1.. characters, not blank; free label, …)`. `note`: `string|null`, không đổi.
+- Nhãn của `record` không đổi (API Contract 4.0.0): 201, 400 `ERR_VALIDATION`, 404, 409, 422, 500.
+- Dữ liệu đã lưu **không** được chuyển đổi hay sửa.
+- Hình dạng output (`payment_record`, `payment_list`, `commission_balance`, `payment_ledger`) không đổi.
 
 ## CẢNH BÁO — điều KHÔNG được làm trong phiên này
 
-- Chỉ sửa `Backend/workflows/manage_client/`, `Backend/workflows/manage_commission/`, `Backend/workflows/manage_watermark_profile/` (code, kiểm thử, checkpoint), Không tạo `Backend/shared/`.
+- Chỉ sửa `Backend/workflows/record_payment/` (code, kiểm thử, checkpoint). Không tạo `Backend/shared/`.
 - Không sửa Main (`Backend.py`), `scaffold_backend`, hay workflow nào khác, kể cả kiểm thử của chúng.
-- Không sửa tệp nào ngoài `Backend/`. Được **chạy** các lệnh của `Desktop/` và `UI/`, không sửa tệp nào ở đó.
-- Không bỏ khoảng trắng khỏi giá trị trước khi lưu.
-- Không áp luật not blank cho trường nào ngoài năm trường ở bảng mục tiêu.
+- Không sửa tệp nào ngoài `Backend/`. Được **chạy** các lệnh của `Desktop/` và `UI/`, không sửa tệp nào ở đó. Nếu `npm run e2e` làm đổi `UI/evidence/`, báo lại, không tự khôi phục bằng git.
+- Không bỏ khoảng trắng khỏi giá trị trước khi lưu. Không áp luật cho `note` hay trường nào khác.
+- Không viết code chuyển đổi dữ liệu cũ.
 - Không đổi `details` sang hình dạng mới.
 - Không làm BE-4.
 - Không sửa `.contracts/`, `CLAUDE.md`, `.plan/`, `.design/`. Không đọc, không ghi `.reviews/`.
+- Không chạy lệnh git nào đổi trạng thái kho (commit, push, reset, checkout, restore, stash).
 - Không kiểm thử nào đụng `%APPDATA%\CommissionTracker` thật. Không tắt hay đổi cấu hình antivirus.
-- Không khuyến khích dùng sub-agent.
+- Không tắt luật lint, không thêm `eslint-disable` hay `# noqa` mới.
+- Không dùng sub-agent.
 
 ## TIÊU CHÍ HOÀN TẤT PHIÊN
 
 Phiên xong khi **tất cả** những điều dưới đây đúng, trên Windows:
 
-1. Endpoint tạo và sửa của ba workflow trả `400 ERR_VALIDATION` cho năm trường khi trống theo `formats.not_blank`. `details` chỉ ra trường vi phạm, và không có gì được ghi.
-2. Giá trị hợp lệ có khoảng trắng hai đầu được lưu và trả lại nguyên văn. Các trường tùy chọn không bị ảnh hưởng.
-3. Có đủ các ca kiểm thử ở việc 3 cho cả ba workflow, và có bằng chứng kiểm thử cắn cho từng workflow.
-4. `pytest`: 381 + số ca mới, đều đạt, không sửa kiểm thử của workflow khác. Desktop `npm test` đạt. UI `npm run e2e` 17/17.
-5. Checkpoint ba workflow theo Giao thức 07: EXPERIENCES, EVIDENCE, giới hạn đã biết, và NOTE đề xuất `đã_hoàn_thiện`. Không `UNSOLVED_PROBLEMS`, trừ khi có ghi rõ.
+1. `POST /payments` trả `400 ERR_VALIDATION` khi `method` trống theo `formats.not_blank`; `loc` là `["payment_input", "method"]`; không có gì được ghi; thứ tự kiểm không đổi.
+2. `method` hợp lệ có khoảng trắng hai đầu được lưu và trả lại nguyên văn. `note` không bị ảnh hưởng.
+3. Có đủ các ca ở việc 3, có bằng chứng kiểm thử cắn (hoặc ghi rõ bị công cụ chặn), và chỉ đúng một ca cũ được viết lại.
+4. `pytest`: 445 + số ca mới, đều đạt, không sửa kiểm thử của workflow khác. Desktop `npm test` đạt. UI `npm run e2e` 54/54; `UI/evidence` không đổi.
+5. Checkpoint `record_payment` theo Giao thức 07: EXPERIENCES, EVIDENCE, giới hạn đã biết, NOTE đề xuất `đã_hoàn_thiện`. Không `UNSOLVED_PROBLEMS`, trừ khi có ghi rõ.
 6. Mốc `%APPDATA%` không đổi.
-7. Báo cáo cuối phiên theo `CLAUDE.md` mục 5, kèm các lệnh để Project Owner tự chạy lại.
+7. Báo cáo cuối phiên theo `CLAUDE.md` mục 5, kèm các lệnh để Project Owner tự chạy lại và danh sách tệp trong `git status --short`.

@@ -98,12 +98,12 @@ Layout: `main_layout` (khung chính có điều hướng) — layout duy nhất.
 | `client_detail` | Xem một khách hàng; lưu trữ, bỏ lưu trữ; lối vào sửa | `manage_client` | `main_layout` | `hoàn_tất` (2026-09-28: phiên 16 và 17, audit phiên 17 đạt, Project Owner tự chạy tay) |
 | `client_form` | Thêm khách hàng mới, hoặc sửa một khách hàng | `manage_client` | `main_layout` | `hoàn_tất` (2026-09-28: phiên 16 và 17, audit phiên 17 đạt, Project Owner tự chạy tay) |
 | `commission_list` | Xem danh sách đơn hàng; lối vào thêm đơn và xem chi tiết | `manage_commission` | `main_layout` | `hoàn_tất` (2026-09-29: audit phiên 21 đạt, Project Owner tự chạy tay) |
-| `commission_detail` | Xem một đơn hàng; lối vào sửa; **từ D3:** phần "Tiến độ"; **từ D4:** phần "Thanh toán" (số dư, lối vào danh sách thanh toán) | `manage_commission`; từ D3 thêm `update_progress`; từ D4 thêm `record_payment` | `main_layout` | `đang_làm` (2026-09-29: plan phiên 22 sửa thêm phần Thanh toán; trước đó `hoàn_tất` cùng ngày, sau audit phiên 21 và Project Owner chạy tay). 2026-09-30: audit phiên 22 đạt; chờ Project Owner chạy tay D4 để chuyển `hoàn_tất` |
+| `commission_detail` | Xem một đơn hàng; lối vào sửa; **từ D3:** phần "Tiến độ"; **từ D4:** phần "Thanh toán" (số dư, lối vào danh sách thanh toán) | `manage_commission`; từ D3 thêm `update_progress`; từ D4 thêm `record_payment` | `main_layout` | `hoàn_tất` (2026-09-30: audit phiên 22 đạt, Project Owner chạy tay D4; phần Thanh toán thêm ở phiên 22) |
 | `commission_form` | Thêm đơn hàng mới, hoặc sửa một đơn | `manage_commission` | `main_layout` | `hoàn_tất` (2026-09-29: audit phiên 21 đạt, Project Owner tự chạy tay) |
 | `progress_board` | Xem mọi đơn hàng nhóm theo giai đoạn; lối vào chi tiết đơn | `update_progress` | `main_layout` | `hoàn_tất` (2026-09-29: audit phiên 21 đạt, Project Owner tự chạy tay) |
 | `stage_change` | Đổi giai đoạn của một đơn, kèm ghi chú | `update_progress` | `main_layout` | `hoàn_tất` (2026-09-29: audit phiên 21 đạt, Project Owner tự chạy tay) |
-| `payment_list` | Xem số dư và mọi khoản thanh toán của một đơn; hủy một khoản; lối vào ghi khoản mới | `record_payment` | `main_layout` | `đang_làm` (2026-09-29: plan phiên 22). 2026-09-30: audit phiên 22 đạt; chờ Project Owner chạy tay D4 để chuyển `hoàn_tất` |
-| `payment_form` | Ghi một khoản nhận tiền hoặc hoàn tiền cho một đơn | `record_payment` | `main_layout` | `đang_làm` (2026-09-29: plan phiên 22). 2026-09-30: audit phiên 22 đạt; chờ Project Owner chạy tay D4 để chuyển `hoàn_tất` |
+| `payment_list` | Xem số dư và mọi khoản thanh toán của một đơn; hủy một khoản; lối vào ghi khoản mới | `record_payment` | `main_layout` | `hoàn_tất` (2026-09-30: audit phiên 22 đạt, Project Owner chạy tay D4) |
+| `payment_form` | Ghi một khoản nhận tiền hoặc hoàn tiền cho một đơn | `record_payment` | `main_layout` | `hoàn_tất` (2026-09-30: audit phiên 22 đạt, Project Owner chạy tay D4) |
 | *(D5)* báo cáo thu nhập | — | `view_income_report` | `main_layout` | `chưa_làm` |
 | *(D6)* nhắc việc | — | `send_reminder` | `main_layout` | `chưa_làm` |
 | *(E, F)* sao lưu, khôi phục | — | `backup_data`, `restore_data` | `main_layout` | `chưa_làm` |

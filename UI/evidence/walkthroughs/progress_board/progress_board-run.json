@@ -5,8 +5,8 @@
     {
       "step": "S1",
       "passed": true,
-      "runner": "coding-agent@2026-09-30#1 (Playwright, tests/e2e/progress_board_walkthrough.spec.ts)",
-      "finished_at": "2026-09-30T02:07:01.917Z",
+      "runner": "<TGN> (Playwright, tests/e2e/progress_board_walkthrough.spec.ts)",
+      "finished_at": "2026-09-30T15:01:21.947Z",
       "screenshot": "evidence/walkthroughs/progress_board/progress_board-S1.png",
       "covers": [
         "ok"
@@ -15,8 +15,8 @@
     {
       "step": "S2",
       "passed": true,
-      "runner": "coding-agent@2026-09-30#1 (Playwright, tests/e2e/progress_board_walkthrough.spec.ts)",
-      "finished_at": "2026-09-30T02:07:10.773Z",
+      "runner": "<TGN> (Playwright, tests/e2e/progress_board_walkthrough.spec.ts)",
+      "finished_at": "2026-09-30T15:01:31.024Z",
       "screenshot": "evidence/walkthroughs/progress_board/progress_board-S2.png",
       "covers": [
         "ok"
@@ -25,8 +25,8 @@
     {
       "step": "S3",
       "passed": true,
-      "runner": "coding-agent@2026-09-30#1 (Playwright, tests/e2e/progress_board_walkthrough.spec.ts)",
-      "finished_at": "2026-09-30T02:07:10.977Z",
+      "runner": "<TGN> (Playwright, tests/e2e/progress_board_walkthrough.spec.ts)",
+      "finished_at": "2026-09-30T15:01:31.192Z",
       "screenshot": "evidence/walkthroughs/progress_board/progress_board-S3.png",
       "covers": [
         "ok"
@@ -35,8 +35,8 @@
     {
       "step": "S4",
       "passed": true,
-      "runner": "coding-agent@2026-09-30#1 (Playwright, tests/e2e/progress_board_walkthrough.spec.ts)",
-      "finished_at": "2026-09-30T02:07:17.416Z",
+      "runner": "<TGN> (Playwright, tests/e2e/progress_board_walkthrough.spec.ts)",
+      "finished_at": "2026-09-30T15:01:37.623Z",
       "screenshot": "evidence/walkthroughs/progress_board/progress_board-S4.png",
       "covers": [
         "unreachable",
