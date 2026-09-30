@@ -286,6 +286,7 @@ Ngày 2026-09-28, Project Owner yêu cầu vá mọi chỗ chưa đạt chuẩn.
 - Mất focus khi nút "Lưu" đang bận.
 - Tên khách ở trang chi tiết nhỏ hơn tiêu đề chung (thứ bậc thị giác, gần với V3).
 - `POST` gửi lại sau `unreachable` có thể tạo trùng.
+- Khoản thanh toán đã hủy trên `payment_list` có dòng chính giống hệt khoản còn hiệu lực; chữ "Đã hủy" chỉ ở cuối dòng phụ (Q22-1 của audit phiên 22). Đạt đặc tả V1; V2 làm dấu hiệu rõ hơn.
 
 **Rút lại:** "Thông báo lưu trữ còn lại sau Tải lại" không xảy ra được. Trang chi tiết chỉ có nút tải lại khi tải thất bại, lúc đó chưa thể có kết quả lưu trữ. Orchestrator đọc sót ở audit.
 
@@ -393,6 +394,17 @@ Máy Orchestrator (Linux) chưa gặp lần nào trong hơn 20 lần e2e toàn b
 **Nếu trace cho thấy giao diện thật sự đứng khi backend tắt**, đó là lỗi của sản phẩm: mở lại trạng thái các trang liên quan.
 
 **Tiêu chí đóng:** biết nguyên nhân, sửa đúng chỗ; sau đó 10 lần e2e liên tiếp trên Windows không hết giờ chụp ảnh.
+
+**Dữ liệu phiên 22** (audit phiên 22 §5; trace đã bật, nhật ký `UI/test-results/screenshot-timing.log`):
+- Windows, năm lần e2e cuối: 390 lần chụp, lâu nhất 155 ms; riêng 50 lần lúc backend tắt, lâu nhất 128 ms.
+- **Một lần hết giờ lúc backend đang bật**: `payment_form-S1-errors`, ngay sau khi gõ vào ô có `datalist`. Agent nghi popup gợi ý gốc còn mở, nên thêm cú bấm vào tiêu đề trang trước ảnh đó; sau đó 16 lần sạch. Orchestrator chấp nhận thay đổi spec này (không che lỗi sản phẩm).
+- Giả thuyết datalist không giải thích được các lần hết giờ trước ở bước backend tắt (`client_detail` S4, `stage_change` S4), nơi không có ô gợi ý. Có thể có hai nguyên nhân.
+- Linux (máy Orchestrator): 468 lần chụp, lâu nhất 96 ms, không lần nào hết giờ.
+- Trace của lần hết giờ nằm trong thư mục tạm của phiên agent (`traces_FINAL_5/*.zip`), chưa ai mở. **Việc của Project Owner:** nếu còn, chép các tệp đó vào `UI/test-results/ui11_traces/` để Orchestrator xem.
+
+**Việc tiếp:** giữ trace và nhật ký trong mọi phiên giao diện; lần hỏng kế tiếp ở bước backend tắt là dữ liệu quyết định.
+
+**Ghi nhận thêm, không phải UI-11 (Q22-2, thấp, không vá ở V1):** ở múi giờ có giờ mùa hè, giờ "không tồn tại" trong khoảng nhảy giờ (ví dụ 02:30 ngày đổi giờ ở New York) được ghép với độ lệch sau khi đổi. Việt Nam không có giờ mùa hè.
 
 ## Môi trường và vận hành (không phải việc của coding agent)
 

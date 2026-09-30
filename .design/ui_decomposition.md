@@ -98,12 +98,12 @@ Layout: `main_layout` (khung chính có điều hướng) — layout duy nhất.
 | `client_detail` | Xem một khách hàng; lưu trữ, bỏ lưu trữ; lối vào sửa | `manage_client` | `main_layout` | `hoàn_tất` (2026-09-28: phiên 16 và 17, audit phiên 17 đạt, Project Owner tự chạy tay) |
 | `client_form` | Thêm khách hàng mới, hoặc sửa một khách hàng | `manage_client` | `main_layout` | `hoàn_tất` (2026-09-28: phiên 16 và 17, audit phiên 17 đạt, Project Owner tự chạy tay) |
 | `commission_list` | Xem danh sách đơn hàng; lối vào thêm đơn và xem chi tiết | `manage_commission` | `main_layout` | `hoàn_tất` (2026-09-29: audit phiên 21 đạt, Project Owner tự chạy tay) |
-| `commission_detail` | Xem một đơn hàng; lối vào sửa; **từ D3:** phần "Tiến độ"; **từ D4:** phần "Thanh toán" (số dư, lối vào danh sách thanh toán) | `manage_commission`; từ D3 thêm `update_progress`; từ D4 thêm `record_payment` | `main_layout` | `đang_làm` (2026-09-29: plan phiên 22 sửa thêm phần Thanh toán; trước đó `hoàn_tất` cùng ngày, sau audit phiên 21 và Project Owner chạy tay) |
+| `commission_detail` | Xem một đơn hàng; lối vào sửa; **từ D3:** phần "Tiến độ"; **từ D4:** phần "Thanh toán" (số dư, lối vào danh sách thanh toán) | `manage_commission`; từ D3 thêm `update_progress`; từ D4 thêm `record_payment` | `main_layout` | `đang_làm` (2026-09-29: plan phiên 22 sửa thêm phần Thanh toán; trước đó `hoàn_tất` cùng ngày, sau audit phiên 21 và Project Owner chạy tay). 2026-09-30: audit phiên 22 đạt; chờ Project Owner chạy tay D4 để chuyển `hoàn_tất` |
 | `commission_form` | Thêm đơn hàng mới, hoặc sửa một đơn | `manage_commission` | `main_layout` | `hoàn_tất` (2026-09-29: audit phiên 21 đạt, Project Owner tự chạy tay) |
 | `progress_board` | Xem mọi đơn hàng nhóm theo giai đoạn; lối vào chi tiết đơn | `update_progress` | `main_layout` | `hoàn_tất` (2026-09-29: audit phiên 21 đạt, Project Owner tự chạy tay) |
 | `stage_change` | Đổi giai đoạn của một đơn, kèm ghi chú | `update_progress` | `main_layout` | `hoàn_tất` (2026-09-29: audit phiên 21 đạt, Project Owner tự chạy tay) |
-| `payment_list` | Xem số dư và mọi khoản thanh toán của một đơn; hủy một khoản; lối vào ghi khoản mới | `record_payment` | `main_layout` | `đang_làm` (2026-09-29: plan phiên 22) |
-| `payment_form` | Ghi một khoản nhận tiền hoặc hoàn tiền cho một đơn | `record_payment` | `main_layout` | `đang_làm` (2026-09-29: plan phiên 22) |
+| `payment_list` | Xem số dư và mọi khoản thanh toán của một đơn; hủy một khoản; lối vào ghi khoản mới | `record_payment` | `main_layout` | `đang_làm` (2026-09-29: plan phiên 22). 2026-09-30: audit phiên 22 đạt; chờ Project Owner chạy tay D4 để chuyển `hoàn_tất` |
+| `payment_form` | Ghi một khoản nhận tiền hoặc hoàn tiền cho một đơn | `record_payment` | `main_layout` | `đang_làm` (2026-09-29: plan phiên 22). 2026-09-30: audit phiên 22 đạt; chờ Project Owner chạy tay D4 để chuyển `hoàn_tất` |
 | *(D5)* báo cáo thu nhập | — | `view_income_report` | `main_layout` | `chưa_làm` |
 | *(D6)* nhắc việc | — | `send_reminder` | `main_layout` | `chưa_làm` |
 | *(E, F)* sao lưu, khôi phục | — | `backup_data`, `restore_data` | `main_layout` | `chưa_làm` |
@@ -456,8 +456,8 @@ Phần này hiện ba dòng số dư. Hàng nút dưới tiêu đề trang thêm
     - 200: tải lại số dư và danh sách, hiện "Đã hủy khoản thanh toán."
     - 409: "Khoản này đã được hủy trước đó.", và tải lại.
     - 404: "Không tìm thấy khoản thanh toán này.", và tải lại.
-    - 500, không tới được: thông báo, danh sách giữ nguyên.
-  - Trong lúc gửi, mọi nút "Hủy khoản này" và "Xác nhận" bị vô hiệu.
+    - 500, không tới được: thông báo, rồi **lặng lẽ tải lại**; nếu tải lại cũng hỏng thì danh sách đang hiện giữ nguyên. (Cập nhật 2026-09-30 theo phiên 22: agent tải lại sau mọi lần bị từ chối; Orchestrator chấp nhận vì không làm mất dữ liệu đang hiện.)
+  - Trong lúc gửi, mọi nút "Hủy khoản này" và "Xác nhận" bị vô hiệu. **Khi khung xác nhận đang mở**, các nút "Hủy khoản này" khác cũng bị vô hiệu, vì khung không nêu tên khoản (cập nhật 2026-09-30 theo phiên 22).
 - Trang nhận thông báo chuyển trang "Đã ghi khoản thanh toán." khi quay về từ `payment_form`.
 
 ### Chi tiết trang `payment_form` (D4)
@@ -469,7 +469,7 @@ Phần này hiện ba dòng số dư. Hàng nút dưới tiêu đề trang thêm
   2. "Khoản": chọn loại khoản, có lựa chọn đầu "Chọn khoản"; bắt buộc. Dưới ô có dòng gợi ý cố định: "Tiền tip không làm giảm số còn phải thu."
   3. "Số tiền": ô chữ, đọc theo luật của D2; đơn vị tiền của đơn hiện dạng chữ cạnh ô, **không** chọn được (hợp đồng: đơn vị tiền phải bằng đơn vị tiền của đơn).
   4. "Phương thức": chữ tự do, có gợi ý "Chuyển khoản", "MoMo", "PayPal", "Tiền mặt"; bắt buộc.
-  5. "Ngày giờ nhận tiền": ô ngày giờ của hệ thống (`<input type="datetime-local">`); mặc định là thời điểm mở form, làm tròn tới phút; bắt buộc.
+  5. "Ngày giờ nhận tiền": ô ngày giờ của hệ thống (`<input type="datetime-local">`); mặc định là thời điểm mở form, **cắt bỏ giây** (không làm tròn lên, để mặc định không vượt thời điểm hiện tại; chỉnh chữ 2026-09-30 theo phiên 22); bắt buộc.
   6. "Ghi chú": tùy chọn, nhiều dòng.
 - **Kiểm trước khi gửi**, trong phân khu logic:
   - chưa chọn khoản: "Chọn khoản thanh toán";
