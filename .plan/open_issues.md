@@ -410,7 +410,7 @@ Máy Orchestrator (Linux) chưa gặp lần nào trong hơn 20 lần e2e toàn b
 - Linux (máy Orchestrator): 468 lần chụp, lâu nhất 96 ms, không lần nào hết giờ.
 - Trace của lần hết giờ nằm trong thư mục tạm của phiên agent (`traces_FINAL_5/*.zip`), chưa ai mở. **Việc của Project Owner:** nếu còn, chép các tệp đó vào `UI/test-results/ui11_traces/` để Orchestrator xem.
 
-**Việc tiếp:** giữ trace và nhật ký trong mọi phiên giao diện; lần hỏng kế tiếp ở bước backend tắt là dữ liệu quyết định.
+**Việc tiếp:** giữ trace và nhật ký trong mọi phiên giao diện; lần hỏng kế tiếp ở bước backend tắt là dữ liệu quyết định. Từ plan phiên 24: trace của lần hết giờ được giữ ngay trong `UI/test-results/ui11_traces/`, không để trong thư mục tạm của phiên agent.
 
 **Ghi nhận thêm, không phải UI-11 (Q22-2, thấp, không vá ở V1):** ở múi giờ có giờ mùa hè, giờ "không tồn tại" trong khoảng nhảy giờ (ví dụ 02:30 ngày đổi giờ ở New York) được ghép với độ lệch sau khi đổi. Việt Nam không có giờ mùa hè.
 

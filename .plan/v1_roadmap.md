@@ -172,7 +172,7 @@ Phần lớn nhất của V1. Chia thành nhiều phiên, mỗi phiên một nh�
 | D2 | Đơn hàng: danh sách, thêm, sửa, xem chi tiết — **phiên 19**, vá ở phiên 20 (UI-9) và 21 (UI-10); **`hoàn_tất` 2026-09-29** | `manage_commission` |
 | D3 | Tiến độ: đổi giai đoạn, xem lịch sử, bảng tiến độ — **phiên 20**, vá ở phiên 21 (UI-10); **`hoàn_tất` 2026-09-29** | `update_progress` |
 | D4 | Thanh toán: ghi khoản, hủy khoản, xem số dư — **phiên 22** (`payment_list`, `payment_form`, phần Thanh toán của `commission_detail`); **`hoàn_tất` 2026-09-30**. Phần backend của CT-4 (BE-7): **phiên 23** (backend) xong 2026-09-30, audit đạt; Data Schema 9.0.1 duyệt 2026-09-30 | `record_payment` |
-| D5 | Báo cáo thu nhập | `view_income_report` |
+| D5 | Báo cáo thu nhập — **phiên 24**, plan phát hành 2026-09-30 (`income_report`, mục điều hướng "Thu nhập") | `view_income_report` |
 | D6 | Nhắc việc: cài đặt, danh sách chờ, xác nhận; `reminder_ticker` | `send_reminder` |
 
 **Ràng buộc chung cho mọi phiên của chặng này:**

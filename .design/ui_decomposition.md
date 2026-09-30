@@ -63,7 +63,7 @@ Mặc định của iWCA: mỗi workflow hệ thống mà giao diện dùng có 
 | `manage_commission` | `nghiệp_vụ` | `manage_commission` | Ghép tên khách hàng vào danh sách và chi tiết đơn. Adapters của workflow này gọi luôn `GET /clients` và `GET /clients/{client_id}`: đây là trùng lặp có chủ đích theo I1.3, không đi qua `manage_client` của giao diện. Sắp danh sách đơn (hợp đồng không hứa thứ tự). Đọc và định dạng số tiền theo `currency_code`; định dạng ngày hạn giao. Kiểm dữ liệu form trước khi gửi (§5, trang `commission_form`). Chi tiết từ D2 ở §5. | D2 |
 | `update_progress` | `nghiệp_vụ` | `update_progress` | Nhóm bảng tiến độ theo giai đoạn, theo thứ tự của `list_stages`; ghép tiêu đề và hạn giao của đơn vào bảng (Adapters gọi luôn `GET /commissions`, trùng lặp có chủ đích theo I1.3). Đặt tên tiếng Việt cho từng giai đoạn. Kiểm form đổi giai đoạn. Chi tiết từ D3 ở §5. | D3 |
 | `record_payment` | `nghiệp_vụ` | `record_payment` | Trình bày số dư (gồm cả trường hợp thu dư) và các khoản đã hủy; tên tiếng Việt của chiều tiền và loại khoản; đọc số tiền và ngày giờ nhận tiền; kiểm form. Chi tiết từ D4 ở §5. | D4 |
-| `view_income_report` | `nghiệp_vụ` | `view_income_report` | Trình bày báo cáo theo tháng và theo tiền tệ. Không quy đổi tiền tệ (hợp đồng). | D5 |
+| `view_income_report` | `nghiệp_vụ` | `view_income_report` | Trình bày báo cáo theo tháng và theo tiền tệ. Không quy đổi tiền tệ (hợp đồng). Chọn khoảng thời gian mặc định, kiểm khoảng thời gian trước khi gửi. Chi tiết từ D5 ở §5. | D5 |
 | `send_reminder` | `nghiệp_vụ` | `send_reminder` | Trình bày danh sách nhắc việc đang chờ và phần cài đặt. | D6 |
 | `backup_data` | `nghiệp_vụ` | `backup_data` | Để chi tiết ở lần làm lại I1 trước chặng E. | E |
 | `restore_data` | `nghiệp_vụ` | `restore_data` (desktop, `ipc`) | Để chi tiết ở lần làm lại I1 trước chặng F. | F |
@@ -90,7 +90,7 @@ Mặc định của iWCA: mỗi workflow hệ thống mà giao diện dùng có 
 
 ## 5. Trang và layout (Bước I1.5)
 
-Layout: `main_layout` (khung chính có điều hướng) — layout duy nhất. **Từ D1:** `main_layout` có một vùng điều hướng cố định, liệt kê các mục cấp cao nhất. Hiện có ba mục, theo thứ tự: "Khách hàng" (mở `client_list`), "Đơn hàng" (mở `commission_list`, từ D2), rồi "Tiến độ" (mở `progress_board`, từ D3). Mỗi phiên sau thêm mục của mình vào đúng vùng này, không đổi vị trí các mục cũ (§7.2, nguyên tắc 7). Màn hình lỗi khởi động không phải layout và không phải đích điều hướng: Main dựng thẳng component kit `FatalMessage` khi giá trị khởi động hỏng, trước khi có trang nào (iWCA I2.6, bước 1).
+Layout: `main_layout` (khung chính có điều hướng) — layout duy nhất. **Từ D1:** `main_layout` có một vùng điều hướng cố định, liệt kê các mục cấp cao nhất. Hiện có bốn mục, theo thứ tự: "Khách hàng" (mở `client_list`), "Đơn hàng" (mở `commission_list`, từ D2), "Tiến độ" (mở `progress_board`, từ D3), rồi "Thu nhập" (mở `income_report`, từ D5). Mỗi phiên sau thêm mục của mình vào đúng vùng này, không đổi vị trí các mục cũ (§7.2, nguyên tắc 7). Màn hình lỗi khởi động không phải layout và không phải đích điều hướng: Main dựng thẳng component kit `FatalMessage` khi giá trị khởi động hỏng, trước khi có trang nào (iWCA I2.6, bước 1).
 
 | Trang (khóa điều hướng) | Mục đích | Workflow giao diện dùng Routers | Layout | Trạng thái |
 |---|---|---|---|---|
@@ -104,7 +104,7 @@ Layout: `main_layout` (khung chính có điều hướng) — layout duy nhất.
 | `stage_change` | Đổi giai đoạn của một đơn, kèm ghi chú | `update_progress` | `main_layout` | `hoàn_tất` (2026-09-29: audit phiên 21 đạt, Project Owner tự chạy tay) |
 | `payment_list` | Xem số dư và mọi khoản thanh toán của một đơn; hủy một khoản; lối vào ghi khoản mới | `record_payment` | `main_layout` | `hoàn_tất` (2026-09-30: audit phiên 22 đạt, Project Owner chạy tay D4) |
 | `payment_form` | Ghi một khoản nhận tiền hoặc hoàn tiền cho một đơn | `record_payment` | `main_layout` | `hoàn_tất` (2026-09-30: audit phiên 22 đạt, Project Owner chạy tay D4) |
-| *(D5)* báo cáo thu nhập | — | `view_income_report` | `main_layout` | `chưa_làm` |
+| `income_report` | Xem thu nhập theo khoảng thời gian: thực nhận, tiền hoàn, còn phải thu, theo từng đơn vị tiền và theo tháng | `view_income_report` | `main_layout` | `đang_làm` (2026-09-30: plan phiên 24) |
 | *(D6)* nhắc việc | — | `send_reminder` | `main_layout` | `chưa_làm` |
 | *(E, F)* sao lưu, khôi phục | — | `backup_data`, `restore_data` | `main_layout` | `chưa_làm` |
 
@@ -512,6 +512,93 @@ Phần này hiện ba dòng số dư. Hàng nút dưới tiêu đề trang thêm
 - Không đòi `rejected_system`: 404, 409, 422 không gây ra được bằng thao tác bình thường. Kiểm thử dựng trang chứng minh chúng hiện đúng.
 - Kịch bản `commission_detail` bổ sung các bước của phần Thanh toán.
 
+## Chặng D5 — Thu nhập (làm lại I1 ngày 2026-09-30, trước phiên 24)
+
+Căn cứ: Data Schema **9.0.1** (`view_income_report`: `period_from`, `period_to`, `income_report`; `formats.date`, `formats.timestamp`, `types.money`, `types.currency_code`; luật số nguyên của `clause_a_common.mandatory_rules`), API Contract 4.0.0 (`view_income_report`). Hợp đồng không cần sửa cho D5.
+
+### Lời gọi của workflow giao diện `view_income_report`
+
+| Lời gọi | Dùng ở | Nhãn phải xử lý (hợp đồng) |
+|---|---|---|
+| `get_income_report` (`GET /reports/income?period_from=YYYY-MM-DD&period_to=YYYY-MM-DD`) | `income_report` | 200, 400 (`ERR_VALIDATION`), 409 (`ERR_OUT_OF_RANGE`), 500 |
+
+Cùng "không tới được" và "vi phạm hợp đồng", như các chặng trước. Đây là lời gọi duy nhất của D5; workflow không gọi địa chỉ nào khác.
+
+### Những điều hợp đồng quy định mà trang phải nói đúng
+
+- **Khoảng thời gian** tính cả hai ngày đầu và cuối. `period_from` sau `period_to` là không hợp lệ.
+- **Một khoản thuộc ngày ghi trong `paid_at` của chính nó**, theo độ lệch múi giờ của chính khoản đó, không quy đổi.
+- **Mỗi đơn vị tiền một phần riêng. Không quy đổi tiền tệ.**
+- `received_net_minor`: tiền nhận trừ tiền hoàn **trong khoảng thời gian**, gồm cả tiền tip và tiền của đơn đã hủy. Có thể âm.
+- `refunded_minor`: tổng tiền hoàn **trong khoảng thời gian**, luôn `>= 0`.
+- `outstanding_minor`: tổng "còn phải thu" của **mọi đơn chưa hủy** ở đơn vị tiền đó, **tính tới lúc lập báo cáo, không phụ thuộc khoảng thời gian**. Giữ dấu: một đơn thu dư làm tổng giảm, nên tổng có thể âm.
+- `by_month`: chỉ những tháng có ít nhất một khoản trong khoảng thời gian, cũ nhất trước.
+- `currencies`: mọi đơn vị tiền có khoản trong khoảng thời gian hoặc có đơn còn phải thu, theo thứ tự mã. Có thể rỗng.
+
+### Luật trình bày của D5 (quyết định của `view_income_report`, đều `[UI-ONLY]` trừ khi ghi khác)
+
+- **Số tiền:** hiện đúng luật của D2 (mục "Số tiền"), kể cả mã tiền không có trong bảng chữ số lẻ. Workflow này giữ **bản riêng** của bảng chữ số lẻ và cách hiện (R2). Số âm hiện với dấu trừ ở đầu, ví dụ `-500.000 VND`. D5 không có ô nhập số tiền.
+- **Tháng** (`YYYY-MM`): hiện "Tháng M/YYYY", ví dụ `2026-09` → "Tháng 9/2026". Tách thẳng từ chuỗi, không qua `Date`.
+- **Ngày** (`period_from`, `period_to`): hiện `dd/mm/yyyy`, tách thẳng từ chuỗi, như hạn giao ở D2.
+- **Thời điểm lập** (`generated_at`): hiện `HH:mm dd/mm/yyyy` theo giờ của máy, như các ngày giờ khác.
+- Workflow giữ **bản riêng** của các cách định dạng ngày, tháng, ngày giờ (R2).
+- **Không lấp tháng trống.** Tháng không có khoản nào thì không hiện, đúng như hợp đồng trả.
+- **Không cộng các đơn vị tiền với nhau**, kể cả để làm "tổng cộng".
+
+### Chi tiết trang `income_report` (D5)
+
+- **Mở từ:** mục **"Thu nhập"** của vùng điều hướng, đứng sau "Tiến độ".
+- **Tiêu đề trang:** "Thu nhập".
+- **Chọn khoảng thời gian:** hai ô ngày của hệ thống (`DateField` của kit): "Từ ngày", "Đến ngày".
+  - **Mặc định khi mở trang:** từ ngày 1 tháng 1 của năm hiện tại tới **hôm nay**, theo ngày của máy. "Hôm nay" lấy qua nguồn "bây giờ" do Main trao cho workflow, như D4, để kiểm thử cố định được.
+  - Khi mở trang, báo cáo của khoảng mặc định **tự tải**, không cần bấm.
+- **Hàng nút dưới tiêu đề:** chỉ có "Xem báo cáo" (hành động chính). Nút này gửi khoảng thời gian đang nhập. Nó cũng là cách tải lại, nên trang không có nút "Tải lại" riêng.
+- **Kiểm trước khi gửi**, trong phân khu logic:
+  - ô rỗng: "Chọn ngày bắt đầu" hoặc "Chọn ngày kết thúc";
+  - giá trị không đúng dạng `YYYY-MM-DD` với năm bốn chữ số, hoặc không phải ngày có thật: "Ngày không hợp lệ". Ô ngày của hệ thống cho gõ năm hơn bốn chữ số, nên phải kiểm;
+  - ngày bắt đầu sau ngày kết thúc: lỗi ở ô "Đến ngày": "Ngày kết thúc phải bằng hoặc sau ngày bắt đầu". **Bản sao của luật hợp đồng**, không phải `[UI-ONLY]`;
+  - lỗi thì không gửi; con trỏ chuyển tới ô lỗi đầu tiên (§7.2, nguyên tắc 4); báo cáo đang hiện (nếu có) giữ nguyên.
+- **Hiện**, khi có kết quả:
+  - dòng phụ dưới tiêu đề: "Từ dd/mm/yyyy đến dd/mm/yyyy · Lập lúc HH:mm dd/mm/yyyy". Khoảng này lấy từ **kết quả** (`period_from`, `period_to`), không từ ô nhập, để người xem biết báo cáo đang hiện là của khoảng nào dù ô đã bị sửa;
+  - với mỗi đơn vị tiền, theo đúng thứ tự hợp đồng trả, một phần có tiêu đề là mã tiền, ví dụ "VND":
+    - ba dòng số:
+      - "Thực nhận trong kỳ": `received_net_minor`;
+      - "Đã hoàn cho khách trong kỳ": `refunded_minor`;
+      - "Còn phải thu (mọi đơn chưa hủy, tính tới lúc lập)": `outstanding_minor`, giữ dấu;
+    - dòng giải thích cố định, chữ phụ: "Thực nhận đã trừ tiền hoàn, gồm cả tiền tip. Còn phải thu không phụ thuộc khoảng thời gian.";
+    - danh sách theo tháng: mỗi dòng "Tháng M/YYYY" và số tiền thực nhận của tháng đó. `by_month` rỗng (đơn vị tiền chỉ có đơn còn phải thu) thì hiện "Không có khoản thanh toán nào trong kỳ." thay cho danh sách.
+  - `currencies` rỗng: trạng thái rỗng "Không có khoản thanh toán nào trong kỳ, và không có đơn nào còn phải thu." Không có nút, vì báo cáo không có việc tiếp theo trên trang này.
+- **Trong lúc tải:** "Xem báo cáo" bị vô hiệu; báo cáo cũ (nếu có) giữ nguyên tới khi có kết quả mới.
+- **Nhãn:**
+  - 200: thay báo cáo cũ bằng báo cáo mới.
+  - 400: "Máy chủ không nhận khoảng thời gian này." Không đọc `details`. Bình thường không xảy ra, vì giao diện kiểm trước.
+  - 409 (`ERR_OUT_OF_RANGE`): "Tổng thu nhập vượt giới hạn tính toán, không lập được báo cáo." Bình thường không xảy ra.
+  - 500, không tới được, vi phạm hợp đồng: thông báo lỗi như các trang khác. Báo cáo cũ (nếu có) **bị bỏ**, không hiện cạnh thông báo lỗi, để không ai tưởng số cũ là số mới. Bấm "Xem báo cáo" để thử lại.
+- **Không có thao tác ghi**, nên không có thông báo chuyển trang, không có xác nhận.
+
+### Điều hướng của D5
+
+- `income_report` không có tham số. Không trang nào khác mở nó ngoài vùng điều hướng, và nó không mở trang nào khác.
+- Vùng điều hướng có bốn mục: "Khách hàng", "Đơn hàng", "Tiến độ", "Thu nhập". Ba mục cũ giữ nguyên vị trí.
+
+### Luật phủ của kịch bản bấm thử ở D5 (iWCA I6.3)
+
+- **Dữ liệu mẫu** phải có: khoản ở ít nhất hai tháng; một khoản hoàn tiền; một khoản tip; một đơn đã hủy có khoản đã nhận; một đơn USD có phần lẻ; một đơn thu dư; một đơn còn phải thu nhưng không có khoản nào trong kỳ. Agent chọn dùng hoặc mở rộng dữ liệu mẫu hiện có, và ghi rõ.
+- `ok`:
+  - chọn một khoảng cố định rồi "Xem báo cáo": hai phần VND và USD, danh sách theo tháng đúng;
+  - thu hẹp khoảng thời gian: số trong kỳ đổi, "Còn phải thu" **không đổi**;
+  - khoảng thời gian không có khoản nào: phần đơn vị tiền chỉ còn "Còn phải thu" và câu "Không có khoản thanh toán nào trong kỳ.".
+- `rejected_input`: ngày bắt đầu sau ngày kết thúc; một ô ngày để trống.
+- Ít nhất một bước `unreachable`: tắt backend rồi "Xem báo cáo", sau đó bật lại và xem được.
+- **Ảnh bằng chứng không được phụ thuộc ngày thật.** Chụp sau khi đã nhập khoảng thời gian cố định, không chụp báo cáo của khoảng mặc định.
+- Không đòi `rejected_system`: 400 và 409 không gây ra được bằng thao tác bình thường. Kiểm thử dựng trang chứng minh chúng hiện đúng.
+- Trạng thái rỗng (`currencies` rỗng) chứng minh bằng kiểm thử dựng trang. Kịch bản bấm thử có thể thêm nếu dữ liệu mẫu cho phép.
+
+### Ghi chú
+
+- Ô ngày hiện kiểu tháng/ngày/năm trong ứng dụng thật, vì Electron dùng ngôn ngữ `en-US` (DSK-15). D5 dùng lại `DateField` như D2, nên sẽ được sửa cùng lúc khi làm DSK-15 ở phía desktop. Giá trị gửi đi vẫn đúng dạng `YYYY-MM-DD`.
+- Ở máy dùng múi giờ Việt Nam, "ngày của khoản" theo hợp đồng trùng với ngày theo giờ máy. Ở múi giờ khác thì khoản có thể rơi vào ngày khác với ngày hiện ở `payment_list`; đây là đúng hợp đồng, không vá ở V1.
+
 ## 6. Đối chiếu độ phủ (Bước I1.6)
 
 - Mọi lối vào ở §1, hoặc có workflow giao diện đối ứng ở §2, hoặc nằm trong bảng loại trừ ở §4. Không lối vào nào ở trạng thái "chưa rõ".
@@ -559,6 +646,7 @@ Kịch bản bấm thử và audit kiểm các điều sau.
 - 2026-09-28: sau audit phiên 16. `client_form` ghi rõ luật nào sao từ hợp đồng (Data Schema 7.0.0, CT-2: not blank) và luật nào `[UI-ONLY]`. Hàng nút của form nằm dưới tiêu đề, và focus chuyển tới ô lỗi đầu tiên. §7.1 thêm luật tương phản 3:1 cho thành phần tương tác. §7.2 bổ sung nguyên tắc 4 và 7. Ba trang giữ `đang_làm`, vá ở phiên 17.
 - 2026-09-28: audit phiên 17 đạt (`.reviews/audits/ui/audit_ui_session17.md`). Ba trang D1 chờ Project Owner chạy tay ba kịch bản, rồi chuyển `hoàn_tất`.
 - 2026-09-28: `client_list`, `client_detail`, `client_form` → `hoàn_tất`. Project Owner đã tự chạy tay ba kịch bản và xác nhận chức năng chạy đúng. Chặng D1 xong về phía giao diện.
+- 2026-09-30: làm lại I1 cho D5, căn cứ Data Schema 9.0.1: trang `income_report` → `đang_làm` (plan phiên 24); mục điều hướng "Thu nhập"; khoảng thời gian mặc định (đầu năm tới hôm nay); kiểm khoảng thời gian (ngày bắt đầu sau ngày kết thúc là bản sao của luật hợp đồng); cách trình bày ba con số, trong đó "Còn phải thu" không phụ thuộc khoảng thời gian; luật phủ D5. Hợp đồng không đổi.
 - 2026-09-30: CT-4 được duyệt (Data Schema 9.0.0): luật phương thức not blank của D4 là bản sao của hợp đồng, không còn `[UI-ONLY]`. Hành vi không đổi.
 - 2026-09-29: làm lại I1 cho D4: trang `payment_list`, `payment_form` → `đang_làm` (plan phiên 22); `commission_detail` thêm phần Thanh toán nên trở lại `đang_làm`; tên tiếng Việt của chiều tiền và loại khoản; cách ghép `paid_at`; xác nhận khi hủy khoản; luật phủ D4.
 - 2026-09-29: `commission_list`, `commission_detail`, `commission_form`, `progress_board`, `stage_change` → `hoàn_tất`: audit phiên 21 đạt (`.reviews/audits/ui/audit_ui_session21.md`), Project Owner tự chạy tay các kịch bản D2 và D3, không có vấn đề. Chặng D2 và D3 xong về phía giao diện.
