@@ -188,6 +188,8 @@ Checkpoint ở đầu `record_payment/services.py` ghi `last_updated_at` và `re
 
 ### CT-5 — Luật "ngày bắt đầu không sau ngày kết thúc" của `view_income_report` nằm ngoài `type` (trung bình; đề xuất của Orchestrator, 2026-10-01, audit phiên 24 §5.1)
 
+> **ĐÃ DUYỆT VÀ GHI 2026-10-01: Data Schema 9.0.2, phương án A.** Phía giao diện: plan phiên 25 (đổi phiên bản và chú thích trong Configs của `view_income_report`, không đổi hành vi).
+
 **Nguồn:** câu hỏi của agent phiên 24. Đặc tả D5 (Orchestrator viết) bắt giao diện kiểm luật này, trong khi iWCA §5 cấm kiểm điều không viết trong `type` (ví dụ chính là "một điều kiện giữa hai trường"). Lỗi của Orchestrator.
 
 **Đề xuất (A), Data Schema 9.0.1 → 9.0.2:** `view_income_report.input_expected.period_to`: `{ type: date, from: end_user }` → `{ type: "date (on or after period_from)", from: end_user }`. Câu tương ứng trong `description` giữ nguyên. Giá trị đầu vào được chấp nhận không đổi, nên chỉ tăng số cuối; `api_contract.yaml` không đổi; backend không đổi gì. Giao diện giữ hành vi; phiên giao diện kế tiếp đổi `contract.dataSchema` và chú thích trong Configs của `view_income_report`.
@@ -430,11 +432,11 @@ Máy Orchestrator (Linux) chưa gặp lần nào trong hơn 20 lần e2e toàn b
 - **Giả thuyết datalist bị bác:** `payment_form-S1-errors` hết giờ lại dù cú bấm vào tiêu đề đã chạy xong 2 s trước.
 - **Giả thuyết còn lại phù hợp nhất:** cửa sổ Electron ngừng vẽ khung hình mới (Chromium trên Windows có thể ngừng vẽ cửa sổ bị che hoặc ở nền). Orchestrator chưa nắm chắc cơ chế và cờ cụ thể.
 
-**Thí nghiệm đề xuất cho phiên giao diện kế tiếp:** chỉ trong lệnh khởi chạy Electron của harness kiểm thử (không ở ứng dụng thật), bật các cờ tắt cơ chế "cửa sổ bị che thì ngừng vẽ / bị hạ ưu tiên"; agent tra tài liệu Electron/Chromium của đúng phiên bản đang dùng để chọn cờ, ghi nguồn. Chạy cùng số lượt e2e với và không có cờ, trên cùng máy, ghi số lần hết giờ. Đây là đổi điều kiện môi trường kiểm thử, không phải nới thời gian chờ; nếu có hiệu quả, Project Owner quyết có giữ hay không.
+**Thí nghiệm — plan phiên 25 (việc 4):** tái hiện có chủ đích bằng công cụ chẩn đoán riêng (cửa sổ bình thường, thu nhỏ, bị che hoặc mất tiêu điểm), rồi mới thử cờ. Đề xuất ban đầu: chỉ trong lệnh khởi chạy Electron của harness kiểm thử (không ở ứng dụng thật), bật các cờ tắt cơ chế "cửa sổ bị che thì ngừng vẽ / bị hạ ưu tiên"; agent tra tài liệu Electron/Chromium của đúng phiên bản đang dùng để chọn cờ, ghi nguồn. Chạy cùng số lượt e2e với và không có cờ, trên cùng máy, ghi số lần hết giờ. Đây là đổi điều kiện môi trường kiểm thử, không phải nới thời gian chờ; nếu có hiệu quả, Project Owner quyết có giữ hay không.
 
 **Ghi nhận thêm, không phải UI-11 (Q22-2, thấp, không vá ở V1):** ở múi giờ có giờ mùa hè, giờ "không tồn tại" trong khoảng nhảy giờ (ví dụ 02:30 ngày đổi giờ ở New York) được ghép với độ lệch sau khi đổi. Việt Nam không có giờ mùa hè.
 
-### UI-12 — Ca focus `StageChange.test.tsx:183` không tất định trên Windows (thấp; audit phiên 24 §5.4) — cho phiên giao diện kế tiếp
+### UI-12 — Ca focus `StageChange.test.tsx:183` không tất định trên Windows (thấp; audit phiên 24 §5.4) — **plan phiên 25**
 
 Hỏng một lần ở phiên 22 và một lần ở lần chạy mốc của phiên 24, đều trên Windows. Orchestrator chạy 20 lần trên Linux, không lần nào hỏng. Việc: đọc ca này, tìm chỗ phụ thuộc thời điểm (focus sau khi vẽ lại), sửa kiểm thử hoặc mã nếu thấy lỗi thật; không thêm `retries`, không nới thời gian chờ. **Tiêu chí đóng:** chạy riêng tệp này 50 lần liên tiếp trên Windows không hỏng.
 

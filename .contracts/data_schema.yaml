@@ -293,9 +293,21 @@
 #            whitespace: 4); the not_blank rule applies to method only,
 #            valid values are stored verbatim, stored data is not migrated;
 #            no unsolved problem. Approved by the Project Owner on 2026-09-30.
+#   v9.0.2 — [Clause B, SỬA] view_income_report.input_expected.period_to:
+#            type date -> "date (on or after period_from)". The rule was
+#            already in the workflow's description ("period_from after
+#            period_to is invalid") but not in a type, so the interface could
+#            not check it before sending (iWCA §5: an interface checks only
+#            what a type writes) — found in the audit of interface session
+#            #24 (open_issues CT-5; the D5 specification had asked the
+#            interface to check it). Accepted inputs are unchanged and the
+#            backend already answers 400 ERR_VALIDATION for this case, so
+#            this is a clarification; the description keeps its sentence.
+#            api_contract.yaml does not change. Approved by the Project
+#            Owner on 2026-10-01.
 # =============================================================================
 
-schema_version: 9.0.1
+schema_version: 9.0.2
 contract_state: approved
 
 # -----------------------------------------------------------------------------
@@ -515,7 +527,7 @@ clause_b_backend:
     description: "Read-only income summary for a period: net received per month and per currency, refunds, and the outstanding balance of every commission that is not cancelled. No currency conversion in V1. Stores nothing. A payment belongs to the calendar date written in its paid_at, in its own UTC offset (no conversion to another time zone); its month is that date's YYYY-MM. The period runs from period_from to period_to, both days included; period_from after period_to is invalid. A commission is owing unless its stage is of kind 'cancelled' (a commission with no stage set counts as the first stage of the catalog)."
     input_expected:
       period_from: { type: date, from: end_user }
-      period_to: { type: date, from: end_user }
+      period_to: { type: "date (on or after period_from)", from: end_user }
       commissions: { type: "list[commission_summary_record]", from: manage_commission }
       progress: { type: "list[progress_entry_record]", from: update_progress }
       payments: { type: "list[ledger_entry_record]", from: record_payment }

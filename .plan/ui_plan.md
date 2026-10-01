@@ -1,191 +1,130 @@
 # ===WCA-PLAN===
 # session_for: ui
 # drafted_by: Orchestrator + Project Owner
-# drafted_at: 2026-09-30T23:45:00+07:00
-# contract: data_schema 9.0.1, api_contract 4.0.0 (approved)
+# drafted_at: 2026-10-01T21:30:00+07:00
+# contract: data_schema 9.0.2, api_contract 4.0.0 (approved)
 
 ## MỤC TIÊU PHIÊN NÀY
 
-Phiên 24 của dự án, phiên giao diện thứ chín. **Chặng D5, thu nhập:**
-- workflow giao diện `view_income_report`;
-- một trang mới, `income_report`;
-- mục điều hướng thứ tư, "Thu nhập".
+Phiên 25 của dự án, phiên giao diện thứ mười. Đây là **phiên vá ngắn sau D5**, không có trang mới. Ba việc, theo thứ tự ưu tiên:
 
-Kèm theo: **tiếp tục thu dữ liệu UI-11**. Trace và nhật ký thời gian chụp ảnh đã có từ phiên 22; phiên này chỉ giữ chúng chạy và báo lại.
+1. **CT-5:** `view_income_report` theo Data Schema 9.0.2. Luật "ngày bắt đầu không sau ngày kết thúc" nay nằm trong `type` của `period_to`. **Hành vi không đổi**: chỉ đổi số phiên bản và các chú thích trích hợp đồng.
+2. **UI-12:** ca focus `StageChange.test.tsx` không tất định trên Windows. Tìm nguyên nhân và sửa.
+3. **UI-11:** thí nghiệm có đối chứng để biết vì sao `page.screenshot` treo 30 s trên Windows.
 
-Đặc tả là `.design/ui_decomposition.md`, mục **"Chặng D5 — Thu nhập"** (làm lại I1 ngày 2026-09-30), cùng §5 và §7. Mọi quyết định trình bày, câu chữ, khoảng thời gian mặc định, luật kiểm và luật phủ đều đã chốt ở đó. Plan này không chép lại.
-
-Đây là chặng **nhỏ hơn D4**: một lời gọi, một trang, không thao tác ghi. Đừng làm thêm cho "đầy".
-
-Cuối phiên, `income_report` được đề xuất `hoàn_tất`.
+Mọi chi tiết và dữ liệu đã có nằm ở `.plan/open_issues.md`, mục **CT-5**, **UI-12**, **UI-11**. Plan này không chép lại dữ liệu.
 
 **Điểm dừng:**
-- `npm run check` đạt;
+- `npm run check` đạt, số kiểm thử không giảm so với mốc 1303;
 - `npm run e2e` đạt **5 lần liên tiếp**, có đặt `CT_WALKTHROUGH_RUNNER`;
-- spec mới chạy riêng đạt **10 lần liên tiếp**;
-- kịch bản bấm thử chạy lại trên hệ thống thật.
+- có kết luận cho UI-12 và báo cáo thí nghiệm UI-11, kể cả khi thí nghiệm không ra kết quả.
 
 ## VIỆC CẦN LÀM, THEO THỨ TỰ
 
 0. **Đọc tài liệu** theo `08-operating-protocol.md`, Phần 1:
-   - `CLAUDE.md`, mục 2 (luật git) và mục 5 (vận hành layer giao diện);
-   - skill `iwca-implementation` v1.0: `iwca_theory.md` (§6, §7 ma trận R1–R14), `i1-decompose.md` (Bước I1.5), `i3-logic.md`, `i4-kit.md`, `i5-screens.md`, `i6-self-check.md`;
-   - `.design/ui_decomposition.md`:
-     - §2 (hàng `view_income_report`) và §5 (đoạn vùng điều hướng, bảng trang);
-     - mục "Chặng D2 — Đơn hàng", phần "Số tiền" (luật hiện số tiền mà D5 dùng lại) và phần "Ngày hạn giao";
-     - mục "Chặng D4 — Thanh toán", phần `payment_form` (mẫu nguồn "bây giờ" do Main trao);
-     - mục **"Chặng D5 — Thu nhập"**;
-     - §7;
-   - `.plan/open_issues.md`: UI-11, UI-10 (luật `getByRole('status')`), DSK-15;
-   - hợp đồng:
-     - `data_schema.yaml`: `clause_a_common` (`formats.date`, `formats.timestamp`, `types.money`, `types.currency_code`, luật số nguyên ±(2^53−1)); `view_income_report` (toàn mục, đặc biệt đoạn `description` và kiểu `income_report`);
-     - `api_contract.yaml`: `view_income_report`, `error_codes` (`ERR_VALIDATION`, `ERR_OUT_OF_RANGE`), `error_body`, `endpoint_forms.http`;
-   - mọi khối checkpoint của `UI/`. Khối `record_payment` (tiền, nguồn "bây giờ") và `progress_board` trong `screens` (trang mở từ vùng điều hướng) là mẫu gần nhất;
+   - `CLAUDE.md`, mục 2 và mục 5;
+   - skill `iwca-implementation` v1.0: `iwca_theory.md` §5 (ranh giới kiểm trước khi gửi), `i3-logic.md`, `i5-screens.md`;
+   - `.plan/open_issues.md`: **CT-5**, **UI-12**, **UI-11** (đọc hết phần "Dữ liệu phiên 22" và "Dữ liệu phiên 24"), BE-8 (quy ước giờ trong checkpoint);
+   - `.design/ui_decomposition.md`: mục "Chặng D5 — Thu nhập", phần "Kiểm trước khi gửi" (có dòng đính chính ngày 2026-10-01);
+   - hợp đồng: `data_schema.yaml` changelog `v9.0.2` và `view_income_report.input_expected`;
+   - khối checkpoint `view_income_report`, `screens`, `main`;
+   - mã: `src/logic/workflows/view_income_report/`, `src/screens/pages/stage_change/` (cả kiểm thử), `tests/e2e/walkthrough_harness.ts`, `tests/tools/walkthrough_lib.mjs`;
    - plan này sau cùng.
 
-   Xác nhận Data Schema **`9.0.1`** và API Contract **`4.0.0`**, cả hai `approved`, và `view_income_report` ở `đã_hoàn_thiện`. Sai khác thì dừng lại và báo.
+   Xác nhận Data Schema **`9.0.2`** và API Contract **`4.0.0`**, cả hai `approved`. Sai thì dừng lại và báo.
 
 1. **Môi trường và mốc.**
    - Ghi phiên bản Node, npm; chạy `npm ci`.
-   - `npm run check`: mốc **1100**.
-   - `npm run e2e` có đặt `CT_WALKTHROUGH_RUNNER`: mốc **54**.
+   - `npm run check`: mốc **1303**. Nếu ca `StageChange` hỏng ở đây, ghi lại; đó là dữ liệu cho việc 3.
+   - `npm run e2e` có đặt `CT_WALKTHROUGH_RUNNER`: mốc **59**.
    - Chụp mốc `%APPDATA%\CommissionTracker`. Ghi `git status --short` (chỉ đọc).
 
-2. **UI-11: tiếp tục thu dữ liệu** (`.plan/open_issues.md` UI-11, phần "Dữ liệu phiên 22").
-   - Giữ nguyên trace khi hỏng và nhật ký `UI/test-results/screenshot-timing.log`. Không đổi cách ghi.
-   - Mỗi lần chụp ảnh hết giờ trong phiên: **giữ trace ngay trong `UI/test-results/ui11_traces/`**, đặt tên theo spec, bước và thời điểm; không để nó trong thư mục tạm của phiên; không xóa khi dọn dẹp. Ghi đường dẫn vào báo cáo.
-   - **Không** nới thời gian chờ, không `retries`, không đổi cách chụp ảnh. Không sửa gì vì UI-11.
-   - Cuối phiên, tổng hợp từ nhật ký như phiên 22: thời gian chụp lớn nhất, trung bình, và riêng các bước backend tắt.
+2. **CT-5: `view_income_report` lên Data Schema 9.0.2.** Không đổi hành vi.
+   - `configs.ts`: `contract.dataSchema: '9.0.2'`. Các chú thích `[CONTRACT]` trích `data_schema.yaml 9.0.1` đổi sang `9.0.2`.
+   - Chú thích của luật thứ tự ngày (`configs.ts` `inputMessages`, `routers.ts` `readDraft`): trích đúng nguồn mới, `view_income_report.input_expected.period_to` `type: "date (on or after period_from)"`, thay cho `description`.
+   - Các chú thích khác trích `9.0.1` trong workflow này (`adapters.ts`, `entities.ts`) cũng đổi sang `9.0.2`.
+   - Kiểm thử "Configs name Data Schema …" đổi theo.
+   - Checkpoint `view_income_report`: NOTE câu hỏi về luật thứ tự ngày ghi đã được trả lời (CT-5, Data Schema 9.0.2); không xóa NOTE cũ, thêm dòng trả lời.
+   - **Không** đổi Configs của workflow khác. Mỗi workflow ghi phiên bản hợp đồng mà chính nó hiện thực.
 
-3. **Logic: workflow giao diện `view_income_report`** (I3), đủ các thành phần.
-   - **Configs:**
-     - `contract.dataSchema: '9.0.1'`, `apiContract: '4.0.0'`;
-     - bảng chữ số lẻ (bản riêng, R2);
-     - câu chữ mọi nhãn, dòng giải thích và thông báo, đúng `ui_decomposition.md`.
-   - **Adapters:** lời gọi `get_income_report`, gửi `period_from`, `period_to` qua tham số truy vấn; kiểm hình dạng `income_report` bằng Zod. Là vi phạm hợp đồng khi lệch bất kỳ điều nào dưới đây:
-     - `period_from`, `period_to` không đúng `formats.date`; `generated_at` không đúng `formats.timestamp`;
-     - `currency` không đúng `types.currency_code`; `month` không đúng dạng `YYYY-MM`;
-     - mọi số `*_minor` không phải số nguyên an toàn;
-     - `refunded_minor` âm.
+3. **UI-12: ca focus không tất định của `StageChange`.**
+   - Đọc ca "rejected input (no stage chosen)" trong `src/screens/pages/stage_change/tests/StageChange.test.tsx` (quanh dòng 173–186). Ca khẳng định `isFocused(select())` **ngay** sau khi `findByRole('alert')` trả về. Nếu focus được đặt trong một effect chạy sau lần vẽ có `alert`, đó là chỗ phụ thuộc thời điểm. Đây là gợi ý để đọc, không phải kết luận: hãy xác nhận bằng mã.
+   - Tìm cùng mẫu ở các kiểm thử dựng trang khác (`ClientForm`, `CommissionForm`, `PaymentForm`, `IncomeReport`…), vì chúng có cùng luật "focus tới ô lỗi đầu tiên".
+   - Sửa đúng chỗ:
+     - nếu là kiểm thử khẳng định sớm, chờ đúng điều kiện (ví dụ `waitFor` trên chính focus);
+     - nếu là mã đặt focus sai thời điểm, sửa mã (kit hoặc trang) và giữ hành vi.
 
-     Thứ tự của `currencies` và `by_month` **không** kiểm ở Adapters (giữ nguyên như nhận, đặc tả không sắp lại).
-   - **Services:**
-     - khoảng thời gian mặc định (đầu năm tới hôm nay) từ nguồn "bây giờ";
-     - kiểm khoảng thời gian;
-     - hiện số tiền (gồm số âm và mã tiền lạ), tháng, ngày, thời điểm lập;
-     - dựng từng phần đơn vị tiền, gồm trường hợp `by_month` rỗng và `currencies` rỗng.
-   - **Routers:** hai lối vào: mở trang (khoảng mặc định và tải) và xem báo cáo với khoảng đã nhập. Kiểm trước khi gửi.
-   - **Nguồn "bây giờ":** Main trao cho workflow này một hàm, như với `record_payment`. Không import từ `record_payment` (R2). Kiểm thử cố định được ngày.
-   - **Kiểm thử bắt buộc**, ngoài ma trận I3.6:
-     - khoảng mặc định: ngày 1 tháng 1 và ngày 31 tháng 12, với "bây giờ" ở `Asia/Ho_Chi_Minh`; và một thời điểm sát nửa đêm mà ngày UTC khác ngày giờ máy (ví dụ 00:30 ngày 1/1 giờ Việt Nam, tức 17:30 ngày 31/12 UTC): ngày mặc định phải theo **giờ máy**;
-     - kiểm khoảng: ô rỗng; năm năm chữ số (`20260-01-01`); ngày không có thật (`2026-02-30`); ngày bắt đầu sau ngày kết thúc (lỗi ở ô "Đến ngày"); hai ngày bằng nhau hợp lệ;
-     - số tiền: `received_net_minor` âm; `outstanding_minor` âm; USD có phần lẻ; mã tiền không có trong bảng; giá trị `±(2^53−1)`;
-     - tháng: `2026-09` → "Tháng 9/2026", `2026-12` → "Tháng 12/2026";
-     - `by_month` rỗng → câu "Không có khoản thanh toán nào trong kỳ."; `currencies` rỗng → trạng thái rỗng;
-     - 400 và 409 cho ra hai câu khác nhau;
-     - kết quả hỏng (500, không tới được, vi phạm hợp đồng) thì không còn báo cáo cũ trong kết quả.
+     Không thêm `retries`, không nới thời gian chờ chung, không `skip`.
+   - **Tiêu chí đóng:** chạy riêng `StageChange.test.tsx` **50 lần liên tiếp** trên Windows không hỏng; ghi lệnh và kết quả. Nếu bạn sửa cùng mẫu ở tệp khác, mỗi tệp đó cũng chạy 20 lần liên tiếp.
 
-4. **Kit** (I4).
-   - Dự kiến đủ bằng component sẵn có: `DateField` (hai ô ngày), `DescriptionList` (ba dòng số, danh sách theo tháng), `Section` (mỗi đơn vị tiền), `EmptyState`, `InlineAlert`.
-   - Nếu thật sự cần mở rộng hay thêm component, ghi lý do; component mới hoặc mở rộng phải được `check_contrast.mjs` phủ và export qua `kit/index.ts` (R9).
+4. **UI-11: thí nghiệm có đối chứng.** Mục tiêu là **biết nguyên nhân**, không phải làm cho e2e xanh.
+   - **4a. Tái hiện có chủ đích.** Viết một công cụ chẩn đoán riêng, ví dụ `tests/tools/ui11_probe.mjs` (không phải spec của `npm run e2e`, không chạy trong `npm run check`).
+     - Công cụ mở ứng dụng bằng Playwright `_electron`, giống harness, với backend thật và thư mục dữ liệu tạm.
+     - Nó chụp ảnh trong ít nhất ba điều kiện: (i) cửa sổ bình thường; (ii) cửa sổ bị thu nhỏ (`BrowserWindow.minimize()` qua `app.evaluate`); (iii) cửa sổ bị một cửa sổ khác che kín, hoặc mất tiêu điểm. Mỗi điều kiện chụp ít nhất 20 lần, mỗi lần có giới hạn thời gian riêng của công cụ (ví dụ 10 s), và ghi thời gian từng lần.
+     - Kết quả mong đợi: biết điều kiện nào làm lệnh chụp treo, nếu có.
+   - **4b. Thử cờ của Chromium**, chỉ khi 4a tái hiện được.
+     - Tra tài liệu của **đúng phiên bản** Electron và Chromium đang dùng để chọn cờ tắt cơ chế ngừng vẽ cửa sổ bị che hoặc ở nền (ví dụ cờ về "native window occlusion" và "backgrounding"). Ghi nguồn.
+     - **Xác nhận cờ thật sự có hiệu lực** trong tiến trình Electron (ví dụ đọc `app.commandLine.hasSwitch` qua `app.evaluate`); cờ truyền sai chỗ thì thí nghiệm vô nghĩa.
+     - Chạy lại 4a với cờ, cùng số lần, cùng máy.
+   - **4c. Chỉ khi 4b cho thấy cờ hết treo:** thêm cờ vào **lệnh khởi chạy Electron của harness kiểm thử** (`walkthrough_harness.ts`, và `main_layout.spec.ts` nếu nó tự khởi chạy). **Không** thêm vào Desktop hay ứng dụng thật. Chạy `npm run e2e` 10 lần liên tiếp. Báo rõ đây là thay đổi điều kiện môi trường kiểm thử; Project Owner quyết có giữ hay không lúc audit.
+   - Nếu 4a không tái hiện được, dừng ở đó, báo dữ liệu, không thử cờ.
+   - Giữ nguyên trace khi hỏng và nhật ký thời gian chụp ảnh; trace của mọi lần hết giờ trong phiên chép vào `UI/test-results/ui11_traces/` như phiên 24.
 
-5. **Màn hình** (I5).
-   - Trang `income_report` cùng hook, theo mẫu của `progress_board`:
-     - cờ tải khởi tạo `true`;
-     - hàng nút dưới tiêu đề chỉ có "Xem báo cáo" (hành động chính);
-     - lỗi nhập thì focus tới ô lỗi đầu tiên;
-     - trong lúc tải, "Xem báo cáo" bị vô hiệu và báo cáo cũ giữ nguyên.
-   - Thêm khóa `income_report` (không tham số) vào bảng điều hướng; mục "Thu nhập" đứng sau "Tiến độ". Ba mục cũ giữ nguyên vị trí.
-   - Ráp nối `view_income_report` ở Main và `logic_context`, gồm nguồn "bây giờ".
-   - **Kiểm thử dựng trang:**
-     - mọi nhãn của bảng D5;
-     - lần vẽ đầu (đang tải) và việc tự tải khi mở;
-     - dòng phụ lấy khoảng thời gian từ **kết quả**, không từ ô nhập (sửa ô sau khi có kết quả thì dòng phụ không đổi);
-     - lỗi nhập: không gửi, báo cáo cũ còn nguyên;
-     - lỗi tải: báo cáo cũ bị bỏ;
-     - hai đơn vị tiền theo đúng thứ tự nhận; `by_month` rỗng; `currencies` rỗng;
-     - vùng điều hướng có bốn mục đúng thứ tự, và "Thu nhập" được đánh dấu khi đang mở trang.
-
-   Không đổi hành vi của các trang đã `hoàn_tất`. Chỉ thêm mục điều hướng.
-
-6. **Kịch bản bấm thử và e2e** (I6.3).
-   - `walkthrough.yaml` mới cho `income_report`, theo luật phủ D5.
-   - **Dữ liệu mẫu** đủ theo luật phủ D5. Dùng hoặc mở rộng dữ liệu mẫu hiện có (ví dụ thêm một cờ cho `walkthrough:app`); ghi rõ lựa chọn và lý do.
-     - `paid_at` của dữ liệu mẫu là ngày cố định, không phụ thuộc ngày chạy.
-     - Đơn đã hủy: đổi giai đoạn qua API thật (`change_stage` sang `cancelled`).
-     - Theo luật của UI-9: chờ hơn 1 s sau lần ghi cuối.
-   - **Ảnh bằng chứng** chỉ chụp sau khi đã nhập khoảng thời gian cố định. Không chụp báo cáo của khoảng mặc định, vì nó đổi theo ngày chạy.
-   - Tín hiệu "đã tải xong" là nội dung đã tải. Khẳng định chữ trên `role="status"` phải lọc theo chữ (`lint:e2e` sẽ bắt).
-   - Chạy spec mới riêng **10 lần liên tiếp**.
-   - Chạy `npm run e2e` **5 lần liên tiếp** có `CT_WALKTHROUGH_RUNNER=coding-agent@<ngày>#<số>`; ghi dòng tổng kết từng lần.
-     - Nếu một lần hỏng **chỉ** vì chụp ảnh hết giờ (UI-11), làm theo việc 2, không tính lần đó, và chạy tiếp cho đủ 5 lần liên tiếp đạt. Báo tổng số lần đã chạy.
-     - Hỏng vì lý do khác thì phải sửa.
-     - **Chạy từng lượt một**, không chạy song song hai lệnh e2e (sự cố của phiên 22).
+5. **Chạy toàn bộ.**
+   - `npm run check` đạt.
+   - `npm run e2e` **5 lần liên tiếp**, chạy từng lượt một, có `CT_WALKTHROUGH_RUNNER=coding-agent@<ngày>#<số>`. Lần hỏng chỉ vì chụp ảnh hết giờ thì giữ trace, không tính, chạy tiếp cho đủ.
    - Một lần không đặt biến: `UI/evidence` nguyên vẹn.
+   - Mốc `%APPDATA%` không đổi.
 
-7. **Tự kiểm I6** cho `income_report`, đủ năm góc; đối chiếu bảy nguyên tắc §7.2, đặc biệt nguyên tắc 2 (không dày thông tin) và 3 (nhãn rõ nghĩa: "Còn phải thu" phải nói rõ là không theo khoảng thời gian). Ghi vào checkpoint `screens`.
-
-8. **Checkpoint** (Giao thức 07; mọi khối `clause: external`):
-   - khối mới `view_income_report` (logic);
-   - `kit`: chỉ khi có thay đổi;
-   - `screens`: trang mới, mục điều hướng, tự kiểm I6, **đề xuất** trạng thái `income_report`;
-   - `main`: ráp nối mới, mốc kiểm thử, phần thu dữ liệu UI-11.
-   - Thời điểm ghi trong checkpoint phải là thời điểm thật lúc ghi (xem BE-8 ở `open_issues`).
+6. **Checkpoint** (Giao thức 07; mọi khối `clause: external`):
+   - `view_income_report`: CT-5;
+   - `screens` (và `kit` nếu sửa): UI-12;
+   - `main`: mốc kiểm thử; kết quả thí nghiệm UI-11 (điều kiện, số lần, thời gian, cờ đã thử, nguồn).
+   - **Giờ ghi trong checkpoint lấy bằng lệnh** (`Get-Date -Format o`) ngay trước khi ghi, không ước lượng (BE-8).
 
 ## KẾ THỪA TỪ CHECKPOINT — vấn đề tồn đọng
 
-- **UI-11:** tiếp tục thu dữ liệu (việc 2), không sửa.
-- **Ô ngày hiện kiểu Mỹ** (DSK-15): việc của Desktop, không làm. Ghi vào NOTE nếu cần.
-- **Giới hạn R13 đã khai:** chấp nhận ở V1, không vá.
+- **DSK-15** (ô ngày kiểu Mỹ): việc của Desktop, phiên desktop riêng. Không làm.
+- **UI-6** (các mục V2): không làm.
 - **Phép kiểm tĩnh `lint:e2e`** không bắt locator gán vào biến trước (Q21-1): đừng viết kiểu đó.
 
 ## RÀNG BUỘC CẦN NHỚ TỪ HỢP ĐỒNG
 
-- `GET /reports/income`, tham số `period_from`, `period_to`, kiểu `date` (`YYYY-MM-DD`). Khoảng tính cả hai đầu. `period_from` sau `period_to` → 400.
-- `income_report` = `{ period_from, period_to, currencies: [{ currency, received_net_minor, refunded_minor, outstanding_minor, by_month: [{ month: 'YYYY-MM', received_net_minor }] }], generated_at }`.
-  - `received_net_minor`: nhận − hoàn trong kỳ, **gồm** tiền tip và tiền của đơn đã hủy.
-  - `refunded_minor`: tổng hoàn trong kỳ, `>= 0`.
-  - `outstanding_minor`: tổng "còn phải thu" của mọi đơn không ở giai đoạn loại `cancelled`, **tính tới `generated_at`, không phụ thuộc kỳ**, giữ dấu.
-  - `currencies`: mọi đơn vị tiền có khoản trong kỳ hoặc có đơn còn phải thu, theo thứ tự mã. `by_month`: chỉ tháng có khoản, cũ nhất trước.
-- Một khoản thuộc ngày ghi trong `paid_at` của nó, theo độ lệch của chính nó. Không quy đổi tiền tệ.
-- 409 `ERR_OUT_OF_RANGE`: một tổng vượt khoảng số nguyên; không có kết quả từng phần.
-- `error_body.details` không có hình dạng trong hợp đồng: không đọc.
+- Data Schema 9.0.2: `view_income_report.input_expected.period_to` có `type: "date (on or after period_from)"`. Luật này nay là ràng buộc trong ngoặc của `type`: theo iWCA §5, giao diện **được phép** kiểm nó, nhãn `[CONTRACT]`.
+- Giá trị đầu vào được chấp nhận không đổi; backend không đổi; API Contract 4.0.0 không đổi.
 
 ## CẢNH BÁO — điều KHÔNG được làm trong phiên này
 
-- ⚠ **Không có màn hình hồ sơ quyền sở hữu** (`/watermark-profiles`, `/watermark-strengths`): không trang, không workflow giao diện, không lời gọi. Watermark thuộc V4 trở đi.
-- Không làm nhắc việc (D6). Không thêm lời gọi nào ngoài `get_income_report`.
-- Không quy đổi tiền tệ, không cộng các đơn vị tiền với nhau, không lấp tháng trống, không biểu đồ, không xuất tệp, không lựa chọn khoảng nhanh ("tháng này", "năm ngoái"…). Đó là việc của phiên bản sau.
-- Không đổi hành vi của các trang `hoàn_tất`. Chỉ thêm mục "Thu nhập" vào vùng điều hướng.
-- Không dùng `window.confirm`, `alert` hay hộp thoại gốc nào.
+- ⚠ **Không có màn hình hồ sơ quyền sở hữu** (`/watermark-profiles`, `/watermark-strengths`).
+- Không thêm trang, không làm D6, không làm việc V2. Không đổi hành vi trang nào; riêng việc 3 chỉ được sửa đúng chỗ gây không tất định.
+- Không đổi Configs của workflow khác ngoài `view_income_report`.
+- Không thêm cờ Chromium vào Desktop hay ứng dụng thật. Ở harness kiểm thử, chỉ thêm khi việc 4b đã chứng minh.
 - Không nới thời gian chờ, không thêm `retries`, không đánh dấu `skip`, `fixme` hay `flaky`.
-- Không sửa Desktop (kể cả DSK-15), không sửa Backend. Không sửa tệp nào ngoài `UI/`. Được **chạy** Desktop và Backend.
-- Không làm các mục V2.
-- Không gọt giao diện: không animation, không transition, không hiệu ứng trang trí, không giao diện sáng, không thư viện hay component từ nguồn ngoài (kể cả thư viện biểu đồ hay chọn ngày), không Tailwind.
+- Không sửa Desktop, không sửa Backend. Không sửa tệp nào ngoài `UI/`. Được **chạy** Desktop và Backend.
+- Không dùng `window.confirm`, `alert` hay hộp thoại gốc nào.
+- Không thư viện hay component từ nguồn ngoài; không phụ thuộc mới.
 - Không tắt luật, không thêm `eslint-disable`. Ngoại lệ lint mới phải liệt kê trong báo cáo, kèm lý do.
 - Không sửa `.contracts/`, `CLAUDE.md`, `.plan/`, `.design/`. Không đọc, không ghi `.reviews/`.
 - Không chạy `git commit`, `push`, `reset`, `checkout`, `restore`, `stash` hay lệnh nào đổi trạng thái kho. Chỉ được đọc.
-- Không kiểm thử nào đụng `%APPDATA%\CommissionTracker` thật.
+- Không kiểm thử hay công cụ chẩn đoán nào đụng `%APPDATA%\CommissionTracker` thật.
 - Không tắt, không đổi cấu hình antivirus.
-- Không nhân sub-agent để code song song.
+- Không nhân sub-agent để code song song. Không chạy song song hai lệnh e2e hay hai lần chạy công cụ chẩn đoán.
 
 ## TIÊU CHÍ HOÀN TẤT PHIÊN
 
 Phiên xong khi **tất cả** những điều dưới đây đúng, trên Windows:
 
-1. **UI-11:** báo cáo có bảng tổng hợp thời gian chụp ảnh, và liệt kê mọi lần hết giờ kèm đường dẫn trace trong `UI/test-results/ui11_traces/` (hoặc ghi rõ không có lần nào).
-2. Workflow `view_income_report` có đủ thành phần; Configs ghi Data Schema 9.0.1; các ca kiểm thử bắt buộc của việc 3 đều có, gồm ca sát nửa đêm.
-3. Trang `income_report` chạy đúng đặc tả D5. Kiểm thử dựng trang phủ mọi nhãn. Các trang `hoàn_tất` không đổi hành vi.
-4. `npm run check` đạt (kể cả `lint:e2e`), số kiểm thử cao hơn mốc 1100.
-5. Spec mới chạy riêng đạt 10/10. `npm run e2e` đạt **5/5 lần liên tiếp**, số e2e cao hơn mốc 54. Một lần không đặt biến để `UI/evidence` nguyên vẹn.
-6. Kịch bản bấm thử chạy trên hệ thống thật, có ảnh chụp và đúng tên người chạy.
-7. Tự kiểm I6 đủ năm góc cho `income_report`.
-8. Checkpoint `view_income_report` (mới), `screens`, `main` (và `kit` nếu có đổi) theo Giao thức 07, thời điểm đúng. Không `UNSOLVED_PROBLEMS`, trừ khi có ghi rõ.
-9. Mốc `%APPDATA%` không đổi.
-10. `git status --short` cuối phiên chỉ có tệp trong `UI/`. Liệt kê trong báo cáo.
-11. Báo cáo cuối phiên theo `CLAUDE.md` mục 5, kèm:
-    - các lệnh để Project Owner tự chạy;
-    - **các bước bấm tay** cho kịch bản `income_report`;
-    - kết quả thu dữ liệu UI-11;
-    - đề xuất trạng thái `income_report`;
-    - danh sách ngoại lệ lint mới, nếu có.
+1. **CT-5:** Configs của `view_income_report` ghi Data Schema 9.0.2; chú thích trích đúng `type` của `period_to`; kiểm thử dựng trang và logic của D5 vẫn đạt; không đổi hành vi.
+2. **UI-12:** nêu nguyên nhân (trích dòng mã); `StageChange.test.tsx` chạy riêng 50/50 lần; các tệp sửa cùng mẫu chạy 20/20.
+3. **UI-11:** báo cáo thí nghiệm gồm:
+   - bảng điều kiện × số lần × số lần treo × thời gian lớn nhất;
+   - nếu thử cờ: tên cờ, nguồn tài liệu, bằng chứng cờ có hiệu lực, kết quả có cờ;
+   - nếu thêm cờ vào harness: 10 lần `npm run e2e` liên tiếp.
+
+   Không tái hiện được cũng là một kết quả, miễn có số liệu.
+4. `npm run check` đạt (kể cả `lint:e2e`), số kiểm thử không giảm so với 1303.
+5. `npm run e2e` đạt **5/5 lần liên tiếp**, 59 ca mỗi lần (hoặc hơn nếu có lý do). Một lần không đặt biến để `UI/evidence` nguyên vẹn.
+6. Checkpoint `view_income_report`, `screens`, `main` (và `kit` nếu đổi) theo Giao thức 07, giờ lấy bằng lệnh. Không `UNSOLVED_PROBLEMS`, trừ khi có ghi rõ.
+7. Mốc `%APPDATA%` không đổi.
+8. `git status --short` cuối phiên chỉ có tệp trong `UI/`. Liệt kê trong báo cáo.
+9. Báo cáo cuối phiên theo `CLAUDE.md` mục 5, kèm các lệnh để Project Owner tự chạy (gồm lệnh chạy công cụ chẩn đoán UI-11), và danh sách ngoại lệ lint mới, nếu có.

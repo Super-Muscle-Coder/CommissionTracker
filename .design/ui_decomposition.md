@@ -104,7 +104,7 @@ Layout: `main_layout` (khung chính có điều hướng) — layout duy nhất.
 | `stage_change` | Đổi giai đoạn của một đơn, kèm ghi chú | `update_progress` | `main_layout` | `hoàn_tất` (2026-09-29: audit phiên 21 đạt, Project Owner tự chạy tay) |
 | `payment_list` | Xem số dư và mọi khoản thanh toán của một đơn; hủy một khoản; lối vào ghi khoản mới | `record_payment` | `main_layout` | `hoàn_tất` (2026-09-30: audit phiên 22 đạt, Project Owner chạy tay D4) |
 | `payment_form` | Ghi một khoản nhận tiền hoặc hoàn tiền cho một đơn | `record_payment` | `main_layout` | `hoàn_tất` (2026-09-30: audit phiên 22 đạt, Project Owner chạy tay D4) |
-| `income_report` | Xem thu nhập theo khoảng thời gian: thực nhận, tiền hoàn, còn phải thu, theo từng đơn vị tiền và theo tháng | `view_income_report` | `main_layout` | `đang_làm` (2026-09-30: plan phiên 24). 2026-10-01: audit phiên 24 đạt về chức năng; chờ Project Owner chạy tay D5 và quyết CT-5 để chuyển `hoàn_tất` |
+| `income_report` | Xem thu nhập theo khoảng thời gian: thực nhận, tiền hoàn, còn phải thu, theo từng đơn vị tiền và theo tháng | `view_income_report` | `main_layout` | `đang_làm` (2026-09-30: plan phiên 24). 2026-10-01: audit phiên 24 đạt về chức năng; CT-5 đã duyệt (Data Schema 9.0.2); chờ Project Owner chạy tay D5 để chuyển `hoàn_tất` |
 | *(D6)* nhắc việc | — | `send_reminder` | `main_layout` | `chưa_làm` |
 | *(E, F)* sao lưu, khôi phục | — | `backup_data`, `restore_data` | `main_layout` | `chưa_làm` |
 
@@ -556,7 +556,7 @@ Cùng "không tới được" và "vi phạm hợp đồng", như các chặng t
 - **Kiểm trước khi gửi**, trong phân khu logic:
   - ô rỗng: "Chọn ngày bắt đầu" hoặc "Chọn ngày kết thúc";
   - giá trị không đúng dạng `YYYY-MM-DD` với năm bốn chữ số, hoặc không phải ngày có thật: "Ngày không hợp lệ". Ô ngày của hệ thống cho gõ năm hơn bốn chữ số, nên phải kiểm;
-  - ngày bắt đầu sau ngày kết thúc: lỗi ở ô "Đến ngày": "Ngày kết thúc phải bằng hoặc sau ngày bắt đầu". **Bản sao của luật hợp đồng**, không phải `[UI-ONLY]`. ⚠ Đính chính 2026-10-01 (audit phiên 24 §5.1): luật này hiện nằm trong `description`, không trong `type`, nên theo iWCA §5 giao diện chưa được kiểm nó; Orchestrator viết sai ở đây. Chờ CT-5 (`open_issues`): phương án A đưa luật vào `type` (Data Schema 9.0.2), hành vi giữ nguyên; phương án B bỏ phép kiểm này;
+  - ngày bắt đầu sau ngày kết thúc: lỗi ở ô "Đến ngày": "Ngày kết thúc phải bằng hoặc sau ngày bắt đầu". **Bản sao của luật hợp đồng**, không phải `[UI-ONLY]`. Từ Data Schema 9.0.2 (CT-5, duyệt 2026-10-01) luật nằm trong `type` của `period_to` (`"date (on or after period_from)"`), nên giao diện được kiểm nó theo iWCA §5, nhãn `[CONTRACT]`. Trước đó luật chỉ có trong `description` và đặc tả này đã sai (audit phiên 24 §5.1);
   - lỗi thì không gửi; con trỏ chuyển tới ô lỗi đầu tiên (§7.2, nguyên tắc 4); báo cáo đang hiện (nếu có) giữ nguyên.
 - **Hiện**, khi có kết quả:
   - dòng phụ dưới tiêu đề: "Từ dd/mm/yyyy đến dd/mm/yyyy · Lập lúc HH:mm dd/mm/yyyy". Khoảng này lấy từ **kết quả** (`period_from`, `period_to`), không từ ô nhập, để người xem biết báo cáo đang hiện là của khoảng nào dù ô đã bị sửa;
@@ -648,6 +648,7 @@ Kịch bản bấm thử và audit kiểm các điều sau.
 - 2026-09-28: audit phiên 17 đạt (`.reviews/audits/ui/audit_ui_session17.md`). Ba trang D1 chờ Project Owner chạy tay ba kịch bản, rồi chuyển `hoàn_tất`.
 - 2026-09-28: `client_list`, `client_detail`, `client_form` → `hoàn_tất`. Project Owner đã tự chạy tay ba kịch bản và xác nhận chức năng chạy đúng. Chặng D1 xong về phía giao diện.
 - 2026-10-01: audit phiên 24 (`.reviews/audits/ui/audit_ui_session24.md`): D5 đúng đặc tả. Đính chính: luật thứ tự ngày của D5 nằm ngoài `type`, trái iWCA §5 (CT-5 chờ duyệt). Chấp nhận hai chỗ trình bày của agent. `income_report` giữ `đang_làm` chờ Project Owner chạy tay và quyết CT-5.
+- 2026-10-01: CT-5 duyệt, phương án A (Data Schema 9.0.2): luật thứ tự ngày của D5 nằm trong `type`. Hành vi không đổi; Configs của `view_income_report` cập nhật ở phiên 25.
 - 2026-09-30: làm lại I1 cho D5, căn cứ Data Schema 9.0.1: trang `income_report` → `đang_làm` (plan phiên 24); mục điều hướng "Thu nhập"; khoảng thời gian mặc định (đầu năm tới hôm nay); kiểm khoảng thời gian (ngày bắt đầu sau ngày kết thúc là bản sao của luật hợp đồng); cách trình bày ba con số, trong đó "Còn phải thu" không phụ thuộc khoảng thời gian; luật phủ D5. Hợp đồng không đổi.
 - 2026-09-30: CT-4 được duyệt (Data Schema 9.0.0): luật phương thức not blank của D4 là bản sao của hợp đồng, không còn `[UI-ONLY]`. Hành vi không đổi.
 - 2026-09-29: làm lại I1 cho D4: trang `payment_list`, `payment_form` → `đang_làm` (plan phiên 22); `commission_detail` thêm phần Thanh toán nên trở lại `đang_làm`; tên tiếng Việt của chiều tiền và loại khoản; cách ghép `paid_at`; xác nhận khi hủy khoản; luật phủ D4.
