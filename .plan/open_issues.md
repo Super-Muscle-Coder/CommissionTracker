@@ -182,7 +182,17 @@ Lúc lập plan (2026-09-30), Orchestrator thấy kiểm thử `test_method_is_f
 
 Checkpoint ở đầu `record_payment/services.py` ghi `last_updated_at` và `recorded_at` của EVIDENCE BE-7 là `2026-09-30T23:40:00+07:00`, trong khi tệp được ghi lần cuối lúc 22:38:59 (+07:00). Sửa hai giá trị thành thời điểm thật. Không đổi gì khác.
 
+**Cùng loại, phiên 24** (audit phiên 24 §5.5): bốn khối checkpoint giao diện ghi 20:20–20:25, trong khi tệp được ghi 20:17–20:19. Lệch vài phút, không cần sửa riêng. **Quy ước cho mọi plan từ nay:** agent lấy giờ bằng lệnh (`Get-Date -Format o`) ngay trước khi ghi checkpoint, không ước lượng.
+
 ## Hợp đồng — chờ Project Owner duyệt
+
+### CT-5 — Luật "ngày bắt đầu không sau ngày kết thúc" của `view_income_report` nằm ngoài `type` (trung bình; đề xuất của Orchestrator, 2026-10-01, audit phiên 24 §5.1)
+
+**Nguồn:** câu hỏi của agent phiên 24. Đặc tả D5 (Orchestrator viết) bắt giao diện kiểm luật này, trong khi iWCA §5 cấm kiểm điều không viết trong `type` (ví dụ chính là "một điều kiện giữa hai trường"). Lỗi của Orchestrator.
+
+**Đề xuất (A), Data Schema 9.0.1 → 9.0.2:** `view_income_report.input_expected.period_to`: `{ type: date, from: end_user }` → `{ type: "date (on or after period_from)", from: end_user }`. Câu tương ứng trong `description` giữ nguyên. Giá trị đầu vào được chấp nhận không đổi, nên chỉ tăng số cuối; `api_contract.yaml` không đổi; backend không đổi gì. Giao diện giữ hành vi; phiên giao diện kế tiếp đổi `contract.dataSchema` và chú thích trong Configs của `view_income_report`.
+
+**Phương án (B):** bỏ phép kiểm ở giao diện; ngày đảo ngược nhận 400 từ backend và trang hiện "Máy chủ không nhận khoảng thời gian này.", không chỉ ra ô sai.
 
 ### CT-1 — Luật "một backend cho một `db_file_path`" (đề xuất của Orchestrator, 2026-09-27)
 
@@ -294,6 +304,7 @@ Ngày 2026-09-28, Project Owner yêu cầu vá mọi chỗ chưa đạt chuẩn.
 - Mất focus khi nút "Lưu" đang bận.
 - Tên khách ở trang chi tiết nhỏ hơn tiêu đề chung (thứ bậc thị giác, gần với V3).
 - `POST` gửi lại sau `unreachable` có thể tạo trùng.
+- `income_report`: lỗi "ngày kết thúc trước ngày bắt đầu" kèm câu tổng của layer "Một số ô chưa đúng định dạng", sai nghĩa với lỗi thứ tự; danh sách theo tháng không có tiêu đề nhìn thấy (audit phiên 24 §5.6).
 - Khoản thanh toán đã hủy trên `payment_list` có dòng chính giống hệt khoản còn hiệu lực; chữ "Đã hủy" chỉ ở cuối dòng phụ (Q22-1 của audit phiên 22). Đạt đặc tả V1; V2 làm dấu hiệu rõ hơn.
 
 **Rút lại:** "Thông báo lưu trữ còn lại sau Tải lại" không xảy ra được. Trang chi tiết chỉ có nút tải lại khi tải thất bại, lúc đó chưa thể có kết quả lưu trữ. Orchestrator đọc sót ở audit.
@@ -412,7 +423,20 @@ Máy Orchestrator (Linux) chưa gặp lần nào trong hơn 20 lần e2e toàn b
 
 **Việc tiếp:** giữ trace và nhật ký trong mọi phiên giao diện; lần hỏng kế tiếp ở bước backend tắt là dữ liệu quyết định. Từ plan phiên 24: trace của lần hết giờ được giữ ngay trong `UI/test-results/ui11_traces/`, không để trong thư mục tạm của phiên agent.
 
+**Dữ liệu phiên 24** (audit phiên 24 §5.2; trace ở `UI/test-results/ui11_traces/` trên máy Project Owner, có `INDEX.txt`):
+- Windows, 24 lượt (gồm các lượt hỏng): 1280 lần chụp, trung bình 217 ms; 4 lần hết giờ ~30 s, mọi lần khác dưới 2,5 s (hai mode: treo, không phải chậm).
+- 4 lần: `client_form-S5-saved`, `payment_form-S1-errors`, `payment_list-S1` (backend bật), `payment_form-S6-unreachable` (backend tắt). Đi thành cụm trong lúc máy nghẽn (mỗi cú bấm ~2 s).
+- Trace của hai lần: nhật ký dừng ở "fonts loaded" rồi treo; ảnh chụp khi hỏng của Playwright ngay sau đó chụp được trong ~2,2 s.
+- **Giả thuyết datalist bị bác:** `payment_form-S1-errors` hết giờ lại dù cú bấm vào tiêu đề đã chạy xong 2 s trước.
+- **Giả thuyết còn lại phù hợp nhất:** cửa sổ Electron ngừng vẽ khung hình mới (Chromium trên Windows có thể ngừng vẽ cửa sổ bị che hoặc ở nền). Orchestrator chưa nắm chắc cơ chế và cờ cụ thể.
+
+**Thí nghiệm đề xuất cho phiên giao diện kế tiếp:** chỉ trong lệnh khởi chạy Electron của harness kiểm thử (không ở ứng dụng thật), bật các cờ tắt cơ chế "cửa sổ bị che thì ngừng vẽ / bị hạ ưu tiên"; agent tra tài liệu Electron/Chromium của đúng phiên bản đang dùng để chọn cờ, ghi nguồn. Chạy cùng số lượt e2e với và không có cờ, trên cùng máy, ghi số lần hết giờ. Đây là đổi điều kiện môi trường kiểm thử, không phải nới thời gian chờ; nếu có hiệu quả, Project Owner quyết có giữ hay không.
+
 **Ghi nhận thêm, không phải UI-11 (Q22-2, thấp, không vá ở V1):** ở múi giờ có giờ mùa hè, giờ "không tồn tại" trong khoảng nhảy giờ (ví dụ 02:30 ngày đổi giờ ở New York) được ghép với độ lệch sau khi đổi. Việt Nam không có giờ mùa hè.
+
+### UI-12 — Ca focus `StageChange.test.tsx:183` không tất định trên Windows (thấp; audit phiên 24 §5.4) — cho phiên giao diện kế tiếp
+
+Hỏng một lần ở phiên 22 và một lần ở lần chạy mốc của phiên 24, đều trên Windows. Orchestrator chạy 20 lần trên Linux, không lần nào hỏng. Việc: đọc ca này, tìm chỗ phụ thuộc thời điểm (focus sau khi vẽ lại), sửa kiểm thử hoặc mã nếu thấy lỗi thật; không thêm `retries`, không nới thời gian chờ. **Tiêu chí đóng:** chạy riêng tệp này 50 lần liên tiếp trên Windows không hỏng.
 
 ## Môi trường và vận hành (không phải việc của coding agent)
 
@@ -485,7 +509,9 @@ Chưa rõ AVG chặn lúc build hay lúc đo; lịch sử cảnh báo của AVG 
 - **Thứ tự:** sau phiên 18 là **D2 (đơn hàng)**. Phiên desktop dọn dẹp (DSK-12, DSK-13) gộp với lần đo lại, nếu cần build lại.
 - **Văn bản tùy chọn để trống** (`description`, `commission_type` và các trường `string|null` khác): giao diện gửi `null`, là quy tắc `[UI-ONLY]` như ô ghi chú khách hàng. Không sửa hợp đồng. Ghi vào I1 của D2.
 
-### DSK-15 — Ô ngày của giao diện hiện kiểu tháng/ngày/năm (thấp; Q19-2 của audit phiên 19) — cho phiên desktop kế tiếp
+### DSK-15 — Ô ngày của giao diện hiện kiểu tháng/ngày/năm (**trung bình** từ 2026-10-01; trước đó thấp; Q19-2 của audit phiên 19) — cho phiên desktop kế tiếp, **đề xuất làm trước D6**
+
+> **Nâng mức 2026-10-01** (audit phiên 24 §5.3): trang `income_report` đặt ô "Từ ngày" `10/01/2026` (tháng/ngày) ngay trên dòng báo cáo "Từ 01/08/2026 …" (ngày/tháng). Họa sĩ đọc `10/01/2026` thành 10 tháng 1, nên có thể chọn sai khoảng và đọc sai báo cáo. Tiêu chí đóng thêm: hai ô ngày của `income_report` hiện kiểu ngày/tháng/năm.
 
 Ô "Hạn giao" (`<input type="date">`) hiện `11/30/2026`, trong khi trang chi tiết và danh sách hiện `30/11/2026`. Nguyên nhân: locale của Electron đang là `en-US`, và giao diện không đổi được định dạng ô ngày gốc.
 
