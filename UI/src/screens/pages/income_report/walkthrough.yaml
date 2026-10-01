@@ -1,0 +1,85 @@
+page: income_report
+precondition: >
+  Desktop đã build (npm run build trong Desktop/). Trong UI/: npm run walkthrough:app -- --income
+  mở ứng dụng thật với thư mục dữ liệu tạm (không đụng %APPDATA%), Backend.py thật sau fixture
+  bật/tắt được, và nạp dữ liệu mẫu D5: ba khách (Mai Anh, Quốc Bảo, Lan Chi đã lưu trữ); bốn đơn
+  "Chân dung bán thân" (1.500.000 VND, chưa có khoản nào), "Chibi đôi" (12,50 USD), "Minh họa bìa
+  sách" (9.000.000 VND), "Bìa truyện (đã hủy)" (2.000.000 VND, đã chuyển sang giai đoạn "Đã hủy").
+  Mọi khoản thanh toán của mẫu có ngày cố định trong tháng 8 và tháng 9 năm 2026. Chờ "ĐÃ NẠP
+  XONG dữ liệu mẫu D5". Bật/tắt backend: npm run walkthrough:backend -- down|up (từ UI/, cửa sổ
+  lệnh khác). Các bước nối tiếp nhau trong cùng một lần mở ứng dụng. Trang mở bằng mục "Thu nhập"
+  ở vùng điều hướng. Trước khi chạy, đặt CT_WALKTHROUGH_RUNNER là tên người chạy. Ở máy dùng Electron
+  ngôn ngữ en-US, ô ngày hiện kiểu tháng/ngày/năm (DSK-15, việc của Desktop); chọn ngày bằng ô,
+  giá trị gửi đi vẫn là YYYY-MM-DD.
+steps:
+  - id: S1
+    setup: null
+    action: >
+      Bấm mục "Thu nhập". Đọc hai ô ngày và báo cáo. Rồi chọn "Từ ngày" 01/08/2026, "Đến ngày"
+      30/09/2026, bấm "Xem báo cáo".
+    expect: >
+      Trang "Thu nhập". Ngay dưới tiêu đề là hàng nút chỉ có "Xem báo cáo" (nút chính, không có "Tải
+      lại"); dưới hàng nút là hai ô "Từ ngày", "Đến ngày", mỗi ô có nút xóa riêng. Khi mở, báo cáo
+      đã tự hiện, không cần bấm; hai ô sẵn là ngày 1 tháng 1 của năm nay và ngày hôm nay (theo ngày
+      của máy). Dòng chữ nhỏ dưới các ô đọc "Từ <ngày đầu> đến <ngày cuối> · Lập lúc HH:mm dd/mm/yyyy"
+      với đúng hai ngày của ô. Có hai phần "USD" rồi "VND" (số thực nhận phụ thuộc ngày chạy, nhưng
+      "Còn phải thu" thì không: -7,55 USD và 6.000.000 VND). Sau khi chọn khoảng 01/08/2026 đến
+      30/09/2026 và bấm "Xem báo cáo": dòng nhỏ đọc "Từ 01/08/2026 đến 30/09/2026 · Lập lúc …". Phần
+      "USD" có ba dòng "Thực nhận trong kỳ" 20,05 USD; "Đã hoàn cho khách trong kỳ" 0,00 USD; "Còn phải
+      thu (mọi đơn chưa hủy, tính tới lúc lập)" -7,55 USD (dấu trừ ở đầu), dòng giải thích "Thực nhận
+      đã trừ tiền hoàn, gồm cả tiền tip. Còn phải thu không phụ thuộc khoảng thời gian.", rồi hai
+      tháng "Tháng 8/2026" 5,05 USD và "Tháng 9/2026" 15,00 USD. Phần "VND": 5.100.000 VND;
+      500.000 VND; 6.000.000 VND; cùng dòng giải thích; "Tháng 8/2026" 500.000 VND (khoản cọc của
+      đơn đã hủy có tính vào thực nhận), "Tháng 9/2026" 4.600.000 VND. Số VND không cộng với số USD.
+    covers: [ok]
+  - id: S2
+    setup: null
+    action: >
+      Chọn "Từ ngày" 01/09/2026, giữ "Đến ngày" 30/09/2026, bấm "Xem báo cáo".
+    expect: >
+      Dòng nhỏ đọc "Từ 01/09/2026 đến 30/09/2026 · Lập lúc …". USD: 15,00 USD; 0,00 USD; -7,55 USD;
+      chỉ còn "Tháng 9/2026" 15,00 USD. VND: 4.600.000 VND; 500.000 VND; 6.000.000 VND; chỉ còn
+      "Tháng 9/2026" 4.600.000 VND. Hai số thực nhận đổi, hai số "Còn phải thu" (-7,55 USD và
+      6.000.000 VND) y như ở S1.
+    covers: [ok]
+  - id: S3
+    setup: null
+    action: >
+      Chọn "Từ ngày" 01/01/2025, "Đến ngày" 31/12/2025, bấm "Xem báo cáo". Rồi đổi "Từ ngày" thành
+      01/01/2024 mà không bấm gì.
+    expect: >
+      Dòng nhỏ đọc "Từ 01/01/2025 đến 31/12/2025 · Lập lúc …". Vẫn có hai phần USD và VND (vì còn đơn
+      chưa thu đủ): USD 0,00 USD; 0,00 USD; -7,55 USD. VND 0 VND; 0 VND; 6.000.000 VND. Mỗi phần có
+      câu "Không có khoản thanh toán nào trong kỳ." thay cho danh sách tháng. Sau khi đổi ô
+      "Từ ngày" thành 01/01/2024 mà chưa bấm: dòng nhỏ vẫn đọc "Từ 01/01/2025 đến 31/12/2025 …"
+      (nó nói về báo cáo đang hiện, không nói về ô), và không có yêu cầu nào được gửi.
+    covers: [ok]
+  - id: S4
+    setup: null
+    action: >
+      Chọn khoảng 01/08/2026 đến 30/09/2026, bấm "Xem báo cáo". Rồi chọn "Từ ngày" 01/10/2026, "Đến
+      ngày" 30/09/2026, bấm "Xem báo cáo". Rồi chọn lại khoảng 01/08/2026 đến 30/09/2026, bấm nút xóa
+      của ô "Từ ngày", bấm "Xem báo cáo". Rồi bấm nút xóa của ô "Đến ngày", bấm "Xem báo cáo". Cuối
+      cùng chọn lại cả hai ô 01/08/2026 và 30/09/2026 và bấm "Xem báo cáo".
+    expect: >
+      Bước đầu hiện báo cáo của khoảng hai tháng. Lần có ngày bắt đầu sau ngày kết thúc: không gửi gì;
+      dưới ô "Đến ngày" hiện "Ngày kết thúc phải bằng hoặc sau ngày bắt đầu."; con trỏ nhập ở ô "Đến
+      ngày"; ngay dưới hàng nút có khung lỗi "Chưa xem được báo cáo" với câu "Một số ô chưa đúng định
+      dạng. Vui lòng kiểm tra lại."; báo cáo đang hiện (khoảng hai tháng, cùng giờ lập) còn nguyên,
+      hai ô còn giá trị vừa nhập. Lần ô "Từ ngày" trống: dưới ô hiện "Chọn ngày bắt đầu.", con trỏ ở
+      ô "Từ ngày", không gửi gì, báo cáo còn nguyên. Lần cả hai ô trống: hai câu "Chọn ngày bắt đầu." và
+      "Chọn ngày kết thúc.", con trỏ ở ô "Từ ngày" (ô đứng trước trên màn hình). Lần cuối: khung lỗi và các
+      câu dưới ô biến mất, báo cáo mới hiện (có gửi yêu cầu).
+    covers: [rejected_input]
+  - id: S5
+    setup: >
+      Tắt backend: npm run walkthrough:backend -- down (từ UI/, cửa sổ lệnh khác).
+    action: >
+      Khi ô vẫn là 01/08/2026 và 30/09/2026, bấm "Xem báo cáo". Khi thông báo hiện ra, bật lại backend
+      (npm run walkthrough:backend -- up) rồi bấm "Xem báo cáo".
+    expect: >
+      Lần đầu: hiện "Không kết nối được" kèm câu "Không kết nối được tới phần xử lý của ứng dụng. Vui
+      lòng thử lại."; báo cáo cũ BIẾN MẤT (không còn phần USD, VND, không còn dòng "Từ … đến …"), để
+      không ai tưởng số cũ là số mới; hai ô ngày còn nguyên giá trị. Sau khi bật lại và bấm "Xem báo
+      cáo": thông báo lỗi mất, hiện lại báo cáo của khoảng 01/08/2026 đến 30/09/2026 với đủ số như ở S1.
+    covers: [unreachable, ok]

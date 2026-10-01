@@ -1,0 +1,57 @@
+{
+  "page": "income_report",
+  "walkthrough": "src/screens/pages/income_report/walkthrough.yaml",
+  "steps": [
+    {
+      "step": "S1",
+      "passed": true,
+      "runner": "coding-agent@2026-09-30#3 (Playwright, tests/e2e/income_report_walkthrough.spec.ts)",
+      "finished_at": "2026-10-01T13:11:57.894Z",
+      "screenshot": "evidence/walkthroughs/income_report/income_report-S1.png",
+      "covers": [
+        "ok"
+      ]
+    },
+    {
+      "step": "S2",
+      "passed": true,
+      "runner": "coding-agent@2026-09-30#3 (Playwright, tests/e2e/income_report_walkthrough.spec.ts)",
+      "finished_at": "2026-10-01T13:11:58.169Z",
+      "screenshot": "evidence/walkthroughs/income_report/income_report-S2.png",
+      "covers": [
+        "ok"
+      ]
+    },
+    {
+      "step": "S3",
+      "passed": true,
+      "runner": "coding-agent@2026-09-30#3 (Playwright, tests/e2e/income_report_walkthrough.spec.ts)",
+      "finished_at": "2026-10-01T13:11:58.470Z",
+      "screenshot": "evidence/walkthroughs/income_report/income_report-S3.png",
+      "covers": [
+        "ok"
+      ]
+    },
+    {
+      "step": "S4",
+      "passed": true,
+      "runner": "coding-agent@2026-09-30#3 (Playwright, tests/e2e/income_report_walkthrough.spec.ts)",
+      "finished_at": "2026-10-01T13:11:59.144Z",
+      "screenshot": "evidence/walkthroughs/income_report/income_report-S4.png",
+      "covers": [
+        "rejected_input"
+      ]
+    },
+    {
+      "step": "S5",
+      "passed": true,
+      "runner": "coding-agent@2026-09-30#3 (Playwright, tests/e2e/income_report_walkthrough.spec.ts)",
+      "finished_at": "2026-10-01T13:12:05.039Z",
+      "screenshot": "evidence/walkthroughs/income_report/income_report-S5.png",
+      "covers": [
+        "unreachable",
+        "ok"
+      ]
+    }
+  ]
+}

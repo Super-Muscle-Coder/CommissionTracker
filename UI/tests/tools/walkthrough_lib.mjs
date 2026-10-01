@@ -328,6 +328,57 @@ export async function seedPaymentSample(baseUrl) {
   return sample
 }
 
+// Sample data of the D5 walkthrough income_report (and the manual run npm run
+// walkthrough:app -- --income): the D4 sample kept as it is (three commissions;
+// on "Minh họa bìa sách" a deposit, a milestone, a tip, a refund and a voided
+// payment, all in September 2026; on "Chibi đôi" a 15,00 USD payment in
+// September 2026; "Chân dung bán thân" with no payment), plus what the income
+// report needs to show its rules (ui_decomposition.md D5, "Luật phủ"):
+//   - a second month: a deposit of 5,05 USD on "Chibi đôi" (2026-08-10), so USD
+//     has a decimal amount in two months and the commission is overpaid
+//     (12,50 USD agreed, 20,05 USD received: outstanding −7,55 USD);
+//   - a cancelled commission with money received: "Bìa truyện (đã hủy)"
+//     (2.000.000 VND) with a deposit of 500.000 VND (2026-08-20), then set to
+//     'cancelled' through change_stage — its payment counts in "Thực nhận", its
+//     debt (1.500.000 VND) does not count in "Còn phải thu".
+// A commission owing money with no payment in a period: "Chân dung bán thân".
+// Every paid_at is a fixed date, so the numbers never depend on the day the run
+// happens. The numbers the report must give (checked against the real backend):
+//   2026-08-01 .. 2026-09-30  USD 20,05 / 0,00 / −7,55; months 5,05 and 15,00
+//                             VND 5.100.000 / 500.000 / 6.000.000; months 500.000 and 4.600.000
+//   2026-09-01 .. 2026-09-30  USD 15,00 / 0,00 / −7,55; VND 4.600.000 / 500.000 / 6.000.000
+//   2025-01-01 .. 2025-12-31  nothing paid: USD 0,00 / 0,00 / −7,55; VND 0 / 0 / 6.000.000
+// Ends AFTER_LAST_WRITE_MS after the last write (UI-9).
+export const D5_CANCELLED = {
+  title: 'Bìa truyện (đã hủy)',
+  commission_type: null,
+  agreed_price: { amount_minor: 2000000, currency: 'VND' },
+  deadline: null,
+  description: null,
+  reference_links: [],
+}
+export const D5_PAYMENTS = {
+  cancelledDeposit: pay('incoming', 'deposit', 500000, 'VND', 'Chuyển khoản', '2026-08-20T09:30:00+07:00', 'Cọc trước khi hủy'),
+  usdAugust: pay('incoming', 'deposit', 505, 'USD', 'PayPal', '2026-08-10T21:00:00+07:00', null),
+}
+// The three fixed periods of the walkthrough: [period_from, period_to].
+export const D5_PERIODS = {
+  twoMonths: ['2026-08-01', '2026-09-30'],
+  september: ['2026-09-01', '2026-09-30'],
+  nothingPaid: ['2025-01-01', '2025-12-31'],
+}
+
+export async function seedIncomeSample(baseUrl) {
+  const sample = await seedPaymentSample(baseUrl)
+  const cancelled = (await call(baseUrl, 'POST', '/commissions', { commission_input: { client_id: sample.clients.full, ...D5_CANCELLED } }, 201)).commission_id
+  await recordPayment(baseUrl, cancelled, D5_PAYMENTS.cancelledDeposit)
+  await recordPayment(baseUrl, sample.commissions.usd, D5_PAYMENTS.usdAugust)
+  await setStage(baseUrl, cancelled, 'cancelled', 'Khách hủy')
+  // UI-9: a write the walkthrough makes next is never in the second of the last sample one.
+  await pause(AFTER_LAST_WRITE_MS)
+  return { ...sample, commissions: { ...sample.commissions, cancelled } }
+}
+
 export async function seedSampleData(baseUrl) {
   // create_client: POST /clients, input [client_input]. endpoint_forms.http:
   // a JSON body whose keys are the input NAMES, so { client_input: {...} }.

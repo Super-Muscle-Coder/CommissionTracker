@@ -1,4 +1,4 @@
-// npm run walkthrough:app [-- --empty | -- --commissions | -- --progress | -- --payments]
+// npm run walkthrough:app [-- --empty | -- --commissions | -- --progress | -- --payments | -- --income]
 //
 // Starts the real desktop app (built UI/dist, real Backend.py behind the
 // switchable fixture) on a temporary data folder, reads the backend port from
@@ -8,12 +8,13 @@
 // --commissions the D2 sample (its own clients and three commissions); with
 // --progress the D3 sample (the D2 sample, one more commission, stages set);
 // with --payments the D4 sample (the D2 sample and payments on two of its
-// commissions); with --empty none.
+// commissions); with --income the D5 sample (the D4 sample, a second month of
+// USD, and a cancelled commission with a payment); with --empty none.
 //
 // For the Project Owner running the walkthroughs by hand
 // (src/screens/pages/{client_list,client_detail,client_form,commission_list,
 // commission_detail,commission_form,progress_board,stage_change,payment_list,
-// payment_form}/walkthrough.yaml).
+// payment_form,income_report}/walkthrough.yaml).
 // The runner name printed (and written by the automated run) comes from
 // CT_WALKTHROUGH_RUNNER. Test tooling only.
 import { spawn } from 'node:child_process'
@@ -28,6 +29,7 @@ import {
   clearSession,
   D2_EXPECTED_LIST,
   D3_EXPECTED_BOARD,
+  D5_PERIODS,
   electronBinary,
   launchArgs,
   makeDataDir,
@@ -35,6 +37,7 @@ import {
   RUNNER_VARIABLE,
   SAMPLE_DETAILED,
   seedCommissionSample,
+  seedIncomeSample,
   seedPaymentSample,
   seedProgressSample,
   seedSampleData,
@@ -43,9 +46,10 @@ import {
 } from './walkthrough_lib.mjs'
 
 const empty = process.argv.includes('--empty')
-const payments = !empty && process.argv.includes('--payments')
-const progress = !empty && !payments && process.argv.includes('--progress')
-const commissions = !empty && !payments && !progress && process.argv.includes('--commissions')
+const income = !empty && process.argv.includes('--income')
+const payments = !empty && !income && process.argv.includes('--payments')
+const progress = !empty && !income && !payments && process.argv.includes('--progress')
+const commissions = !empty && !income && !payments && !progress && process.argv.includes('--commissions')
 
 if (!fs.existsSync(path.join(DESKTOP_ROOT, 'dist', 'main.js'))) {
   console.error('Desktop is not built: run npm run build in Desktop/ first.')
@@ -77,7 +81,9 @@ app.stderr.on('data', (chunk) => {
 
 async function onReady(baseUrl) {
   writeSession({ dataDir, baseUrl, pid: app.pid ?? null })
-  if (payments) {
+  if (income) {
+    await seedIncomeSample(baseUrl)
+  } else if (payments) {
     await seedPaymentSample(baseUrl)
   } else if (progress) {
     await seedProgressSample(baseUrl)
@@ -93,6 +99,16 @@ async function onReady(baseUrl) {
   console.log(`Backend (qua fixture bật/tắt được): ${baseUrl}`)
   if (empty) {
     console.log('Cơ sở dữ liệu TRỐNG.')
+  } else if (income) {
+    console.log('ĐÃ NẠP XONG dữ liệu mẫu D5 (thu nhập). Mở mục "Thu nhập". Mọi ngày thanh toán của mẫu nằm trong tháng 8 và tháng 9 năm 2026.')
+    const [a1, a2] = D5_PERIODS.twoMonths
+    const [b1, b2] = D5_PERIODS.september
+    const [c1, c2] = D5_PERIODS.nothingPaid
+    console.log(`  Khoảng ${a1} .. ${a2}: USD thực nhận 20,05, hoàn 0,00, còn phải thu -7,55; tháng 8 là 5,05, tháng 9 là 15,00.`)
+    console.log('                                 VND thực nhận 5.100.000, hoàn 500.000, còn phải thu 6.000.000; tháng 8 là 500.000, tháng 9 là 4.600.000.')
+    console.log(`  Khoảng ${b1} .. ${b2}: USD 15,00 / 0,00 / -7,55; VND 4.600.000 / 500.000 / 6.000.000 (còn phải thu không đổi).`)
+    console.log(`  Khoảng ${c1} .. ${c2}: không khoản nào; USD 0,00 / 0,00 / -7,55; VND 0 / 0 / 6.000.000; câu "Không có khoản thanh toán nào trong kỳ.".`)
+    console.log('  Ô ngày của trang mở sẵn từ 1/1 năm nay tới hôm nay (đổi theo ngày chạy); nhập các khoảng trên để so.')
   } else if (payments) {
     console.log('ĐÃ NẠP XONG dữ liệu mẫu D4 (thanh toán). Mở "Đơn hàng", bấm một đơn, rồi bấm "Thanh toán".')
     console.log('  "Minh họa bìa sách" (9.000.000 VND): năm khoản, một khoản đã hủy; đã nhận 4.600.000 VND, còn phải thu 4.500.000 VND.')

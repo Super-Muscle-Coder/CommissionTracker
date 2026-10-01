@@ -2,8 +2,8 @@
 // workflow: kit
 // clause: external
 // component: kit
-// last_updated_by: coding-agent@2026-09-30#1
-// last_updated_at: 2026-09-30T09:00:00+07:00
+// last_updated_by: coding-agent@2026-09-30#3
+// last_updated_at: 2026-10-01T20:22:00+07:00
 //
 // EXPERIENCES:
 //   - id: kit-EXP-001
@@ -210,6 +210,19 @@
 //       "Khoản"; một component chữ rời sẽ mất liên kết với ô. Hai trang cũ dùng SelectField
 //       (commission_form, stage_change) chỉ thêm hint={null}. Cặp chữ phụ trên nền trang đã có
 //       (7.17:1), chỉ ghi thêm nơi dùng.
+//   - id: kit-EXP-018
+//     content: >
+//       Phiên 24 (D5), component MỚI Caption: text: string, một đoạn chữ phụ (p) màu
+//       --color-text-muted, cỡ --font-size-sm, dãn dòng --line-height-body, không có vai trò
+//       status/alert (đọc như chữ thường). Vì sao mới, không mở rộng cái có sẵn: D5 đòi hai đoạn chữ
+//       phụ thuần túy không gắn với ô nhập, không phải thông báo, không phải trạng thái rỗng: dòng "Từ …
+//       đến … · Lập lúc …" (nói về báo cáo đang hiện) và câu giải thích cố định dưới ba con số của mỗi
+//       đơn vị tiền. Đã cân nhắc: hint của SelectField/TextField gắn với một ô (không có ô ở đây);
+//       EmptyState là khung nét đứt cho "chưa có gì" (dùng cho câu "Không có khoản thanh toán nào trong
+//       kỳ." đúng nghĩa đó, nhưng không cho chữ giải thích); Section group là tiêu đề h3 (dòng phụ không
+//       phải tiêu đề, và đặt nó làm h3 làm lẫn mục lục tiêu đề của trang với các phần đơn vị tiền). Đặt
+//       trên nền trang (--color-surface), cặp chữ phụ/nền trang đã có trong check_contrast.mjs (7.17:1),
+//       chỉ ghi thêm nơi dùng (Caption). Chỉ props kiểu nguyên thủy, không biết gì về thu nhập.
 //
 // UNSOLVED_PROBLEMS: []
 //
@@ -378,6 +391,17 @@
 //       (SelectField có hint và lỗi, ô số tiền lỗi, ô đơn vị tiền vô hiệu, DateTimeField),
 //       payment_list/payment_list-S3-confirm.png (ItemList có nút "Hủy khoản này", ConfirmPanel).
 //     recorded_at: 2026-09-30T09:00:00+07:00
+//   - claim: >
+//       Phiên 24: Caption dựng đúng trên ứng dụng thật, nền tối; phép kiểm tương phản không đổi kết quả.
+//     how: >
+//       Trong UI/: node scripts/check_contrast.mjs (bước lint:contrast của npm run check); ảnh chụp kịch bản
+//       income_report.
+//     result: >
+//       "check_contrast: 19 text pairs >= 4.5:1 and 13 non-text pairs >= 3:1 checked, all pass." (bằng mốc phiên
+//       22; Caption dùng cặp chữ phụ/nền trang 7.17:1 đã có, chỉ ghi thêm nơi dùng ở TEXT_PAIRS). Ảnh:
+//       UI/evidence/walkthroughs/income_report/income_report-S1.png (dòng phụ và câu giải thích là Caption).
+//       Không có thay đổi cấu hình ESLint, stylelint, check_layer.
+//     recorded_at: 2026-10-01T20:22:00+07:00
 //
 // NOTES:
 //   - content: >
@@ -445,3 +469,5 @@ export { DateTimeField } from './components/DateTimeField/DateTimeField'
 export type { DateTimeFieldProps } from './components/DateTimeField/DateTimeField'
 export { ConfirmPanel } from './components/ConfirmPanel/ConfirmPanel'
 export type { ConfirmPanelProps } from './components/ConfirmPanel/ConfirmPanel'
+export { Caption } from './components/Caption/Caption'
+export type { CaptionProps } from './components/Caption/Caption'

@@ -39,7 +39,7 @@ const TEXT_PAIRS = [
   ['--color-text', '--color-surface-selected', 'current NavMenu item'],
   ['--color-text', '--color-surface-field', 'text typed or chosen in TextField, TextArea, SelectField, DateField, DateTimeField'],
   ['--color-text', '--color-surface-danger', 'InlineAlert text, FatalMessage detail, ConfirmPanel text'],
-  ['--color-text-muted', '--color-surface', 'Section group heading, LoadingIndicator, SelectField hint'],
+  ['--color-text-muted', '--color-surface', 'Section group heading, LoadingIndicator, SelectField hint, Caption'],
   ['--color-text-muted', '--color-surface-raised', 'DescriptionList terms, ItemList secondary line'],
   ['--color-text-muted', '--color-surface-hover', 'ItemList secondary line of a hovered row'],
   ['--color-text-muted', '--color-surface-muted', 'EmptyState text'],

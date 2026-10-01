@@ -7,6 +7,7 @@ import type { ManageClientRouters } from '../../logic/workflows/manage_client/ro
 import type { ManageCommissionRouters } from '../../logic/workflows/manage_commission/routers'
 import type { RecordPaymentRouters } from '../../logic/workflows/record_payment/routers'
 import type { UpdateProgressRouters } from '../../logic/workflows/update_progress/routers'
+import type { ViewIncomeReportRouters } from '../../logic/workflows/view_income_report/routers'
 import { LogicContext, type LogicRouters } from '../logic_context'
 
 // A Routers operation answering the queued results in order; a call with
@@ -83,18 +84,30 @@ export function fakeRecordPayment(over: Partial<RecordPaymentRouters>): RecordPa
   }
 }
 
+// defaultPeriod is a plain synchronous operation, not a call that fails when
+// unexpected: every page that opens income_report asks it once.
+export function fakeViewIncomeReport(over: Partial<ViewIncomeReportRouters>): ViewIncomeReportRouters {
+  return {
+    defaultPeriod: vi.fn(() => ({ periodFrom: '2026-01-01', periodTo: '2026-09-30' })),
+    viewIncomeReport: unexpected('viewIncomeReport'),
+    ...over,
+  }
+}
+
 // Every Routers of the context; a workflow the test does not give fails on any call.
 function logicOf(
   manageClient: ManageClientRouters,
   manageCommission: ManageCommissionRouters | undefined,
   updateProgress: UpdateProgressRouters | undefined,
   recordPayment: RecordPaymentRouters | undefined,
+  viewIncomeReport: ViewIncomeReportRouters | undefined,
 ): LogicRouters {
   return {
     manageClient,
     manageCommission: manageCommission ?? fakeManageCommission({}),
     updateProgress: updateProgress ?? fakeUpdateProgress({}),
     recordPayment: recordPayment ?? fakeRecordPayment({}),
+    viewIncomeReport: viewIncomeReport ?? fakeViewIncomeReport({}),
   }
 }
 
@@ -104,8 +117,11 @@ export function renderWithLogic(
   manageCommission?: ManageCommissionRouters,
   updateProgress?: UpdateProgressRouters,
   recordPayment?: RecordPaymentRouters,
+  viewIncomeReport?: ViewIncomeReportRouters,
 ) {
-  return render(<LogicContext.Provider value={logicOf(manageClient, manageCommission, updateProgress, recordPayment)}>{ui}</LogicContext.Provider>)
+  return render(
+    <LogicContext.Provider value={logicOf(manageClient, manageCommission, updateProgress, recordPayment, viewIncomeReport)}>{ui}</LogicContext.Provider>,
+  )
 }
 
 // What the page shows at its very first commit (UI-4): the status messages,
@@ -124,15 +140,20 @@ export function renderFirstCommit(
   manageCommission?: ManageCommissionRouters,
   updateProgress?: UpdateProgressRouters,
   recordPayment?: RecordPaymentRouters,
+  viewIncomeReport?: ViewIncomeReportRouters,
 ): FirstCommit {
   let seen: FirstCommit | null = null
-  const logic = logicOf(manageClient, manageCommission, updateProgress, recordPayment)
+  const logic = logicOf(manageClient, manageCommission, updateProgress, recordPayment, viewIncomeReport)
   const calls = () =>
     [
       ...Object.values(logic.manageClient),
       ...Object.values(logic.manageCommission),
       ...Object.values(logic.updateProgress),
       ...Object.values(logic.recordPayment),
+      // defaultPeriod is a synchronous read the page makes while it renders (its first draft), not a call that loads: not counted.
+      ...Object.entries(logic.viewIncomeReport)
+        .filter(([name]) => name !== 'defaultPeriod')
+        .map(([, fn]) => fn),
     ].some((fn) => vi.isMockFunction(fn) && fn.mock.calls.length > 0)
   function Probe() {
     useLayoutEffect(() => {

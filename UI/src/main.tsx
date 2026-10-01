@@ -2,8 +2,8 @@
 // workflow: main
 // clause: external
 // component: main
-// last_updated_by: coding-agent@2026-09-30#1
-// last_updated_at: 2026-09-30T09:25:00+07:00
+// last_updated_by: coding-agent@2026-09-30#3
+// last_updated_at: 2026-10-01T20:25:00+07:00
 //
 // EXPERIENCES:
 //   - id: main-EXP-001
@@ -276,10 +276,67 @@
 //       trên cây mã đã bị sửa tạm để tắt một kiểm tra ("Security Test Removal"): phép sửa kiểu "&&
 //       false" bị coi là gỡ kiểm tra; phép sửa đổi một giá trị (đổi tham số, đổi token) thì chạy
 //       được. Bằng chứng cắn ghi rõ phép nào có kết quả.
+//   - id: main-EXP-020
+//     content: >
+//       Phiên 24 (D5): bước 4 ráp nối view_income_report theo mẫu, sau record_payment (thứ tự
+//       ui_decomposition §2): createViewIncomeReportAdapters(httpClient, VIEW_INCOME_REPORT_CONFIGS) →
+//       createViewIncomeReportServices(adapters, VIEW_INCOME_REPORT_CONFIGS, LAYER_CONFIGS.resultMessages,
+//       () => new Date()) → createViewIncomeReportRouters(services) (Routers không cần giá trị Configs nào), đặt
+//       vào LogicRouters.viewIncomeReport. NGUỒN "BÂY GIỜ": hàm () => new Date() thứ hai do Main tạo (không dùng
+//       chung với record_payment, R2); chỉ Services.defaultPeriod() gọi nó. fake_logic.tsx thêm
+//       fakeViewIncomeReport (defaultPeriod là hàm đồng bộ, mặc định 2026-01-01 → 2026-09-30) và tham số thứ sáu
+//       của renderWithLogic, renderFirstCommit; renderFirstCommit không tính defaultPeriod là "đã gọi Routers"
+//       (đó là phép đọc đồng bộ lúc vẽ, không phải lần tải). Chạy tay D5: npm run walkthrough:app -- --income.
+//       Không đổi giá trị khởi động, cấu hình ESLint, stylelint, check_layer; check_contrast chỉ ghi thêm nơi dùng
+//       của một cặp có sẵn. tests/main/main.test.tsx không đổi.
+//   - id: main-EXP-021
+//     content: >
+//       Phiên 24, thứ tự và các lượt e2e hỏng (để Orchestrator biết). (1) Không đảo thứ tự việc nào của plan. (2) Lượt
+//       e2e đầu hỏng 2 ca vì commission_list và progress_board đếm ĐÚNG ba mục điều hướng (spec
+//       commission_list S1, progress_board S1, S3): đó là hệ quả trực tiếp của mục "Thu nhập" (đặc tả D5), đã sửa bằng
+//       cách thêm ['Thu nhập', null] vào ba danh sách, không đổi hành vi nào. (3) Từ 23:55 đến 00:31 (giờ máy) bảy
+//       lượt kế tiếp bị nghẽn máy: bốn lần page.screenshot hết 30 s (client_form-S5-saved, payment_form-S6-unreachable,
+//       payment_form-S1-errors, payment_list-S1; ba trong đó với backend ĐANG CHẠY), một lần locator.click hết giờ ở
+//       client_detail S4 sau khi backend bật lại mà trang đã về danh sách khách hàng (trang khởi động; trace không nói
+//       vì sao), và một lần "the backend did not switch up within 60000 ms". Không có lỗi nào ở income_report hay ở mã mới;
+//       lượt 2-3 ở chính đợt đó đạt (59 passed, 7,3 và 5,9 phút so với 2,9 phút lúc bình thường). Sáng hôm sau (19:57
+//       2026-10-01) máy bình thường: 5 lượt liên tiếp đạt, mỗi lượt khoảng 3 phút. Script bọc (scratchpad run_loop.sh)
+//       coi lần hỏng là UI-11 chỉ khi MỌI lỗi là "page.screenshot: Timeout"; hai lỗi khác loại (click, backend) không
+//       được tính là UI-11 và các trace của chúng để ngoài ui11_traces. Chuỗi 5 lượt liên tiếp tính từ 19:57. Nghi
+//       phạm vi: AVG (AVGUI chạy), xem ENV-2; không thay đổi gì ở máy.
+//   - id: main-EXP-022
+//     content: >
+//       UI-11, dữ liệu phiên 24 (CHỈ THU DỮ LIỆU, không sửa gì, không nới giờ chờ, không retries). Cách ghi không đổi
+//       so với main-EXP-018. Playwright xóa test-results/ ở đầu mỗi lần chạy, nên script bọc cất screenshot-timing.log
+//       và thư mục lỗi của từng lượt ra ngoài rồi chép lại: UI/test-results/ui11_traces/ có INDEX.txt, bốn thư mục
+//       trace_* (trace.zip, error-context.md) và screenshot-timing-all-runs.log (1280 dòng của 24 lượt). Tổng hợp:
+//       1280 lần chụp, trung bình 217 ms, lớn nhất 30012 ms; riêng bước backend tắt 162 lần, trung bình 307 ms, lớn
+//       nhất 30012 ms; 4 lần hết giờ 30 s: client_form-S5-saved (backend=up), payment_form-S6-unreachable (down),
+//       payment_form-S1-errors (up), payment_list-S1 (up); lần thứ năm có dòng "error" (client_detail-S4, 29 ms) là
+//       trang bị đóng sau lỗi khác, không phải hết giờ. Trong 4 lượt khỏe (spec riêng 10 lượt, mốc, 5 lượt cuối) không
+//       lần nào chụp quá 2,2 giây. Điều mới so với phiên 22: hết giờ cũng xảy ra khi backend ĐANG CHẠY, ở trang không
+//       liên quan tới việc tắt backend; chúng đi thành cụm trong một giai đoạn máy chậm, không rải đều.
 //
 // UNSOLVED_PROBLEMS: []
 //
 // EVIDENCE:
+//   - claim: >
+//       Phiên 24: môi trường, mốc, và kết quả cuối; mốc %APPDATA% không đổi.
+//     how: >
+//       node --version; npm --version; git status --short; Backend/env/Scripts/python.exe --version; trong UI/: npm ci;
+//       npm run check (mốc và cuối); CT_WALKTHROUGH_RUNNER=coding-agent@2026-09-30#3 npm run e2e (mốc; 5 lần liên tiếp cuối);
+//       một lần không biến với SHA-256 UI/evidence trước và sau; tên, kích thước, giờ ghi, SHA-256 mọi tệp trong
+//       %APPDATA%CommissionTracker đầu (23:20) và cuối phiên (20:17).
+//     result: >
+//       Node v24.14.1; npm 11.11.0; Python 3.13.12; git status đầu phiên rỗng; npm ci "found 0 vulnerabilities". Mốc: check
+//       "Tests 1100 passed (1100)" (lần chạy đầu hỏng 1 ca focus của StageChange.test.tsx:183, không tất định có sẵn, bốn lần
+//       chạy lại đạt; không sửa, ngoài plan), e2e "54 passed (3.5m)". Cuối: check exit 0 (tsc -b, eslint --max-warnings 0,
+//       stylelint, "check_contrast: 19 text pairs >= 4.5:1 and 13 non-text pairs >= 3:1 checked, all pass.", "check_layer: 147
+//       files under src/ checked", "check_e2e_status: no unfiltered text assertion", vitest 1303 đạt); spec income_report
+//       riêng 10/10; e2e 5/5 "59 passed" (mốc 54); lần không biến "59 passed", UI/evidence không đổi (99 tệp).
+//       %APPDATA%: data.db 114688 byte và data.db.lock 0 byte, cùng giờ ghi 2026-09-28 21:09, cùng hash B1996554… — không đổi.
+//       Không eslint-disable, không ngoại lệ lint mới, không phụ thuộc mới. Backend: Backend/env/Scripts/python.exe (qua fixture).
+//     recorded_at: 2026-10-01T20:25:00+07:00
 //   - claim: >
 //       Môi trường và phiên bản công cụ của phiên.
 //     how: >
@@ -691,6 +748,12 @@
 //       một lời gọi GET <backendBaseUrl>/clients. Hành vi mới theo plan việc 4 và
 //       7, không phải nới kiểm thử.
 //     written_at: 2026-09-28
+//   - content: >
+//       Cho Orchestrator (phiên 24, không sửa vì ngoài plan): src/screens/pages/stage_change/tests/StageChange.test.tsx
+//       dòng 183 khẳng định isFocused(select()) NGAY sau findByRole('alert'), không dùng vi.waitFor như
+//       screens-EXP-012 đã khuyên; hỏng 1 lần trong lần chạy mốc đầu phiên (1099/1100) rồi đạt cả bốn lần chạy lại. Cùng
+//       loại với lỗi focus đã vá ở client_form (phiên 17).
+//     written_at: 2026-10-01
 // ===WCA-CHECKPOINT-END===
 /**
  * Main of the interface layer (iwca_theory.md §4; i2-scaffold.md, Step I2.6).
@@ -724,6 +787,10 @@ import { createRecordPaymentAdapters } from './logic/workflows/record_payment/ad
 import { RECORD_PAYMENT_CONFIGS } from './logic/workflows/record_payment/configs'
 import { createRecordPaymentRouters } from './logic/workflows/record_payment/routers'
 import { createRecordPaymentServices } from './logic/workflows/record_payment/services'
+import { createViewIncomeReportAdapters } from './logic/workflows/view_income_report/adapters'
+import { VIEW_INCOME_REPORT_CONFIGS } from './logic/workflows/view_income_report/configs'
+import { createViewIncomeReportRouters } from './logic/workflows/view_income_report/routers'
+import { createViewIncomeReportServices } from './logic/workflows/view_income_report/services'
 import { createHttpClient } from './logic/workflows/scaffold_ui/adapters'
 import { SCAFFOLD_UI_CONFIGS } from './logic/workflows/scaffold_ui/configs'
 import { AppRoot } from './screens/app_root'
@@ -797,6 +864,16 @@ if (!launch.ok) {
   // (ui_decomposition.md D4), so a test can fix the instant.
   const recordPaymentAdapters = createRecordPaymentAdapters(httpClient, RECORD_PAYMENT_CONFIGS)
   const recordPaymentServices = createRecordPaymentServices(recordPaymentAdapters, RECORD_PAYMENT_CONFIGS, LAYER_CONFIGS.resultMessages, () => new Date())
+  // view_income_report gets the clock too (ui_decomposition.md D5): the period
+  // the report page opens with is decided from it. Its own arrow, not shared
+  // with record_payment's.
+  const viewIncomeReportAdapters = createViewIncomeReportAdapters(httpClient, VIEW_INCOME_REPORT_CONFIGS)
+  const viewIncomeReportServices = createViewIncomeReportServices(
+    viewIncomeReportAdapters,
+    VIEW_INCOME_REPORT_CONFIGS,
+    LAYER_CONFIGS.resultMessages,
+    () => new Date(),
+  )
   const routers: LogicRouters = {
     manageClient: createManageClientRouters(manageClientServices, MANAGE_CLIENT_CONFIGS.limits),
     manageCommission: createManageCommissionRouters(manageCommissionServices, {
@@ -811,6 +888,7 @@ if (!launch.ok) {
       directions: RECORD_PAYMENT_CONFIGS.directions,
       paymentKinds: RECORD_PAYMENT_CONFIGS.paymentKinds,
     }),
+    viewIncomeReport: createViewIncomeReportRouters(viewIncomeReportServices),
   }
 
   // Step 5. Hand the Routers to the screens zone and render the root.

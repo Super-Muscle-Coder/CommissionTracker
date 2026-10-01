@@ -31,6 +31,7 @@ test.describe.serial('walkthrough commission_list', () => {
           ['Đơn hàng', 'page'],
           // From D3, "Tiến độ" after "Đơn hàng"; the places of the first two never change.
           ['Tiến độ', null],
+          ['Thu nhập', null],
         ])
         const adds = l.page.getByRole('button', { name: 'Thêm đơn hàng' })
         await expect(adds).toHaveCount(2)

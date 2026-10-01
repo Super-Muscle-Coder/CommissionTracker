@@ -8,6 +8,7 @@ import type { ManageClientRouters } from '../logic/workflows/manage_client/route
 import type { ManageCommissionRouters } from '../logic/workflows/manage_commission/routers'
 import type { RecordPaymentRouters } from '../logic/workflows/record_payment/routers'
 import type { UpdateProgressRouters } from '../logic/workflows/update_progress/routers'
+import type { ViewIncomeReportRouters } from '../logic/workflows/view_income_report/routers'
 
 // The set of Routers, composed from each interface workflow's Routers type
 // (imported as a type from logic/workflows/<name>/routers).
@@ -16,6 +17,7 @@ export type LogicRouters = {
   manageCommission: ManageCommissionRouters
   updateProgress: UpdateProgressRouters
   recordPayment: RecordPaymentRouters
+  viewIncomeReport: ViewIncomeReportRouters
 }
 
 export const LogicContext = createContext<LogicRouters | null>(null)

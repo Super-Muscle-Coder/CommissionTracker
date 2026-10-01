@@ -71,3 +71,7 @@ export declare function recordPayment(baseUrl: string, commissionId: string, pay
 export declare function voidPayment(baseUrl: string, paymentId: string): Promise<unknown>
 export declare const D4_PAYMENTS: Record<'deposit' | 'milestone' | 'tip' | 'refund' | 'mistaken' | 'overpaid', PaymentInputSample>
 export declare function seedPaymentSample(baseUrl: string): Promise<{ clients: Record<D2Key, string>; commissions: Record<D2Key, string> }>
+export declare function seedIncomeSample(baseUrl: string): Promise<{ clients: Record<D2Key, string>; commissions: Record<D2Key | 'cancelled', string> }>
+export declare const D5_PAYMENTS: Record<'cancelledDeposit' | 'usdAugust', PaymentInputSample>
+export declare const D5_CANCELLED: { title: string; agreed_price: { amount_minor: number; currency: string } }
+export declare const D5_PERIODS: { twoMonths: [string, string]; september: [string, string]; nothingPaid: [string, string] }

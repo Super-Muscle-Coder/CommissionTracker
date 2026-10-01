@@ -21,9 +21,10 @@ import type {
 import type { CommissionDetailView, CommissionListView } from '../../logic/workflows/manage_commission/routers'
 import type { BalanceView, PaymentFormView, PaymentListView, SavedPaymentView } from '../../logic/workflows/record_payment/routers'
 import type { ProgressBoardView } from '../../logic/workflows/update_progress/routers'
+import type { IncomePeriodDraft, IncomeReportView } from '../../logic/workflows/view_income_report/routers'
 import { AppRoot } from '../app_root'
 import { NAVIGATION, START_PAGE, type Route } from '../navigation'
-import { answers, fakeManageClient, fakeManageCommission, fakeRecordPayment, fakeUpdateProgress, renderWithLogic } from './fake_logic'
+import { answers, fakeManageClient, fakeManageCommission, fakeRecordPayment, fakeUpdateProgress, fakeViewIncomeReport, renderWithLogic } from './fake_logic'
 
 const ID = '3f2b8c1e-9a4d-4e6f-8b2a-1c3d5e7f9a0b'
 const CID = '7a1d2e3f-4b5c-4d6e-9f80-1a2b3c4d5e6f'
@@ -63,10 +64,12 @@ export const WRONG_ROUTES: Route[] = [
   { page: 'payment_list', params: { commission_id: ID } },
   // @ts-expect-error payment_form needs commission_id, not client_id
   { page: 'payment_form', params: { client_id: ID, title: 'x' } },
+  // @ts-expect-error income_report takes no parameter
+  { page: 'income_report', params: { commission_id: ID } },
 ]
 
 describe('navigation table', () => {
-  it('has exactly the ten pages of ui_decomposition.md §5 (D1, D2, D3 and D4), and opens on client_list', () => {
+  it('has exactly the eleven pages of ui_decomposition.md §5 (D1, D2, D3, D4 and D5), and opens on client_list', () => {
     expect(Object.keys(NAVIGATION).sort()).toEqual([
       'client_detail',
       'client_form',
@@ -74,6 +77,7 @@ describe('navigation table', () => {
       'commission_detail',
       'commission_form',
       'commission_list',
+      'income_report',
       'payment_form',
       'payment_list',
       'progress_board',
@@ -82,12 +86,12 @@ describe('navigation table', () => {
     expect(START_PAGE).toBe('client_list')
   })
 
-  it('the navigation region lists "Khách hàng", "Đơn hàng", then "Tiến độ"; D2 pages, stage_change and the payment pages belong to "Đơn hàng"', () => {
+  it('the navigation region lists "Khách hàng", "Đơn hàng", "Tiến độ", then "Thu nhập"; D2 pages, stage_change and the payment pages belong to "Đơn hàng"', () => {
     const menu = (Object.keys(NAVIGATION) as (keyof typeof NAVIGATION)[]).flatMap((k) => {
       const m = NAVIGATION[k].menu
       return m === null ? [] : [m.label]
     })
-    expect(menu).toEqual(['Khách hàng', 'Đơn hàng', 'Tiến độ'])
+    expect(menu).toEqual(['Khách hàng', 'Đơn hàng', 'Tiến độ', 'Thu nhập'])
     expect([
       NAVIGATION.commission_list.section,
       NAVIGATION.commission_detail.section,
@@ -97,6 +101,7 @@ describe('navigation table', () => {
       NAVIGATION.payment_form.section,
     ]).toEqual(['commission_list', 'commission_list', 'commission_list', 'commission_list', 'commission_list', 'commission_list'])
     expect(NAVIGATION.progress_board.section).toBe('progress_board')
+    expect(NAVIGATION.income_report.section).toBe('income_report')
   })
 })
 
@@ -106,10 +111,11 @@ describe('AppRoot', () => {
     expect(await screen.findByRole('heading', { level: 2, name: 'Khách hàng' })).toBeTruthy()
     const nav = screen.getByRole('navigation', { name: 'Điều hướng chính' })
     const items = within(nav).getAllByRole('button')
-    expect(items.map((b) => b.textContent)).toEqual(['Khách hàng', 'Đơn hàng', 'Tiến độ'])
+    expect(items.map((b) => b.textContent)).toEqual(['Khách hàng', 'Đơn hàng', 'Tiến độ', 'Thu nhập'])
     expect(items[0].getAttribute('aria-current')).toBe('page')
     expect(items[1].getAttribute('aria-current')).toBeNull()
     expect(items[2].getAttribute('aria-current')).toBeNull()
+    expect(items[3].getAttribute('aria-current')).toBeNull()
   })
 
   it('"Tiến độ" opens progress_board, marked current; a commission of the board → its detail, "Đơn hàng" current', async () => {
@@ -134,6 +140,7 @@ describe('AppRoot', () => {
       ['Khách hàng', null],
       ['Đơn hàng', null],
       ['Tiến độ', 'page'],
+      ['Thu nhập', null],
     ])
     fireEvent.click(await screen.findByRole('button', { name: /^Chân dung/ }))
     expect(await screen.findByRole('heading', { level: 2, name: 'Chi tiết đơn hàng' })).toBeTruthy()
@@ -142,6 +149,7 @@ describe('AppRoot', () => {
       ['Khách hàng', null],
       ['Đơn hàng', 'page'],
       ['Tiến độ', null],
+      ['Thu nhập', null],
     ])
   })
 
@@ -167,6 +175,7 @@ describe('AppRoot', () => {
       ['Khách hàng', null],
       ['Đơn hàng', 'page'],
       ['Tiến độ', null],
+      ['Thu nhập', null],
     ])
     fireEvent.click(await screen.findByRole('button', { name: /^Chân dung/ }))
     expect(await screen.findByRole('heading', { level: 2, name: 'Chi tiết đơn hàng' })).toBeTruthy()
@@ -175,7 +184,40 @@ describe('AppRoot', () => {
       ['Khách hàng', null],
       ['Đơn hàng', 'page'],
       ['Tiến độ', null],
+      ['Thu nhập', null],
     ])
+  })
+
+  it('"Thu nhập" opens income_report, marked current, the other three not; the report loads once; leaving it marks the item it goes to', async () => {
+    const viewIncomeReport = answers<[IncomePeriodDraft], ViewResult<IncomeReportView>>({
+      kind: 'ok',
+      view: { periodText: 'Từ 01/01/2026 đến 30/09/2026 · Lập lúc 10:00 30/09/2026', sections: [], isEmpty: true, emptyText: 'Không có gì' },
+    })
+    renderWithLogic(
+      <AppRoot />,
+      fakeManageClient({ loadClientList: answers<[], ViewResult<ClientListView>>(LIST, LIST) }),
+      undefined,
+      undefined,
+      undefined,
+      fakeViewIncomeReport({ viewIncomeReport }),
+    )
+    await screen.findByRole('button', { name: 'An' })
+    fireEvent.click(within(screen.getByRole('navigation')).getByRole('button', { name: 'Thu nhập' }))
+    expect(await screen.findByRole('heading', { level: 2, name: 'Thu nhập' })).toBeTruthy()
+    const current = () => within(screen.getByRole('navigation')).getAllByRole('button').map((b) => [b.textContent, b.getAttribute('aria-current')])
+    expect(current()).toEqual([
+      ['Khách hàng', null],
+      ['Đơn hàng', null],
+      ['Tiến độ', null],
+      ['Thu nhập', 'page'],
+    ])
+    await screen.findByText('Không có gì')
+    expect(viewIncomeReport).toHaveBeenCalledExactlyOnceWith({ periodFrom: '2026-01-01', periodTo: '2026-09-30' })
+    // The page has no notice: nothing to write, nothing to confirm.
+    expect(screen.queryByRole('status')).toBeNull()
+    fireEvent.click(within(screen.getByRole('navigation')).getByRole('button', { name: 'Khách hàng' }))
+    expect(await screen.findByRole('heading', { level: 2, name: 'Khách hàng' })).toBeTruthy()
+    expect(current()[3]).toEqual(['Thu nhập', null])
   })
 
   it('D4: detail → "Thanh toán" → payment_list → "Ghi khoản thanh toán" → payment_form → saved → payment_list with the notice, once; "Đơn hàng" current throughout', async () => {

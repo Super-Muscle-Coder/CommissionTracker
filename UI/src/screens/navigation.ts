@@ -2,8 +2,8 @@
 // workflow: screens
 // clause: external
 // component: screens
-// last_updated_by: coding-agent@2026-09-30#1
-// last_updated_at: 2026-09-30T09:20:00+07:00
+// last_updated_by: coding-agent@2026-09-30#3
+// last_updated_at: 2026-10-01T20:22:00+07:00
 //
 // EXPERIENCES:
 //   - id: screens-EXP-001
@@ -531,10 +531,122 @@
 //       nội dung). NGƯỜI DÙNG: ba kịch bản của D4 (payment_list, payment_form, commission_detail)
 //       chạy trên hệ thống thật (EVIDENCE); §7.2 ở screens-EXP-033. CHECKPOINT: record_payment (mới), kit, screens, main. BẰNG CHỨNG: đủ ba
 //       loại (dưới đây, ở record_payment, kit, main).
+//   - id: screens-EXP-035
+//     content: >
+//       Chặng D5 (phiên 24), điều hướng. PageParams thêm income_report: null (một dòng expect-error
+//       mới trong app_root.test.tsx: trang không nhận tham số). NAVIGATION thêm income_report với menu
+//       "Thu nhập" SAU "Tiến độ" (bốn mục: Khách hàng, Đơn hàng, Tiến độ, Thu nhập; ba mục cũ không
+//       đổi chỗ), section income_report. LogicRouters thêm viewIncomeReport. Không trang nào khác mở
+//       nó và nó không mở trang nào. Kiểm thử cũ của app_root.test.tsx phải đổi vì ĐẾM mục (ba → bốn),
+//       đó chính là đặc tả D5 chứ không phải nới: bảng có mười một trang, vùng điều hướng bốn mục, các
+//       danh sách "mục nào đang mở" thêm dòng ['Thu nhập', null]; thêm một ca riêng: "Thu nhập" mở
+//       income_report, được đánh dấu, ba mục kia không, báo cáo tải đúng một lần với khoảng mặc định.
+//   - id: screens-EXP-036
+//     content: >
+//       income_report: Section page "Thu nhập" > hàng nút ngay dưới tiêu đề (CHỈ "Xem báo cáo", primary,
+//       busy khi tải; không có "Tải lại") > khung lỗi nhập (nếu có) > hai DateField "Từ ngày", "Đến ngày"
+//       (mỗi ô có nút xóa riêng "Xóa ngày bắt đầu", "Xóa ngày kết thúc", vì DateField của kit có nút đó
+//       khi ô có giá trị) > chỉ báo tải > vùng kết quả: Caption dòng phụ (khoảng và giờ lập của KẾT QUẢ),
+//       rồi mỗi đơn vị tiền một Section group (h3 = mã tiền) gồm DescriptionList "Tổng hợp <mã>" (ba dòng),
+//       Caption giải thích cố định, rồi DescriptionList "Thực nhận theo tháng, <mã>" hoặc EmptyState (không
+//       nút) với câu "Không có khoản thanh toán nào trong kỳ."; currencies rỗng → EmptyState không nút.
+//       Dòng phụ đặt TRONG vùng kết quả (không giữa tiêu đề và hàng nút) để hàng nút không đổi chỗ khi có
+//       kết quả (§7.2 nguyên tắc 7); đặc tả nói "dòng phụ dưới tiêu đề", tôi hiểu là dưới tiêu đề của báo
+//       cáo. Hai ô ngày không bị vô hiệu lúc tải (đặc tả chỉ nói nút).
+//   - id: screens-EXP-037
+//     content: >
+//       Hook use_income_report (gọi, giữ, chuyển): bản nháp đầu = defaultPeriod() của Routers (lúc vẽ lần đầu),
+//       cờ tải khởi tạo true (UI-4), tải lần đầu bằng viewIncomeReport(bản nháp lúc mở) qua ref opening; giữ
+//       HAI thứ riêng: report (kết quả gần nhất của một lần TẢI) và rejection (lần bản nháp bị Routers từ chối
+//       gần nhất). KHI NÀO thay báo cáo (một quyết định về thời điểm, switch trên kind, nhánh rejected so
+//       origin): ok, unreachable, contract_violation và rejected hệ thống thay report (nên lỗi tải BỎ báo cáo
+//       cũ, không bao giờ để số cũ cạnh lỗi); rejected input KHÔNG đụng report (báo cáo đang hiện còn nguyên) mà
+//       đặt rejection và tăng rejectionCount, là số trang trao cho DateField của ô lỗi đầu tiên (FIELD_ORDER
+//       period_from, period_to) làm focusRequest, nên mỗi lần từ chối lại đưa con trỏ về ô. Lần nhận kết quả
+//       khác xóa rejection. Phép cắn (b): đổi thành giữ báo cáo cũ khi có lỗi làm hỏng 6 ca.
+//   - id: screens-EXP-038
+//     content: >
+//       Kịch bản và e2e D5: income_report S1..S5 (src/screens/pages/income_report/walkthrough.yaml,
+//       tests/e2e/income_report_walkthrough.spec.ts). Dữ liệu mẫu RIÊNG của D5 (seedIncomeSample ở
+//       tests/tools/walkthrough_lib.mjs; chạy tay npm run walkthrough:app -- --income) là mẫu D4 giữ nguyên
+//       cộng khoản 5,05 USD tháng 8 cho "Chibi đôi" (đơn thu dư, USD lẻ hai tháng) và đơn "Bìa truyện (đã
+//       hủy)" 2.000.000 VND có cọc 500.000 VND ngày 20/08 rồi đổi sang cancelled qua change_stage thật; chờ
+//       AFTER_LAST_WRITE_MS sau lần ghi cuối (UI-9). Mọi paid_at là ngày cố định. Ba khoảng cố định
+//       (D5_PERIODS) và số đúng đã đo bằng backend thật (USD 20,05 / 0,00 / -7,55, VND 5.100.000 / 500.000 /
+//       6.000.000 cho 01/08–30/09/2026; hẹp hơn thì số trong kỳ đổi còn "Còn phải thu" không đổi; 2025 không
+//       khoản nào). ẢNH chỉ chụp sau khi đã nhập khoảng cố định; báo cáo của khoảng MẶC ĐỊNH (đổi theo ngày
+//       chạy) chỉ kiểm cấu trúc ở S1 (hai ô = 1/1 năm nay và hôm nay, dòng phụ khớp hai ô, hai phần USD, VND,
+//       "Còn phải thu" cố định) và không chụp. Tín hiệu đã tải là NỘI DUNG: dòng phụ của kết quả mang đúng
+//       khoảng vừa nhập (expectIncomeLoaded nhận khoảng), không phải trạng thái nút; mọi khẳng định chữ trên
+//       status đều lọc (lint:e2e đạt). Số yêu cầu tới /reports/income đếm bằng page.on('request') để chứng
+//       minh lỗi nhập KHÔNG gửi gì. Luật phủ D5: ok (S1 khoảng hai tháng hai đơn vị tiền, S2 thu hẹp và "Còn
+//       phải thu" không đổi, S3 khoảng không khoản nào); rejected_input (S4: bắt đầu sau kết thúc, ô trống,
+//       cả hai trống); unreachable rồi ok (S5: báo cáo cũ biến mất, bật lại xem được); không rejected_system.
+//   - id: screens-EXP-039
+//     content: >
+//       Tự kiểm I6 phiên 24, trang income_report, năm góc. HỢP ĐỒNG: Data Schema 9.0.1, API Contract 4.0.0
+//       approved, view_income_report đã_hoàn_thiện; Configs ghi data 9.0.1, api 4.0.0; bảng nhãn một lời gọi
+//       khớp từng dòng (kiểm thử so nguyên bảng); đầu vào gửi đúng hai khóa trên query. Tìm trong src và tests
+//       (grep): không có đường dẫn nào ngoài /reports/income cho workflow mới; không /watermark-profiles,
+//       /watermark-strengths, /artworks, /verifications, /reminders, /backups; không confirm(, alert(, prompt(.
+//       RANH GIỚI: npm run check đạt (R1–R14, không ngoại lệ lint mới); Services chỉ quyết định trình bày
+//       (view_income_report-EXP-003, không cộng số, không cộng đơn vị tiền); Routers chỉ kiểm ngày (formats.date
+//       và luật thứ tự chép từ hợp đồng, xem NOTE ở view_income_report); hook viết lại được bằng gọi, giữ,
+//       chuyển (phép cắn b); Caption không mang khái niệm nghiệp vụ (text: string). NGƯỜI DÙNG: S1..S5 chạy trên
+//       hệ thống thật, đạt (EVIDENCE). CHECKPOINT: view_income_report (mới), kit, screens, main. BẰNG CHỨNG: đủ
+//       ba loại (check, kịch bản bấm thử, luật cắn của lint không đổi nên còn hiệu lực).
+//   - id: screens-EXP-040
+//     content: >
+//       §7.2 cho D5. (1) Hành động chính: "Xem báo cáo" (primary, duy nhất ở hàng nút). Đạt. (2) Không dày: ba
+//       con số mỗi đơn vị tiền, một dòng giải thích, danh sách tháng chỉ tháng có khoản, không bảng, không biểu
+//       đồ, không tổng các đơn vị tiền. Đạt. (3) Nhãn rõ nghĩa: "Còn phải thu (mọi đơn chưa hủy, tính tới lúc
+//       lập)" nói ngay trong nhãn rằng số này không theo khoảng thời gian, và dòng giải thích nhắc lại; "Thực nhận
+//       trong kỳ" nói là đã trừ hoàn tiền. Ghi nhận (không chặn): danh sách tháng không có tiêu đề nhìn thấy, chỉ có
+//       aria-label "Thực nhận theo tháng, <mã>"; người đọc hiểu qua câu giải thích ngay trên nó và dòng "Tháng …"; nếu
+//       Orchestrator muốn một tiêu đề thì cần chốt chữ ở D5. (4) Lỗi nhập ngay dưới ô, con trỏ tới ô lỗi đầu tiên
+//       (e2e S4, toBeFocused: "Đến ngày"; "Từ ngày" khi trống), báo cáo đang hiện không mất; báo cáo hỏng thì nói rõ
+//       và bỏ số cũ (S5). Đạt. (5) Không có thao tác khó quay lại (chỉ đọc). Đạt. (6) Rỗng: câu "Không có khoản thanh
+//       toán nào trong kỳ, và không có đơn nào còn phải thu." không nút, đúng đặc tả (trang này không có việc tiếp theo).
+//       Đạt. (7) Điều hướng ổn định: "Thu nhập" thêm SAU "Tiến độ", ba mục cũ không đổi chỗ; hàng nút ngay dưới tiêu đề
+//       và nút không đổi chỗ khi báo cáo hiện (e2e S1 đo vị trí: "Xem báo cáo" trên ô "Từ ngày"). Đạt. ĐỀ XUẤT: income_report
+//       hoàn_tất, chờ Orchestrator audit và Project Owner tự chạy tay npm run walkthrough:app -- --income.
 //
 // UNSOLVED_PROBLEMS: []
 //
 // EVIDENCE:
+//   - claim: >
+//       Phiên 24: trang income_report và mục điều hướng "Thu nhập" đạt kiểm thử dựng trang; ma trận phủ I5.4.
+//     how: >
+//       Trong UI/: npm run check; npx vitest run src/screens/pages/income_report src/screens/tests/app_root.test.tsx.
+//     result: >
+//       IncomeReport.test.tsx 23 đạt (lần vẽ đầu có chỉ báo tải, "Xem báo cáo" bận, hai ô đã có khoảng mặc định,
+//       Routers chưa gọi; tự tải một lần với bản nháp lúc mở; nhãn; hàng nút chỉ "Xem báo cáo"; tải lỗi lần đầu mà
+//       hai ô vẫn giữ giá trị; hai đơn vị tiền đúng thứ tự, ba dòng số, giải thích, danh sách tháng; by_month rỗng;
+//       currencies rỗng không nút; dòng phụ lấy từ KẾT QUẢ; gửi đúng bản nháp; đang tải thì nút bận, không gửi hai
+//       lần, báo cáo cũ còn; lỗi nhập: câu dưới ô, khung lỗi, báo cáo cũ còn, con trỏ tới ô lỗi đầu tiên, lần hai về
+//       lại ô, lần chấp nhận sau xóa lỗi; rejected hệ thống 400/409/500 bỏ báo cáo cũ; 400 khác 409; unreachable rồi
+//       thử lại với cùng bản nháp; contract_violation không số, không "Lập lúc"; không status, dialog hay xác nhận).
+//       app_root.test.tsx 8 đạt (bảng mười một trang; bốn mục; "Thu nhập" được đánh dấu, ba mục kia không; ba danh sách
+//       "mục nào đang mở" thêm dòng Thu nhập; một ca riêng cho trang). Toàn layer 1303 (mốc 1100).
+//     recorded_at: 2026-10-01T20:22:00+07:00
+//   - claim: >
+//       Kịch bản bấm thử income_report S1..S5 chạy trên hệ thống thật, đạt, có ảnh, đúng tên người chạy; e2e 5 lần
+//       liên tiếp; spec riêng 10 lần liên tiếp; một lần không biến để UI/evidence nguyên vẹn.
+//     how: >
+//       Desktop đã build. Trong UI/: scratchpad run_loop.sh: spec income_report riêng 10 lần (npx playwright test …
+//       income_report, 23:45–23:50); CT_WALKTHROUGH_RUNNER=coding-agent@2026-09-30#3 npm run e2e từng lượt một đến khi
+//       đủ 5 lần liên tiếp đạt (19:57–20:10 ngày 2026-10-01); rồi một lần không đặt biến với SHA-256 của mọi tệp dưới
+//       UI/evidence trước và sau. Bản ghi UI/evidence/walkthroughs/income_report/income_report-run.json.
+//     result: >
+//       Spec riêng: 10/10 "5 passed" (21–25 s). e2e: 5/5 "59 passed" (2,9–3,0 phút; mốc 54), lượt 19:57, 20:01, 20:04,
+//       20:07, 20:10. Trước đó 8 lượt hỏng/không tính, xem main-EXP-020 (2 spec cũ đếm ba mục điều hướng: sửa và thêm
+//       Thu nhập; rồi các lượt máy nghẽn, trace giữ ở UI/test-results/ui11_traces). Lần không biến: "59 passed
+//       (2.8m)", "UI/evidence 99 tệp, SHA-256 gộp 40da53cd… trước và sau, không đổi", runner nháp "unknown (Playwright,
+//       tests/e2e/income_report_walkthrough.spec.ts)". Bản ghi lần cuối có tên: mọi bước passed true, runner
+//       "coding-agent@2026-09-30#3 (Playwright, tests/e2e/income_report_walkthrough.spec.ts)": S1 (ok), S2 (ok), S3 (ok),
+//       S4 (rejected_input), S5 (unreachable, ok). Ảnh: income_report-S1..S5, -S3-edited, -S4-from-after-to,
+//       -S4-empty-field, -S5-unreachable. Mọi ảnh sau khi nhập khoảng cố định.
+//     recorded_at: 2026-10-01T20:22:00+07:00
 //   - claim: >
 //       Phiên 17: kiểm thử dựng trang phủ lần vẽ đầu (UI-4), hàng nút dưới tiêu đề
 //       và focus tới ô lỗi đầu tiên, cùng mọi ca cũ.
@@ -918,6 +1030,7 @@ import { ClientList } from './pages/client_list/ClientList'
 import { CommissionDetail } from './pages/commission_detail/CommissionDetail'
 import { CommissionForm } from './pages/commission_form/CommissionForm'
 import { CommissionList } from './pages/commission_list/CommissionList'
+import { IncomeReport } from './pages/income_report/IncomeReport'
 import { PaymentForm } from './pages/payment_form/PaymentForm'
 import { PaymentList } from './pages/payment_list/PaymentList'
 import { ProgressBoard } from './pages/progress_board/ProgressBoard'
@@ -930,7 +1043,7 @@ export type LayoutKey = 'main_layout'
 // The parameters each page opens with, typed per page
 // (ui_decomposition.md §5, "Điều hướng giữa các trang khách hàng";
 // "Chặng D2", "Điều hướng của D2"; "Chặng D3", "Điều hướng của D3";
-// "Chặng D4", "Điều hướng của D4").
+// "Chặng D4", "Điều hướng của D4"; "Chặng D5", "Điều hướng của D5").
 // stage_change receives the commission's title to show, handed by
 // commission_detail (it does not call get_commission again); so do
 // payment_list and payment_form (D4).
@@ -945,6 +1058,7 @@ export type PageParams = {
   stage_change: { commission_id: string; title: string }
   payment_list: { commission_id: string; title: string }
   payment_form: { commission_id: string; title: string }
+  income_report: null
 }
 
 // Keys of the pages (ui_decomposition.md §5), one per page that is built.
@@ -982,7 +1096,7 @@ export const START_ROUTE: Route = { page: START_PAGE, params: null }
 
 // One entry per page. The type ties each page to the component that takes
 // exactly its parameters. The navigation region lists the entries that have a
-// menu, in this order: "Khách hàng", "Đơn hàng", then "Tiến độ" (§5); a later
+// menu, in this order: "Khách hàng", "Đơn hàng", "Tiến độ", then "Thu nhập" (§5); a later
 // stage adds its entries after these, never moving them. stage_change is a
 // step of the commission detail: its item is "Đơn hàng" (D3).
 export const NAVIGATION: { readonly [K in PageKey]: NavigationEntry<K> } = {
@@ -1012,4 +1126,10 @@ export const NAVIGATION: { readonly [K in PageKey]: NavigationEntry<K> } = {
   // Payments are a step of the commission detail (D4): the "Đơn hàng" item is the current one.
   payment_list: { layout: 'main_layout', component: PaymentList, section: 'commission_list', menu: null },
   payment_form: { layout: 'main_layout', component: PaymentForm, section: 'commission_list', menu: null },
+  income_report: {
+    layout: 'main_layout',
+    component: IncomeReport,
+    section: 'income_report',
+    menu: { label: 'Thu nhập', route: { page: 'income_report', params: null } },
+  },
 }

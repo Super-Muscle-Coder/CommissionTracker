@@ -414,3 +414,62 @@ export async function reloadPayments(page: Page, outcome: 'list' | 'unreachable'
       break
   }
 }
+
+// --- D5: income ----------------------------------------------------------------------
+
+// "dd/mm/yyyy" of a "YYYY-MM-DD", cut from the string as the app does.
+export const dmy = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}`
+
+// The sub-line of a loaded report: "Từ … đến … · Lập lúc HH:mm dd/mm/yyyy".
+const REPORT_LINE = /^Từ \d{2}\/\d{2}\/\d{4} đến \d{2}\/\d{2}\/\d{4} · Lập lúc \d{2}:\d{2} \d{2}\/\d{2}\/\d{4}$/
+export const incomeLine = (page: Page) => page.getByText(REPORT_LINE)
+
+// The report is loaded: its sub-line is shown, with no loading status and no alert.
+// Read from the content, never from the state of a button (UI-4). With a period
+// given, the sub-line must name that period: a report of another period (the
+// one before) cannot satisfy the wait.
+export async function expectIncomeLoaded(page: Page, period?: readonly [string, string]): Promise<void> {
+  if (period === undefined) {
+    await expect(incomeLine(page)).toBeVisible({ timeout: 30_000 })
+  } else {
+    await expect(incomeLine(page)).toContainText(`Từ ${dmy(period[0])} đến ${dmy(period[1])} · Lập lúc `, { timeout: 30_000 })
+  }
+  await expect(page.getByRole('status').filter({ hasText: 'Đang lập báo cáo' })).toHaveCount(0)
+  await expect(page.getByRole('alert')).toHaveCount(0)
+}
+
+// Open the report through the navigation region ("Thu nhập"): the page is built
+// anew and loads the report of its default period by itself.
+export async function goToIncome(page: Page): Promise<void> {
+  await page.getByRole('navigation', { name: 'Điều hướng chính' }).getByRole('button', { name: 'Thu nhập' }).click()
+  await expect(page.getByRole('heading', { level: 2, name: 'Thu nhập' })).toBeVisible()
+  await expectIncomeLoaded(page)
+}
+
+export const incomeFrom = (page: Page) => page.getByLabel('Từ ngày', { exact: true })
+export const incomeTo = (page: Page) => page.getByLabel('Đến ngày', { exact: true })
+
+// Choose a period in the two fields (the values of the native date inputs).
+export async function chooseIncomePeriod(page: Page, period: readonly [string, string]): Promise<void> {
+  await incomeFrom(page).fill(period[0])
+  await incomeTo(page).fill(period[1])
+}
+
+// Choose a period, press "Xem báo cáo", wait for the report OF THAT PERIOD.
+export async function viewIncome(page: Page, period: readonly [string, string]): Promise<void> {
+  await chooseIncomePeriod(page, period)
+  await page.getByRole('button', { name: 'Xem báo cáo', exact: true }).click()
+  await expectIncomeLoaded(page, period)
+}
+
+// The currency sections, in the order shown.
+export const incomeCurrencies = (page: Page) => page.getByRole('main').getByRole('heading', { level: 3 }).allInnerTexts()
+
+// [term, details] of the three numbers of one currency.
+export const incomeNumbers = (page: Page, currency: string) => detailEntries(page, `Tổng hợp ${currency}`)
+
+// [term, details] of the month list of one currency ([] when it has none: the sentence is shown instead).
+export async function incomeMonths(page: Page, currency: string): Promise<[string, string[]][]> {
+  const name = `Thực nhận theo tháng, ${currency}`
+  return (await page.getByLabel(name).count()) === 0 ? [] : detailEntries(page, name)
+}
