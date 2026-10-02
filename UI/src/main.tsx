@@ -2,8 +2,8 @@
 // workflow: main
 // clause: external
 // component: main
-// last_updated_by: coding-agent@2026-09-30#3
-// last_updated_at: 2026-10-01T20:25:00+07:00
+// last_updated_by: coding-agent@2026-10-01#1
+// last_updated_at: 2026-10-01T22:04:00+07:00
 //
 // EXPERIENCES:
 //   - id: main-EXP-001
@@ -316,10 +316,53 @@
 //       trang bị đóng sau lỗi khác, không phải hết giờ. Trong 4 lượt khỏe (spec riêng 10 lượt, mốc, 5 lượt cuối) không
 //       lần nào chụp quá 2,2 giây. Điều mới so với phiên 22: hết giờ cũng xảy ra khi backend ĐANG CHẠY, ở trang không
 //       liên quan tới việc tắt backend; chúng đi thành cụm trong một giai đoạn máy chậm, không rải đều.
+//   - id: main-EXP-023
+//     content: >
+//       UI-11, thí nghiệm có đối chứng (phiên 25). Công cụ tests/tools/ui11_probe.mjs (không thuộc npm run e2e hay
+//       check): mở ứng dụng thật bằng Playwright _electron (Desktop đã build, fixture backend, thư mục dữ liệu tạm),
+//       trước mỗi lần chụp bấm một mục điều hướng (trang vẽ thật), chụp page.screenshot với giới hạn riêng 10 s, ghi
+//       ms từng lần vào test-results/ui11_probe/<nhãn>.jsonl. Electron 44.4.5, Chromium 152.0.7977.130, Windows 11.
+//       KẾT QUẢ 4a (mỗi điều kiện 20 lần): bình thường 0 treo (lớn nhất 107 ms); CHE KÍN bằng một cửa sổ cùng kích
+//       thước, luôn ở trên: 0 treo (85 ms); MẤT TIÊU ĐIỂM (cửa sổ nhỏ ở góc, có tiêu điểm): 0 treo (95 ms);
+//       THU NHỎ (BrowserWindow.minimize()): 11/20 treo đủ 10 s, các lần còn lại 97–2108 ms. Chỉ thu nhỏ (cửa sổ
+//       isVisible()=false) làm lệnh chụp treo. Khớp tài liệu Electron (BrowserWindow, backgroundThrottling): trên
+//       Windows trang chỉ "hidden" khi cửa sổ thu nhỏ hoặc bị ẩn; che kín không đủ (chỉ macOS tính che kín). Chưa kiểm
+//       được rằng Chromium thật sự coi cửa sổ bị che là occluded; chỉ biết là nó không treo. KẾT QUẢ 4b, chỉ điều
+//       kiện thu nhỏ, 20 lần mỗi bộ cờ, cờ đặt TRƯỚC đường dẫn ứng dụng, và đọc lại trong tiến trình Electron bằng
+//       app.commandLine (hasSwitch, getSwitchValue) nên chắc chắn có hiệu lực: --disable-renderer-backgrounding
+//       11/20; --disable-backgrounding-occluded-windows + --disable-features=CalculateNativeWinOcclusion 10/20;
+//       --disable-background-timer-throttling 10/20; renderer-backgrounding + timer-throttling 10/20; cả bốn cờ 3/20
+//       ở lần đầu nhưng 10/20 ở lần lặp lại (nên 3/20 là ngẫu nhiên). Không cờ nào hết treo. NGUỒN: Electron docs
+//       "Command Line Switches" (chỉ ghi --disable-renderer-backgrounding) và "BrowserWindow" (backgroundThrottling,
+//       visibilityState); hai cờ còn lại là cờ của Chromium, không có trong tài liệu Electron, chưa tra được tài liệu
+//       Chromium trực tiếp. Việc 4c KHÔNG làm: không thêm cờ vào harness, Desktop hay ứng dụng thật. KẾT LUẬN: lệnh
+//       chụp treo khi cửa sổ Electron bị thu nhỏ; chưa chứng minh được cửa sổ e2e bị thu nhỏ lúc hết giờ ở các lần
+//       phiên 19-24 (không có dữ liệu trạng thái cửa sổ lúc đó). Nếu muốn khẳng định, lần sau có thể ghi isMinimized
+//       cùng thời gian chụp trong harness (chỉ ghi, không đổi hành vi). Trong phiên này, sáu lượt e2e đầy đủ không
+//       có lần hết giờ nào (87 lần chụp mỗi lượt, lớn nhất 127 ms ở năm lượt có nhật ký).
 //
 // UNSOLVED_PROBLEMS: []
 //
 // EVIDENCE:
+//   - claim: >
+//       Phiên 25: môi trường, mốc, và kết quả cuối; mốc %APPDATA% không đổi.
+//     how: >
+//       node --version; npm --version; git status --short; trong UI/: npm ci; npm run check (mốc và cuối);
+//       CT_WALKTHROUGH_RUNNER=coding-agent@2026-10-01#1 npm run e2e (mốc; 5 lần liên tiếp cuối); một lần không biến
+//       với SHA-256 UI/evidence trước và sau; node tests/tools/ui11_probe.mjs [--n=20] [--only=...] [--flags=...]
+//       [--label=...]; tên, kích thước, giờ ghi mọi tệp trong %APPDATA%\CommissionTracker đầu (21:12) và cuối phiên
+//       (22:02).
+//     result: >
+//       Node v24.14.1; npm 11.11.0; git status đầu phiên rỗng; npm ci "found 0 vulnerabilities". Mốc: check "Tests
+//       1303 passed (1303)", e2e "59 passed (2.9m)". Cuối: check exit 0 (tsc -b, eslint --max-warnings 0, stylelint,
+//       check_contrast "19 text pairs ... all pass", check_layer "147 files", check_e2e_status, "Test Files 30 passed",
+//       "Tests 1303 passed (1303)"); e2e 5/5 "59 passed" (2,8–2,9 phút), không lần chụp nào hết giờ (87 lần mỗi lượt,
+//       lớn nhất 127 ms); lần không biến "59 passed", UI/evidence không đổi (99 tệp, băm toàn thư mục trước và sau).
+//       %APPDATA%: data.db 114688 byte, data.db.lock 0 byte, cùng giờ ghi 2026-09-28 21:09 — không đổi. UI-12:
+//       StageChange.test.tsx 3/50 hỏng trước khi sửa, 50/50 đạt sau (xem EVIDENCE của screens). Không eslint-disable,
+//       không ngoại lệ lint mới, không phụ thuộc mới. Công cụ ui11_probe.mjs phải sửa một lỗi lint (no-undef
+//       'document') bằng cách đưa biểu thức dạng chuỗi vào page.evaluate.
+//     recorded_at: 2026-10-01T22:04:00+07:00
 //   - claim: >
 //       Phiên 24: môi trường, mốc, và kết quả cuối; mốc %APPDATA% không đổi.
 //     how: >

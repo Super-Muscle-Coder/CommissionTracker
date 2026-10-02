@@ -5,7 +5,7 @@
  */
 export const VIEW_INCOME_REPORT_CONFIGS = {
   // [CONTRACT] Versions of the supreme contract these values realize.
-  contract: { apiContract: '4.0.0', dataSchema: '9.0.1' },
+  contract: { apiContract: '4.0.0', dataSchema: '9.0.2' },
 
   // The one endpoint this workflow calls (.design/ui_decomposition.md, "Chặng
   // D5", table of calls), as declared in api_contract.yaml 4.0.0. labels: every
@@ -26,17 +26,17 @@ export const VIEW_INCOME_REPORT_CONFIGS = {
   },
 
   formats: {
-    // [CONTRACT] data_schema.yaml 9.0.1 clause_a_common.formats.date:
+    // [CONTRACT] data_schema.yaml 9.0.2 clause_a_common.formats.date:
     // "ISO 8601 calendar date, e.g. 2026-10-01". The digits are checked here; that
     // the day exists is checked by the code that reads it.
     date: /^\d{4}-\d{2}-\d{2}$/,
-    // [CONTRACT] data_schema.yaml 9.0.1 clause_a_common.formats.timestamp:
+    // [CONTRACT] data_schema.yaml 9.0.2 clause_a_common.formats.timestamp:
     // "ISO 8601 with UTC offset, e.g. 2026-09-23T14:05:00+07:00" (Z is offset zero).
     timestamp: /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:\d{2})$/,
-    // [CONTRACT] data_schema.yaml 9.0.1 clause_a_common.types.currency_code:
+    // [CONTRACT] data_schema.yaml 9.0.2 clause_a_common.types.currency_code:
     // "string (ISO 4217 alphabetic code, e.g. VND, USD)" — three capital letters.
     currencyCode: /^[A-Z]{3}$/,
-    // [CONTRACT] data_schema.yaml 9.0.1 view_income_report.output_guaranteed.income_report:
+    // [CONTRACT] data_schema.yaml 9.0.2 view_income_report.output_guaranteed.income_report:
     // "by_month: list[object { month: string (YYYY-MM), … }]".
     month: /^\d{4}-(0[1-9]|1[0-2])$/,
   },
@@ -62,9 +62,10 @@ export const VIEW_INCOME_REPORT_CONFIGS = {
   // [UI-ONLY] Message under a field that failed the format check in Routers,
   // by field (keys are the contract's input names) and reason
   // (ui_decomposition.md D5, "Kiểm trước khi gửi"). period_to also carries the
-  // rule "period_from after period_to is invalid" (data_schema.yaml 9.0.1,
-  // view_income_report.description), reported as violates_type_constraint. A
-  // pair not listed falls back to ResultMessages.input.
+  // rule of its type, "date (on or after period_from)" ([CONTRACT]
+  // data_schema.yaml 9.0.2, view_income_report.input_expected.period_to.type),
+  // reported as violates_type_constraint. A pair not listed falls back to
+  // ResultMessages.input.
   inputMessages: {
     period_from: { required: 'Chọn ngày bắt đầu.', not_date: 'Ngày không hợp lệ.' },
     period_to: {

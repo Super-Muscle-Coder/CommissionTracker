@@ -2,8 +2,8 @@
 // workflow: screens
 // clause: external
 // component: screens
-// last_updated_by: coding-agent@2026-09-30#3
-// last_updated_at: 2026-10-01T20:22:00+07:00
+// last_updated_by: coding-agent@2026-10-01#1
+// last_updated_at: 2026-10-01T22:03:00+07:00
 //
 // EXPERIENCES:
 //   - id: screens-EXP-001
@@ -610,10 +610,30 @@
 //       Đạt. (7) Điều hướng ổn định: "Thu nhập" thêm SAU "Tiến độ", ba mục cũ không đổi chỗ; hàng nút ngay dưới tiêu đề
 //       và nút không đổi chỗ khi báo cáo hiện (e2e S1 đo vị trí: "Xem báo cáo" trên ô "Từ ngày"). Đạt. ĐỀ XUẤT: income_report
 //       hoàn_tất, chờ Orchestrator audit và Project Owner tự chạy tay npm run walkthrough:app -- --income.
+//   - id: screens-EXP-041
+//     content: >
+//       UI-12 (phiên 25), nguyên nhân: ca "rejected input (no stage chosen)" của StageChange.test.tsx khẳng định
+//       isFocused(select()) NGAY sau findByRole('alert'), và ca "shown for a closing stage" khẳng định
+//       isFocused(button('Xác nhận')) ngay sau findByRole('group'). Focus do kit đặt trong useEffect (passive):
+//       SelectField.tsx:40 (effect [focusRequest, disabled]) và ConfirmPanel.tsx:32; effect passive chạy SAU lần
+//       commit đã đưa alert/panel vào DOM, nên findBy có thể trả về trước khi focus được đặt (phụ thuộc thời điểm
+//       lập lịch, hiện ra trên Windows). Không phải lỗi sản phẩm: focus tới nơi ngay sau đó. Sửa ở kiểm thử, không
+//       ở mã: hai dòng nay là await vi.waitFor(() => expect(isFocused(...)).toBe(true)). Các tệp cùng luật
+//       (ClientForm, CommissionForm, PaymentForm, IncomeReport, PaymentList) đã chờ focus bằng waitFor từ trước, nên
+//       không sửa. Mã kit và trang không đổi, hành vi không đổi.
 //
 // UNSOLVED_PROBLEMS: []
 //
 // EVIDENCE:
+//   - claim: >
+//       UI-12: StageChange.test.tsx hết không tất định.
+//     how: >
+//       Trong UI/: for i in 1..50: npx vitest run src/screens/pages/stage_change/tests/StageChange.test.tsx, đếm lần
+//       exit khác 0; làm trước và sau khi sửa.
+//     result: >
+//       Trước khi sửa: 3 lần hỏng trong 50. Sau khi sửa: 0 trong 50 (50/50). Chưa chạy lại tệp khác vì không sửa tệp
+//       nào khác.
+//     recorded_at: 2026-10-01T22:03:00+07:00
 //   - claim: >
 //       Phiên 24: trang income_report và mục điều hướng "Thu nhập" đạt kiểm thử dựng trang; ma trận phủ I5.4.
 //     how: >

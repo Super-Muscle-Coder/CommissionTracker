@@ -5,8 +5,8 @@
     {
       "step": "S1",
       "passed": true,
-      "runner": "coding-agent@2026-09-30#3 (Playwright, tests/e2e/client_form_walkthrough.spec.ts)",
-      "finished_at": "2026-10-01T13:10:34.577Z",
+      "runner": "coding-agent@2026-10-01#1 (Playwright, tests/e2e/client_form_walkthrough.spec.ts)",
+      "finished_at": "2026-10-01T14:53:08.668Z",
       "screenshot": "evidence/walkthroughs/client_form/client_form-S1.png",
       "covers": [
         "ok"
@@ -15,8 +15,8 @@
     {
       "step": "S2",
       "passed": true,
-      "runner": "coding-agent@2026-09-30#3 (Playwright, tests/e2e/client_form_walkthrough.spec.ts)",
-      "finished_at": "2026-10-01T13:10:34.949Z",
+      "runner": "coding-agent@2026-10-01#1 (Playwright, tests/e2e/client_form_walkthrough.spec.ts)",
+      "finished_at": "2026-10-01T14:53:09.041Z",
       "screenshot": "evidence/walkthroughs/client_form/client_form-S2.png",
       "covers": [
         "rejected_input"
@@ -25,8 +25,8 @@
     {
       "step": "S3",
       "passed": true,
-      "runner": "coding-agent@2026-09-30#3 (Playwright, tests/e2e/client_form_walkthrough.spec.ts)",
-      "finished_at": "2026-10-01T13:10:35.368Z",
+      "runner": "coding-agent@2026-10-01#1 (Playwright, tests/e2e/client_form_walkthrough.spec.ts)",
+      "finished_at": "2026-10-01T14:53:09.440Z",
       "screenshot": "evidence/walkthroughs/client_form/client_form-S3.png",
       "covers": [
         "ok"
@@ -35,8 +35,8 @@
     {
       "step": "S4",
       "passed": true,
-      "runner": "coding-agent@2026-09-30#3 (Playwright, tests/e2e/client_form_walkthrough.spec.ts)",
-      "finished_at": "2026-10-01T13:10:35.671Z",
+      "runner": "coding-agent@2026-10-01#1 (Playwright, tests/e2e/client_form_walkthrough.spec.ts)",
+      "finished_at": "2026-10-01T14:53:09.703Z",
       "screenshot": "evidence/walkthroughs/client_form/client_form-S4.png",
       "covers": [
         "rejected_input"
@@ -45,8 +45,8 @@
     {
       "step": "S5",
       "passed": true,
-      "runner": "coding-agent@2026-09-30#3 (Playwright, tests/e2e/client_form_walkthrough.spec.ts)",
-      "finished_at": "2026-10-01T13:10:42.045Z",
+      "runner": "coding-agent@2026-10-01#1 (Playwright, tests/e2e/client_form_walkthrough.spec.ts)",
+      "finished_at": "2026-10-01T14:53:16.102Z",
       "screenshot": "evidence/walkthroughs/client_form/client_form-S5.png",
       "covers": [
         "unreachable",

@@ -58,7 +58,7 @@ export function createViewIncomeReportAdapters(http: HttpClient, cfg: ViewIncome
   const currencyCode = z.string().regex(cfg.formats.currencyCode, 'expected currency_code (ISO 4217 alphabetic code)')
   const month = z.string().regex(cfg.formats.month, 'expected a month as YYYY-MM')
   const safeInteger = z.number().refine(Number.isSafeInteger, 'expected an integer within ±(2^53−1)')
-  // data_schema.yaml 9.0.1 view_income_report.output_guaranteed.income_report.
+  // data_schema.yaml 9.0.2 view_income_report.output_guaranteed.income_report.
   const incomeReport: z.ZodType<IncomeReport> = z.object({
     period_from: date,
     period_to: date,

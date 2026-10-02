@@ -2,8 +2,8 @@
 // workflow: view_income_report
 // clause: external
 // component: services
-// last_updated_by: coding-agent@2026-09-30#3
-// last_updated_at: 2026-10-01T20:20:00+07:00
+// last_updated_by: coding-agent@2026-10-01#1
+// last_updated_at: 2026-10-01T22:02:30+07:00
 //
 // EXPERIENCES:
 //   - id: view_income_report-EXP-001
@@ -13,7 +13,7 @@
 //       /reports/income { 200 ok, 400 ERR_VALIDATION, 409 ERR_OUT_OF_RANGE, 500 ERR_STORAGE_IO }. Hai đầu vào
 //       period_from, period_to không nằm trên đường dẫn và đây là GET, nên đi trên QUERY, đặt tên theo đầu vào
 //       (endpoint_forms.http); không có thân. 400 và 409 có HAI câu khác nhau (kiểm thử). errorMessages theo
-//       lời gọi như record_payment; kiểm thử "mọi mã có câu" duyệt từ bảng nhãn. Configs ghi Data Schema 9.0.1,
+//       lời gọi như record_payment; kiểm thử "mọi mã có câu" duyệt từ bảng nhãn. Configs ghi Data Schema 9.0.2 (từ phiên 25; trước đó 9.0.1),
 //       API Contract 4.0.0. Workflow không gọi địa chỉ nào khác (tìm trong src và tests: không có đường dẫn
 //       nào ngoài /reports/income trong Configs của nó).
 //   - id: view_income_report-EXP-002
@@ -115,8 +115,22 @@
 //       khoản nào), S4 (rejected_input, không gửi gì: số yêu cầu tới /reports/income không đổi), S5 (unreachable
 //       rồi ok). Số liệu so với backend thật: USD 20,05 / 0,00 / -7,55, VND 5.100.000 / 500.000 / 6.000.000.
 //     recorded_at: 2026-10-01T20:12:00+07:00
+//   - claim: >
+//       CT-5 (phiên 25): Configs ghi Data Schema 9.0.2; chú thích trích đúng `type` của period_to; hành vi không đổi.
+//     how: >
+//       Trong UI/: npm run check; npx vitest run src/logic/workflows/view_income_report src/screens/pages/income_report;
+//       tìm "9.0.1" trong src/logic/workflows/view_income_report (chỉ còn trong chú thích lịch sử của khối này).
+//     result: >
+//       "Tests 1303 passed (1303)" (không đổi: chỉ đổi giá trị mong đợi của ca "Configs name Data Schema 9.0.2 and API
+//       Contract 4.0.0"); e2e income_report vẫn đạt trong 59 ca. Không đổi logic nào của Routers, Services, Adapters.
+//     recorded_at: 2026-10-01T22:02:30+07:00
 //
 // NOTES:
+//   - content: >
+//       TRẢ LỜI câu hỏi bên dưới (CT-5, phiên 25): Orchestrator đã chọn phương án A, Data Schema 9.0.2 đưa luật vào
+//       `type` của period_to ("date (on or after period_from)"). Luật nay là ràng buộc trong ngoặc của `type`, giao
+//       diện được phép kiểm (iWCA §5, nhãn [CONTRACT]); Configs, Routers (readDraft) trích đúng nguồn mới.
+//     written_at: 2026-10-01
 //   - content: >
 //       Câu hỏi cho Orchestrator (không chặn): luật "ngày bắt đầu sau ngày kết thúc" nằm ở phần description của
 //       view_income_report trong data_schema.yaml 9.0.1 ("period_from after period_to is invalid"), không nằm

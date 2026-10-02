@@ -180,7 +180,8 @@ describe('page stage_change: saving', () => {
     expect(alert.textContent).toContain('Chưa lưu được')
     expect(alert.textContent).toContain('Một số ô chưa đúng định dạng.')
     expect(errorOf(select())).toBe('Chọn giai đoạn mới.')
-    expect(isFocused(select())).toBe(true)
+    // The kit moves the focus in a passive effect, after the commit that shows the alert (UI-12).
+    await vi.waitFor(() => expect(isFocused(select())).toBe(true))
     expect(note().value).toBe('giữ nguyên')
     expect(saveStageChange).toHaveBeenCalledOnce()
     expect(navigate).not.toHaveBeenCalled()
@@ -259,7 +260,7 @@ describe('page stage_change: the in-page confirmation of a closing stage', () =>
     fireEvent.click(button('Lưu'))
     const panel = await screen.findByRole('group', { name: 'Xác nhận đổi giai đoạn' })
     expect(panel.textContent).toContain(CONFIRM_TEXT)
-    expect(isFocused(button('Xác nhận'))).toBe(true)
+    await vi.waitFor(() => expect(isFocused(button('Xác nhận'))).toBe(true))
     // Services answered "needs confirmation" (confirmed = false): change_stage has not been sent.
     expect(saveStageChange).toHaveBeenCalledExactlyOnceWith(TARGET, { toStage: 'delivered', note: '' }, false)
     expect(navigate).not.toHaveBeenCalled()

@@ -1,6 +1,6 @@
 /**
  * Entities of the interface workflow view_income_report: types only. Types at
- * the boundary keep the contract's field names (data_schema.yaml 9.0.1,
+ * the boundary keep the contract's field names (data_schema.yaml 9.0.2,
  * view_income_report.output_guaranteed.income_report).
  */
 

@@ -27,12 +27,14 @@ function isCalendarDate(value: string): boolean {
 export function createViewIncomeReportRouters(services: ViewIncomeReportServices) {
   // Format check and conversion of the draft, before anything is sent
   // (ui_decomposition.md D5, page income_report). Rules copied from the
-  // contract (data_schema.yaml 9.0.1 view_income_report.input_expected and
-  // .description, formats.date):
+  // contract (data_schema.yaml 9.0.2 view_income_report.input_expected,
+  // formats.date):
   //   - period_from, period_to: formats.date, a day that exists → else
   //     'required' (empty) / 'not_date';
-  //   - period_from after period_to is invalid → 'violates_type_constraint' on
-  //     period_to. Two equal days are valid (both days are counted).
+  //   - period_to has type "date (on or after period_from)"
+  //     (view_income_report.input_expected.period_to.type): period_from after
+  //     period_to → 'violates_type_constraint' on period_to. Two equal days are
+  //     valid (both days are counted).
   // No rule of the interface only. Field keys are the contract's input names.
   function readDraft(draft: IncomePeriodDraft): { ok: true; period: IncomePeriod } | { ok: false; errors: Record<string, InputFormatCode> } {
     const errors: Record<string, InputFormatCode> = {}
