@@ -105,6 +105,8 @@ Mục Publisher trong danh sách gỡ cài đặt đang trống. **Project Owner
 
 ### DSK-10 — `startup-logs/` chưa có trong `.gitignore` (thấp; Q14-2 của audit phiên 14)
 
+> **ĐÃ ĐÓNG** (kiểm lại 2026-10-01, khi lập plan phiên 26): `.gitignore` gốc đã có dòng `Desktop/startup-logs/` (Project Owner thêm).
+
 > **Chuyển thành việc của Project Owner, 2026-09-28:** thêm `Desktop/startup-logs/` vào `.gitignore` gốc, cùng lúc với phần còn thiếu của ENV-6. Hiện `*.log` đã bị bỏ qua nhờ `Desktop/.gitignore`, nhưng `*-summary.json` thì chưa.
 
 Phiên desktop sau thêm vào.
@@ -183,6 +185,8 @@ Lúc lập plan (2026-09-30), Orchestrator thấy kiểm thử `test_method_is_f
 Checkpoint ở đầu `record_payment/services.py` ghi `last_updated_at` và `recorded_at` của EVIDENCE BE-7 là `2026-09-30T23:40:00+07:00`, trong khi tệp được ghi lần cuối lúc 22:38:59 (+07:00). Sửa hai giá trị thành thời điểm thật. Không đổi gì khác.
 
 **Cùng loại, phiên 24** (audit phiên 24 §5.5): bốn khối checkpoint giao diện ghi 20:20–20:25, trong khi tệp được ghi 20:17–20:19. Lệch vài phút, không cần sửa riêng. **Quy ước cho mọi plan từ nay:** agent lấy giờ bằng lệnh (`Get-Date -Format o`) ngay trước khi ghi checkpoint, không ước lượng.
+
+**Phiên 25** (audit phiên 25 §5.3): giờ đã lấy bằng lệnh nhưng vẫn muộn hơn lúc ghi tệp từ 11 s tới khoảng 1 phút, có vẻ do làm tròn lên. Quy ước bổ sung: chép nguyên giá trị của lệnh, không làm tròn.
 
 ## Hợp đồng — chờ Project Owner duyệt
 
@@ -434,9 +438,23 @@ Máy Orchestrator (Linux) chưa gặp lần nào trong hơn 20 lần e2e toàn b
 
 **Thí nghiệm — plan phiên 25 (việc 4):** tái hiện có chủ đích bằng công cụ chẩn đoán riêng (cửa sổ bình thường, thu nhỏ, bị che hoặc mất tiêu điểm), rồi mới thử cờ. Đề xuất ban đầu: chỉ trong lệnh khởi chạy Electron của harness kiểm thử (không ở ứng dụng thật), bật các cờ tắt cơ chế "cửa sổ bị che thì ngừng vẽ / bị hạ ưu tiên"; agent tra tài liệu Electron/Chromium của đúng phiên bản đang dùng để chọn cờ, ghi nguồn. Chạy cùng số lượt e2e với và không có cờ, trên cùng máy, ghi số lần hết giờ. Đây là đổi điều kiện môi trường kiểm thử, không phải nới thời gian chờ; nếu có hiệu quả, Project Owner quyết có giữ hay không.
 
+**Dữ liệu phiên 25: thí nghiệm có đối chứng** (audit phiên 25 §5.1; công cụ `UI/tests/tools/ui11_probe.mjs`):
+- Windows, Electron 44.4.5, 20 lần mỗi điều kiện, giới hạn 10 s: **thu nhỏ 11/20 treo**; bị che, mất tiêu điểm, bình thường 0/20 mỗi điều kiện.
+- Cờ Chromium (đã xác nhận có hiệu lực trong tiến trình): không bộ nào đưa về 0 (10–11/20; một lần 3/20 không lặp lại được). Không thêm cờ nào.
+- Linux (Orchestrator): lệnh thu nhỏ không có tác dụng dưới Xvfb (`minimized: false`), 0 lần treo. Điều này giải thích vì sao Linux chưa bao giờ treo.
+- **Giả thuyết hiện tại:** cửa sổ Electron bị thu nhỏ trong lúc e2e chạy (bấm thu nhỏ, Win+D, "Show desktop"). Chưa chứng minh cho các lần treo cũ.
+
+**Việc tiếp theo:**
+1. **Hỏi Project Owner** (audit phiên 25): trong lúc agent chạy e2e trên máy, anh có thu nhỏ cửa sổ Electron hay dùng "Show desktop" không?
+2. **Quy ước vận hành, chờ Project Owner đồng ý:** khi e2e chạy, không thu nhỏ cửa sổ Electron, không dùng "Show desktop".
+3. **Phiên giao diện kế tiếp, chỉ ghi:** harness ghi `isMinimized`, `isVisible`, `visibilityState` cạnh mỗi lần chụp trong nhật ký thời gian chụp ảnh.
+4. **Chỉ khi (3) xác nhận:** Project Owner quyết harness có tự `restore()` cửa sổ trước khi chụp (và ghi lại mỗi lần phải làm vậy) hay chỉ dựa vào quy ước (2).
+
 **Ghi nhận thêm, không phải UI-11 (Q22-2, thấp, không vá ở V1):** ở múi giờ có giờ mùa hè, giờ "không tồn tại" trong khoảng nhảy giờ (ví dụ 02:30 ngày đổi giờ ở New York) được ghép với độ lệch sau khi đổi. Việt Nam không có giờ mùa hè.
 
 ### UI-12 — Ca focus `StageChange.test.tsx:183` không tất định trên Windows (thấp; audit phiên 24 §5.4) — **plan phiên 25**
+
+> **ĐÃ ĐÓNG 2026-10-01, phiên 25** (`coding-agent@2026-10-01#1`). Nguyên nhân: kit đặt focus trong `useEffect` (`SelectField.tsx:40`, `ConfirmPanel.tsx:32`), còn hai khẳng định ở `StageChange.test.tsx` (dòng 183, 262 cũ) không chờ. Sửa: `await vi.waitFor(...)`, chỉ ở kiểm thử. Agent: trước 3/50 hỏng, sau 0/50 trên Windows. Orchestrator: 0/50 trên Linux; làm focus đến chậm 40 ms thì kiểm thử cũ hỏng, kiểm thử mới đạt; bỏ hẳn focus thì kiểm thử mới hỏng (`.reviews/audits/ui/audit_ui_session25.md` §3).
 
 Hỏng một lần ở phiên 22 và một lần ở lần chạy mốc của phiên 24, đều trên Windows. Orchestrator chạy 20 lần trên Linux, không lần nào hỏng. Việc: đọc ca này, tìm chỗ phụ thuộc thời điểm (focus sau khi vẽ lại), sửa kiểm thử hoặc mã nếu thấy lỗi thật; không thêm `retries`, không nới thời gian chờ. **Tiêu chí đóng:** chạy riêng tệp này 50 lần liên tiếp trên Windows không hỏng.
 
@@ -463,7 +481,7 @@ Hỏng một lần ở phiên 22 và một lần ở lần chạy mốc của ph
 - **Giao diện** (5 khối): không có `UNSOLVED_PROBLEMS`. Các NOTE còn lại đều là ghi chú còn giá trị (cách chạy, việc tương lai của `ipc_bridge`, đề xuất trạng thái đã được xử lý).
 - **Desktop** (Main): còn **`main-PROB-001`** trong `UNSOLVED_PROBLEMS`, và một NOTE ghi watermark là "V2". Xem DSK-12.
 
-### DSK-12 — Dọn checkpoint Main desktop (thấp) — cho phiên desktop kế tiếp
+### DSK-12 — Dọn checkpoint Main desktop (thấp) — **plan phiên 26**
 
 - `main-PROB-001` (bản sao do antivirus chạy) nay đã có hướng xử lý ở mọi mặt, nên chuyển thành EXPERIENCES và dẫn nguồn. Đây cũng là nơi ghi kết quả ENV-5: giữ 75 s; không thấy bản sao trong 15,9 s quan sát được, trước khi AVG chặn tiến trình theo dõi (DSK-14); bản thật chạy đúng với khóa của phiên 15. Các nguồn:
   - rủi ro dữ liệu: đã chặn bằng khóa backend (BE-3, Data Schema 6.2.0);
@@ -472,7 +490,7 @@ Hỏng một lần ở phiên 22 và một lần ở lần chạy mốc của ph
 - NOTE "Dịch vụ AI không được khởi động ở V1 (watermark để dành V2)": sửa thành "V4 trở đi", theo `.design/product_versions.md`.
 - NOTE "Cách làm của phiên 13 so với plan": chuyển thành EXPERIENCES nếu còn giá trị, hoặc xóa.
 
-### DSK-13 — Hộp thoại lỗi của desktop viết bằng tiếng Anh kỹ thuật (thấp) — **ĐÃ DUYỆT 2026-09-28**, cho phiên desktop kế tiếp
+### DSK-13 — Hộp thoại lỗi của desktop viết bằng tiếng Anh kỹ thuật (thấp) — **ĐÃ DUYỆT 2026-09-28**, **plan phiên 26**
 
 > Project Owner: ứng dụng phục vụ cộng đồng họa sĩ Việt, nên V1 dùng **tiếng Việt**. Tiếng Anh (hay đa ngôn ngữ) bàn ở phiên bản sau; đặt câu chữ trong `configs/desktop.json` giúp việc đó rẻ về sau.
 
@@ -487,7 +505,7 @@ Họa sĩ là người Việt, và giao diện V1 dùng nhãn tiếng Việt (`u
 
 Câu chữ đặt trong `configs/desktop.json`.
 
-### DSK-14 — AVG chặn công cụ đo `measure_startup.cjs` (thấp; phát hiện ở ENV-5, 2026-09-28) — cho phiên desktop kế tiếp
+### DSK-14 — AVG chặn công cụ đo `measure_startup.cjs` (thấp; phát hiện ở ENV-5, 2026-09-28) — **plan phiên 26**
 
 **Hiện tượng:** AVG Behavior Shield chặn `powershell.exe` với nhận dạng `IDP.HELU.PSE91 - Command line detection`. Project Owner có ảnh chụp cảnh báo.
 
@@ -511,7 +529,7 @@ Chưa rõ AVG chặn lúc build hay lúc đo; lịch sử cảnh báo của AVG 
 - **Thứ tự:** sau phiên 18 là **D2 (đơn hàng)**. Phiên desktop dọn dẹp (DSK-12, DSK-13) gộp với lần đo lại, nếu cần build lại.
 - **Văn bản tùy chọn để trống** (`description`, `commission_type` và các trường `string|null` khác): giao diện gửi `null`, là quy tắc `[UI-ONLY]` như ô ghi chú khách hàng. Không sửa hợp đồng. Ghi vào I1 của D2.
 
-### DSK-15 — Ô ngày của giao diện hiện kiểu tháng/ngày/năm (**trung bình** từ 2026-10-01; trước đó thấp; Q19-2 của audit phiên 19) — cho phiên desktop kế tiếp, **đề xuất làm trước D6**
+### DSK-15 — Ô ngày của giao diện hiện kiểu tháng/ngày/năm (**trung bình** từ 2026-10-01; trước đó thấp; Q19-2 của audit phiên 19) — **plan phiên 26** (`.plan/desktop_plan.md`, phát hành 2026-10-01), trước D6
 
 > **Nâng mức 2026-10-01** (audit phiên 24 §5.3): trang `income_report` đặt ô "Từ ngày" `10/01/2026` (tháng/ngày) ngay trên dòng báo cáo "Từ 01/08/2026 …" (ngày/tháng). Họa sĩ đọc `10/01/2026` thành 10 tháng 1, nên có thể chọn sai khoảng và đọc sai báo cáo. Tiêu chí đóng thêm: hai ô ngày của `income_report` hiện kiểu ngày/tháng/năm.
 

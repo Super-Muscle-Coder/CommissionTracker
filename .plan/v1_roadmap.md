@@ -172,7 +172,7 @@ Phần lớn nhất của V1. Chia thành nhiều phiên, mỗi phiên một nh�
 | D2 | Đơn hàng: danh sách, thêm, sửa, xem chi tiết — **phiên 19**, vá ở phiên 20 (UI-9) và 21 (UI-10); **`hoàn_tất` 2026-09-29** | `manage_commission` |
 | D3 | Tiến độ: đổi giai đoạn, xem lịch sử, bảng tiến độ — **phiên 20**, vá ở phiên 21 (UI-10); **`hoàn_tất` 2026-09-29** | `update_progress` |
 | D4 | Thanh toán: ghi khoản, hủy khoản, xem số dư — **phiên 22** (`payment_list`, `payment_form`, phần Thanh toán của `commission_detail`); **`hoàn_tất` 2026-09-30**. Phần backend của CT-4 (BE-7): **phiên 23** (backend) xong 2026-09-30, audit đạt; Data Schema 9.0.1 duyệt 2026-09-30 | `record_payment` |
-| D5 | Báo cáo thu nhập — **phiên 24** xong 2026-10-01, audit đạt về chức năng (`income_report`, mục điều hướng "Thu nhập"); CT-5 duyệt (Data Schema 9.0.2); chờ Project Owner chạy tay. **Phiên 25** (giao diện, vá ngắn): CT-5 trong Configs, UI-12, thí nghiệm UI-11 | `view_income_report` |
+| D5 | Báo cáo thu nhập — **phiên 24** xong 2026-10-01, audit đạt về chức năng (`income_report`, mục điều hướng "Thu nhập"); CT-5 duyệt (Data Schema 9.0.2); **`hoàn_tất` 2026-10-01** (Project Owner chạy tay). **Phiên 25** (giao diện, vá ngắn) xong 2026-10-01, audit đạt: CT-5 trong Configs, UI-12 đóng, thí nghiệm UI-11 cho thấy cửa sổ thu nhỏ làm treo | `view_income_report` |
 | D6 | Nhắc việc: cài đặt, danh sách chờ, xác nhận; `reminder_ticker` | `send_reminder` |
 
 **Ràng buộc chung cho mọi phiên của chặng này:**
