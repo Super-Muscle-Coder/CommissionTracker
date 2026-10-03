@@ -105,8 +105,8 @@ Layout: `main_layout` (khung chính có điều hướng) — layout duy nhất.
 | `payment_list` | Xem số dư và mọi khoản thanh toán của một đơn; hủy một khoản; lối vào ghi khoản mới | `record_payment` | `main_layout` | `hoàn_tất` (2026-09-30: audit phiên 22 đạt, Project Owner chạy tay D4) |
 | `payment_form` | Ghi một khoản nhận tiền hoặc hoàn tiền cho một đơn | `record_payment` | `main_layout` | `hoàn_tất` (2026-09-30: audit phiên 22 đạt, Project Owner chạy tay D4) |
 | `income_report` | Xem thu nhập theo khoảng thời gian: thực nhận, tiền hoàn, còn phải thu, theo từng đơn vị tiền và theo tháng | `view_income_report` | `main_layout` | `hoàn_tất` (2026-10-01: audit phiên 24 và 25 đạt, CT-5 duyệt, Project Owner chạy tay D5) |
-| `reminder_list` | Xem nhắc việc đang chờ; đánh dấu đã xem; lối vào cài đặt và chi tiết đơn | `send_reminder` | `main_layout` | `đang_làm` (2026-10-03: plan phiên 27) |
-| `reminder_settings` | Xem và sửa cài đặt nhắc định kỳ và nhắc trước hạn giao | `send_reminder` | `main_layout` | `đang_làm` (2026-10-03: plan phiên 27) |
+| `reminder_list` | Xem nhắc việc đang chờ; đánh dấu đã xem; lối vào cài đặt và chi tiết đơn | `send_reminder` | `main_layout` | `đang_làm` (2026-10-03: plan phiên 27; audit phiên 27 đạt, chờ Project Owner chạy tay) |
+| `reminder_settings` | Xem và sửa cài đặt nhắc định kỳ và nhắc trước hạn giao | `send_reminder` | `main_layout` | `đang_làm` (2026-10-03: plan phiên 27; audit phiên 27 đạt, chờ Project Owner chạy tay) |
 | *(E, F)* sao lưu, khôi phục | — | `backup_data`, `restore_data` | `main_layout` | `chưa_làm` |
 
 **Chi tiết trang `client_list`** (phiên B2b):
@@ -634,7 +634,7 @@ Cùng "không tới được" và "vi phạm hợp đồng". Không có lời g�
 ### Chi tiết trang `reminder_list` (D6)
 
 - **Mở từ:** mục **"Nhắc việc"** của vùng điều hướng, đứng sau "Thu nhập".
-- **Tiêu đề trang:** "Nhắc việc". Dòng chữ phụ cố định dưới tiêu đề: "Nhắc việc đến hạn sẽ hiện thành thông báo của Windows. Mọi nhắc việc chưa đánh dấu đã xem nằm ở đây."
+- **Tiêu đề trang:** "Nhắc việc". Dòng chữ phụ cố định, đặt **dưới hàng nút** (nguyên tắc 7: hàng nút ngay dưới tiêu đề; chốt ở audit phiên 27): "Nhắc việc đến hạn sẽ hiện thành thông báo của Windows. Mọi nhắc việc chưa đánh dấu đã xem nằm ở đây."
 - **Hàng nút:** "Cài đặt nhắc việc" (hành động chính, mở `reminder_settings`); "Tải lại".
 - **Khi mở, và khi bấm "Tải lại":** `list_pending`.
 - **Mỗi nhắc việc:**
@@ -644,7 +644,7 @@ Cùng "không tới được" và "vi phạm hợp đồng". Không có lời g�
 - **Đã xem:** **không** hỏi xác nhận. Lý do: đánh dấu đã xem không làm mất dữ liệu nào, đơn hàng và cài đặt không đổi; hỏi xác nhận cho từng mục là gánh nặng không tương xứng (§7.2 nguyên tắc 5 chỉ đòi xác nhận cho thao tác khó quay lại **và có hậu quả**).
   - 200: tải lại danh sách, hiện "Đã đánh dấu đã xem."
   - 404: "Nhắc việc này không còn trong danh sách.", và tải lại.
-  - 500, không tới được: thông báo; danh sách giữ nguyên.
+  - 500, không tới được: thông báo; danh sách giữ nguyên. (Chốt ở audit phiên 27: với 500, trang được lặng lẽ đọc lại danh sách như với 404; nếu lần đọc lại cũng hỏng thì danh sách cũ vẫn giữ.)
   - Trong lúc gửi, mọi nút "Đã xem" bị vô hiệu.
 - **Trạng thái rỗng:** "Không có nhắc việc nào đang chờ.", kèm nút "Cài đặt nhắc việc".
 - Trang nhận thông báo chuyển trang "Đã lưu cài đặt nhắc việc." khi quay về từ `reminder_settings`.
@@ -662,15 +662,15 @@ Cùng "không tới được" và "vi phạm hợp đồng". Không có lời g�
 - **Phần "Nhắc trước hạn giao"** (`deadline`):
   1. ô đánh dấu "Bật nhắc trước hạn giao" (`enabled`);
   2. danh sách "Mốc nhắc" (`lead_times`), mỗi dòng: ô số (`amount`), ô chọn "giờ" / "ngày" (`unit`), nút "Bỏ mốc này" (vô hiệu khi chỉ còn một dòng);
-  3. nút "Thêm mốc nhắc" (vô hiệu khi đã có 5 dòng); dòng mới mặc định "1 ngày" nếu chưa có, không thì ô số trống.
+  3. nút "Thêm mốc nhắc" (vô hiệu khi đã có 5 dòng); dòng mới là "1 ngày" nếu chưa có mốc nào dài đúng 24 giờ ("1 ngày" hay "24 giờ"), không thì ô số trống, đơn vị "ngày" (chốt ở audit phiên 27, để nút không tự tạo một mốc trùng).
   4. dòng gợi ý cố định: "Hạn giao tính tới hết ngày đó. Một ngày là 24 giờ."
 - **Các ô vẫn sửa được khi phần đó tắt.** Hợp đồng đòi đủ mọi trường hợp lệ dù `enabled` là `false`, nên luật kiểm áp cho cả phần đang tắt.
 - **Kiểm trước khi gửi**, trong phân khu logic. Mọi luật dưới đây là **bản sao của `types.reminder_settings_record`** (`[CONTRACT]`):
   - `every`: số nguyên ≥ 1 (và trong khoảng số nguyên an toàn); rỗng: "Nhập số ngày hoặc số tuần"; không phải số nguyên dương: "Nhập một số nguyên từ 1 trở lên";
   - `at_time`: rỗng hoặc sai dạng `HH:MM` (00:00..23:59): "Chọn giờ nhắc";
   - `weekday`: khi đơn vị "tuần" mà chưa chọn: "Chọn thứ trong tuần";
-  - mỗi `amount`: số nguyên ≥ 1; quá 365 ngày hoặc 8760 giờ: "Mốc nhắc tối đa 365 ngày (8760 giờ)";
-  - hai mốc cùng độ dài (1 ngày = 24 giờ): lỗi ở mốc trùng sau: "Mốc nhắc này trùng với một mốc khác";
+  - mỗi `amount`: để trống: "Nhập thời gian nhắc trước"; không phải số nguyên ≥ 1 (kể cả 0 và số âm): "Nhập một số nguyên từ 1 trở lên"; quá 365 ngày hoặc 8760 giờ: "Mốc nhắc tối đa 365 ngày (8760 giờ)" (chốt ở audit phiên 27);
+  - hai mốc cùng độ dài (1 ngày = 24 giờ): lỗi ở mốc trùng sau, hiện dưới ô số của mốc đó: "Mốc nhắc này trùng với một mốc khác";
   - số mốc 1..5 được bảo đảm bằng nút, nên không có câu lỗi riêng;
   - lỗi thì không gửi, con trỏ tới ô lỗi đầu tiên (§7.2, nguyên tắc 4).
 - **Gửi:** `edit_settings`, thân `{ "reminder_settings_input": { periodic: { enabled, every, unit, at_time, weekday }, deadline: { enabled, lead_times: [{ amount, unit }] } } }`. Trong lúc gửi, "Lưu" bị vô hiệu.
@@ -746,6 +746,7 @@ Kịch bản bấm thử và audit kiểm các điều sau.
 - 2026-09-28: `client_list`, `client_detail`, `client_form` → `hoàn_tất`. Project Owner đã tự chạy tay ba kịch bản và xác nhận chức năng chạy đúng. Chặng D1 xong về phía giao diện.
 - 2026-10-01: audit phiên 24 (`.reviews/audits/ui/audit_ui_session24.md`): D5 đúng đặc tả. Đính chính: luật thứ tự ngày của D5 nằm ngoài `type`, trái iWCA §5 (CT-5 chờ duyệt). Chấp nhận hai chỗ trình bày của agent. `income_report` giữ `đang_làm` chờ Project Owner chạy tay và quyết CT-5.
 - 2026-10-01: CT-5 duyệt, phương án A (Data Schema 9.0.2): luật thứ tự ngày của D5 nằm trong `type`. Hành vi không đổi; Configs của `view_income_report` cập nhật ở phiên 25.
+- 2026-10-03: audit phiên 27 đạt (`.reviews/audits/ui/audit_ui_session27.md`): D6 phía giao diện đúng đặc tả. Chấp nhận năm chỗ agent tự quyết, ghi vào mục D6: mặc định của "Thêm mốc nhắc"; mã và câu lỗi của mốc (≤ 0, quá 365 ngày, trùng hiện dưới ô số); câu cho mốc để trống; dòng chữ cố định đặt dưới hàng nút; với 500 khi "Đã xem", trang lặng lẽ đọc lại danh sách. Hai trang giữ `đang_làm`, chờ Project Owner chạy tay. Ghi nhận UI-13 (lỗi trùng mốc nhảy dòng sau khi bỏ một mốc) và UI-14 (ô giờ hiện kiểu 12 giờ có SA/CH trên Windows).
 - 2026-10-03: làm lại I1 cho D6, căn cứ Data Schema 9.0.2: trang `reminder_list`, `reminder_settings` → `đang_làm` (plan phiên 27); mục điều hướng "Nhắc việc"; luật kiểm form cài đặt là bản sao của `reminder_settings_record`; "Đã xem" không hỏi xác nhận; giao diện không gọi `check_due`, kịch bản dùng công cụ kiểm thử để tạo nhắc việc. `reminder_ticker` (desktop) làm ở phiên sau. Hợp đồng không đổi.
 - 2026-10-01: `income_report` → `hoàn_tất`: Project Owner chạy tay D5, không có vấn đề. Chặng D5 xong về phía giao diện. Lưu ý: sau khi DSK-15 đổi ngôn ngữ ứng dụng (phiên 26), ảnh bằng chứng có ô ngày trong `UI/evidence` sẽ cũ; phiên giao diện kế tiếp chạy lại kịch bản có runner để làm mới.
 - 2026-10-01: audit phiên 25 đạt (`.reviews/audits/ui/audit_ui_session25.md`): Configs của `view_income_report` ghi Data Schema 9.0.2. Không trang nào đổi trạng thái; `income_report` vẫn chờ Project Owner chạy tay.

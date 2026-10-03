@@ -466,6 +466,17 @@ Máy Orchestrator (Linux) chưa gặp lần nào trong hơn 20 lần e2e toàn b
 3. **Phiên giao diện kế tiếp, chỉ ghi:** harness ghi `isMinimized`, `isVisible`, `visibilityState` cạnh mỗi lần chụp trong nhật ký thời gian chụp ảnh. — **plan phiên 27** (việc 2).
 4. **Chỉ khi (3) xác nhận:** Project Owner quyết harness có tự `restore()` cửa sổ trước khi chụp (và ghi lại mỗi lần phải làm vậy) hay chỉ dựa vào quy ước (2).
 
+**Dữ liệu phiên 27: bước (3) đã làm** (audit phiên 27 §5.1; trace ở `UI/test-results/ui11_traces/`, 10 thư mục, có `INDEX.txt`; lượt e2e kế tiếp sẽ xóa):
+- Windows, 29 lượt: 1119 lần chụp có trạng thái cửa sổ; 7 lần hết giờ 30 s. **Cả 7 lần**, đọc ngay trước lệnh chụp: `minimized:true, visible:false`. Không lần hết giờ nào ở cửa sổ không bị thu nhỏ.
+- Cơ chế đã rõ: cửa sổ bị thu nhỏ thì lệnh chụp của Playwright chờ khung hình mới mà không có. Ứng dụng thật không bị ảnh hưởng.
+- **Nguồn của việc thu nhỏ chưa rõ.** Agent khẳng định không thu nhỏ cửa sổ nào. Không có lệnh thu nhỏ trong mã. Việc thu nhỏ rải rác qua nhiều spec, mỗi spec một cửa sổ mới (lượt `norunner3`: `commission_form`, `commission_list`, `progress_board`). Giả thuyết phù hợp nhất: người dùng máy hoặc Windows, trong lúc lượt chạy (10:16–10:38 ngày 2026-10-03).
+- Linux (Orchestrator), 555 lần chụp: lâu nhất 105 ms, không lần nào thu nhỏ.
+- **Hỏi Project Owner** (audit phiên 27): trong khoảng 10:15–10:40 ngày 2026-10-03, anh có dùng máy và thu nhỏ cửa sổ hay dùng "Show desktop" không?
+- **Bước (4), chờ Project Owner quyết:**
+  - **A (Orchestrator khuyến nghị):** harness, trước mỗi lần chụp, nếu cửa sổ đang thu nhỏ thì gọi `restore()`, ghi một dòng `restored` vào nhật ký, rồi chụp. Chỉ ở công cụ kiểm thử; không che lỗi sản phẩm, vì ứng dụng thật không chụp ảnh và thu nhỏ không làm ứng dụng hỏng.
+  - **B:** chỉ giữ quy ước không thu nhỏ. Dữ liệu phiên 27 cho thấy quy ước không giữ được e2e tất định khi máy có người dùng.
+- **Tiêu chí đóng (đề xuất, thay tiêu chí cũ):** sau khi áp quyết định (4), 10 lượt e2e liên tiếp trên Windows không hết giờ chụp ảnh.
+
 **Ghi nhận thêm, không phải UI-11 (Q22-2, thấp, không vá ở V1):** ở múi giờ có giờ mùa hè, giờ "không tồn tại" trong khoảng nhảy giờ (ví dụ 02:30 ngày đổi giờ ở New York) được ghép với độ lệch sau khi đổi. Việt Nam không có giờ mùa hè.
 
 ### UI-12 — Ca focus `StageChange.test.tsx:183` không tất định trên Windows (thấp; audit phiên 24 §5.4) — **plan phiên 25**
@@ -473,6 +484,35 @@ Máy Orchestrator (Linux) chưa gặp lần nào trong hơn 20 lần e2e toàn b
 > **ĐÃ ĐÓNG 2026-10-01, phiên 25** (`coding-agent@2026-10-01#1`). Nguyên nhân: kit đặt focus trong `useEffect` (`SelectField.tsx:40`, `ConfirmPanel.tsx:32`), còn hai khẳng định ở `StageChange.test.tsx` (dòng 183, 262 cũ) không chờ. Sửa: `await vi.waitFor(...)`, chỉ ở kiểm thử. Agent: trước 3/50 hỏng, sau 0/50 trên Windows. Orchestrator: 0/50 trên Linux; làm focus đến chậm 40 ms thì kiểm thử cũ hỏng, kiểm thử mới đạt; bỏ hẳn focus thì kiểm thử mới hỏng (`.reviews/audits/ui/audit_ui_session25.md` §3).
 
 Hỏng một lần ở phiên 22 và một lần ở lần chạy mốc của phiên 24, đều trên Windows. Orchestrator chạy 20 lần trên Linux, không lần nào hỏng. Việc: đọc ca này, tìm chỗ phụ thuộc thời điểm (focus sau khi vẽ lại), sửa kiểm thử hoặc mã nếu thấy lỗi thật; không thêm `retries`, không nới thời gian chờ. **Tiêu chí đóng:** chạy riêng tệp này 50 lần liên tiếp trên Windows không hỏng.
+
+## Layer giao diện — sau audit phiên 27
+
+### UI-13 — Lỗi "trùng mốc" nhảy sang dòng khác sau "Bỏ mốc này" (thấp; audit phiên 27 §5.3) — cho phiên giao diện kế tiếp
+
+Trang `reminder_settings` gắn lỗi của form theo vị trí dòng mốc (`deadline.lead_times.<i>`) và giữ lỗi tới lần lưu kế tiếp. Tái hiện bằng kiểm thử dựng trang tạm của Orchestrator:
+1. ba dòng [1 ngày, 24 giờ, 5 ngày];
+2. lưu: lỗi "Mốc nhắc này trùng với một mốc khác" ở dòng 2;
+3. bỏ dòng 1: còn [24 giờ, 5 ngày], hết trùng;
+4. kết quả: câu lỗi hiện dưới dòng "5 ngày".
+
+Hết khi lưu lại; không mất dữ liệu, không gửi sai.
+
+**Việc:** khi thêm hoặc bỏ một dòng mốc, bỏ các lỗi đang gắn với dòng mốc. Agent chọn chỗ sửa theo iWCA và ghi lý do.
+
+**Tiêu chí đóng:** một kiểm thử dựng trang tái hiện đúng bốn bước trên, hỏng trước khi sửa và đạt sau khi sửa.
+
+Không chặn `hoàn_tất` của `reminder_settings`.
+
+### UI-14 — Ô giờ hiện kiểu 12 giờ có SA/CH trên Windows (thấp; audit phiên 27 §5.2) — chờ Project Owner trả lời
+
+- **Windows:** ô "Vào lúc" (`reminder_settings`, `<input type="time">`) hiện `08:15 SA`; ô "Ngày giờ nhận tiền" (`payment_form`, `datetime-local`) hiện `03/10/2026 10:38 SA`.
+- **Linux, cùng bản build và `--lang=vi`:** ô "Vào lúc" hiện `08:15` (24 giờ).
+- Vậy định dạng đến từ phía Windows, nhiều khả năng là định dạng giờ ngắn trong cài đặt vùng. Orchestrator không nắm chắc cơ chế của Chromium trên Windows.
+- Giá trị lưu vẫn là `HH:MM`, dữ liệu đúng. Chỉ khác chữ giờ 24 giờ ở các chỗ khác, ví dụ "Lưu lần cuối lúc 10:20".
+
+**Hỏi Project Owner:** trong Windows Settings → Time & language → Language & region → Regional format, giờ ngắn (Short time) đang là 12 giờ hay 24 giờ?
+
+**Đề xuất:** V1 chấp nhận, vì ô gốc theo cài đặt của chính người dùng. Muốn đồng nhất thì làm ở V2, bằng hai ô chọn giờ và phút, và chuyển mục này sang UI-6.
 
 ## Môi trường và vận hành (không phải việc của coding agent)
 
@@ -490,6 +530,11 @@ Hỏng một lần ở phiên 22 và một lần ở lần chạy mốc của ph
   - Sau đó **mỗi phiên đã audit đạt là một commit** do Project Owner tạo.
   - DSK-10 được giải quyết luôn trong `.gitignore` chung.
   - Chờ Project Owner quyết. Orchestrator soạn sẵn hai tệp cấu hình và các lệnh khi được yêu cầu.
+- **ENV-7** (Orchestrator, thấp; audit phiên 27 §5.5): `npm audit` báo lỗ hổng mới, chỉ ở công cụ phát triển.
+  - UI: 5 lỗ hổng mức high, cùng một chuỗi `stylelint → globby → fast-glob → micromatch → braces` (GHSA-vfj7-8cjw-p6xm).
+  - Desktop: 8 lỗ hổng mức high (ví dụ `http-cache-semantics`, GHSA-ch52-4w7c-c8xp).
+  - `npm audit --omit=dev` ở cả hai layer: 0. `package-lock.json` không đổi từ phiên trước: đây là cảnh báo mới được công bố, không phải phụ thuộc mới.
+  - Không chạy `npm audit fix --force` (đổi phiên bản phá vỡ, ví dụ hạ `stylelint`). Rà lại trước chặng G; nếu khi đó có bản vá không phá vỡ thì đưa vào một phiên riêng.
 
 ## Rà soát toàn bộ checkpoint — 2026-09-28 (trước phiên 18)
 
