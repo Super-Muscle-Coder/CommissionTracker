@@ -2,8 +2,8 @@
 // workflow: kit
 // clause: external
 // component: kit
-// last_updated_by: coding-agent@2026-09-30#3
-// last_updated_at: 2026-10-01T20:22:00+07:00
+// last_updated_by: coding-agent@2026-10-03#1
+// last_updated_at: 2026-10-03T10:42:22.0487385+07:00
 //
 // EXPERIENCES:
 //   - id: kit-EXP-001
@@ -223,6 +223,35 @@
 //       phải tiêu đề, và đặt nó làm h3 làm lẫn mục lục tiêu đề của trang với các phần đơn vị tiền). Đặt
 //       trên nền trang (--color-surface), cặp chữ phụ/nền trang đã có trong check_contrast.mjs (7.17:1),
 //       chỉ ghi thêm nơi dùng (Caption). Chỉ props kiểu nguyên thủy, không biết gì về thu nhập.
+//   - id: kit-EXP-019
+//     content: >
+//       Phiên 27 (D6), component MỚI TimeField: ô giờ gốc (input type="time", giá trị HH:mm hoặc ''), đúng
+//       khuôn của DateTimeField (id, label, value, onChange, error, disabled, focusRequest): nhãn gắn ô, lỗi là
+//       chữ dưới ô (aria-describedby, aria-invalid), viền --color-border-field và --color-border-field-danger,
+//       vòng focus ngoài ô (offset 0), chữ vô hiệu --color-text-muted, focusRequest cùng cơ chế kit-EXP-011.
+//       Vì sao mới: DateTimeField là datetime-local (ngày kèm giờ), ô này chỉ là giờ trong ngày; thêm prop
+//       "kiểu" vào DateTimeField sẽ làm một component mang hai nghĩa. Không prop nào mang khái niệm nghiệp vụ.
+//       Dùng ở reminder_settings ("Vào lúc"). Thêm vào FIELDS của check_contrast.mjs, nên viền, viền lỗi và
+//       vòng focus của nó được kiểm cả tỷ lệ lẫn vị trí trong CSS.
+//   - id: kit-EXP-020
+//     content: >
+//       Phiên 27 (D6), component MỚI CheckboxField (id, label, checked, onChange(checked), disabled): input
+//       type="checkbox" gốc cộng nhãn bên cạnh (bấm nhãn cũng đổi), accent-color là màu nhấn
+//       --color-action, vòng focus ngoài ô với offset --border-width-focus (như Button, nên vòng nằm trên nền
+//       trang, không sát ô). Vì sao mới: kit chưa có ô chọn có/không; SelectField chỉ chọn trong danh sách.
+//       KHÔNG có lỗi và không có focusRequest: có hay không đều hợp lệ (Data Schema 9.0.2: enabled là boolean),
+//       nên không có gì để báo lỗi hay dồn con trỏ tới. Chữ nhãn khi vô hiệu dùng --color-text-muted (cặp đã có).
+//       check_contrast thêm khai báo CSS đặt vòng focus của nó (checkboxRingOutside) vào cặp vòng focus trên nền
+//       trang; không cặp mới. Ghi nhận: viền của chính ô vuông là của control gốc (:root color-scheme: dark),
+//       không có token để kiểm; ảnh UI/evidence/walkthroughs/reminder_settings/reminder_settings-S1-defaults.png
+//       cho thấy ô vuông nhìn rõ trên nền tối.
+//   - id: kit-EXP-021
+//     content: >
+//       Phiên 27 (D6), KHÔNG thêm component cho dòng mốc nhắc ("số", "giờ|ngày", "Bỏ mốc này"): dựng bằng
+//       Inline + TextField + SelectField + Button sẵn có (plan việc 4: dùng component sẵn nếu được). Nhãn của ô
+//       theo vị trí ("Mốc nhắc 2: số", "Mốc nhắc 2: đơn vị") để mỗi ô có tên duy nhất; nút "Bỏ mốc này" lặp tên
+//       ở mỗi dòng (spec bấm theo vị trí). Khung "Mốc nhắc" là FieldGroup. Không có kiểm thử riêng cho kit (như
+//       các phiên trước, kit được phủ qua kiểm thử dựng trang: ReminderSettings.test.tsx 27 ca).
 //
 // UNSOLVED_PROBLEMS: []
 //
@@ -402,6 +431,39 @@
 //       UI/evidence/walkthroughs/income_report/income_report-S1.png (dòng phụ và câu giải thích là Caption).
 //       Không có thay đổi cấu hình ESLint, stylelint, check_layer.
 //     recorded_at: 2026-10-01T20:22:00+07:00
+//   - claim: >
+//       Phiên 27: TimeField và CheckboxField được phép kiểm tương phản phủ; nhóm chữ vẫn >= 4.5:1, nhóm phi văn
+//       bản >= 3:1.
+//     how: >
+//       Trong UI/: node scripts/check_contrast.mjs (bước lint:contrast của npm run check). FIELDS thêm
+//       TimeField/TimeField.module.css; CSS.checkboxRingOutside đưa vòng focus của CheckboxField vào cặp vòng
+//       focus trên nền trang; TEXT_PAIRS và NON_TEXT_PAIRS ghi thêm nơi dùng.
+//     result: >
+//       "check_contrast: 19 text pairs >= 4.5:1 and 13 non-text pairs >= 3:1 checked, all pass." (số cặp bằng mốc
+//       phiên 24: cả hai component dùng lại cặp đã có). Viền ô, viền lỗi, vòng focus của TimeField: 3.73 và
+//       4.62, 3.83 và 4.74, 7.74. Vòng focus của CheckboxField trên nền trang 7.74:1.
+//     recorded_at: 2026-10-03T10:42:22.0487385+07:00
+//   - claim: >
+//       Phép kiểm vị trí cắn với hai component mới.
+//     how: >
+//       (a) Tạm đổi outline-offset của .input:focus-visible trong CheckboxField.module.css sang 0; (b) tạm đổi
+//       border của .input trong TimeField.module.css sang var(--color-border); node scripts/check_contrast.mjs;
+//       khôi phục từng cái (sao lưu và chép lại nguyên byte); chạy lại.
+//     result: >
+//       (a) exit 1: "the CSS no longer puts it there: CheckboxField/CheckboxField.module.css .input:focus-visible
+//       ends with outline-offset: 0 (expected var(--border-width-focus))", "1 of 32 pair(s) fail". (b) exit 1:
+//       "TimeField/TimeField.module.css .input ends with border: var(--border-width-panel) solid
+//       var(--color-border) (expected …var(--color-border-field))", "2 of 32 pair(s) fail". Khôi phục: "all pass".
+//     recorded_at: 2026-10-03T10:42:22.0487385+07:00
+//   - claim: >
+//       Hai component mới dựng đúng trên ứng dụng thật, nền tối.
+//     how: >
+//       npm run e2e có runner (ảnh chụp các kịch bản bấm thử); npm run check (ReminderSettings.test.tsx 27 ca).
+//     result: >
+//       Ảnh: UI/evidence/walkthroughs/reminder_settings/reminder_settings-S1-defaults.png (hai ô đánh dấu có nhãn,
+//       ô giờ "Vào lúc" 09:00, ô chọn thứ), reminder_settings-S4-errors.png (lỗi cạnh ô số của mốc và ô "Mỗi").
+//       Kiểm thử dựng trang: ô giờ là input type time, ô bật là checkbox, các ô vô hiệu khi đang lưu.
+//     recorded_at: 2026-10-03T10:42:22.0487385+07:00
 //
 // NOTES:
 //   - content: >
@@ -467,6 +529,10 @@ export { DateField } from './components/DateField/DateField'
 export type { DateFieldProps } from './components/DateField/DateField'
 export { DateTimeField } from './components/DateTimeField/DateTimeField'
 export type { DateTimeFieldProps } from './components/DateTimeField/DateTimeField'
+export { TimeField } from './components/TimeField/TimeField'
+export type { TimeFieldProps } from './components/TimeField/TimeField'
+export { CheckboxField } from './components/CheckboxField/CheckboxField'
+export type { CheckboxFieldProps } from './components/CheckboxField/CheckboxField'
 export { ConfirmPanel } from './components/ConfirmPanel/ConfirmPanel'
 export type { ConfirmPanelProps } from './components/ConfirmPanel/ConfirmPanel'
 export { Caption } from './components/Caption/Caption'

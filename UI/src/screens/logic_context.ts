@@ -7,6 +7,7 @@ import { createContext, useContext } from 'react'
 import type { ManageClientRouters } from '../logic/workflows/manage_client/routers'
 import type { ManageCommissionRouters } from '../logic/workflows/manage_commission/routers'
 import type { RecordPaymentRouters } from '../logic/workflows/record_payment/routers'
+import type { SendReminderRouters } from '../logic/workflows/send_reminder/routers'
 import type { UpdateProgressRouters } from '../logic/workflows/update_progress/routers'
 import type { ViewIncomeReportRouters } from '../logic/workflows/view_income_report/routers'
 
@@ -18,6 +19,7 @@ export type LogicRouters = {
   updateProgress: UpdateProgressRouters
   recordPayment: RecordPaymentRouters
   viewIncomeReport: ViewIncomeReportRouters
+  sendReminder: SendReminderRouters
 }
 
 export const LogicContext = createContext<LogicRouters | null>(null)

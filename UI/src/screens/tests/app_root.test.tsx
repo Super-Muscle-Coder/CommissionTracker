@@ -20,11 +20,12 @@ import type {
 } from '../../logic/workflows/manage_client/routers'
 import type { CommissionDetailView, CommissionListView } from '../../logic/workflows/manage_commission/routers'
 import type { BalanceView, PaymentFormView, PaymentListView, SavedPaymentView } from '../../logic/workflows/record_payment/routers'
+import type { PendingListView, SettingsFormView } from '../../logic/workflows/send_reminder/routers'
 import type { ProgressBoardView } from '../../logic/workflows/update_progress/routers'
 import type { IncomePeriodDraft, IncomeReportView } from '../../logic/workflows/view_income_report/routers'
 import { AppRoot } from '../app_root'
 import { NAVIGATION, START_PAGE, type Route } from '../navigation'
-import { answers, fakeManageClient, fakeManageCommission, fakeRecordPayment, fakeUpdateProgress, fakeViewIncomeReport, renderWithLogic } from './fake_logic'
+import { answers, fakeManageClient, fakeManageCommission, fakeRecordPayment, fakeSendReminder, fakeUpdateProgress, fakeViewIncomeReport, renderWithLogic } from './fake_logic'
 
 const ID = '3f2b8c1e-9a4d-4e6f-8b2a-1c3d5e7f9a0b'
 const CID = '7a1d2e3f-4b5c-4d6e-9f80-1a2b3c4d5e6f'
@@ -66,10 +67,14 @@ export const WRONG_ROUTES: Route[] = [
   { page: 'payment_form', params: { client_id: ID, title: 'x' } },
   // @ts-expect-error income_report takes no parameter
   { page: 'income_report', params: { commission_id: ID } },
+  // @ts-expect-error reminder_list takes no parameter
+  { page: 'reminder_list', params: { commission_id: ID } },
+  // @ts-expect-error reminder_settings takes no parameter
+  { page: 'reminder_settings', params: { commission_id: ID } },
 ]
 
 describe('navigation table', () => {
-  it('has exactly the eleven pages of ui_decomposition.md §5 (D1, D2, D3, D4 and D5), and opens on client_list', () => {
+  it('has exactly the thirteen pages of ui_decomposition.md §5 (D1 to D6), and opens on client_list', () => {
     expect(Object.keys(NAVIGATION).sort()).toEqual([
       'client_detail',
       'client_form',
@@ -81,17 +86,19 @@ describe('navigation table', () => {
       'payment_form',
       'payment_list',
       'progress_board',
+      'reminder_list',
+      'reminder_settings',
       'stage_change',
     ])
     expect(START_PAGE).toBe('client_list')
   })
 
-  it('the navigation region lists "Khách hàng", "Đơn hàng", "Tiến độ", then "Thu nhập"; D2 pages, stage_change and the payment pages belong to "Đơn hàng"', () => {
+  it('the navigation region lists "Khách hàng", "Đơn hàng", "Tiến độ", "Thu nhập", then "Nhắc việc"; D2 pages, stage_change and the payment pages belong to "Đơn hàng"', () => {
     const menu = (Object.keys(NAVIGATION) as (keyof typeof NAVIGATION)[]).flatMap((k) => {
       const m = NAVIGATION[k].menu
       return m === null ? [] : [m.label]
     })
-    expect(menu).toEqual(['Khách hàng', 'Đơn hàng', 'Tiến độ', 'Thu nhập'])
+    expect(menu).toEqual(['Khách hàng', 'Đơn hàng', 'Tiến độ', 'Thu nhập', 'Nhắc việc'])
     expect([
       NAVIGATION.commission_list.section,
       NAVIGATION.commission_detail.section,
@@ -102,6 +109,10 @@ describe('navigation table', () => {
     ]).toEqual(['commission_list', 'commission_list', 'commission_list', 'commission_list', 'commission_list', 'commission_list'])
     expect(NAVIGATION.progress_board.section).toBe('progress_board')
     expect(NAVIGATION.income_report.section).toBe('income_report')
+    // The settings are a step of the reminder list: its item is the current one (D6).
+    expect(NAVIGATION.reminder_list.section).toBe('reminder_list')
+    expect(NAVIGATION.reminder_settings.section).toBe('reminder_list')
+    expect(NAVIGATION.reminder_settings.menu).toBeNull()
   })
 })
 
@@ -111,11 +122,12 @@ describe('AppRoot', () => {
     expect(await screen.findByRole('heading', { level: 2, name: 'Khách hàng' })).toBeTruthy()
     const nav = screen.getByRole('navigation', { name: 'Điều hướng chính' })
     const items = within(nav).getAllByRole('button')
-    expect(items.map((b) => b.textContent)).toEqual(['Khách hàng', 'Đơn hàng', 'Tiến độ', 'Thu nhập'])
+    expect(items.map((b) => b.textContent)).toEqual(['Khách hàng', 'Đơn hàng', 'Tiến độ', 'Thu nhập', 'Nhắc việc'])
     expect(items[0].getAttribute('aria-current')).toBe('page')
     expect(items[1].getAttribute('aria-current')).toBeNull()
     expect(items[2].getAttribute('aria-current')).toBeNull()
     expect(items[3].getAttribute('aria-current')).toBeNull()
+    expect(items[4].getAttribute('aria-current')).toBeNull()
   })
 
   it('"Tiến độ" opens progress_board, marked current; a commission of the board → its detail, "Đơn hàng" current', async () => {
@@ -141,6 +153,7 @@ describe('AppRoot', () => {
       ['Đơn hàng', null],
       ['Tiến độ', 'page'],
       ['Thu nhập', null],
+      ['Nhắc việc', null],
     ])
     fireEvent.click(await screen.findByRole('button', { name: /^Chân dung/ }))
     expect(await screen.findByRole('heading', { level: 2, name: 'Chi tiết đơn hàng' })).toBeTruthy()
@@ -150,6 +163,7 @@ describe('AppRoot', () => {
       ['Đơn hàng', 'page'],
       ['Tiến độ', null],
       ['Thu nhập', null],
+      ['Nhắc việc', null],
     ])
   })
 
@@ -176,6 +190,7 @@ describe('AppRoot', () => {
       ['Đơn hàng', 'page'],
       ['Tiến độ', null],
       ['Thu nhập', null],
+      ['Nhắc việc', null],
     ])
     fireEvent.click(await screen.findByRole('button', { name: /^Chân dung/ }))
     expect(await screen.findByRole('heading', { level: 2, name: 'Chi tiết đơn hàng' })).toBeTruthy()
@@ -185,10 +200,11 @@ describe('AppRoot', () => {
       ['Đơn hàng', 'page'],
       ['Tiến độ', null],
       ['Thu nhập', null],
+      ['Nhắc việc', null],
     ])
   })
 
-  it('"Thu nhập" opens income_report, marked current, the other three not; the report loads once; leaving it marks the item it goes to', async () => {
+  it('"Thu nhập" opens income_report, marked current, the other four not; the report loads once; leaving it marks the item it goes to', async () => {
     const viewIncomeReport = answers<[IncomePeriodDraft], ViewResult<IncomeReportView>>({
       kind: 'ok',
       view: { periodText: 'Từ 01/01/2026 đến 30/09/2026 · Lập lúc 10:00 30/09/2026', sections: [], isEmpty: true, emptyText: 'Không có gì' },
@@ -210,6 +226,7 @@ describe('AppRoot', () => {
       ['Đơn hàng', null],
       ['Tiến độ', null],
       ['Thu nhập', 'page'],
+      ['Nhắc việc', null],
     ])
     await screen.findByText('Không có gì')
     expect(viewIncomeReport).toHaveBeenCalledExactlyOnceWith({ periodFrom: '2026-01-01', periodTo: '2026-09-30' })
@@ -218,6 +235,63 @@ describe('AppRoot', () => {
     fireEvent.click(within(screen.getByRole('navigation')).getByRole('button', { name: 'Khách hàng' }))
     expect(await screen.findByRole('heading', { level: 2, name: 'Khách hàng' })).toBeTruthy()
     expect(current()[3]).toEqual(['Thu nhập', null])
+  })
+
+  it('D6: "Nhắc việc" → reminder_list (marked current) → "Cài đặt nhắc việc" → reminder_settings (still marked) → saved → reminder_list with the notice, once; "Hủy" → reminder_list with none', async () => {
+    const EMPTY: ViewResult<PendingListView> = { kind: 'ok', view: { rows: [], isEmpty: true, emptyText: 'Không có nhắc việc nào đang chờ.' } }
+    const FORM_VIEW: ViewResult<SettingsFormView> = {
+      kind: 'ok',
+      view: {
+        subtitle: 'Chưa lưu lần nào, đang dùng cài đặt mặc định.',
+        draft: { periodicEnabled: false, every: '1', periodicUnit: 'days', atTime: '09:00', weekday: '', deadlineEnabled: false, leadTimes: [{ amount: '1', unit: 'days' }] },
+        periodicUnitChoices: [{ value: 'days', label: 'ngày' }],
+        weekdayChoices: [],
+        leadUnitChoices: [{ value: 'days', label: 'ngày' }],
+        weekdayUnit: 'weeks',
+        leadTimeLimits: { min: 1, max: 5 },
+      },
+    }
+    const loadPending = answers<[], ViewResult<PendingListView>>(EMPTY, EMPTY, EMPTY)
+    const openSettings = answers<[], ViewResult<SettingsFormView>>(FORM_VIEW, FORM_VIEW)
+    const saveSettings = answers<[unknown], ViewResult<{ message: string }>>({ kind: 'ok', view: { message: 'Đã lưu cài đặt nhắc việc.' } })
+    renderWithLogic(
+      <AppRoot />,
+      fakeManageClient({ loadClientList: answers<[], ViewResult<ClientListView>>(LIST, LIST) }),
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      fakeSendReminder({ loadPending, openSettings, saveSettings }),
+    )
+    await screen.findByRole('button', { name: 'An' })
+    const current = () => within(screen.getByRole('navigation')).getAllByRole('button').map((b) => [b.textContent, b.getAttribute('aria-current')])
+    fireEvent.click(within(screen.getByRole('navigation')).getByRole('button', { name: 'Nhắc việc' }))
+    expect(await screen.findByRole('heading', { level: 2, name: 'Nhắc việc' })).toBeTruthy()
+    await screen.findByText('Không có nhắc việc nào đang chờ.')
+    expect(current()).toEqual([
+      ['Khách hàng', null],
+      ['Đơn hàng', null],
+      ['Tiến độ', null],
+      ['Thu nhập', null],
+      ['Nhắc việc', 'page'],
+    ])
+    // The way to the settings: the item "Nhắc việc" stays the current one.
+    fireEvent.click(screen.getAllByRole('button', { name: 'Cài đặt nhắc việc' })[0])
+    expect(await screen.findByRole('heading', { level: 2, name: 'Cài đặt nhắc việc' })).toBeTruthy()
+    await screen.findByRole('button', { name: 'Lưu' })
+    expect(current()[4]).toEqual(['Nhắc việc', 'page'])
+    // "Hủy": back with no notice.
+    fireEvent.click(screen.getByRole('button', { name: 'Hủy' }))
+    await screen.findByText('Không có nhắc việc nào đang chờ.')
+    expect(screen.queryByRole('status')).toBeNull()
+    // Save: back with the notice, shown once.
+    fireEvent.click(screen.getAllByRole('button', { name: 'Cài đặt nhắc việc' })[0])
+    fireEvent.click(await screen.findByRole('button', { name: 'Lưu' }))
+    expect(await screen.findByText('Đã lưu cài đặt nhắc việc.')).toBeTruthy()
+    expect(loadPending).toHaveBeenCalledTimes(3)
+    fireEvent.click(within(screen.getByRole('navigation')).getByRole('button', { name: 'Khách hàng' }))
+    expect(await screen.findByRole('heading', { level: 2, name: 'Khách hàng' })).toBeTruthy()
+    expect(screen.queryByText('Đã lưu cài đặt nhắc việc.')).toBeNull()
   })
 
   it('D4: detail → "Thanh toán" → payment_list → "Ghi khoản thanh toán" → payment_form → saved → payment_list with the notice, once; "Đơn hàng" current throughout', async () => {

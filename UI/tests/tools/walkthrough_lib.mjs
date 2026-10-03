@@ -379,6 +379,75 @@ export async function seedIncomeSample(baseUrl) {
   return { ...sample, commissions: { ...sample.commissions, cancelled } }
 }
 
+// Sample data of the D6 walkthrough reminder_list (and the manual run npm run
+// walkthrough:app -- --reminders): reminders cannot be made by the interface
+// (only the desktop's reminder_ticker calls check_due, api_contract.yaml 4.0.0),
+// so THIS TOOL — a test, not the layer — calls POST /reminders/checks once.
+//   - one client, three commissions: "Tranh hạn hôm nay" (deadline TODAY by the
+//     machine's date), "Minh họa bìa sách" (deadline 2026-01-01, long past) and
+//     "Chibi đôi" (no deadline); none has a stage, so all three are open;
+//   - the settings are saved with both kinds on: a reminder 1 day before a
+//     deadline, and a digest every day at the minute after next (HH:MM of
+//     now + 3 s, rounded up to the minute);
+//   - once that minute has gone, check_due is called: it produces the deadline
+//     reminder (due 00:00 today: the deadline ends at 00:00 tomorrow, minus 24
+//     hours) and the digest (due at that minute), oldest first. The digest takes
+//     between 4 and 64 seconds to exist (less than 70).
+// What the list must show (D6_EXPECTED_REMINDERS): the deadline reminder, then
+// the digest "3 đơn đang mở", "2 đơn có hạn giao", earliest "Minh họa bìa
+// sách (01/01/2026)". The date of the run is in the lines (today, the due
+// times): the evidence images change from day to day. Settings saved here
+// restart the digest's cadence, so a spec that wants "Chưa lưu lần nào" must
+// not use this sample.
+export const D6_TITLES = { today: 'Tranh hạn hôm nay', past: 'Minh họa bìa sách', none: 'Chibi đôi' }
+const two = (n) => String(n).padStart(2, '0')
+export const localDate = (d) => `${d.getFullYear()}-${two(d.getMonth() + 1)}-${two(d.getDate())}`
+export const dmy = (iso) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}`
+
+export async function seedReminderSample(baseUrl) {
+  // Close to midnight "today" would change under the sample's feet: wait it out.
+  const now0 = new Date()
+  const midnight = new Date(now0.getFullYear(), now0.getMonth(), now0.getDate() + 1).getTime()
+  if (midnight - now0.getTime() < 120_000) await pause(midnight - now0.getTime() + 2000)
+
+  const client = (await call(baseUrl, 'POST', '/clients', { client_input: { display_name: 'Mai Anh', contacts: [], note: null } }, 201)).client_id
+  const today = localDate(new Date())
+  const make = async (title, deadline) =>
+    (await call(baseUrl, 'POST', '/commissions', {
+      commission_input: { client_id: client, title, commission_type: null, agreed_price: { amount_minor: 1500000, currency: 'VND' }, deadline, description: null, reference_links: [] },
+    }, 201)).commission_id
+  const commissions = {
+    today: await make(D6_TITLES.today, today),
+    past: await make(D6_TITLES.past, '2026-01-01'),
+    none: await make(D6_TITLES.none, null),
+  }
+
+  // The minute after next: at least 3 seconds away, so the first occurrence is at or after the saving.
+  const target = new Date(Math.ceil((Date.now() + 3000) / 60000) * 60000)
+  const digestTime = `${two(target.getHours())}:${two(target.getMinutes())}`
+  await call(baseUrl, 'PUT', '/reminders/settings', {
+    reminder_settings_input: {
+      periodic: { enabled: true, every: 1, unit: 'days', at_time: digestTime, weekday: null },
+      deadline: { enabled: true, lead_times: [{ amount: 1, unit: 'days' }] },
+    },
+  }, 200)
+  // The check must come after the digest's minute (the backend's clock is this machine's).
+  await pause(Math.max(0, target.getTime() + 1500 - Date.now()))
+  const produced = await call(baseUrl, 'POST', '/reminders/checks', undefined, 200)
+  if (produced.length !== 2) throw new Error(`check_due produced ${produced.length} reminders, expected 2: ${JSON.stringify(produced)}`)
+  // The date of the digest: the minute's own day (it may differ from "today" only past midnight, which is waited out above).
+  return { client, commissions, today, digestTime, digestDate: localDate(target) }
+}
+
+// What reminder_list shows for the sample above: [main line, secondary line].
+export function d6ExpectedReminders(sample) {
+  const day = dmy(sample.today)
+  return [
+    [`Sắp tới hạn giao: ${D6_TITLES.today}`, `Hạn giao ${day} · nhắc trước 1 ngày · đến hạn lúc 00:00 ${day}`],
+    ['Tổng hợp định kỳ: 3 đơn đang mở', `2 đơn có hạn giao · đến hạn lúc ${sample.digestTime} ${dmy(sample.digestDate)} · sớm nhất: ${D6_TITLES.past} (01/01/2026)`],
+  ]
+}
+
 export async function seedSampleData(baseUrl) {
   // create_client: POST /clients, input [client_input]. endpoint_forms.http:
   // a JSON body whose keys are the input NAMES, so { client_input: {...} }.

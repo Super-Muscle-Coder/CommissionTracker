@@ -1,0 +1,24 @@
+.field {
+  display: flex;
+  gap: var(--space-sm);
+  align-items: center;
+}
+
+.input {
+  margin: 0;
+  accent-color: var(--color-action);
+}
+
+.input:focus-visible {
+  outline: var(--border-width-focus) solid var(--color-focus-ring);
+  outline-offset: var(--border-width-focus);
+}
+
+.label {
+  color: var(--color-text);
+  font-weight: var(--font-weight-heading);
+}
+
+.input:disabled + .label {
+  color: var(--color-text-muted);
+}

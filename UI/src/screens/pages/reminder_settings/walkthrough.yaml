@@ -1,0 +1,72 @@
+page: reminder_settings
+precondition: >
+  Desktop đã build (npm run build trong Desktop/). Trong UI/: npm run walkthrough:app -- --empty mở
+  ứng dụng thật với cơ sở dữ liệu TRỐNG trong thư mục dữ liệu tạm (không đụng %APPDATA%), Backend.py
+  thật sau fixture bật/tắt được; cài đặt nhắc việc chưa được lưu lần nào. (Dữ liệu mẫu --reminders
+  KHÔNG dùng được ở đây: công cụ phải lưu cài đặt để tạo nhắc việc, nên trang sẽ không còn hiện "Chưa
+  lưu lần nào".) Chờ dòng "Cơ sở dữ liệu TRỐNG". Bật/tắt backend: npm run walkthrough:backend --
+  down|up (từ UI/, cửa sổ lệnh khác). Các bước nối tiếp nhau trong cùng một lần mở ứng dụng. Bấm mục
+  "Nhắc việc", rồi "Cài đặt nhắc việc" để tới trang này. Trước khi chạy, đặt CT_WALKTHROUGH_RUNNER là
+  tên người chạy. LƯU Ý: dòng "Lưu lần cuối lúc …" mang giờ của lần chạy, nên ảnh bằng chứng sau khi
+  lưu đổi theo mỗi lần chạy; chấp nhận.
+steps:
+  - id: S1
+    setup: null
+    action: >
+      Bấm mục "Nhắc việc", rồi "Cài đặt nhắc việc".
+    expect: >
+      Trang "Cài đặt nhắc việc"; ngay dưới tiêu đề là hàng nút "Lưu" (nút chính, đứng đầu), "Hủy"; dưới
+      đó dòng "Chưa lưu lần nào, đang dùng cài đặt mặc định." Phần "Nhắc định kỳ": ô đánh dấu "Bật nhắc
+      định kỳ" (chưa đánh dấu); "Mỗi" = 1, đơn vị = "tuần" (chọn được "ngày" hoặc "tuần"); "Vào lúc" =
+      09:00; "Vào thứ" = "Thứ Hai" (chọn được Thứ Hai … Chủ nhật); dòng "Mỗi lần lưu cài đặt, chu kỳ
+      nhắc định kỳ được tính lại từ lúc lưu." Phần "Nhắc trước hạn giao": "Bật nhắc trước hạn giao"
+      (chưa đánh dấu); một mốc nhắc "1" "ngày" (đơn vị chọn được "giờ" hoặc "ngày"), nút "Bỏ mốc này" bị
+      vô hiệu vì chỉ còn một dòng; nút "Thêm mốc nhắc"; dòng "Hạn giao tính tới hết ngày đó. Một ngày
+      là 24 giờ." Mọi ô vẫn sửa được dù phần đó đang tắt.
+    covers: [ok]
+  - id: S2
+    setup: null
+    action: >
+      Đổi đơn vị chu kỳ sang "ngày", rồi lại sang "tuần". Đánh dấu "Bật nhắc định kỳ"; "Mỗi" = 2; "Vào
+      lúc" = 08:15; "Vào thứ" = "Thứ Năm". Đánh dấu "Bật nhắc trước hạn giao". Bấm "Thêm mốc nhắc", ở
+      dòng mới nhập số 12 và chọn "giờ". Bấm "Lưu". Rồi bấm "Cài đặt nhắc việc" để mở lại.
+    expect: >
+      Đơn vị "ngày": ô "Vào thứ" biến mất; trở lại "tuần": ô hiện lại với "Thứ Hai". Dòng mốc nhắc mới
+      có ô số trống (vì "1 ngày" đã có). Sau "Lưu": về trang "Nhắc việc" (danh sách trống) với thông báo
+      "Đã lưu cài đặt nhắc việc." đúng một lần. Mở lại: dòng "Lưu lần cuối lúc <giờ:phút> <ngày>" (thay
+      cho "Chưa lưu lần nào"); các ô đúng giá trị đã lưu: định kỳ bật, mỗi 2 tuần, 08:15, Thứ Năm; nhắc
+      trước hạn bật, hai mốc "1 ngày" và "12 giờ", cả hai nút "Bỏ mốc này" dùng được.
+    covers: [ok]
+  - id: S3
+    setup: null
+    action: >
+      Đổi đơn vị chu kỳ sang "ngày". Bấm "Hủy". Bấm lại "Cài đặt nhắc việc".
+    expect: >
+      Đơn vị "ngày": ô "Vào thứ" biến mất. "Hủy" về trang "Nhắc việc", không có thông báo, không lưu gì:
+      mở lại, đơn vị vẫn là "tuần", "Vào thứ" vẫn "Thứ Năm".
+    covers: [ok]
+  - id: S4
+    setup: null
+    action: >
+      Xóa trống ô "Mỗi" rồi bấm "Lưu". Nhập "Mỗi" = 0, ở mốc nhắc 2 nhập 24 (đơn vị "giờ") rồi bấm "Lưu".
+      Nhập "Mỗi" = 2, ở mốc nhắc 2 nhập 366 và chọn "ngày" rồi bấm "Lưu". Bấm "Hủy".
+    expect: >
+      Lần 1: khung "Chưa lưu được" với câu "Một số ô chưa đúng định dạng. Vui lòng kiểm tra lại."; ngay
+      dưới ô "Mỗi": "Nhập số ngày hoặc số tuần"; con trỏ nhập ở ô "Mỗi"; không gửi gì. Lần 2: dưới "Mỗi":
+      "Nhập một số nguyên từ 1 trở lên"; dưới ô số của mốc 2: "Mốc nhắc này trùng với một mốc khác"
+      (24 giờ trùng "1 ngày"); con trỏ ở "Mỗi". Lần 3: dưới ô số của mốc 2: "Mốc nhắc tối đa 365 ngày
+      (8760 giờ)"; con trỏ ở ô đó. Các ô giữ nguyên chữ đã nhập. "Hủy" về trang "Nhắc việc"; mở lại
+      thấy giá trị đã lưu ở S2 (không có gì bị lưu).
+    covers: [rejected_input]
+  - id: S5
+    setup: >
+      Đang ở trang "Cài đặt nhắc việc" (mở lại), đổi "Mỗi" thành 3. Chạy npm run walkthrough:backend --
+      down (ứng dụng vẫn mở).
+    action: >
+      Bấm "Lưu". Khi khung báo lỗi hiện ra, chạy npm run walkthrough:backend -- up, rồi bấm "Lưu".
+    expect: >
+      Lần đầu: khung "Không kết nối được" với câu "Không kết nối được tới phần xử lý của ứng dụng. Vui
+      lòng thử lại."; vẫn ở trang cài đặt; các ô giữ nguyên ("Mỗi" 3, mốc 2 "12" "giờ"); "Lưu" bấm lại
+      được. Sau "Lưu" (backend đã chạy lại): về trang "Nhắc việc" với thông báo "Đã lưu cài đặt nhắc
+      việc."; mở lại thấy "Mỗi" = 3.
+    covers: [unreachable, ok]

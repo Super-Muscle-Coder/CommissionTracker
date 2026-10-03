@@ -32,19 +32,19 @@ const MINIMUM = { text: 4.5, 'non-text': 3 }
 
 // [text token, background token, where the kit uses this pair]
 const TEXT_PAIRS = [
-  ['--color-text', '--color-surface', 'body text and headings on the page (global.css, Section, TextField, TextArea, SelectField, DateField and DateTimeField labels, FieldGroup legend)'],
+  ['--color-text', '--color-surface', 'body text and headings on the page (global.css, Section, TextField, TextArea, SelectField, DateField, DateTimeField and TimeField labels, CheckboxField label, FieldGroup legend)'],
   ['--color-text', '--color-surface-header', 'application title (AppFrame header)'],
   ['--color-text', '--color-surface-raised', 'NavMenu items, ItemList rows, DescriptionList details'],
   ['--color-text', '--color-surface-hover', 'hovered NavMenu item and ItemList row'],
   ['--color-text', '--color-surface-selected', 'current NavMenu item'],
-  ['--color-text', '--color-surface-field', 'text typed or chosen in TextField, TextArea, SelectField, DateField, DateTimeField'],
+  ['--color-text', '--color-surface-field', 'text typed or chosen in TextField, TextArea, SelectField, DateField, DateTimeField, TimeField'],
   ['--color-text', '--color-surface-danger', 'InlineAlert text, FatalMessage detail, ConfirmPanel text'],
-  ['--color-text-muted', '--color-surface', 'Section group heading, LoadingIndicator, SelectField hint, Caption'],
+  ['--color-text-muted', '--color-surface', 'Section group heading, LoadingIndicator, SelectField hint, Caption, label of a disabled CheckboxField'],
   ['--color-text-muted', '--color-surface-raised', 'DescriptionList terms, ItemList secondary line'],
   ['--color-text-muted', '--color-surface-hover', 'ItemList secondary line of a hovered row'],
   ['--color-text-muted', '--color-surface-muted', 'EmptyState text'],
-  ['--color-text-muted', '--color-surface-field', 'text of a disabled TextField, TextArea, SelectField, DateField, DateTimeField (while saving; the locked currency)'],
-  ['--color-text-danger', '--color-surface', 'field error under a TextField, TextArea, SelectField, DateField or DateTimeField'],
+  ['--color-text-muted', '--color-surface-field', 'text of a disabled TextField, TextArea, SelectField, DateField, DateTimeField, TimeField (while saving; the locked currency)'],
+  ['--color-text-danger', '--color-surface', 'field error under a TextField, TextArea, SelectField, DateField, DateTimeField or TimeField'],
   ['--color-text-danger', '--color-surface-danger', 'InlineAlert title, FatalMessage title, ConfirmPanel title'],
   ['--color-text-success', '--color-surface-success', 'SuccessNotice'],
   ['--color-action-text', '--color-action', 'primary Button, ConfirmPanel confirm button'],
@@ -61,6 +61,7 @@ const FIELDS = [
   'SelectField/SelectField.module.css',
   'DateField/DateField.module.css',
   'DateTimeField/DateTimeField.module.css',
+  'TimeField/TimeField.module.css',
 ]
 
 // CSS declarations of the kit that decide where a non-text part is drawn:
@@ -76,6 +77,12 @@ const CSS = {
     [f, '.input:focus-visible', 'outline-offset', '0'],
     [f, '.inputError:focus-visible', 'outline-offset', '0'],
   ]),
+  // CheckboxField: a positive offset too, so its ring sits on the page the
+  // checkbox is on, not on the checkbox.
+  checkboxRingOutside: [
+    ['CheckboxField/CheckboxField.module.css', '.input:focus-visible', 'outline', 'var(--border-width-focus) solid var(--color-focus-ring)'],
+    ['CheckboxField/CheckboxField.module.css', '.input:focus-visible', 'outline-offset', 'var(--border-width-focus)'],
+  ],
   // Positive offset: a gap as wide as the ring separates it from the button,
   // so the ring touches only what is around the button — never the button
   // itself. This is why no pair "ring on --color-action" is listed: it would
@@ -123,11 +130,11 @@ const CSS = {
 
 // [part token, adjacent colour token, where, CSS that puts the part there]
 const NON_TEXT_PAIRS = [
-  ['--color-border-field', '--color-surface-field', 'TextField, TextArea, SelectField, DateField, DateTimeField border — inner edge, on the field', [...CSS.fieldBorder, ...CSS.fieldBackground]],
-  ['--color-border-field', '--color-surface', 'TextField, TextArea, SelectField, DateField, DateTimeField border — outer edge, on the page the form sits on', CSS.fieldBorder],
-  ['--color-border-field-danger', '--color-surface-field', 'TextField, TextArea, SelectField, DateField, DateTimeField border with an error — inner edge', [...CSS.fieldErrorBorder, ...CSS.fieldBackground]],
-  ['--color-border-field-danger', '--color-surface', 'TextField, TextArea, SelectField, DateField, DateTimeField border with an error — outer edge, on the page', CSS.fieldErrorBorder],
-  ['--color-focus-ring', '--color-surface', 'focus ring of Button (also the DateField clear button) and of TextField, TextArea, SelectField, DateField, DateTimeField — drawn outside, on the page', [...CSS.buttonRingOutside, ...CSS.fieldRingOutside]],
+  ['--color-border-field', '--color-surface-field', 'TextField, TextArea, SelectField, DateField, DateTimeField, TimeField border — inner edge, on the field', [...CSS.fieldBorder, ...CSS.fieldBackground]],
+  ['--color-border-field', '--color-surface', 'TextField, TextArea, SelectField, DateField, DateTimeField, TimeField border — outer edge, on the page the form sits on', CSS.fieldBorder],
+  ['--color-border-field-danger', '--color-surface-field', 'TextField, TextArea, SelectField, DateField, DateTimeField, TimeField border with an error — inner edge', [...CSS.fieldErrorBorder, ...CSS.fieldBackground]],
+  ['--color-border-field-danger', '--color-surface', 'TextField, TextArea, SelectField, DateField, DateTimeField, TimeField border with an error — outer edge, on the page', CSS.fieldErrorBorder],
+  ['--color-focus-ring', '--color-surface', 'focus ring of Button (also the DateField clear button), of CheckboxField and of TextField, TextArea, SelectField, DateField, DateTimeField, TimeField — drawn outside, on the page', [...CSS.buttonRingOutside, ...CSS.checkboxRingOutside, ...CSS.fieldRingOutside]],
   // The action button of an ItemList row is a Button: its ring sits outside it (positive offset), on the row, whose background is the list's.
   ['--color-focus-ring', '--color-surface-raised', 'focus ring of the action button of an ItemList row — drawn outside the button, on the row', [...CSS.buttonRingOutside, ...CSS.itemListRowBackground]],
   ['--color-focus-ring', '--color-surface-muted', 'focus ring of the EmptyState button — drawn outside, on the EmptyState box', CSS.emptyStateRingOutside],

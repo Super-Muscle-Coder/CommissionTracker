@@ -6,6 +6,7 @@ import { vi } from 'vitest'
 import type { ManageClientRouters } from '../../logic/workflows/manage_client/routers'
 import type { ManageCommissionRouters } from '../../logic/workflows/manage_commission/routers'
 import type { RecordPaymentRouters } from '../../logic/workflows/record_payment/routers'
+import type { SendReminderRouters } from '../../logic/workflows/send_reminder/routers'
 import type { UpdateProgressRouters } from '../../logic/workflows/update_progress/routers'
 import type { ViewIncomeReportRouters } from '../../logic/workflows/view_income_report/routers'
 import { LogicContext, type LogicRouters } from '../logic_context'
@@ -94,6 +95,22 @@ export function fakeViewIncomeReport(over: Partial<ViewIncomeReportRouters>): Vi
   }
 }
 
+// The three operations that only reshape the draft are plain synchronous ones
+// (like defaultPeriod), with the behaviour Services gives them (D6): the
+// weekday follows the unit, a new row is empty, a row goes.
+export function fakeSendReminder(over: Partial<SendReminderRouters>): SendReminderRouters {
+  return {
+    loadPending: unexpected('loadPending'),
+    acknowledge: unexpected('acknowledge'),
+    openSettings: unexpected('openSettings'),
+    saveSettings: unexpected('saveSettings'),
+    changePeriodicUnit: vi.fn((d, unit) => ({ ...d, periodicUnit: unit, weekday: unit === 'weeks' ? (d.weekday === '' ? '1' : d.weekday) : '' })),
+    addLeadTime: vi.fn((d) => ({ ...d, leadTimes: [...d.leadTimes, { amount: '', unit: 'days' }] })),
+    removeLeadTime: vi.fn((d, index) => ({ ...d, leadTimes: d.leadTimes.filter((_row: unknown, i: number) => i !== index) })),
+    ...over,
+  }
+}
+
 // Every Routers of the context; a workflow the test does not give fails on any call.
 function logicOf(
   manageClient: ManageClientRouters,
@@ -101,6 +118,7 @@ function logicOf(
   updateProgress: UpdateProgressRouters | undefined,
   recordPayment: RecordPaymentRouters | undefined,
   viewIncomeReport: ViewIncomeReportRouters | undefined,
+  sendReminder: SendReminderRouters | undefined,
 ): LogicRouters {
   return {
     manageClient,
@@ -108,6 +126,7 @@ function logicOf(
     updateProgress: updateProgress ?? fakeUpdateProgress({}),
     recordPayment: recordPayment ?? fakeRecordPayment({}),
     viewIncomeReport: viewIncomeReport ?? fakeViewIncomeReport({}),
+    sendReminder: sendReminder ?? fakeSendReminder({}),
   }
 }
 
@@ -118,9 +137,10 @@ export function renderWithLogic(
   updateProgress?: UpdateProgressRouters,
   recordPayment?: RecordPaymentRouters,
   viewIncomeReport?: ViewIncomeReportRouters,
+  sendReminder?: SendReminderRouters,
 ) {
   return render(
-    <LogicContext.Provider value={logicOf(manageClient, manageCommission, updateProgress, recordPayment, viewIncomeReport)}>{ui}</LogicContext.Provider>,
+    <LogicContext.Provider value={logicOf(manageClient, manageCommission, updateProgress, recordPayment, viewIncomeReport, sendReminder)}>{ui}</LogicContext.Provider>,
   )
 }
 
@@ -141,15 +161,20 @@ export function renderFirstCommit(
   updateProgress?: UpdateProgressRouters,
   recordPayment?: RecordPaymentRouters,
   viewIncomeReport?: ViewIncomeReportRouters,
+  sendReminder?: SendReminderRouters,
 ): FirstCommit {
   let seen: FirstCommit | null = null
-  const logic = logicOf(manageClient, manageCommission, updateProgress, recordPayment, viewIncomeReport)
+  const logic = logicOf(manageClient, manageCommission, updateProgress, recordPayment, viewIncomeReport, sendReminder)
   const calls = () =>
     [
       ...Object.values(logic.manageClient),
       ...Object.values(logic.manageCommission),
       ...Object.values(logic.updateProgress),
       ...Object.values(logic.recordPayment),
+      // The three operations that reshape the draft are synchronous and not calls that load: not counted.
+      ...Object.entries(logic.sendReminder)
+        .filter(([name]) => !['changePeriodicUnit', 'addLeadTime', 'removeLeadTime'].includes(name))
+        .map(([, fn]) => fn),
       // defaultPeriod is a synchronous read the page makes while it renders (its first draft), not a call that loads: not counted.
       ...Object.entries(logic.viewIncomeReport)
         .filter(([name]) => name !== 'defaultPeriod')

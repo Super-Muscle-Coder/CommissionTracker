@@ -2,8 +2,8 @@
 // workflow: screens
 // clause: external
 // component: screens
-// last_updated_by: coding-agent@2026-10-01#1
-// last_updated_at: 2026-10-01T22:03:00+07:00
+// last_updated_by: coding-agent@2026-10-03#1
+// last_updated_at: 2026-10-03T10:42:22.0487385+07:00
 //
 // EXPERIENCES:
 //   - id: screens-EXP-001
@@ -621,6 +621,71 @@
 //       ở mã: hai dòng nay là await vi.waitFor(() => expect(isFocused(...)).toBe(true)). Các tệp cùng luật
 //       (ClientForm, CommissionForm, PaymentForm, IncomeReport, PaymentList) đã chờ focus bằng waitFor từ trước, nên
 //       không sửa. Mã kit và trang không đổi, hành vi không đổi.
+//   - id: screens-EXP-042
+//     content: >
+//       Phiên 27 (D6): hai trang mới, reminder_list và reminder_settings, mục điều hướng thứ năm "Nhắc việc"
+//       (khóa reminder_list, đứng sau "Thu nhập"; thứ tự menu sinh từ thứ tự khóa của bảng NAVIGATION, nên chỉ
+//       thêm khóa vào cuối). reminder_settings không có mục menu, section = reminder_list: ở trang cài đặt mục
+//       "Nhắc việc" được đánh dấu đang mở (kiểm thử app_root và e2e). Cả hai trang không tham số (PageParams
+//       null). Cờ tải khởi tạo true (UI-4); hàng nút ngay dưới tiêu đề, hành động chính đứng đầu; sau đó dòng
+//       chữ phụ (Caption). Chỗ đặc tả để mở, agent quyết: dòng chữ phụ cố định "Nhắc việc đến hạn sẽ hiện…"
+//       đặt DƯỚI hàng nút, không giữa tiêu đề và hàng nút, để giữ nguyên tắc 7 "hàng nút ngay dưới tiêu đề".
+//   - id: screens-EXP-043
+//     content: >
+//       reminder_list: ItemList sẵn có (onSelect = mở theo mục, action "Đã xem", onAction = acknowledge). Bấm
+//       dòng chính: nhắc việc hạn giao mở commission_detail(commission_id), tổng hợp mở commission_list, phân
+//       nhánh bằng switch trên view.open.to (Services trao đích, trang chỉ dịch thành điều hướng). "Đã xem":
+//       KHÔNG hỏi xác nhận (đặc tả D6; nguyên tắc 5 §7.2 chỉ đòi cho việc khó quay lại và có hậu quả; đánh dấu
+//       đã xem không làm mất dữ liệu nào). Hook: một lần gọi (cờ ackRunning), mọi nút "Đã xem" vô hiệu trong
+//       lúc gửi (action.disabled = acknowledging). Sau 200: tải lại (load) và thông báo "Đã đánh dấu đã xem.";
+//       sau rejected (404 "không còn trong danh sách", cả 500): đọc lại IM LẶNG (refreshQuietly như payment_list),
+//       danh sách cũ ở lại nếu lần đọc này cũng hỏng; unreachable và contract_violation: chỉ thông báo, không đọc
+//       lại. Trạng thái rỗng: câu + nút "Cài đặt nhắc việc" (nguyên tắc 6). Thông báo chuyển trang từ trang cài
+//       đặt hiện một lần. Trang KHÔNG gọi check_due (chỉ reminder_ticker của desktop).
+//   - id: screens-EXP-044
+//     content: >
+//       reminder_settings: hook giữ bản nháp thô (chuỗi) và hai loại thao tác: sửa một ô (setField) và thay đổi
+//       kéo theo ô khác (setPeriodicUnit, addLeadTime, removeLeadTime) đi qua Routers (Services quyết thứ
+//       mặc định và mốc mặc định). "Vào thứ" hiện khi draft.periodicUnit === view.weekdayUnit (giá trị 'weeks'
+//       đi từ Configs qua view, trang không gõ chữ 'weeks'). Mọi ô sửa được khi phần đang tắt. "Thêm mốc nhắc"
+//       vô hiệu từ 5 dòng, "Bỏ mốc này" vô hiệu ở 1 dòng (giới hạn đi từ view.leadTimeLimits, [CONTRACT] 1..5);
+//       trong lúc lưu mọi ô và nút vô hiệu, "Lưu" bận. Lỗi định dạng hiện cạnh ô, con trỏ tới ô lỗi đầu tiên
+//       theo thứ tự trên màn hình (every, unit, at_time, weekday, rồi từng mốc: số, đơn vị, trùng) bằng
+//       focusRequest = số lần lưu; lỗi "trùng mốc" (khóa deadline.lead_times.<i>) hiện dưới ô SỐ của mốc đó. Sau
+//       200: về reminder_list kèm "Đã lưu cài đặt nhắc việc."; 400, 500, không tới được, vi phạm hợp đồng: thông
+//       báo, giữ nguyên bản nháp, "Lưu" gửi lại được. Dòng mốc không có định danh riêng: key = vị trí (ô nhập có
+//       điều khiển nên đúng giá trị khi xóa giữa danh sách; kiểm thử "Bỏ mốc này … giữ nguyên chữ đã gõ").
+//   - id: screens-EXP-045
+//     content: >
+//       Kiểm thử dựng trang: fake_logic thêm fakeSendReminder (ba thao tác chỉ định hình bản nháp là hàm đồng bộ
+//       có hành vi như Services, như defaultPeriod của income_report; không tính vào "routersCalled" ở khung
+//       hình đầu). renderWithLogic, renderFirstCommit, logicOf nhận thêm tham số thứ bảy sendReminder.
+//       app_root.test: năm mục điều hướng đúng thứ tự, bảng có 13 trang, hai lệnh sai-kiểu @ts-expect-error mới,
+//       ca D6 đi vòng "Nhắc việc" → cài đặt → Hủy → cài đặt → Lưu. e2e: commission_list và progress_board đếm bốn
+//       mục điều hướng nên thêm đúng ['Nhắc việc', null] (hai chỗ ở progress_board; lần chạy đầu của phiên quên
+//       progress_board và hỏng S1 của nó, đã sửa).
+//   - id: screens-EXP-046
+//     content: >
+//       Tự kiểm I6 cho reminder_list và reminder_settings (năm góc). (1) Hợp đồng: bảng nhãn của bốn lời gọi
+//       khớp api_contract.yaml 4.0.0 từng dòng (kiểm thử so nguyên bảng), Configs ghi 9.0.2 và 4.0.0, 6 cặp
+//       (lời gọi, mã) có câu; mọi lời gọi nằm trong bảng D6; tìm trong UI/src: không có lời gọi tới đường dẫn của
+//       check_due, tới /watermark-profiles, /watermark-strengths, không confirm(, alert(, prompt(. (2) Ranh giới:
+//       lệnh check đạt (R1–R14); Services chỉ có quyết định trình bày (dòng chữ, mốc, ngày, câu lỗi, mặc định của
+//       bản nháp); Routers chỉ kiểm điều reminder_settings_record viết trong type (luật bản sao), ngoài ra là chữ
+//       (câu "Nhập thời gian nhắc trước" cho mốc để trống) và cách tách mã lỗi (send_reminder-EXP-004); hook chỉ
+//       gọi, giữ, chuyển (hook của reminder_list quyết KHI NÀO đọc lại, như payment_list); kit: CheckboxField và
+//       TimeField không prop nào mang khái niệm nghiệp vụ. (3) Người dùng, bảy nguyên tắc §7.2: 1 mỗi trang một nút
+//       chính ("Cài đặt nhắc việc", "Lưu"); 2 danh sách chỉ hai dòng mỗi mục; 3 nhãn tiếng Việt theo lời họa sĩ; 4
+//       lỗi hiện cạnh ô và con trỏ tới ô lỗi đầu tiên (kiểm thử dựng trang, và e2e S4 toBeFocused ở "Mỗi" rồi ở
+//       mốc 2); 5 "Đã xem" không hỏi xác nhận, vì nó không làm mất dữ liệu và không đổi đơn hàng hay cài đặt (đặc tả
+//       D6 đã chốt), mỗi mục gửi một lần, mọi nút vô hiệu trong lúc gửi; 6 trạng thái rỗng có nút "Cài đặt nhắc
+//       việc"; 7 hàng nút ngay dưới tiêu đề (e2e đo bằng boundingBox ở trang cài đặt, thứ tự nút ở trang danh
+//       sách), mục "Nhắc việc" đứng cuối menu và được đánh dấu cả ở trang cài đặt. Kịch bản bấm thử: reminder_list
+//       S1–S5 (ok, unreachable), reminder_settings S1–S5 (ok, rejected_input, unreachable); không rejected_system
+//       (400 và 404 không gây ra được bằng thao tác bình thường; kiểm thử dựng trang chứng minh chúng hiện đúng
+//       câu). (4) Checkpoint: bốn khối (send_reminder, kit, screens, main). (5) Bằng chứng: xem các EVIDENCE.
+//       ĐỀ XUẤT: reminder_list và reminder_settings → hoàn_tất, sau audit của Orchestrator và Project Owner chạy
+//       tay hai kịch bản.
 //
 // UNSOLVED_PROBLEMS: []
 //
@@ -994,6 +1059,77 @@
 //       payment_form, 5 lần e2e có tên, 1 lần không biến). Không nới thời gian chờ, không retries. KHÔNG kết luận được nguyên nhân của
 //       UI-11 (các lần cũ đều ở bước backend tắt, lần này backend bật): để Orchestrator xét.
 //     recorded_at: 2026-09-30T09:20:00+07:00
+//   - claim: >
+//       Phiên 27: kiểm thử dựng trang của hai trang mới và của điều hướng đạt, phủ mọi nhãn của bảng D6 cho từng lời
+//       gọi.
+//     how: >
+//       Trong UI/: npm run check; npx vitest run src/screens/pages/reminder_list src/screens/pages/reminder_settings
+//       src/screens/tests.
+//     result: >
+//       ReminderList.test.tsx 21 ca: khung hình đầu (UI-4: "Đang tải nhắc việc…", chỉ "Cài đặt nhắc việc" bấm được);
+//       ok với hai loại nhắc việc và thứ tự nút; dòng chính mở commission_detail hoặc commission_list; trạng thái rỗng
+//       có nút; thông báo chuyển trang; "Tải lại"; "Đã xem": một lần gọi đúng id, không hỏi, đọc lại và thông báo, mọi
+//       nút vô hiệu trong lúc gửi và lần bấm thứ hai không gửi gì, 404 (câu và đọc lại), 500 (danh sách cũ ở lại),
+//       unreachable, contract_violation; rejected 500, unreachable + "Tải lại", contract_violation của lần tải.
+//       ReminderSettings.test.tsx 27 ca: khung hình đầu; ok; hai câu của dòng phụ; ô giữ bản nháp; ô giờ và ô đánh dấu
+//       là ô gốc; ô sửa được khi phần tắt; "Hủy"; rejected 500, unreachable + "Thử lại", contract_violation khi mở;
+//       "Vào thứ" hiện và ẩn theo đơn vị; "Thêm mốc nhắc" vô hiệu ở 5 dòng, "Bỏ mốc này" vô hiệu ở 1; lưu một lần, ok về
+//       danh sách kèm thông báo; trong lúc lưu mọi ô vô hiệu; lỗi định dạng cạnh ô, con trỏ tới ô đầu tiên theo thứ tự
+//       màn hình, hai lần liên tiếp; 400, 500, unreachable, contract_violation giữ bản nháp. app_root.test.tsx 9 ca
+//       (mốc 8; năm mục điều hướng, 13 trang, ca D6). Tổng "Tests 1550 passed (1550)" (mốc 1303).
+//     recorded_at: 2026-10-03T10:42:22.0487385+07:00
+//   - claim: >
+//       Mỗi spec e2e mới chạy riêng đạt 10 lần liên tiếp.
+//     how: >
+//       Scratchpad loop10.sh: npx playwright test -c tests/e2e/playwright.config.ts reminder_settings, rồi
+//       reminder_list, mỗi spec 10 lần, từng lượt một (không đặt runner: bằng chứng nháp vào test-results).
+//     result: >
+//       reminder_settings 10/10 "5 passed" (khoảng 14 s mỗi lượt), reminder_list 10/10 "5 passed" (khoảng 1,2 phút mỗi
+//       lượt, phần lớn là chờ phút của nhắc việc tổng hợp). Không lần nào hết giờ chụp ảnh.
+//     recorded_at: 2026-10-03T10:42:22.0487385+07:00
+//   - claim: >
+//       npm run e2e đạt 5 lần, từng lượt một, có CT_WALKTHROUGH_RUNNER=coding-agent@2026-10-03#1; lần hỏng duy nhất vì
+//       chụp ảnh hết giờ (UI-11) không tính.
+//     how: >
+//       Scratchpad full5.sh (một tiến trình, dừng khi đủ 5 lượt đạt), sau npm run build trong UI/ và Desktop/.
+//     result: >
+//       Sáu lượt: 1 "69 passed (4.1m)"; 2 "1 failed, 64 passed" (reminder_list-S1-list hết giờ chụp ảnh 30 s, cửa sổ
+//       minimized:true, trace ở UI/test-results/ui11_traces/); 3, 4, 5, 6 mỗi lượt "69 passed" (3.9–4.6 phút). Tức 5
+//       lượt đạt, bốn lượt cuối liên tiếp (số e2e 69, mốc 59). Còn hai lượt chạy trước đó bị bỏ, không tính, không dùng:
+//       tôi dừng nhầm tập lệnh bằng TaskStop mà vòng lặp bên trong vẫn chạy nên hai lượt Playwright chồng nhau (lỗi cách
+//       làm của tôi, không phải của sản phẩm). Lượt đầu của vòng đó cũng làm lộ một chỗ tôi quên: spec progress_board
+//       còn đếm bốn mục điều hướng (đã thêm ['Nhắc việc', null], hai chỗ).
+//     recorded_at: 2026-10-03T10:42:22.0487385+07:00
+//   - claim: >
+//       Lần chạy không đặt biến để UI/evidence nguyên vẹn.
+//     how: >
+//       SHA-256 mọi tệp dưới UI/evidence (120 tệp) trước và sau từng lần npm run e2e không đặt CT_WALKTHROUGH_RUNNER.
+//     result: >
+//       Ba lần chạy không biến: "63 passed, 2 failed, 4 did not run", "64 passed, 1 failed, 4 did not run", "59 passed,
+//       3 failed, 7 did not run"; MỌI lỗi là hết giờ chụp ảnh (page.screenshot 30 s) lúc cửa sổ bị thu nhỏ (xem EVIDENCE
+//       của main). Sau từng lần: UI/evidence UNCHANGED (120 tệp, so SHA-256). Chưa có lần không biến nào đạt đủ vì
+//       UI-11, nên chưa có "69 passed" không biến; điều kiện "evidence nguyên vẹn" đạt.
+//     recorded_at: 2026-10-03T10:42:22.0487385+07:00
+//   - claim: >
+//       Việc 7: ảnh có ô ngày sau khi DSK-15 đổi ngôn ngữ ứng dụng sang vi.
+//     how: >
+//       Mở ảnh sinh bởi lượt e2e có runner số 6, và một ảnh chụp riêng của ô ngày giờ (script tạm trong tests/tools,
+//       đã xóa; ảnh payment_form_datetime.png ở scratchpad của phiên).
+//     result: >
+//       commission_form-S1-filled.png, ô "Hạn giao": "30/11/2026" — ngày/tháng/năm. income_report-S3-edited.png, hai ô
+//       "Từ ngày" và "Đến ngày": "01/01/2024" và "31/12/2025" — ngày/tháng/năm. payment_form: KHÔNG ảnh nào trong
+//       evidence có ô "Ngày giờ nhận tiền" trong khung nhìn (nó nằm dưới mép dưới, ảnh chụp chỉ phần đầu trang); ảnh
+//       riêng cho thấy "03/10/2026 10:38 SA" — ngày/tháng/năm, nhưng giờ theo 12 giờ có SA/CH (không phải 24 giờ như
+//       HH:mm ở chỗ khác). Không sửa (plan việc 7).
+//     recorded_at: 2026-10-03T10:42:22.0487385+07:00
+//   - claim: >
+//       Mốc %APPDATA% và các điều kiện cuối phiên.
+//     how: >
+//       Tên, kích thước, giờ ghi của mọi tệp trong %APPDATA%\CommissionTracker lúc đầu và cuối phiên; git status.
+//     result: >
+//       data.db 114688 byte và data.db.lock 0 byte, giờ ghi 2026-09-28 21:09, không đổi. Không kiểm thử nào đụng
+//       %APPDATA%. git status chỉ có tệp trong UI/. Không eslint-disable, không ngoại lệ lint mới, không phụ thuộc mới.
+//     recorded_at: 2026-10-03T10:42:22.0487385+07:00
 //
 // NOTES:
 //   - content: >
@@ -1054,6 +1190,8 @@ import { IncomeReport } from './pages/income_report/IncomeReport'
 import { PaymentForm } from './pages/payment_form/PaymentForm'
 import { PaymentList } from './pages/payment_list/PaymentList'
 import { ProgressBoard } from './pages/progress_board/ProgressBoard'
+import { ReminderList } from './pages/reminder_list/ReminderList'
+import { ReminderSettings } from './pages/reminder_settings/ReminderSettings'
 import { StageChange } from './pages/stage_change/StageChange'
 
 // Layouts of .design/ui_decomposition.md §5 that pages live in. The startup
@@ -1063,7 +1201,7 @@ export type LayoutKey = 'main_layout'
 // The parameters each page opens with, typed per page
 // (ui_decomposition.md §5, "Điều hướng giữa các trang khách hàng";
 // "Chặng D2", "Điều hướng của D2"; "Chặng D3", "Điều hướng của D3";
-// "Chặng D4", "Điều hướng của D4"; "Chặng D5", "Điều hướng của D5").
+// "Chặng D4", "Điều hướng của D4"; "Chặng D5", "Điều hướng của D5"; "Chặng D6", "Điều hướng của D6").
 // stage_change receives the commission's title to show, handed by
 // commission_detail (it does not call get_commission again); so do
 // payment_list and payment_form (D4).
@@ -1079,6 +1217,8 @@ export type PageParams = {
   payment_list: { commission_id: string; title: string }
   payment_form: { commission_id: string; title: string }
   income_report: null
+  reminder_list: null
+  reminder_settings: null
 }
 
 // Keys of the pages (ui_decomposition.md §5), one per page that is built.
@@ -1116,7 +1256,7 @@ export const START_ROUTE: Route = { page: START_PAGE, params: null }
 
 // One entry per page. The type ties each page to the component that takes
 // exactly its parameters. The navigation region lists the entries that have a
-// menu, in this order: "Khách hàng", "Đơn hàng", "Tiến độ", then "Thu nhập" (§5); a later
+// menu, in this order: "Khách hàng", "Đơn hàng", "Tiến độ", "Thu nhập", then "Nhắc việc" (§5); a later
 // stage adds its entries after these, never moving them. stage_change is a
 // step of the commission detail: its item is "Đơn hàng" (D3).
 export const NAVIGATION: { readonly [K in PageKey]: NavigationEntry<K> } = {
@@ -1152,4 +1292,12 @@ export const NAVIGATION: { readonly [K in PageKey]: NavigationEntry<K> } = {
     section: 'income_report',
     menu: { label: 'Thu nhập', route: { page: 'income_report', params: null } },
   },
+  reminder_list: {
+    layout: 'main_layout',
+    component: ReminderList,
+    section: 'reminder_list',
+    menu: { label: 'Nhắc việc', route: { page: 'reminder_list', params: null } },
+  },
+  // The settings are a step of the reminder list (D6): the "Nhắc việc" item is the current one.
+  reminder_settings: { layout: 'main_layout', component: ReminderSettings, section: 'reminder_list', menu: null },
 }

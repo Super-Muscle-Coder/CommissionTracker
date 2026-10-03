@@ -12,6 +12,7 @@ import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { evidenceRoot } from '../tools/walkthrough_lib.mjs'
+import { timedScreenshot } from './walkthrough_harness.js'
 
 const UI_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..')
 const DESKTOP_ROOT = path.resolve(UI_ROOT, '..', 'Desktop')
@@ -79,7 +80,7 @@ test('the desktop app loads UI/dist: main frame, no startup error, no CSP violat
       // Electron prints its security warnings shortly after load; give them time.
       await page.waitForTimeout(2000)
       fs.mkdirSync(path.dirname(SCREENSHOT), { recursive: true })
-      await page.screenshot({ path: SCREENSHOT })
+      await timedScreenshot(page, 'tests/e2e/main_layout.spec.ts', 'main_layout', SCREENSHOT, app)
     } finally {
       console.log(`renderer console: ${JSON.stringify(consoleLines)}`)
       await app.close()

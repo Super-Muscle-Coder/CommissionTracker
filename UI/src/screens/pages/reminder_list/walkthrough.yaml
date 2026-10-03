@@ -1,0 +1,68 @@
+page: reminder_list
+precondition: >
+  Desktop đã build (npm run build trong Desktop/). Trong UI/: npm run walkthrough:app -- --reminders
+  mở ứng dụng thật với thư mục dữ liệu tạm (không đụng %APPDATA%), Backend.py thật sau fixture
+  bật/tắt được. Giao diện KHÔNG tự tạo nhắc việc (chỉ reminder_ticker của desktop gọi
+  POST /reminders/checks), nên công cụ này nạp dữ liệu mẫu D6 rồi tự gọi endpoint đó MỘT lần: một
+  khách (Mai Anh), ba đơn "Tranh hạn hôm nay" (hạn giao là HÔM NAY theo ngày máy), "Minh họa bìa
+  sách" (hạn 01/01/2026) và "Chibi đôi" (không hạn); cài đặt đã lưu với cả hai loại nhắc việc bật
+  (nhắc trước hạn "1 ngày", nhắc định kỳ hằng ngày vào phút kế tiếp). Công cụ chờ qua phút đó (tối
+  đa khoảng một phút) trước khi gọi, nên phải chờ dòng "ĐÃ NẠP XONG dữ liệu mẫu D6". Bật/tắt backend:
+  npm run walkthrough:backend -- down|up (từ UI/, cửa sổ lệnh khác). Các bước nối tiếp nhau trong
+  cùng một lần mở ứng dụng. Trước khi chạy, đặt CT_WALKTHROUGH_RUNNER là tên người chạy.
+  LƯU Ý: ngày và giờ trong các dòng nhắc việc (hạn giao, "đến hạn lúc") là của ngày chạy, nên ảnh
+  bằng chứng đổi theo ngày chạy; chấp nhận, vì ảnh được chụp lại mỗi lần chạy có runner. Dưới đây,
+  <hôm nay> là ngày máy dạng dd/mm/yyyy, <giờ> là giờ:phút của phút nhắc tổng hợp (dòng "đến hạn lúc"
+  do công cụ in ra).
+steps:
+  - id: S1
+    setup: null
+    action: >
+      Bấm mục "Nhắc việc" ở vùng điều hướng. Bấm vào dòng chính "Sắp tới hạn giao: Tranh hạn hôm nay".
+    expect: >
+      Trang "Nhắc việc"; ngay dưới tiêu đề là hàng nút "Cài đặt nhắc việc" (nút chính, đứng đầu), "Tải
+      lại"; dưới đó dòng chữ phụ "Nhắc việc đến hạn sẽ hiện thành thông báo của Windows. Mọi nhắc việc
+      chưa đánh dấu đã xem nằm ở đây." Hai nhắc việc, cũ nhất trước, mỗi nhắc việc có nút "Đã xem":
+      (1) "Sắp tới hạn giao: Tranh hạn hôm nay" · "Hạn giao <hôm nay> · nhắc trước 1 ngày · đến hạn
+      lúc 00:00 <hôm nay>"; (2) "Tổng hợp định kỳ: 3 đơn đang mở" · "2 đơn có hạn giao · đến hạn lúc
+      <giờ> <hôm nay> · sớm nhất: Minh họa bìa sách (01/01/2026)". Bấm dòng chính thứ nhất mở "Chi
+      tiết đơn hàng" của "Tranh hạn hôm nay".
+    covers: [ok]
+  - id: S2
+    setup: null
+    action: >
+      Bấm lại mục "Nhắc việc". Bấm vào dòng chính "Tổng hợp định kỳ: 3 đơn đang mở".
+    expect: >
+      Mở trang "Đơn hàng" (danh sách đơn hàng).
+    covers: [ok]
+  - id: S3
+    setup: >
+      Đang ở trang "Nhắc việc" (bấm lại mục "Nhắc việc"). Chạy npm run walkthrough:backend -- down (ứng
+      dụng vẫn mở).
+    action: >
+      Bấm "Tải lại". Khi khung báo lỗi hiện ra, chạy npm run walkthrough:backend -- up, rồi bấm "Tải
+      lại".
+    expect: >
+      Lần đầu: khung "Không kết nối được" với câu "Không kết nối được tới phần xử lý của ứng dụng. Vui
+      lòng thử lại."; không có danh sách; hàng nút vẫn có "Cài đặt nhắc việc" và "Tải lại". Sau "Tải
+      lại" (backend đã chạy lại): đúng hai nhắc việc như ở S1.
+    covers: [unreachable, ok]
+  - id: S4
+    setup: null
+    action: >
+      Bấm "Đã xem" ở nhắc việc "Tổng hợp định kỳ: 3 đơn đang mở".
+    expect: >
+      Không có câu hỏi xác nhận nào (không khung xác nhận, không hộp thoại của hệ thống). Hiện thông
+      báo "Đã đánh dấu đã xem."; nhắc việc tổng hợp biến mất, còn lại đúng một nhắc việc "Sắp tới hạn
+      giao: Tranh hạn hôm nay".
+    covers: [ok]
+  - id: S5
+    setup: null
+    action: >
+      Bấm "Đã xem" ở nhắc việc còn lại. Bấm nút "Cài đặt nhắc việc" ở trong khung trống. Ở trang cài
+      đặt bấm "Hủy".
+    expect: >
+      Danh sách trống: dòng "Không có nhắc việc nào đang chờ." kèm nút "Cài đặt nhắc việc" (ngoài nút
+      ở hàng nút đầu trang). Nút ở khung trống mở trang "Cài đặt nhắc việc" (có dòng "Lưu lần cuối lúc
+      <giờ:phút> <ngày>" vì công cụ đã lưu cài đặt); "Hủy" về lại trang "Nhắc việc", không có thông báo.
+    covers: [ok]

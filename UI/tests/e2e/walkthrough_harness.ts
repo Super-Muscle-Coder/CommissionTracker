@@ -31,6 +31,10 @@ import {
   writeSession,
 } from '../tools/walkthrough_lib.mjs'
 
+// The app of the running spec (one launch per spec file, so one per process):
+// the screenshot timing log reads the state of its window through it (UI-11).
+let launchedApp: ElectronApplication | null = null
+
 export type Launched = { app: ElectronApplication; page: Page; dataDir: string; baseUrl: string; log: () => string; exited: Promise<number | null> }
 
 export async function launch(options: { seed: boolean }): Promise<Launched> {
@@ -41,6 +45,7 @@ export async function launch(options: { seed: boolean }): Promise<Launched> {
   let log = ''
   try {
     app = await electron.launch({ executablePath: electronBinary(), args: launchArgs(dataDir, { noDialog: true }), cwd: DESKTOP_ROOT })
+    launchedApp = app
     const proc = app.process()
     const exited = new Promise<number | null>((resolve) => proc.once('exit', (code) => resolve(code)))
     proc.stderr?.on('data', (chunk: Buffer) => {
@@ -61,6 +66,7 @@ export async function launch(options: { seed: boolean }): Promise<Launched> {
   } catch (e) {
     // Leave nothing behind when the launch itself fails.
     console.log(`desktop main log:\n${log}`)
+    launchedApp = null
     if (app !== null) await app.close()
     clearSession()
     fs.rmSync(dataDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 })
@@ -70,6 +76,7 @@ export async function launch(options: { seed: boolean }): Promise<Launched> {
 
 export async function close(l: Launched): Promise<void> {
   let code: number | null
+  launchedApp = null
   try {
     await l.app.close()
     code = await l.exited
@@ -96,11 +103,67 @@ export function setBackend(wanted: 'down' | 'up'): void {
 // UI-11, data only: one line per screenshot of the harness in
 // test-results/screenshot-timing.log (git ignores test-results; Playwright
 // empties it at the start of every run, so a run's log is read after that run):
-// start time, spec, step, milliseconds, whether the backend was down, outcome.
-function logScreenshotTiming(spec: string, step: string, startedAt: Date, ms: number, outcome: 'ok' | 'error'): void {
+// start time, spec, step, milliseconds, whether the backend was down, outcome,
+// and (UI-11 step 3) the state of the window read just BEFORE the screenshot
+// command: isMinimized, isVisible, isFocused of the main window (through the
+// Electron main process) and document.visibilityState of the page. Read only:
+// nothing here changes the window or the way the screenshot is taken.
+const WINDOW_READ_MS = 3_000
+
+async function within<T>(ms: number, read: Promise<T>): Promise<T | string> {
+  let timer: NodeJS.Timeout | undefined
+  const guarded = read.catch((e: unknown) => `error(${e instanceof Error ? e.message.slice(0, 80) : String(e)})`)
+  const late = new Promise<string>((resolve) => {
+    timer = setTimeout(() => resolve('timeout'), ms)
+  })
+  try {
+    return await Promise.race([guarded, late])
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+async function readWindowState(page: Page, app: ElectronApplication | null): Promise<string> {
+  const win =
+    app === null
+      ? 'no-app'
+      : await within(
+          WINDOW_READ_MS,
+          app.evaluate(({ BrowserWindow }) => {
+            const w = BrowserWindow.getAllWindows()[0]
+            return w === undefined ? null : { minimized: w.isMinimized(), visible: w.isVisible(), focused: w.isFocused() }
+          }),
+        )
+  const visibility = await within(WINDOW_READ_MS, page.evaluate('document.visibilityState') as Promise<string>)
+  const parts =
+    typeof win === 'string'
+      ? [`window:${win}`]
+      : win === null
+        ? ['window:none']
+        : [`minimized:${win.minimized}`, `visible:${win.visible}`, `focused:${win.focused}`]
+  return [...parts, `visibility:${visibility}`].join(',')
+}
+
+function logScreenshotTiming(spec: string, step: string, startedAt: Date, ms: number, outcome: 'ok' | 'error', windowState: string): void {
   const file = path.join(UI_ROOT, 'test-results', 'screenshot-timing.log')
   fs.mkdirSync(path.dirname(file), { recursive: true })
-  fs.appendFileSync(file, `${startedAt.toISOString()}\t${spec}\t${step}\t${ms}\tbackend=${backendDown ? 'down' : 'up'}\t${outcome}\n`)
+  fs.appendFileSync(file, `${startedAt.toISOString()}\t${spec}\t${step}\t${ms}\tbackend=${backendDown ? 'down' : 'up'}\t${outcome}\t${windowState}\n`)
+}
+
+// The one place a screenshot is taken (the walkthrough recorder and
+// main_layout.spec.ts go through it): the window state is read first, then the
+// screenshot, timed, exactly as before.
+export async function timedScreenshot(page: Page, specFile: string, step: string, file: string, app: ElectronApplication | null = launchedApp): Promise<void> {
+  const windowState = await readWindowState(page, app)
+  const startedAt = new Date()
+  const t0 = performance.now()
+  try {
+    await page.screenshot({ path: file })
+  } catch (e) {
+    logScreenshotTiming(specFile, step, startedAt, Math.round(performance.now() - t0), 'error', windowState)
+    throw e
+  }
+  logScreenshotTiming(specFile, step, startedAt, Math.round(performance.now() - t0), 'ok', windowState)
 }
 
 type StepRecord = { step: string; passed: boolean; runner: string; finished_at: string; screenshot: string; covers: string[] }
@@ -115,15 +178,7 @@ export function walkthroughRecorder(pageKey: string, specFile: string) {
   async function screenshot(page: Page, name: string): Promise<string> {
     fs.mkdirSync(dir, { recursive: true })
     const file = path.join(dir, `${name}.png`)
-    const startedAt = new Date()
-    const t0 = performance.now()
-    try {
-      await page.screenshot({ path: file })
-    } catch (e) {
-      logScreenshotTiming(specFile, name, startedAt, Math.round(performance.now() - t0), 'error')
-      throw e
-    }
-    logScreenshotTiming(specFile, name, startedAt, Math.round(performance.now() - t0), 'ok')
+    await timedScreenshot(page, specFile, name, file)
     return path.relative(UI_ROOT, file).split(path.sep).join('/')
   }
 
@@ -472,4 +527,73 @@ export const incomeNumbers = (page: Page, currency: string) => detailEntries(pag
 export async function incomeMonths(page: Page, currency: string): Promise<[string, string[]][]> {
   const name = `Thực nhận theo tháng, ${currency}`
   return (await page.getByLabel(name).count()) === 0 ? [] : detailEntries(page, name)
+}
+
+// --- D6: reminders --------------------------------------------------------------------
+
+const REMINDER_LIST = 'Nhắc việc đang chờ'
+const EMPTY_REMINDERS_TEXT = 'Không có nhắc việc nào đang chờ.'
+
+// [main line, secondary line] of each reminder of the list, in the order shown.
+export async function reminderRows(page: Page): Promise<[string, string][]> {
+  const texts = await page.getByRole('list', { name: REMINDER_LIST }).getByRole('listitem').locator(':scope > button').allInnerTexts()
+  return texts.map((t) => {
+    const [title, ...rest] = t.split('\n').map((s) => s.trim()).filter((s) => s !== '')
+    return [title, rest.join(' ')]
+  })
+}
+
+// The list of reminders is loaded: it shows reminders ('list') or its empty
+// state ('empty'), with no "Đang tải" status and no alert. Read from the
+// content (UI-4); a notice (also role="status") may stay, so the status is
+// filtered by its words.
+export async function expectRemindersLoaded(page: Page, shown: 'list' | 'empty'): Promise<void> {
+  switch (shown) {
+    case 'list':
+      await expect(page.getByRole('list', { name: REMINDER_LIST }).getByRole('listitem').first()).toBeVisible({ timeout: 30_000 })
+      break
+    case 'empty':
+      await expect(page.getByText(EMPTY_REMINDERS_TEXT)).toBeVisible({ timeout: 30_000 })
+      break
+  }
+  await expect(page.getByRole('status').filter({ hasText: 'Đang tải' })).toHaveCount(0)
+  await expect(page.getByRole('alert')).toHaveCount(0)
+}
+
+// Open the reminders through the navigation region ("Nhắc việc"); the page is
+// built anew, so what it shows once loaded is never a leftover.
+export async function goToReminders(page: Page, shown: 'list' | 'empty'): Promise<void> {
+  await page.getByRole('navigation', { name: 'Điều hướng chính' }).getByRole('button', { name: 'Nhắc việc' }).click()
+  await expect(page.getByRole('heading', { level: 2, name: 'Nhắc việc', exact: true })).toBeVisible()
+  await expectRemindersLoaded(page, shown)
+}
+
+// Press "Tải lại" on reminder_list and wait for the content it must end on
+// (list → "không kết nối được", that alert → list).
+export async function reloadReminders(page: Page, outcome: 'list' | 'empty' | 'unreachable'): Promise<void> {
+  await page.getByRole('button', { name: 'Tải lại' }).click()
+  switch (outcome) {
+    case 'list':
+    case 'empty':
+      await expectRemindersLoaded(page, outcome)
+      break
+    case 'unreachable':
+      await expect(page.getByRole('alert')).toContainText('Không kết nối được', { timeout: 30_000 })
+      await expect(page.getByRole('list', { name: REMINDER_LIST })).toHaveCount(0)
+      await expect(page.getByRole('status').filter({ hasText: 'Đang tải' })).toHaveCount(0)
+      break
+  }
+}
+
+// reminder_settings is open: its form is shown (the button "Lưu"), with no "Đang mở" status.
+export async function expectSettingsLoaded(page: Page): Promise<void> {
+  await expect(page.getByRole('button', { name: 'Lưu', exact: true })).toBeVisible({ timeout: 30_000 })
+  await expect(page.getByRole('status').filter({ hasText: 'Đang mở' })).toHaveCount(0)
+}
+
+// From reminder_list (its row of buttons) to reminder_settings.
+export async function openReminderSettings(page: Page): Promise<void> {
+  await page.getByRole('button', { name: 'Cài đặt nhắc việc', exact: true }).first().click()
+  await expect(page.getByRole('heading', { level: 2, name: 'Cài đặt nhắc việc' })).toBeVisible()
+  await expectSettingsLoaded(page)
 }

@@ -2,8 +2,8 @@
 // workflow: main
 // clause: external
 // component: main
-// last_updated_by: coding-agent@2026-10-01#1
-// last_updated_at: 2026-10-01T22:04:00+07:00
+// last_updated_by: coding-agent@2026-10-03#1
+// last_updated_at: 2026-10-03T10:42:22.0487385+07:00
 //
 // EXPERIENCES:
 //   - id: main-EXP-001
@@ -340,6 +340,24 @@
 //       phiên 19-24 (không có dữ liệu trạng thái cửa sổ lúc đó). Nếu muốn khẳng định, lần sau có thể ghi isMinimized
 //       cùng thời gian chụp trong harness (chỉ ghi, không đổi hành vi). Trong phiên này, sáu lượt e2e đầy đủ không
 //       có lần hết giờ nào (87 lần chụp mỗi lượt, lớn nhất 127 ms ở năm lượt có nhật ký).
+//   - id: main-EXP-024
+//     content: >
+//       Phiên 27 (D6): ráp nối send_reminder đúng mẫu: createSendReminderAdapters(httpClient, SEND_REMINDER_CONFIGS) →
+//       createSendReminderServices(adapters, SEND_REMINDER_CONFIGS, LAYER_CONFIGS.resultMessages) →
+//       createSendReminderRouters(services, { limits, formats, periodicUnits, leadUnits }) (Routers nhận các giá trị
+//       Configs nó kiểm bằng, vì chỉ Main đọc Configs, R14), đặt vào LogicRouters.sendReminder. Không có đồng hồ: mặc
+//       định của form đến từ backend (get_settings). Giao diện không gọi check_due.
+//   - id: main-EXP-025
+//     content: >
+//       UI-11 bước (3) (phiên 27): harness tests/e2e/walkthrough_harness.ts ghi, cạnh mỗi dòng của
+//       test-results/screenshot-timing.log, trạng thái cửa sổ ĐỌC TRƯỚC lệnh chụp: isMinimized, isVisible, isFocused
+//       của cửa sổ chính (electronApp.evaluate, tiến trình chính) và document.visibilityState của trang, mỗi lần đọc
+//       có hạn 3 s (quá hạn ghi "timeout"). Hàm timedScreenshot là chỗ duy nhất chụp ảnh (bộ ghi kịch bản và
+//       main_layout.spec.ts cùng dùng). Chỉ ghi: không đổi cách chụp, không restore(), không nới thời gian chờ. Cạm
+//       bẫy vận hành: Playwright xóa test-results ở đầu mỗi lượt, nên trace và nhật ký phải chép ra ngay sau lượt (tôi
+//       chép vào UI/test-results/ui11_traces/ ở cuối phiên, sau lượt chạy cuối); TaskStop trên một tập lệnh bash KHÔNG
+//       dừng vòng lặp bên trong, và hai lượt Playwright chạy chồng nhau hỏng cả hai (SESSION_FILE và thư mục kết quả
+//       dùng chung): đừng bao giờ chạy hai lệnh e2e cùng lúc.
 //
 // UNSOLVED_PROBLEMS: []
 //
@@ -752,6 +770,43 @@
 //       eslint-disable, không ngoại lệ lint mới, không phụ thuộc mới. Backend: Backend/env/Scripts/python.exe
 //       (qua fixture).
 //     recorded_at: 2026-09-30T09:25:00+07:00
+//   - claim: >
+//       Phiên 27: môi trường, mốc đầu phiên và kết quả cuối; mốc %APPDATA% không đổi.
+//     how: >
+//       node --version; npm --version; Backend/env/Scripts/python.exe --version; git status --short; trong UI/: npm ci,
+//       npm run check (mốc và cuối); npm run build trong Desktop/ rồi CT_WALKTHROUGH_RUNNER=coding-agent@2026-10-03#1 npm
+//       run e2e (mốc và cuối); tên, kích thước, giờ ghi mọi tệp trong %APPDATA%\CommissionTracker.
+//     result: >
+//       Node v24.14.1; npm 11.11.0 (npm ci in thêm cảnh báo của npm audit, không còn "0 vulnerabilities" như các phiên
+//       trước; không sửa, ngoài plan); Python 3.13.12; git status đầu phiên sạch. Mốc: check "Tests 1303 passed (1303)"
+//       (30 tệp); e2e mốc 59 test: "54 passed, 3 failed, 2 did not run" — hai lần hết giờ chụp ảnh (client_detail S4,
+//       client_form S5) và một lần locator.click "Tải lại" không thấy (progress_board S4); mốc này chạy TRƯỚC khi có
+//       nhật ký trạng thái cửa sổ nên không có dữ liệu cửa sổ. Cuối: check exit 0 (tsc -b, eslint --max-warnings 0,
+//       stylelint, "check_contrast: 19 text pairs >= 4.5:1 and 13 non-text pairs >= 3:1 checked, all pass.",
+//       "check_layer: 167 files under src/ checked", "check_e2e_status: no unfiltered text assertion", "Test Files 35
+//       passed (35)", "Tests 1550 passed (1550)"); e2e 69 test, xem EVIDENCE của screens. %APPDATA%: data.db 114688
+//       byte, data.db.lock 0 byte, giờ ghi 2026-09-28 21:09, không đổi.
+//     recorded_at: 2026-10-03T10:42:22.0487385+07:00
+//   - claim: >
+//       UI-11, dữ liệu của phiên 27: mọi lần hết giờ chụp ảnh xảy ra khi cửa sổ Electron bị THU NHỎ.
+//     how: >
+//       Gộp mọi nhật ký test-results/screenshot-timing.log của các lượt có trạng thái cửa sổ (20 lượt riêng từng spec, 6
+//       lượt đầy đủ có runner, 3 lượt không runner; không tính hai lượt chạy chồng nhau), script scratchpad agg.mjs.
+//     result: >
+//       1119 lần chụp có trạng thái cửa sổ. Lần chụp thành công (1112): trung bình 122 ms, lâu nhất 2859 ms, không lần
+//       nào quá 5 s. Riêng 134 lần lúc backend tắt: trung bình 349 ms (gồm một lần hết giờ), lâu nhất 30005 ms. Hết giờ
+//       (30 s): 7 lần — reminder_list-S1-list (2 lần), income_report-S1, payment_form-S6, commission_form-S1,
+//       commission_list-S3-unreachable (backend tắt), progress_board-S4 — và CẢ BẢY lần, đọc trước lệnh chụp, đều là
+//       "minimized:true, visible:false, focused:false, visibility:visible". Trạng thái của các lần thành công: 1096
+//       bình thường (không thu nhỏ, có tiêu điểm), 11 không thu nhỏ nhưng mất tiêu điểm, 5 minimized:true (chụp vẫn
+//       xong: cửa sổ được mở lại giữa lúc đọc và lúc chụp). Không lần hết giờ nào ở cửa sổ không bị thu nhỏ. Cùng cơ
+//       chế với thí nghiệm phiên 25 (thu nhỏ: 11/20 treo; bị che, mất tiêu điểm: 0/20). Trace của các lượt hỏng (thêm ba
+//       lượt của mốc đầu phiên, chưa có dữ liệu cửa sổ) ở UI/test-results/ui11_traces/ với INDEX.txt; thư mục nằm trong
+//       test-results nên git bỏ qua và lượt e2e kế tiếp xóa nó: chép đi nếu cần giữ. Việc tiếp (4 của UI-11) thuộc
+//       Project Owner: quyết harness có tự restore() hay chỉ dựa vào quy ước không thu nhỏ khi e2e chạy. Trong phiên này
+//       tôi không thu nhỏ cửa sổ nào, nhưng cửa sổ vẫn bị thu nhỏ nhiều lần (nguồn chưa rõ: có thể Windows hoặc ứng dụng
+//       khác khi máy đang dùng); người vận hành nên đối chiếu.
+//     recorded_at: 2026-10-03T10:42:22.0487385+07:00
 //
 // NOTES:
 //   - content: >
@@ -834,6 +889,10 @@ import { createViewIncomeReportAdapters } from './logic/workflows/view_income_re
 import { VIEW_INCOME_REPORT_CONFIGS } from './logic/workflows/view_income_report/configs'
 import { createViewIncomeReportRouters } from './logic/workflows/view_income_report/routers'
 import { createViewIncomeReportServices } from './logic/workflows/view_income_report/services'
+import { createSendReminderAdapters } from './logic/workflows/send_reminder/adapters'
+import { SEND_REMINDER_CONFIGS } from './logic/workflows/send_reminder/configs'
+import { createSendReminderRouters } from './logic/workflows/send_reminder/routers'
+import { createSendReminderServices } from './logic/workflows/send_reminder/services'
 import { createHttpClient } from './logic/workflows/scaffold_ui/adapters'
 import { SCAFFOLD_UI_CONFIGS } from './logic/workflows/scaffold_ui/configs'
 import { AppRoot } from './screens/app_root'
@@ -917,6 +976,10 @@ if (!launch.ok) {
     LAYER_CONFIGS.resultMessages,
     () => new Date(),
   )
+  // send_reminder: the four calls of D6 only; check_due is the desktop's
+  // reminder_ticker's, never the interface's (api_contract.yaml 4.0.0).
+  const sendReminderAdapters = createSendReminderAdapters(httpClient, SEND_REMINDER_CONFIGS)
+  const sendReminderServices = createSendReminderServices(sendReminderAdapters, SEND_REMINDER_CONFIGS, LAYER_CONFIGS.resultMessages)
   const routers: LogicRouters = {
     manageClient: createManageClientRouters(manageClientServices, MANAGE_CLIENT_CONFIGS.limits),
     manageCommission: createManageCommissionRouters(manageCommissionServices, {
@@ -932,6 +995,12 @@ if (!launch.ok) {
       paymentKinds: RECORD_PAYMENT_CONFIGS.paymentKinds,
     }),
     viewIncomeReport: createViewIncomeReportRouters(viewIncomeReportServices),
+    sendReminder: createSendReminderRouters(sendReminderServices, {
+      limits: SEND_REMINDER_CONFIGS.limits,
+      formats: SEND_REMINDER_CONFIGS.formats,
+      periodicUnits: SEND_REMINDER_CONFIGS.periodicUnits,
+      leadUnits: SEND_REMINDER_CONFIGS.leadUnits,
+    }),
   }
 
   // Step 5. Hand the Routers to the screens zone and render the root.

@@ -75,3 +75,15 @@ export declare function seedIncomeSample(baseUrl: string): Promise<{ clients: Re
 export declare const D5_PAYMENTS: Record<'cancelledDeposit' | 'usdAugust', PaymentInputSample>
 export declare const D5_CANCELLED: { title: string; agreed_price: { amount_minor: number; currency: string } }
 export declare const D5_PERIODS: { twoMonths: [string, string]; september: [string, string]; nothingPaid: [string, string] }
+export declare const D6_TITLES: Record<'today' | 'past' | 'none', string>
+export declare const localDate: (d: Date) => string
+export declare const dmy: (iso: string) => string
+export type ReminderSample = {
+  client: string
+  commissions: Record<'today' | 'past' | 'none', string>
+  today: string
+  digestTime: string
+  digestDate: string
+}
+export declare function seedReminderSample(baseUrl: string): Promise<ReminderSample>
+export declare function d6ExpectedReminders(sample: ReminderSample): [string, string][]

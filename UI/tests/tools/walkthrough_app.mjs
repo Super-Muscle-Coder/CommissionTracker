@@ -1,4 +1,4 @@
-// npm run walkthrough:app [-- --empty | -- --commissions | -- --progress | -- --payments | -- --income]
+// npm run walkthrough:app [-- --empty | -- --commissions | -- --progress | -- --payments | -- --income | -- --reminders]
 //
 // Starts the real desktop app (built UI/dist, real Backend.py behind the
 // switchable fixture) on a temporary data folder, reads the backend port from
@@ -8,13 +8,13 @@
 // --commissions the D2 sample (its own clients and three commissions); with
 // --progress the D3 sample (the D2 sample, one more commission, stages set);
 // with --payments the D4 sample (the D2 sample and payments on two of its
-// commissions); with --income the D5 sample (the D4 sample, a second month of
+// commissions); with --reminders the D6 sample (three commissions, settings saved, and two reminders made by this tool, which waits up to a minute for the digest); with --income the D5 sample (the D4 sample, a second month of
 // USD, and a cancelled commission with a payment); with --empty none.
 //
 // For the Project Owner running the walkthroughs by hand
 // (src/screens/pages/{client_list,client_detail,client_form,commission_list,
 // commission_detail,commission_form,progress_board,stage_change,payment_list,
-// payment_form,income_report}/walkthrough.yaml).
+// payment_form,income_report,reminder_list,reminder_settings}/walkthrough.yaml).
 // The runner name printed (and written by the automated run) comes from
 // CT_WALKTHROUGH_RUNNER. Test tooling only.
 import { spawn } from 'node:child_process'
@@ -29,6 +29,7 @@ import {
   clearSession,
   D2_EXPECTED_LIST,
   D3_EXPECTED_BOARD,
+  d6ExpectedReminders,
   D5_PERIODS,
   electronBinary,
   launchArgs,
@@ -40,16 +41,18 @@ import {
   seedIncomeSample,
   seedPaymentSample,
   seedProgressSample,
+  seedReminderSample,
   seedSampleData,
   walkthroughRunner,
   writeSession,
 } from './walkthrough_lib.mjs'
 
 const empty = process.argv.includes('--empty')
-const income = !empty && process.argv.includes('--income')
-const payments = !empty && !income && process.argv.includes('--payments')
-const progress = !empty && !income && !payments && process.argv.includes('--progress')
-const commissions = !empty && !income && !payments && !progress && process.argv.includes('--commissions')
+const reminders = !empty && process.argv.includes('--reminders')
+const income = !empty && !reminders && process.argv.includes('--income')
+const payments = !empty && !reminders && !income && process.argv.includes('--payments')
+const progress = !empty && !reminders && !income && !payments && process.argv.includes('--progress')
+const commissions = !empty && !reminders && !income && !payments && !progress && process.argv.includes('--commissions')
 
 if (!fs.existsSync(path.join(DESKTOP_ROOT, 'dist', 'main.js'))) {
   console.error('Desktop is not built: run npm run build in Desktop/ first.')
@@ -81,7 +84,11 @@ app.stderr.on('data', (chunk) => {
 
 async function onReady(baseUrl) {
   writeSession({ dataDir, baseUrl, pid: app.pid ?? null })
-  if (income) {
+  let reminderSample = null
+  if (reminders) {
+    console.log('Đang nạp dữ liệu mẫu D6: chờ qua phút của nhắc việc tổng hợp (tối đa khoảng một phút)…')
+    reminderSample = await seedReminderSample(baseUrl)
+  } else if (income) {
     await seedIncomeSample(baseUrl)
   } else if (payments) {
     await seedPaymentSample(baseUrl)
@@ -99,6 +106,11 @@ async function onReady(baseUrl) {
   console.log(`Backend (qua fixture bật/tắt được): ${baseUrl}`)
   if (empty) {
     console.log('Cơ sở dữ liệu TRỐNG.')
+  } else if (reminders && reminderSample !== null) {
+    console.log('ĐÃ NẠP XONG dữ liệu mẫu D6 (nhắc việc). Mở mục "Nhắc việc". Giao diện không tự tạo nhắc việc; công cụ này đã gọi POST /reminders/checks một lần.')
+    console.log('  Hai nhắc việc đang chờ, cũ nhất trước (ngày theo ngày chạy hôm nay):')
+    for (const [main, detail] of d6ExpectedReminders(reminderSample)) console.log(`    ${main} — ${detail}`)
+    console.log('  Cài đặt đã được lưu (cả hai loại nhắc việc bật), nên trang cài đặt hiện "Lưu lần cuối lúc …". Muốn thấy "Chưa lưu lần nào" thì chạy với --empty.')
   } else if (income) {
     console.log('ĐÃ NẠP XONG dữ liệu mẫu D5 (thu nhập). Mở mục "Thu nhập". Mọi ngày thanh toán của mẫu nằm trong tháng 8 và tháng 9 năm 2026.')
     const [a1, a2] = D5_PERIODS.twoMonths
