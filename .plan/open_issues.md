@@ -188,6 +188,20 @@ Checkpoint ở đầu `record_payment/services.py` ghi `last_updated_at` và `re
 
 **Phiên 25** (audit phiên 25 §5.3): giờ đã lấy bằng lệnh nhưng vẫn muộn hơn lúc ghi tệp từ 11 s tới khoảng 1 phút, có vẻ do làm tròn lên. Quy ước bổ sung: chép nguyên giá trị của lệnh, không làm tròn.
 
+### DSK-16 — `test:packaged` hỏng từ phiên 16 mà không ai biết (trung bình, quy trình; audit phiên 26 §5.2)
+
+`packaged_app.spec.ts` chờ câu trạng thái rỗng cũ của `client_list`; câu đó đổi ở phiên giao diện 16, còn `test:packaged` chỉ chạy ở phiên desktop (gần nhất là phiên 14). Agent phiên 26 sửa dòng chờ chữ, Orchestrator chấp nhận.
+
+**Quy ước từ nay:**
+- plan giao diện nào đổi chữ của trang mở đầu (`client_list`) hay khung chính phải chạy thêm `npm run dist` và `npm run test:packaged` trong `Desktop/`, hoặc ghi rõ lý do không chạy;
+- tiêu chí của chặng G (phát hành) có `test:packaged`.
+
+### DSK-17 — `reminder_ticker` chưa có (trung bình; thuộc V1, chặng D6) — cho phiên desktop sau phiên 27
+
+Theo API Contract 4.0.0 (`cross_cutting.reminder_ticker`), desktop Main khởi động `reminder_ticker` sau khi backend READY. Nó gọi `send_reminder.check_due` (`POST /reminders/checks`) theo nhịp riêng, hiện một thông báo Windows cho mỗi nhắc việc trả về (chữ dựng từ các trường của nhắc việc), bấm thông báo chỉ đưa cửa sổ lên trước. Nó không quyết định gì và không đánh dấu đã xem.
+
+Chưa có thành phần này thì trong dùng thật danh sách nhắc việc đang chờ của giao diện (D6, phiên 27) luôn rỗng. Lập plan sau khi audit phiên 27; cần chốt: nhịp gọi, chữ thông báo tiếng Việt (trong `configs/desktop.json`), cách kiểm thử thông báo trên Windows.
+
 ## Hợp đồng — chờ Project Owner duyệt
 
 ### CT-5 — Luật "ngày bắt đầu không sau ngày kết thúc" của `view_income_report` nằm ngoài `type` (trung bình; đề xuất của Orchestrator, 2026-10-01, audit phiên 24 §5.1)
@@ -310,6 +324,7 @@ Ngày 2026-09-28, Project Owner yêu cầu vá mọi chỗ chưa đạt chuẩn.
 - Mất focus khi nút "Lưu" đang bận.
 - Tên khách ở trang chi tiết nhỏ hơn tiêu đề chung (thứ bậc thị giác, gần với V3).
 - `POST` gửi lại sau `unreachable` có thể tạo trùng.
+- Tiêu đề cửa sổ hộp thoại lỗi của desktop là "Error" (hành vi của `dialog.showErrorBox` trên Windows); đổi bằng `showMessageBox` (audit phiên 26 §5.3).
 - `income_report`: lỗi "ngày kết thúc trước ngày bắt đầu" kèm câu tổng của layer "Một số ô chưa đúng định dạng", sai nghĩa với lỗi thứ tự; danh sách theo tháng không có tiêu đề nhìn thấy (audit phiên 24 §5.6).
 - Khoản thanh toán đã hủy trên `payment_list` có dòng chính giống hệt khoản còn hiệu lực; chữ "Đã hủy" chỉ ở cuối dòng phụ (Q22-1 của audit phiên 22). Đạt đặc tả V1; V2 làm dấu hiệu rõ hơn.
 
@@ -446,8 +461,9 @@ Máy Orchestrator (Linux) chưa gặp lần nào trong hơn 20 lần e2e toàn b
 
 **Việc tiếp theo:**
 1. **Hỏi Project Owner** (audit phiên 25): trong lúc agent chạy e2e trên máy, anh có thu nhỏ cửa sổ Electron hay dùng "Show desktop" không?
+   **Trả lời 2026-10-02:** Project Owner có thu nhỏ và phóng to cửa sổ trong lúc dùng máy, và ứng dụng vẫn chạy bình thường. Điều này khớp giả thuyết: thu nhỏ không làm hỏng ứng dụng, chỉ làm **lệnh chụp ảnh của công cụ kiểm thử** chờ khung hình mới. Ứng dụng thật không chụp ảnh nên không bị ảnh hưởng. Giả thuyết được củng cố; bước (3) sẽ xác nhận dứt khoát.
 2. **Quy ước vận hành, chờ Project Owner đồng ý:** khi e2e chạy, không thu nhỏ cửa sổ Electron, không dùng "Show desktop".
-3. **Phiên giao diện kế tiếp, chỉ ghi:** harness ghi `isMinimized`, `isVisible`, `visibilityState` cạnh mỗi lần chụp trong nhật ký thời gian chụp ảnh.
+3. **Phiên giao diện kế tiếp, chỉ ghi:** harness ghi `isMinimized`, `isVisible`, `visibilityState` cạnh mỗi lần chụp trong nhật ký thời gian chụp ảnh. — **plan phiên 27** (việc 2).
 4. **Chỉ khi (3) xác nhận:** Project Owner quyết harness có tự `restore()` cửa sổ trước khi chụp (và ghi lại mỗi lần phải làm vậy) hay chỉ dựa vào quy ước (2).
 
 **Ghi nhận thêm, không phải UI-11 (Q22-2, thấp, không vá ở V1):** ở múi giờ có giờ mùa hè, giờ "không tồn tại" trong khoảng nhảy giờ (ví dụ 02:30 ngày đổi giờ ở New York) được ghép với độ lệch sau khi đổi. Việt Nam không có giờ mùa hè.
@@ -483,6 +499,8 @@ Hỏng một lần ở phiên 22 và một lần ở lần chạy mốc của ph
 
 ### DSK-12 — Dọn checkpoint Main desktop (thấp) — **plan phiên 26**
 
+> **ĐÃ ĐÓNG 2026-10-02, phiên 26** (`coding-agent@2026-10-02#1`). `main-PROB-001` → `main-EXP-019` (`derived_from`); `UNSOLVED_PROBLEMS: []`; không còn "V2" gắn với watermark; NOTE phiên 13 bị xóa, lý do ở `main-EXP-023` (`.reviews/audits/desktop/audit_desktop_session26.md`).
+
 - `main-PROB-001` (bản sao do antivirus chạy) nay đã có hướng xử lý ở mọi mặt, nên chuyển thành EXPERIENCES và dẫn nguồn. Đây cũng là nơi ghi kết quả ENV-5: giữ 75 s; không thấy bản sao trong 15,9 s quan sát được, trước khi AVG chặn tiến trình theo dõi (DSK-14); bản thật chạy đúng với khóa của phiên 15. Các nguồn:
   - rủi ro dữ liệu: đã chặn bằng khóa backend (BE-3, Data Schema 6.2.0);
   - độ trễ lần mở đầu: đã chẩn đoán xong, hướng xử lý là ký số ở chặng G (DSK-3, DSK-9);
@@ -491,6 +509,8 @@ Hỏng một lần ở phiên 22 và một lần ở lần chạy mốc của ph
 - NOTE "Cách làm của phiên 13 so với plan": chuyển thành EXPERIENCES nếu còn giá trị, hoặc xóa.
 
 ### DSK-13 — Hộp thoại lỗi của desktop viết bằng tiếng Anh kỹ thuật (thấp) — **ĐÃ DUYỆT 2026-09-28**, **plan phiên 26**
+
+> **ĐÃ ĐÓNG 2026-10-02, phiên 26.** Câu tiếng Việt trong `configs/desktop.json` (`main.error_dialog`, hai trường hợp: khởi động và đang chạy), chi tiết kỹ thuật ở dòng sau, dòng `FATAL:` không đổi; có ca kiểm thử, phép cắn và ảnh hộp thoại thật. Câu cuối dùng "gửi nội dung chi tiết bên dưới" thay cho "gửi tệp nhật ký" (ứng dụng không ghi tệp nhật ký) (`.reviews/audits/desktop/audit_desktop_session26.md`).
 
 > Project Owner: ứng dụng phục vụ cộng đồng họa sĩ Việt, nên V1 dùng **tiếng Việt**. Tiếng Anh (hay đa ngôn ngữ) bàn ở phiên bản sau; đặt câu chữ trong `configs/desktop.json` giúp việc đó rẻ về sau.
 
@@ -506,6 +526,8 @@ Họa sĩ là người Việt, và giao diện V1 dùng nhãn tiếng Việt (`u
 Câu chữ đặt trong `configs/desktop.json`.
 
 ### DSK-14 — AVG chặn công cụ đo `measure_startup.cjs` (thấp; phát hiện ở ENV-5, 2026-09-28) — **plan phiên 26**
+
+> **ĐÃ ĐÓNG PHẦN MÃ 2026-10-02, phiên 26.** `measure_startup.cjs` ghi script ra `.ps1` tạm (có BOM) và chạy bằng `-File`, xóa khi xong; 3 lượt đo trên bản dựng cuối khi AVG bật, tiến trình theo dõi sống tới cuối. **ĐÃ ĐÓNG HẲN 2026-10-02:** Project Owner xác nhận không có cảnh báo nào của AVG hay ReasonLabs trong suốt phiên 26 (`.reviews/audits/desktop/audit_desktop_session26.md`).
 
 **Hiện tượng:** AVG Behavior Shield chặn `powershell.exe` với nhận dạng `IDP.HELU.PSE91 - Command line detection`. Project Owner có ảnh chụp cảnh báo.
 
@@ -530,6 +552,8 @@ Chưa rõ AVG chặn lúc build hay lúc đo; lịch sử cảnh báo của AVG 
 - **Văn bản tùy chọn để trống** (`description`, `commission_type` và các trường `string|null` khác): giao diện gửi `null`, là quy tắc `[UI-ONLY]` như ô ghi chú khách hàng. Không sửa hợp đồng. Ghi vào I1 của D2.
 
 ### DSK-15 — Ô ngày của giao diện hiện kiểu tháng/ngày/năm (**trung bình** từ 2026-10-01; trước đó thấp; Q19-2 của audit phiên 19) — **plan phiên 26** (`.plan/desktop_plan.md`, phát hành 2026-10-01), trước D6
+
+> **ĐÃ ĐÓNG 2026-10-02, phiên 26.** `app.locale: "vi"` trong config; Main gọi `app.commandLine.appendSwitch('lang', …)` trước `whenReady`. Đo: `getLocale()` `en-US` → `vi`; ô "Hạn giao" `11/30/2026` → `30/11/2026`, hai ô của "Thu nhập" cũng ngày/tháng/năm, trên bản mã nguồn và bản đóng gói (ảnh ở `Desktop/evidence/dsk15/`). Ca kiểm thử 12 hỏng khi bỏ dòng đặt ngôn ngữ. Ảnh có ô ngày trong `UI/evidence` cần làm mới ở phiên giao diện kế tiếp (`.reviews/audits/desktop/audit_desktop_session26.md`).
 
 > **Nâng mức 2026-10-01** (audit phiên 24 §5.3): trang `income_report` đặt ô "Từ ngày" `10/01/2026` (tháng/ngày) ngay trên dòng báo cáo "Từ 01/08/2026 …" (ngày/tháng). Họa sĩ đọc `10/01/2026` thành 10 tháng 1, nên có thể chọn sai khoảng và đọc sai báo cáo. Tiêu chí đóng thêm: hai ô ngày của `income_report` hiện kiểu ngày/tháng/năm.
 
