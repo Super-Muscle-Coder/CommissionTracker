@@ -196,11 +196,27 @@ Checkpoint ở đầu `record_payment/services.py` ghi `last_updated_at` và `re
 - plan giao diện nào đổi chữ của trang mở đầu (`client_list`) hay khung chính phải chạy thêm `npm run dist` và `npm run test:packaged` trong `Desktop/`, hoặc ghi rõ lý do không chạy;
 - tiêu chí của chặng G (phát hành) có `test:packaged`.
 
-### DSK-17 — `reminder_ticker` chưa có (trung bình; thuộc V1, chặng D6) — cho phiên desktop sau phiên 27
+### DSK-17 — `reminder_ticker` chưa có (trung bình; thuộc V1, chặng D6) — **phiên desktop 29**, sau phiên giao diện 28 (UI-15)
 
 Theo API Contract 4.0.0 (`cross_cutting.reminder_ticker`), desktop Main khởi động `reminder_ticker` sau khi backend READY. Nó gọi `send_reminder.check_due` (`POST /reminders/checks`) theo nhịp riêng, hiện một thông báo Windows cho mỗi nhắc việc trả về (chữ dựng từ các trường của nhắc việc), bấm thông báo chỉ đưa cửa sổ lên trước. Nó không quyết định gì và không đánh dấu đã xem.
 
 Chưa có thành phần này thì trong dùng thật danh sách nhắc việc đang chờ của giao diện (D6, phiên 27) luôn rỗng. Lập plan sau khi audit phiên 27; cần chốt: nhịp gọi, chữ thông báo tiếng Việt (trong `configs/desktop.json`), cách kiểm thử thông báo trên Windows.
+
+**Thứ tự (chốt 2026-10-03):** phiên 28 (giao diện) làm UI-15 trước, để e2e của giao diện không hỏng khi ticker xuất hiện; phiên 29 (desktop) làm DSK-17.
+
+**Đặc tả dự kiến cho phiên 29** (Orchestrator, 2026-10-03; chốt hẳn khi viết plan phiên 29):
+- **Vị trí:** `Desktop/src/cross_cutting/reminder_ticker/`, đúng bố cục ở `CLAUDE.md` mục 4. Không có năm lớp; không quyết định nghiệp vụ (lý thuyết WCA §5).
+- **Khởi động:** Main khởi động ticker sau khi backend READY và cửa sổ đã nạp lần đầu. Lần kiểm đầu tiên chạy ngay, để nhắc việc đến hạn trong lúc ứng dụng đóng hiện ra khi mở; sau đó theo nhịp cố định. Ticker dừng trước khi Main dừng backend.
+- **Nhịp:** giá trị nội bộ của ticker, trong `configs/desktop.json`; đề xuất 60 s. Không chạy lần kiểm mới khi lần trước chưa xong. Mỗi lời gọi có hạn chờ riêng (trong config).
+- **Mỗi nhắc việc trả về, một thông báo Windows.** Chữ tiếng Việt trong config, dựng từ các trường của nhắc việc, cùng lời với trang `reminder_list`:
+  - hạn giao: tiêu đề "Sắp tới hạn giao: <title>", nội dung "Hạn giao dd/mm/yyyy · nhắc trước <n> ngày|giờ";
+  - tổng hợp: tiêu đề "Tổng hợp định kỳ: <open_count> đơn đang mở", nội dung "<số đơn trong upcoming> đơn có hạn giao", thêm " · sớm nhất: <title> (dd/mm/yyyy)" khi `upcoming` không rỗng.
+- **Bấm thông báo:** chỉ đưa cửa sổ lên trước (mở lại nếu đang thu nhỏ, rồi focus), như khi có lần mở thứ hai. Không mở trang nào, không đánh dấu đã xem.
+- **Lỗi:** 500, không tới được, hay thân trả về sai hình dạng: ghi log, không hiện gì, thử lại ở nhịp sau; không làm ứng dụng dừng. Một phần tử sai hình dạng thì bỏ riêng phần tử đó và ghi log.
+- **Windows:** thông báo có thể cần Application User Model ID khớp `appId` của `electron-builder.yml` (`com.commissiontracker.desktop`). Orchestrator **không nắm chắc** yêu cầu này với Electron 44.4.5 khi chạy từ mã nguồn, từ `win-unpacked` và từ bản cài: agent tra tài liệu của đúng phiên bản và **đo** ở cả ba (sự kiện `show` hay `failed` của thông báo). Không sửa registry, không tự tạo lối tắt Start Menu.
+- **Kiểm được không cần mắt người:** mỗi thông báo ghi một dòng log có chữ của nó. Cờ kiểm thử chỉ cho bản chạy từ mã nguồn để rút ngắn nhịp; bản đóng gói bỏ qua cờ đó.
+- **Mắt người:** Project Owner thấy thông báo thật và bấm thử, trên bản chạy từ mã nguồn (`npm run walkthrough:app -- --reminders`).
+
 
 ## Hợp đồng — chờ Project Owner duyệt
 
@@ -327,6 +343,7 @@ Ngày 2026-09-28, Project Owner yêu cầu vá mọi chỗ chưa đạt chuẩn.
 - Tiêu đề cửa sổ hộp thoại lỗi của desktop là "Error" (hành vi của `dialog.showErrorBox` trên Windows); đổi bằng `showMessageBox` (audit phiên 26 §5.3).
 - `income_report`: lỗi "ngày kết thúc trước ngày bắt đầu" kèm câu tổng của layer "Một số ô chưa đúng định dạng", sai nghĩa với lỗi thứ tự; danh sách theo tháng không có tiêu đề nhìn thấy (audit phiên 24 §5.6).
 - Khoản thanh toán đã hủy trên `payment_list` có dòng chính giống hệt khoản còn hiệu lực; chữ "Đã hủy" chỉ ở cuối dòng phụ (Q22-1 của audit phiên 22). Đạt đặc tả V1; V2 làm dấu hiệu rõ hơn.
+- Ô giờ và ô ngày giờ gốc hiện theo kiểu giờ của Windows (12 giờ có SA/CH trên máy Project Owner), khác chữ giờ 24 giờ ở chỗ khác của giao diện (UI-14, đóng 2026-10-03). V2 có thể thay bằng ô chọn giờ và phút riêng.
 
 **Rút lại:** "Thông báo lưu trữ còn lại sau Tải lại" không xảy ra được. Trang chi tiết chỉ có nút tải lại khi tải thất bại, lúc đó chưa thể có kết quả lưu trữ. Orchestrator đọc sót ở audit.
 
@@ -412,7 +429,7 @@ Thí nghiệm: chờ thêm 1,1 s sau khi nạp mẫu thì 8/8 lần đạt; khô
 
 ## Layer giao diện — sau audit phiên 21
 
-### UI-11 — `page.screenshot` hết 30 s trong e2e, chỉ trên Windows (trung bình; không chặn `hoàn_tất`; audit phiên 21 §5) — cho phiên giao diện kế tiếp
+### UI-11 — `page.screenshot` hết 30 s trong e2e, chỉ trên Windows (trung bình; không chặn `hoàn_tất`; audit phiên 21 §5) — **plan phiên 28** (việc 2)
 
 **Dữ liệu:**
 - phiên 19, mốc đầu phiên: `client_detail` S4 (backend tắt), có đặt runner;
@@ -477,6 +494,12 @@ Máy Orchestrator (Linux) chưa gặp lần nào trong hơn 20 lần e2e toàn b
   - **B:** chỉ giữ quy ước không thu nhỏ. Dữ liệu phiên 27 cho thấy quy ước không giữ được e2e tất định khi máy có người dùng.
 - **Tiêu chí đóng (đề xuất, thay tiêu chí cũ):** sau khi áp quyết định (4), 10 lượt e2e liên tiếp trên Windows không hết giờ chụp ảnh.
 
+**Trả lời và quyết định của Project Owner, 2026-10-03:**
+- Trong lúc agent chạy e2e, Project Owner vẫn dùng máy; cửa sổ ứng dụng bật lên liên tục nên Project Owner tiện tay thu nhỏ. **Nguồn của việc thu nhỏ đã rõ**; cơ chế đã chứng minh ở phiên 25 và 27. Nguyên nhân UI-11 coi như đã biết.
+- **Chọn A:** công cụ kiểm thử tự mở lại cửa sổ bị thu nhỏ và ghi lại mỗi lần. Quy ước "không thu nhỏ khi e2e chạy" bỏ: người vận hành được dùng máy bình thường.
+- Lưu ý từ dữ liệu phiên 27: một lần hỏng ở mốc đầu phiên là `locator.click` không thấy nút (không phải chụp ảnh), cũng trong lượt có cửa sổ thu nhỏ. Vậy cửa sổ thu nhỏ có thể làm treo cả thao tác khác chứ không chỉ chụp ảnh; cách làm phải phủ mọi thao tác, không chỉ lệnh chụp.
+- **Tiêu chí đóng:** 10 lượt `npm run e2e` liên tiếp trên Windows đạt, trong lúc người vận hành dùng máy bình thường, nhật ký cho biết số lần phải mở lại cửa sổ.
+
 **Ghi nhận thêm, không phải UI-11 (Q22-2, thấp, không vá ở V1):** ở múi giờ có giờ mùa hè, giờ "không tồn tại" trong khoảng nhảy giờ (ví dụ 02:30 ngày đổi giờ ở New York) được ghép với độ lệch sau khi đổi. Việt Nam không có giờ mùa hè.
 
 ### UI-12 — Ca focus `StageChange.test.tsx:183` không tất định trên Windows (thấp; audit phiên 24 §5.4) — **plan phiên 25**
@@ -487,7 +510,7 @@ Hỏng một lần ở phiên 22 và một lần ở lần chạy mốc của ph
 
 ## Layer giao diện — sau audit phiên 27
 
-### UI-13 — Lỗi "trùng mốc" nhảy sang dòng khác sau "Bỏ mốc này" (thấp; audit phiên 27 §5.3) — cho phiên giao diện kế tiếp
+### UI-13 — Lỗi "trùng mốc" nhảy sang dòng khác sau "Bỏ mốc này" (thấp; audit phiên 27 §5.3) — **plan phiên 28** (việc 3)
 
 Trang `reminder_settings` gắn lỗi của form theo vị trí dòng mốc (`deadline.lead_times.<i>`) và giữ lỗi tới lần lưu kế tiếp. Tái hiện bằng kiểm thử dựng trang tạm của Orchestrator:
 1. ba dòng [1 ngày, 24 giờ, 5 ngày];
@@ -503,7 +526,10 @@ Hết khi lưu lại; không mất dữ liệu, không gửi sai.
 
 Không chặn `hoàn_tất` của `reminder_settings`.
 
-### UI-14 — Ô giờ hiện kiểu 12 giờ có SA/CH trên Windows (thấp; audit phiên 27 §5.2) — chờ Project Owner trả lời
+### UI-14 — Ô giờ hiện kiểu 12 giờ có SA/CH trên Windows (thấp; audit phiên 27 §5.2)
+
+> **ĐÃ ĐÓNG 2026-10-03** (sau audit phiên 27). Project Owner xác nhận đồng hồ máy hiện "11h53 SA", tức máy đặt giờ kiểu 12 giờ: ô giờ gốc theo đúng cài đặt của người dùng. V1 chấp nhận; việc đồng nhất kiểu giờ chuyển sang UI-6 (phần V2).
+
 
 - **Windows:** ô "Vào lúc" (`reminder_settings`, `<input type="time">`) hiện `08:15 SA`; ô "Ngày giờ nhận tiền" (`payment_form`, `datetime-local`) hiện `03/10/2026 10:38 SA`.
 - **Linux, cùng bản build và `--lang=vi`:** ô "Vào lúc" hiện `08:15` (24 giờ).
@@ -513,6 +539,14 @@ Không chặn `hoàn_tất` của `reminder_settings`.
 **Hỏi Project Owner:** trong Windows Settings → Time & language → Language & region → Regional format, giờ ngắn (Short time) đang là 12 giờ hay 24 giờ?
 
 **Đề xuất:** V1 chấp nhận, vì ô gốc theo cài đặt của chính người dùng. Muốn đồng nhất thì làm ở V2, bằng hai ô chọn giờ và phút, và chuyển mục này sang UI-6.
+
+### UI-15 — Dữ liệu mẫu D6 phải chịu được `reminder_ticker` (trung bình; điều kiện trước của DSK-17; phát hiện khi lập plan phiên 28) — **plan phiên 28** (việc 4)
+
+`seedReminderSample` (`UI/tests/tools/walkthrough_lib.mjs`) gọi `POST /reminders/checks` một lần rồi đòi kết quả có **đúng hai** nhắc việc. Theo hợp đồng, mỗi nhắc việc đến hạn chỉ được trao ra **một lần** (`send_reminder.description`). Khi desktop có `reminder_ticker` (DSK-17), ticker trong ứng dụng mà e2e mở cũng gọi `check_due` theo nhịp, và có thể nhận trước một hoặc cả hai nhắc việc. Khi đó lần gọi của công cụ nhận ít hơn hai, và `reminder_list_walkthrough.spec`, cùng `npm run walkthrough:app -- --reminders`, hỏng không tất định.
+
+**Việc:** công cụ kiểm thử vẫn gọi `check_due` như cũ, nhưng điều nó khẳng định là **danh sách đang chờ** (`GET /reminders/pending`) có đúng hai nhắc việc mong đợi, không phụ thuộc bên nào đã nhận chúng trước. Kịch bản và ảnh bằng chứng không đổi.
+
+**Tiêu chí đóng:** một kiểm thử của công cụ (hoặc một lần chạy có chủ đích) cho thấy: khi nhắc việc đã bị một lời gọi `check_due` khác nhận trước, dữ liệu mẫu vẫn đạt; trước khi sửa thì hỏng.
 
 ## Môi trường và vận hành (không phải việc của coding agent)
 
