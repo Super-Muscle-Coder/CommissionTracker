@@ -2,8 +2,8 @@
 // workflow: main
 // clause: clause_d_desktop
 // component: main
-// last_updated_by: coding-agent@2026-09-27#4
-// last_updated_at: 2026-09-27T21:15:00+07:00
+// last_updated_by: coding-agent@2026-10-02#1
+// last_updated_at: 2026-10-02T16:26:47.6226621+07:00
 //
 // EXPERIENCES:
 //   - id: main-EXP-001
@@ -317,45 +317,104 @@
 //       nào. H2, H3, H4 bị loại cho lượt này: Main thật dừng êm (WM_CLOSE,
 //       "standard input closed", mã 0), script chỉ spawn một lần, và Main
 //       không làm gì trong 64 s đó vì JavaScript của nó chưa chạy.
+//   - id: main-EXP-019
+//     derived_from: main-PROB-001
+//     content: >
+//       Bản sao do antivirus chạy (chuyển từ main-PROB-001 theo DSK-12, plan
+//       phiên 26: vấn đề đã có hướng xử lý ở mọi mặt; id cũ không dùng lại).
+//       Hiện tượng: ở lần mở đầu của một Commission Tracker.exe mới ở thư mục
+//       không có ngoại lệ antivirus, một thành phần ngoài ứng dụng chạy một
+//       bản sao của exe với cùng dòng lệnh, có backend thật, trong khi giữ bản
+//       thật lại (main-EXP-018). Ba mặt, mỗi mặt một nguồn. (1) Rủi ro dữ
+//       liệu (hai backend cùng mở một data.db, bản sao dùng
+//       %APPDATA%\CommissionTracker\data.db thật khi không có
+//       --ct-test-data-dir): đã chặn ở backend bằng khóa trên
+//       <db_file_path>.lock suốt đời tiến trình (BE-3, Data Schema 6.2.0,
+//       phiên 15); Main không ngăn được một bản sao mà hệ điều hành đã cho
+//       chạy, nên khóa là biện pháp duy nhất. (2) Độ trễ lần mở đầu (33-75 s):
+//       đã chẩn đoán xong, phần chậm nằm trước khi JavaScript của Main chạy
+//       (main-EXP-015, main-EXP-018); không sửa được trong code; hướng xử lý là
+//       ký số exe ở chặng G (DSK-3, DSK-9), sau đó phải đo lại. (3) Đo lại
+//       (ENV-5, 2026-09-28, bản đã cài, cả hai antivirus bật): tiến trình bị
+//       giữ 75 s trước khi chạy dòng code đầu tiên, các lượt sau 4-5 s; không
+//       thấy bản sao nào trong 15,9 s quan sát được, vì AVG chặn tiến trình
+//       theo dõi lúc đó (DSK-14, đã vá ở phiên 26, main-EXP-022); bản thật chạy
+//       đúng với khóa của phiên 15. Còn chưa biết: antivirus nào (AVG hay
+//       ReasonLabs) tạo bản sao, và bản sao ghi thẳng vào tệp thật hay vào một
+//       lớp ảo hóa. Cả hai đều không còn gây hại dữ liệu nhờ khóa ở (1). Lượt
+//       thử của phiên 14 (attempt 1, coding-agent@2026-09-27#4): thêm log vòng
+//       đời, dựng lại measure_startup.cjs, đo đợt A1, A2, B, C; tái lập ở C
+//       lượt 1, có bản Main thứ hai và một backend thứ hai.
+//   - id: main-EXP-020
+//     content: >
+//       Ngôn ngữ ứng dụng và định dạng ô ngày (DSK-15, phiên 26). Main gọi
+//       app.commandLine.appendSwitch('lang', app.locale của desktop.json) ở đầu
+//       main(), trước whenReady; giá trị cấu hình là "vi". Nguồn: electron.d.ts
+//       của Electron 44.4.5, mục app.getLocale(): "To set the locale, you'll
+//       want to use a command line switch at app startup"; Chromium đọc switch
+//       lang lúc khởi động nên phải đặt trước 'ready'. Đo trên máy thật (Windows
+//       11, vùng VN, preferredSystemLanguages ["en-US","vi"]): khi chưa đặt,
+//       app.getLocale() = "en-US" và <input type="date"> hiện tháng/ngày/năm
+//       ("11/30/2026" cho 2026-11-30); khi đặt "vi", getLocale(), navigator.
+//       language và Intl.DateTimeFormat().resolvedOptions().locale đều là "vi"
+//       và ô ngày hiện ngày/tháng/năm ("30/11/2026"). Kết quả như nhau ở bản
+//       chạy từ mã nguồn lẫn bản đóng gói (gói giữ vi.pak, electronLanguages
+//       vi và en-US). Điều đo được: Chromium theo switch lang chứ không theo
+//       danh sách ngôn ngữ ưu tiên của hệ điều hành (vẫn đứng đầu là "en-US"
+//       trong preferredSystemLanguages). Thay đổi này đổi cả navigator.language
+//       và Intl mặc định của renderer; giao diện luôn ghi 'vi-VN' rõ ràng khi
+//       định dạng ngày, tiền nên không bị ảnh hưởng. Ca 12 của npm test kiểm
+//       getLocale(), navigator.language và Intl bằng giá trị trong config. Ca
+//       đọc stderr qua launchMain không thấy dòng log "application language
+//       set to ..." (stderr chỉ gắn sau khi launch(), main-EXP-014), nên ca đó
+//       không so dòng này.
+//   - id: main-EXP-021
+//     content: >
+//       Hộp thoại lỗi bằng tiếng Việt (DSK-13, phiên 26). Lời lẽ nằm trong
+//       desktop.json, main.error_dialog: startup_summary, running_summary,
+//       detail_label. buildErrorDialog(config, phase, detail) dựng nội dung:
+//       câu tiếng Việt, một dòng trống, nhãn "Chi tiết kỹ thuật:", rồi đúng
+//       thông điệp tiếng Anh mà dòng "FATAL:" ghi (dòng FATAL không đổi chữ).
+//       phase 'startup' (mặc định: backend không lên, thiếu giao diện, lỗi nạp
+//       cửa sổ) chọn startup_summary; 'running' (backend chết sau READY, chỉ
+//       onUnexpectedExit) chọn running_summary. Khi có --ct-test-no-dialog,
+//       thay cho hộp thoại, Main ghi một dòng "error dialog text: <JSON của
+//       {title, content}>" ngay sau dòng FATAL, nên kiểm thử đọc được nội dung
+//       mà không bấm; có hộp thoại thì dòng này không có. Câu không nhắc "tệp
+//       nhật ký" như câu mẫu của plan, vì ứng dụng không ghi tệp nhật ký nào
+//       (log của Main chỉ ra stderr); câu bảo gửi "nội dung chi tiết bên dưới".
+//       Ảnh thật (không có --ct-test-no-dialog, thư mục giao diện không tồn
+//       tại, --ct-test-data-dir tạm): Windows hiện dialog.showErrorBox với
+//       tiêu đề cửa sổ là "Error" (cố định), còn tham số title
+//       ("Commission Tracker") hiện làm dòng chữ xanh đầu nội dung. Muốn đổi
+//       tiêu đề cửa sổ phải dùng showMessageBox, nằm ngoài DSK-13. Ca 13
+//       (startup) và 14 (running) kiểm các nội dung đó.
+//   - id: main-EXP-022
+//     content: >
+//       Công cụ đo không dùng chuỗi lệnh mã hóa (DSK-14, phiên 26).
+//       tests/packaged/measure_startup.cjs viết script theo dõi tiến trình ra
+//       tệp watch_processes.ps1 (UTF-8 có BOM, vì PowerShell 5.1 đọc tệp không
+//       BOM theo ANSI) trong một thư mục tạm riêng ct-watch-*, chạy bằng
+//       powershell.exe -NoProfile -NonInteractive -File <tệp>, và xóa thư mục
+//       đó khi tiến trình theo dõi đã thoát. Chọn -File thay cho -Command vì
+//       script dài nhiều dòng và có dấu nháy; cách này cũng không nhét cả script
+//       vào dòng lệnh. -File chỉ chạy được khi execution policy cho phép tệp
+//       cục bộ: máy Project Owner có CurrentUser và LocalMachine đều
+//       RemoteSigned (tệp tạo cục bộ chạy được); nếu sau này đặt Restricted
+//       hoặc AllSigned thì công cụ đo sẽ hỏng và cần Bypass ở mức tiến trình,
+//       không phải ngoại lệ antivirus. Kết quả đo ở EVIDENCE.
+//   - id: main-EXP-023
+//     content: >
+//       Dọn checkpoint (DSK-12, phiên 26). main-PROB-001 chuyển thành
+//       main-EXP-019. Ghi chú "Dịch vụ AI không được khởi động ở V1" nay ghi
+//       watermark để dành "V4 trở đi" (.design/product_versions.md; hợp đồng
+//       không đổi). Ghi chú "Cách làm của phiên 13 so với plan" bị xóa: nó chỉ
+//       liệt kê tệp thêm và thứ tự làm của phiên 13, những thứ đã có trong
+//       mã nguồn và lịch sử git; không còn quyết định hay bài học nào chưa nằm
+//       ở main-EXP-008 tới main-EXP-017. Ghi chú "Cách làm của phiên 14 so với
+//       plan" giữ nguyên (ngoài phạm vi của plan này).
 //
-// UNSOLVED_PROBLEMS:
-//   - id: main-PROB-001
-//     description: >
-//       Ở lần mở đầu của một Commission Tracker.exe mới ở thư mục không có
-//       ngoại lệ antivirus, một thành phần ngoài ứng dụng chạy một bản sao của
-//       exe với cùng dòng lệnh, có backend thật, trong khi giữ bản thật lại
-//       (main-EXP-018). Ở máy người dùng không có --ct-test-data-dir, bản sao
-//       đó dùng %APPDATA%\CommissionTracker\data.db thật. Chưa biết: bản sao
-//       ghi thẳng vào tệp thật hay vào một lớp ảo hóa; bản sao có thể chạy
-//       chồng với một bản thật đang chạy không (khóa một-bản tính theo
-//       userData, một lớp ảo hóa có thể tách khóa); và bị kết thúc thế nào
-//       (DSK-2: backend của nó thoát mã 0 không có dòng dừng; lượt 1 phiên 14
-//       không bắt được đoạn cuối, xem attempts). Hệ quả thứ hai: người dùng
-//       chờ khoảng 33-64 s ở lần mở đầu (DSK-3).
-//     attempts:
-//       - attempt: 1
-//         agent: coding-agent@2026-09-27#4
-//         tried: >
-//           Thêm log vòng đời vào Main, dựng lại measure_startup.cjs (ảnh chụp
-//           tiến trình 500 ms, stderr đầy đủ, extra_main_instances,
-//           second_instance_events), đo đợt A1, A2 (exe mới trong release\ có
-//           ngoại lệ), B (10 lượt), C (bản đã cài không ngoại lệ).
-//         result: >
-//           Tái lập ở C lượt 1: có bản Main thứ hai cùng dòng lệnh và một
-//           backend thứ hai; dừng phần DSK-2 theo điểm dừng bắt buộc của plan,
-//           không sửa Main, không sửa Backend/. Ảnh chụp bị hổng từ +40,9 s
-//           tới +64,0 s: spawn() đồng bộ chặn vòng lặp của Node, pipe của tiến
-//           trình theo dõi đầy; đã sửa công cụ (ghi ảnh chụp ra tệp) sau lượt
-//           đó, chưa đo lại. Không lượt nào có FATAL.
-//     next_suggested: >
-//       (1) Orchestrator và Project Owner quyết việc chống hai backend cùng mở
-//       một data.db (layer backend, có thể phải sửa hợp đồng), vì Main không
-//       ngăn được một bản sao mà hệ điều hành đã cho chạy. (2) Project Owner
-//       đo lại đợt C bằng công cụ đã sửa, ba cấu hình: cả hai antivirus bật;
-//       chỉ tạm dừng AVG; chỉ tạm dừng ReasonLabs (rồi cả hai), để biết bên
-//       nào tạo bản sao (xem báo cáo phiên 14). (3) Ký số exe (DSK-9, chặng
-//       G) là hướng khả dĩ nhất để antivirus không coi exe là tệp lạ; cần đo
-//       lại sau khi ký.
+// UNSOLVED_PROBLEMS: []
 //
 // EVIDENCE:
 //   - claim: >
@@ -751,16 +810,140 @@
 //       *ommission* nào khác. Mọi lần chạy ứng dụng trong phiên, kể cả bản
 //       sao ở đợt C lượt 1, đều mang --ct-test-data-dir.
 //     recorded_at: 2026-09-27T21:00:10+07:00
+//   - claim: >
+//       DSK-15: sau khi đặt ngôn ngữ ứng dụng là "vi" từ config, ô "Hạn giao"
+//       của form đơn hàng và hai ô ngày của trang "Thu nhập" hiện ngày/tháng/
+//       năm, ở bản chạy từ mã nguồn và ở bản đóng gói; trước đó hiện tháng/
+//       ngày/năm.
+//     how: >
+//       Phiên 26, máy có AVG và ReasonLabs bật. Script tạm (không nằm trong dự
+//       án) mở ứng dụng bằng Playwright _electron.launch với --ct-test-data-
+//       dir tạm và --ct-test-no-dialog, backend thật, nạp mẫu thu nhập D5 qua
+//       UI/tests/tools/walkthrough_lib.mjs (seedIncomeSample), in app.
+//       getLocale(), navigator.language, Intl, rồi mở "Thu nhập", điền "Từ
+//       ngày" 2026-10-01 và "Đến ngày" 2026-11-30, chụp vùng main; mở "Đơn
+//       hàng" > "Thêm đơn hàng", điền "Hạn giao" 2026-11-30, chụp. Chạy 4 lần:
+//       mã nguồn trước (chưa có dòng appendSwitch), mã nguồn sau, bản đóng gói
+//       sau (npm run dist với "vi"), bản đóng gói trước (npm run dist với
+//       app.locale tạm đặt "en-US", tức hành vi cũ; đã khôi phục "vi" ngay
+//       sau). Ảnh ở Desktop/evidence/dsk15/{source,packaged}-{before,after}-
+//       {income,commission-form}.png.
+//     result: >
+//       Trước (mã nguồn và gói): getLocale "en-US", navigator.language
+//       "en-US", Intl "en-US"; ô ngày hiện "10/01/2026" và "11/30/2026" (trang
+//       Thu nhập), "11/30/2026" (Hạn giao). Sau (mã nguồn và gói): getLocale
+//       "vi", navigator.language "vi", Intl "vi"; ô ngày hiện "01/10/2026" và
+//       "30/11/2026", "30/11/2026". Vậy ô ngày ĐÃ hiện ngày/tháng/năm. Kết
+//       luận: Chromium theo switch lang, không theo vùng của Windows.
+//       Kiểm thử tự động có bằng chứng cắn: ca 12 của npm test (getLocale,
+//       navigator.language, Intl bằng app.locale của config) đạt với dòng
+//       appendSwitch (MEASURED language: {"getLocale":"vi","navigatorLanguage"
+//       :"vi","intlLocale":"vi"}); khi chú thích dòng đó và dịch lại, ca 12
+//       hỏng với getLocale, navigatorLanguage, intlLocale đều "en-US" thay vì
+//       "vi"; khôi phục dòng, ca 12 đạt lại.
+//     recorded_at: 2026-10-02T16:14:19.0645803+07:00
+//   - claim: >
+//       DSK-13: hộp thoại lỗi có câu tiếng Việt trước, chi tiết kỹ thuật ở
+//       dòng sau; dòng FATAL không đổi; nội dung kiểm được khi chạy với
+//       --ct-test-no-dialog.
+//     how: >
+//       cd Desktop; npm run build; npx playwright test -g "(13|14)\. error".
+//       Ca 13: thư mục giao diện không tồn tại (startup); ca 14: backend giả
+//       chết sau READY (running). Bằng chứng cắn: (a) tạm đổi buildErrorDialog
+//       để content chỉ còn chi tiết kỹ thuật, chạy lại; (b) tạm bỏ đối số
+//       'running' ở onUnexpectedExit, chạy lại; khôi phục cả hai. Ảnh thật:
+//       script tạm PowerShell chạy electron.exe . --ct-test-data-dir=<tạm>
+//       --ct-test-renderer-root=<không tồn tại> (không có --ct-test-no-dialog),
+//       đợi cửa sổ lớp #32770, chụp bằng PrintWindow rồi đóng bằng WM_CLOSE;
+//       ảnh ở Desktop/evidence/dsk13/source-startup-dialog.png.
+//     result: >
+//       Ca 13 và 14 đạt: nội dung ca 13 là "Commission Tracker không khởi động
+//       được. Hãy mở lại ứng dụng; nếu lỗi vẫn còn, hãy gửi nội dung chi tiết
+//       bên dưới cho người hỗ trợ.\n\nChi tiết kỹ thuật:\nThe interface files
+//       were not found: the folder <thư mục tạm>\no-such-ui-dist does not
+//       exist."; ca 14 dùng câu "Commission Tracker gặp lỗi khi đang chạy và
+//       phải đóng..." và chi tiết "The backend stopped unexpectedly (exit code
+//       3). The app will close.". Cả hai so dòng FATAL: cũ, nguyên chữ. (a):
+//       cả hai ca hỏng. (b): chỉ ca 14 hỏng, ca 13 đạt. Sau khi khôi phục: 2
+//       passed. Ảnh thật: hộp thoại Windows có tiêu đề cửa sổ "Error",
+//       dòng đầu "Commission Tracker", câu tiếng Việt, "Chi tiết kỹ thuật:" và
+//       thông điệp tiếng Anh; app thoát mã 1 sau khi đóng hộp thoại, không đụng
+//       %APPDATA%. Hai lần chụp trước bằng CopyFromScreen chụp trúng nội dung
+//       riêng tư phía sau (hộp thoại chưa nằm trên cùng); đã xóa ngay, đổi sang
+//       PrintWindow, không giữ ảnh nào ngoài ảnh hộp thoại.
+//     recorded_at: 2026-10-02T16:14:19.0645803+07:00
+//   - claim: >
+//       DSK-14: measure_startup.cjs không còn dùng chuỗi lệnh mã hóa; tiến
+//       trình theo dõi sống tới cuối mỗi lượt đo khi AVG và ReasonLabs bật.
+//     how: >
+//       cd Desktop; Grep chuỗi "EncodedCommand" trong tests/ (không còn lệnh
+//       gọi; chỉ còn câu giải thích đã diễn đạt lại). Với AVGSvc và
+//       rsEngineSvc đang chạy: node tests/packaged/measure_startup.cjs 3
+//       release/win-unpacked A. Đọc startup-logs/A-run<N>.log, đếm các dòng
+//       SNAPSHOT và so thời điểm ảnh chụp cuối với thời điểm Main thoát; kiểm
+//       không còn thư mục %TEMP%\ct-watch-* và tiến trình powershell.exe nào
+//       chạy watch_processes.ps1.
+//     result: >
+//       3 lượt, mã thoát 0, không FATAL, không bản Main thứ hai, không
+//       second-instance. Số ms từ spawn (dòng log đầu / backend started / READY
+//       / cửa sổ / Main thoát): lượt 1 68/129/707/883/1637, lượt 2
+//       117/177/734/902/1514, lượt 3 94/151/722/882/2944. Số ảnh chụp tiến
+//       trình: 14, 14, 17; ảnh chụp cuối ở +6145, +6117, +7611 ms, tức hơn 4
+//       s sau khi Main thoát (công cụ theo dõi thêm 5 s sau khi thoát): tiến
+//       trình theo dõi sống tới cuối. exe SHA-256 bd912a32c9b397ca40045a2d423
+//       fbe80fed95df7929b4b8ba062eb67ee426b04 (build có app.locale "vi", chưa
+//       có khối checkpoint cuối). Không còn thư mục ct-watch-* hay tiến trình
+//       theo dõi sót. Cảnh báo AVG mới: coding agent không đọc được lịch sử
+//       cảnh báo của AVG; nhờ Project Owner xác nhận (xem báo cáo cuối phiên).
+//     recorded_at: 2026-10-02T16:14:19.0645803+07:00
+//   - claim: >
+//       Phiên 26, chạy toàn bộ với AVG và ReasonLabs bật: lint, npm test, npm
+//       run dist từ trạng thái sạch, npm run test:packaged, UI npm run e2e;
+//       mốc %APPDATA% không đổi.
+//     how: >
+//       cd Desktop; npm run lint; npm test; xóa packaging\stage và release rồi
+//       npm run dist (ELECTRON_BUILDER_CACHE trỏ vào thư mục tạm: sandbox của
+//       agent chặn đổi tên trong %LOCALAPPDATA%\electron-builder\Cache, EXDEV,
+//       như phiên 14); npm run test:packaged; node tests/packaged/
+//       measure_startup.cjs 3 release/win-unpacked A. cd UI; npm run e2e
+//       (CT_WALKTHROUGH_RUNNER không đặt); git status --short UI/evidence.
+//       Mốc %APPDATA%: PowerShell liệt kê mọi tệp của %APPDATA%\CommissionTracker
+//       và %APPDATA%\Commission Tracker với kích thước, LastWriteTimeUtc,
+//       SHA-256, chụp đầu phiên (15:56:45) và cuối phiên (16:26:40), so từng dòng.
+//     result: >
+//       lint sạch (lần đầu có một lỗi no-irregular-whitespace ở
+//       measure_startup.cjs do ký tự BOM gõ thẳng vào mã; đã đổi sang
+//       String.fromCharCode(0xfeff)). npm test 17 passed (1.9m: 14 ca cũ, ca
+//       12 ngôn ngữ, ca 13 và 14 hộp thoại), sau bộ không còn python.exe của
+//       dự án. npm run dist: thoát mã 0 sau 121 s, exe SHA-256 9dd525bc29325b16
+//       8b2083d6f9cc74d80dd9413b578261402871beadb86d7e88. test:packaged: lần
+//       đầu 5/6 hỏng (P1, P2, P4, P5, P6) vì packaged_app.spec.ts còn chờ câu
+//       "Chưa có khách hàng nào đang hoạt động.", trong khi client_list của
+//       giao diện (từ phiên 16) hiện "Chưa có khách hàng nào." khi rỗng; lỗi có
+//       sẵn từ trước, không do ngôn ngữ ứng dụng; sửa một dòng chờ chữ trong
+//       tests/packaged/packaged_app.spec.ts rồi 6 passed (38,0 s), sau bộ không
+//       còn python.exe của gói. measure_startup.cjs 3 lượt: mã thoát 0, không
+//       FATAL, không bản Main thứ hai; dòng log đầu 115/89/81 ms, READY
+//       767/723/718, cửa sổ 942/917/889; ảnh chụp cuối ở +6151, +6098, +6132
+//       ms (Main thoát ở +1557, +1502, +1568): tiến trình theo dõi sống tới
+//       cuối. UI npm run e2e: 59 passed (3,4m); git status --short UI/evidence
+//       trống. Mốc %APPDATA%: 70 dòng ở cả hai lần, 0 khác biệt (data.db
+//       114688 byte, ghi 2026-09-28T14:09:42.7922654Z, SHA-256 B1996554...390B;
+//       mọi lần chạy đều có --ct-test-data-dir tạm). Các kết quả trên là của
+//       mã nguồn trước lần sửa cuối của khối checkpoint này (chỉ là chú thích,
+//       nhưng làm dist\main.js và app.asar đổi như đã ghi ở main-EXP-017).
+//     recorded_at: 2026-10-02T16:26:47.6226621+07:00
 //
 // NOTES:
 //   - content: >
 //       Dịch vụ AI không được khởi động ở V1 (.design/v1_scope.md: watermark để
-//       dành V2). Main vẫn chọn một cổng trống cho nó và trao
-//       CT_AI_SERVICE_BASE_URL=http://127.0.0.1:<cổng> cho backend, vì backend
-//       bắt buộc có biến này (main-EXP-003 của backend). Không tiến trình nào
-//       nghe trên cổng đó. Ở V2, Main khởi động clause_c_ai_service với CT_PORT
-//       là đúng cổng này (tìm aiPort trong startBackend) và chờ READY theo luật
-//       "the app must run without clause_c_ai_service".
+//       dành V4 trở đi, .design/product_versions.md). Main vẫn chọn một cổng
+//       trống cho nó và trao CT_AI_SERVICE_BASE_URL=http://127.0.0.1:<cổng> cho
+//       backend, vì backend bắt buộc có biến này (main-EXP-003 của backend).
+//       Không tiến trình nào nghe trên cổng đó. Khi làm watermark (V4 trở đi),
+//       Main khởi động clause_c_ai_service với CT_PORT là đúng cổng này (tìm
+//       aiPort trong startBackend) và chờ READY theo luật "the app must run
+//       without clause_c_ai_service".
 //     written_at: 2026-09-26
 //   - content: >
 //       Desktop.esproj giữ nguyên JavaScriptTestFramework = Vitest: không chắc
@@ -783,23 +966,10 @@
 //       bị bỏ qua và ghi log (main-EXP-010).
 //     written_at: 2026-09-27
 //   - content: >
-//       Cách làm của phiên 13 so với plan. Ngoài danh sách tệp của D8, phiên
-//       thêm: tests/fixtures/slow_first_load (ca 11), tests/packaged/
-//       (packaged_app.spec.ts, measure_startup.cjs), playwright.packaged.config.ts;
-//       sửa eslint.config.js (bỏ qua obj, packaging/cache, packaging/stage,
-//       release; nhận .mjs), playwright.config.ts (testIgnore packaged/**),
-//       tests/helpers.ts (xuất processTable, thêm ExecutablePath). Main có thêm
-//       ba dòng log phục vụ bằng chứng và phép đo (lệnh và thư mục làm việc
-//       trong "backend started", "serving the interface from", "first load
-//       finished"). Thứ tự: việc 7 (đo) và việc 8 (kiểm thử) đan xen, vì các
-//       lần build trung gian phải sửa kiểm thử; số đo cuối là của build cuối,
-//       đo khởi động trước rồi mới chạy test:packaged.
-//     written_at: 2026-09-27
-//   - content: >
 //       Cho Project Owner và phiên sau. (1) Lần mở đầu tiên của một exe mới ở
 //       thư mục không có ngoại lệ antivirus có thể mất tới khoảng 64 giây mới
 //       có cửa sổ, và trong lúc đó một bản sao của ứng dụng chạy
-//       (main-EXP-015, main-EXP-018, main-PROB-001); người chạy thử cần được
+//       (main-EXP-015, main-EXP-018, main-EXP-019); người chạy thử cần được
 //       dặn chờ. Màn hình chờ không giúp được, vì JavaScript của Main chưa
 //       chạy trong khoảng chờ đó. Ký số là quyết định của Project Owner. (2)
 //       Chưa có lượt quét antivirus nào (Defender tắt trên máy này). (3)
@@ -873,7 +1043,12 @@ interface DesktopConfig {
     non_fatal_first_load_errors: string[]
   }
   preload: { arguments: { bridge_name: string; backend_base_url: string } }
-  main: { failure_exit_code: number; error_dialog_title: string }
+  app: { locale: string }
+  main: {
+    failure_exit_code: number
+    error_dialog_title: string
+    error_dialog: { startup_summary: string; running_summary: string; detail_label: string }
+  }
   packaged: {
     backend: { interpreter: string; script: string; working_dir: string }
     renderer_root_dir: string
@@ -1220,6 +1395,19 @@ function argvForLog(config: DesktopConfig, argv: readonly string[], packaged: bo
   })
 }
 
+/** When the failure happened: before the window finished loading
+ * ('startup') or after the app was up ('running'). Picks the sentence. */
+type FailurePhase = 'startup' | 'running'
+
+/** Text of the error dialog: a Vietnamese sentence first, the technical
+ * message (the one logged after "FATAL:") after it. Wording is in
+ * configs/desktop.json (main.error_dialog). */
+function buildErrorDialog(config: DesktopConfig, phase: FailurePhase, detail: string): { title: string; content: string } {
+  const text = config.main.error_dialog
+  const summary = phase === 'startup' ? text.startup_summary : text.running_summary
+  return { title: config.main.error_dialog_title, content: `${summary}\n\n${text.detail_label}\n${detail}` }
+}
+
 function main(): void {
   const config = loadConfig()
   const resourcesPath = app.isPackaged ? process.resourcesPath : null
@@ -1233,6 +1421,13 @@ function main(): void {
   log(resourcesPath === null ? 'running from source' : `running the packaged app (resources: ${resourcesPath})`)
   const { loopback_host: host, ui_origin: uiOrigin } = config.boundary
   const origin = parseOrigin(uiOrigin)
+
+  // Application language (DSK-15): Chromium reads the "lang" switch at start,
+  // so it is set before 'ready' (Electron 44 app.getLocale(): "To set the
+  // locale, use a command line switch at app startup"). It decides the
+  // format of <input type="date"> in the renderer.
+  app.commandLine.appendSwitch('lang', config.app.locale)
+  log(`application language set to ${config.app.locale}`)
 
   // Test flag only: keep the database and Chromium's profile out of the
   // user's real app-data folder. Must happen before the instance lock, which
@@ -1278,7 +1473,7 @@ function main(): void {
     readyTimeoutMs: config.backend.ready_timeout_ms,
     shutdownTimeoutMs: config.backend.shutdown_timeout_ms,
     onUnexpectedExit: (code, signal) =>
-      fatal(`The backend stopped unexpectedly (exit code ${code}${signal ? `, signal ${signal}` : ''}). The app will close.`),
+      fatal(`The backend stopped unexpectedly (exit code ${code}${signal ? `, signal ${signal}` : ''}). The app will close.`, 'running'),
   })
 
   // h. Stop: the app exits only after the backend has exited.
@@ -1290,10 +1485,14 @@ function main(): void {
     app.exit(exitCode)
   }
 
-  function fatal(message: string): void {
+  function fatal(message: string, phase: FailurePhase = 'startup'): void {
     // Logged first, so the message can be checked without a click.
     log(`FATAL: ${message}`)
-    if (settings.showDialogs) dialog.showErrorBox(config.main.error_dialog_title, message)
+    const box = buildErrorDialog(config, phase, message)
+    if (settings.showDialogs) dialog.showErrorBox(box.title, box.content)
+    // No dialog (test flag): the text it would have shown goes to the log, so
+    // tests can check it without a click (DSK-13).
+    else log(`error dialog text: ${JSON.stringify(box)}`)
     void shutdown(config.main.failure_exit_code)
   }
 

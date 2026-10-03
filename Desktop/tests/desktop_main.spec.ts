@@ -340,3 +340,62 @@ test('11. first load aborted by a reload (ERR_ABORTED, -3): logged, not fatal; t
   expect(await waitForExit(electronProcess)).toBe(0)
   expect(stillAlive(tree)).toEqual([])
 })
+
+test('12. application language is the one in the config (DSK-15): getLocale() and the renderer', async () => {
+  const wanted: string = config.app.locale
+  const { app, log } = await launchMain(mainArgs({ dataDir: tempDataDir(), rendererRoot: PROBE_ROOT }))
+  const page = await app.firstWindow()
+  await expect(page.locator('#done')).toBeVisible({ timeout: 60_000 })
+  const measured = {
+    getLocale: await app.evaluate(({ app: electronApp }) => electronApp.getLocale()),
+    navigatorLanguage: await page.evaluate(() => navigator.language),
+    intlLocale: await page.evaluate(() => Intl.DateTimeFormat().resolvedOptions().locale),
+  }
+  console.log(`MEASURED language: ${JSON.stringify(measured)}`)
+  expect(measured).toEqual({ getLocale: wanted, navigatorLanguage: wanted, intlLocale: wanted })
+
+  const { tree } = await backendTree(log)
+  const electronProcess = app.process()
+  await app.close()
+  expect(await waitForExit(electronProcess)).toBe(0)
+  expect(stillAlive(tree)).toEqual([])
+})
+
+/** The one "error dialog text:" line the Main logs instead of a dialog. */
+function dialogTextOf(log: LogCollector): { title: string; content: string } {
+  const lines = log.lines(/\[desktop-main\] error dialog text: /)
+  expect(lines).toHaveLength(1)
+  return JSON.parse(lines[0].replace(/^.*error dialog text: /, ''))
+}
+
+test('13. error dialog at start-up (DSK-13): Vietnamese sentence first, technical detail after, FATAL line unchanged', async () => {
+  const missingRoot = path.join(tempDataDir(), 'no-such-ui-dist')
+  const run = spawnMain(mainArgs({ dataDir: tempDataDir(), rendererRoot: missingRoot }))
+  expect(await waitForExit(run.child)).toBe(FAILURE_EXIT_CODE)
+  const dialog = dialogTextOf(run.log)
+  console.log(`error dialog: ${JSON.stringify(dialog)}`)
+  const text = config.main.error_dialog
+  const fatal = run.log.lines(/\[desktop-main\] FATAL: /)
+  expect(fatal).toHaveLength(1)
+  const detail = fatal[0].replace(/^\[desktop-main\] FATAL: /, '')
+  expect(detail).toMatch(/^The interface files were not found: the folder .* does not exist\.$/)
+  expect(dialog.title).toBe(config.main.error_dialog_title)
+  // Vietnamese sentence, blank line, label, then the exact FATAL message.
+  expect(dialog.content).toBe(`${text.startup_summary}\n\n${text.detail_label}\n${detail}`)
+  expect(dialog.content).toContain('không khởi động được')
+  expect(dialog.content.indexOf('không khởi động được')).toBeLessThan(dialog.content.indexOf(detail))
+  expect(dialog.content).not.toContain(text.running_summary)
+})
+
+test('14. error dialog while running (DSK-13): the "stopped while running" sentence, same layout', async () => {
+  const run = spawnMain(mainArgs({ dataDir: tempDataDir(), rendererRoot: PROBE_ROOT, fakeBackend: 'fake_backend_ready_then_die.py' }))
+  expect(await waitForExit(run.child)).toBe(FAILURE_EXIT_CODE)
+  const dialog = dialogTextOf(run.log)
+  console.log(`error dialog: ${JSON.stringify(dialog)}`)
+  const text = config.main.error_dialog
+  const detail = 'The backend stopped unexpectedly (exit code 3). The app will close.'
+  expect(run.log.lines(/\[desktop-main\] FATAL: /)).toEqual([`[desktop-main] FATAL: ${detail}`])
+  expect(dialog.content).toBe(`${text.running_summary}\n\n${text.detail_label}\n${detail}`)
+  expect(dialog.content).toContain('gặp lỗi khi đang chạy')
+  expect(dialog.content).not.toContain(text.startup_summary)
+})

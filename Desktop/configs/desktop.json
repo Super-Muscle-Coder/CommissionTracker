@@ -44,9 +44,17 @@
       "backend_base_url": "--ct-backend-base-url="
     }
   },
+  "app": {
+    "locale": "vi"
+  },
   "main": {
     "failure_exit_code": 1,
-    "error_dialog_title": "Commission Tracker"
+    "error_dialog_title": "Commission Tracker",
+    "error_dialog": {
+      "startup_summary": "Commission Tracker không khởi động được. Hãy mở lại ứng dụng; nếu lỗi vẫn còn, hãy gửi nội dung chi tiết bên dưới cho người hỗ trợ.",
+      "running_summary": "Commission Tracker gặp lỗi khi đang chạy và phải đóng. Hãy mở lại ứng dụng; nếu lỗi vẫn còn, hãy gửi nội dung chi tiết bên dưới cho người hỗ trợ.",
+      "detail_label": "Chi tiết kỹ thuật:"
+    }
   },
   "packaged": {
     "backend": {

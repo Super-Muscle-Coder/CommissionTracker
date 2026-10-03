@@ -131,9 +131,11 @@ async function expectPackagedRun(l: Launched): Promise<ProcessRow[]> {
   expect(log.text).not.toMatch(/FATAL/)
 
   // The window shows the product UI served from resources\ui at ui_origin,
-  // with an empty client list (fresh database).
+  // with an empty client list (fresh database): the empty state of client_list
+  // ("Chưa có khách hàng nào.", since UI session 16; before it the page showed
+  // "Chưa có khách hàng nào đang hoạt động.").
   expect(await page.evaluate(() => location.href)).toBe(`${UI_ORIGIN}/${config.renderer.entry_file}`)
-  await expect(page.getByText('Chưa có khách hàng nào đang hoạt động.')).toBeVisible()
+  await expect(page.getByText('Chưa có khách hàng nào.', { exact: true })).toBeVisible()
   await expect(page.getByRole('alert')).toHaveCount(0)
   const indexOnDisk = fs.readFileSync(path.join(PACKAGED_UI_DIR, 'index.html'), 'utf8')
   // Through the app:// handler from the main process: the product page's

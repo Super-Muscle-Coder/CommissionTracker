@@ -51,7 +51,11 @@ const fileTimeToMs = (ft) => Number(BigInt(ft) / 10_000n - 11_644_473_600_000n)
  * snapFile until killed. It writes to a file, not to a pipe: spawn() of the
  * exe can block this script's event loop for a minute (DSK-2), and a full
  * pipe would then stop the snapshots too. CreationDate goes out as a
- * FILETIME string (see tests/helpers.ts). */
+ * FILETIME string (see tests/helpers.ts).
+ * The script is written to a .ps1 file in its own temporary folder and run
+ * with -File: antivirus (AVG Behavior Shield, IDP.HELU.PSE91) blocked the
+ * same script passed as a base64 command-line argument (DSK-14). Returns the process and the
+ * folder, which stopWatcher removes. */
 function startWatcher(dataDir, snapFile) {
   const q = (s) => `'${s.replace(/'/g, "''")}'`
   const script = `
@@ -76,11 +80,23 @@ while ($true) {
   $left = ${SNAPSHOT_EVERY_MS} - ([DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds() - $t0)
   if ($left -gt 0) { Start-Sleep -Milliseconds $left }
 }`
-  const encoded = Buffer.from(script, 'utf16le').toString('base64')
-  return spawn(POWERSHELL, ['-NoProfile', '-NonInteractive', '-EncodedCommand', encoded], {
+  const scriptDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ct-watch-'))
+  const scriptFile = path.join(scriptDir, 'watch_processes.ps1')
+  // UTF-8 with a BOM: Windows PowerShell 5.1 reads a BOM-less file as ANSI.
+  fs.writeFileSync(scriptFile, `${String.fromCharCode(0xfeff)}${script}\n`, 'utf8')
+  const proc = spawn(POWERSHELL, ['-NoProfile', '-NonInteractive', '-File', scriptFile], {
     stdio: ['ignore', 'ignore', 'inherit'],
     windowsHide: true,
   })
+  return { proc, scriptDir }
+}
+
+function stopWatcher(watcher) {
+  const remove = () => fs.rmSync(watcher.scriptDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 })
+  if (watcher.proc.exitCode !== null) return remove()
+  // The process may still hold the file for a moment after the kill.
+  watcher.proc.once('exit', remove)
+  watcher.proc.kill()
 }
 
 function lineSplitter(onLine) {
@@ -195,7 +211,7 @@ function once(run) {
     }
 
     function finish() {
-      watcher.kill()
+      stopWatcher(watcher)
       const snapshots = []
       for (const line of fs.readFileSync(snapFile, 'utf8').split('\n')) {
         try {
