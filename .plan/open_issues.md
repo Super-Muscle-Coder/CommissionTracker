@@ -196,15 +196,15 @@ Checkpoint ở đầu `record_payment/services.py` ghi `last_updated_at` và `re
 - plan giao diện nào đổi chữ của trang mở đầu (`client_list`) hay khung chính phải chạy thêm `npm run dist` và `npm run test:packaged` trong `Desktop/`, hoặc ghi rõ lý do không chạy;
 - tiêu chí của chặng G (phát hành) có `test:packaged`.
 
-### DSK-17 — `reminder_ticker` chưa có (trung bình; thuộc V1, chặng D6) — **phiên desktop 29**, sau phiên giao diện 28 (UI-15)
+### DSK-17 — `reminder_ticker` chưa có (trung bình; thuộc V1, chặng D6) — **phiên desktop 30**, sau phiên giao diện 29 (Project Owner chọn 2026-10-04)
 
 Theo API Contract 4.0.0 (`cross_cutting.reminder_ticker`), desktop Main khởi động `reminder_ticker` sau khi backend READY. Nó gọi `send_reminder.check_due` (`POST /reminders/checks`) theo nhịp riêng, hiện một thông báo Windows cho mỗi nhắc việc trả về (chữ dựng từ các trường của nhắc việc), bấm thông báo chỉ đưa cửa sổ lên trước. Nó không quyết định gì và không đánh dấu đã xem.
 
 Chưa có thành phần này thì trong dùng thật danh sách nhắc việc đang chờ của giao diện (D6, phiên 27) luôn rỗng. Lập plan sau khi audit phiên 27; cần chốt: nhịp gọi, chữ thông báo tiếng Việt (trong `configs/desktop.json`), cách kiểm thử thông báo trên Windows.
 
-**Thứ tự (chốt 2026-10-03):** phiên 28 (giao diện) làm UI-15 trước, để e2e của giao diện không hỏng khi ticker xuất hiện; phiên 29 (desktop) làm DSK-17.
+**Thứ tự (chốt 2026-10-03, sửa 2026-10-04):** phiên 28 (giao diện) làm UI-15 trước, để e2e của giao diện không hỏng khi ticker xuất hiện (xong). Phiên 29 (giao diện) vá UI-16, UI-17, UI-18 theo lựa chọn của Project Owner ngày 2026-10-04. Phiên 30 (desktop) làm DSK-17.
 
-**Đặc tả dự kiến cho phiên 29** (Orchestrator, 2026-10-03; chốt hẳn khi viết plan phiên 29):
+**Đặc tả dự kiến cho phiên 30** (Orchestrator, 2026-10-03; chốt hẳn khi viết plan phiên 30):
 - **Vị trí:** `Desktop/src/cross_cutting/reminder_ticker/`, đúng bố cục ở `CLAUDE.md` mục 4. Không có năm lớp; không quyết định nghiệp vụ (lý thuyết WCA §5).
 - **Khởi động:** Main khởi động ticker sau khi backend READY và cửa sổ đã nạp lần đầu. Lần kiểm đầu tiên chạy ngay, để nhắc việc đến hạn trong lúc ứng dụng đóng hiện ra khi mở; sau đó theo nhịp cố định. Ticker dừng trước khi Main dừng backend.
 - **Nhịp:** giá trị nội bộ của ticker, trong `configs/desktop.json`; đề xuất 60 s. Không chạy lần kiểm mới khi lần trước chưa xong. Mỗi lời gọi có hạn chờ riêng (trong config).
@@ -431,6 +431,8 @@ Thí nghiệm: chờ thêm 1,1 s sau khi nạp mẫu thì 8/8 lần đạt; khô
 
 ### UI-11 — `page.screenshot` hết 30 s trong e2e, chỉ trên Windows (trung bình; không chặn `hoàn_tất`; audit phiên 21 §5) — **plan phiên 28** (việc 2)
 
+> **ĐÃ ĐÓNG 2026-10-04, phiên 28** (`coding-agent@2026-10-03#2`; `.reviews/audits/ui/audit_ui_session28.md`). Nguyên nhân: cửa sổ Electron bị người vận hành thu nhỏ trong lúc e2e chạy; cửa sổ thu nhỏ không vẽ khung hình mới nên lệnh chụp và cả cú bấm của Playwright chờ tới hết giờ. Sửa (phương án A): `UI/tests/tools/window_guard.mjs` gắn trình nghe `minimize` trong tiến trình chính, gọi `restore()` và ghi `test-results/window-restore.log`. Windows: probe tắt cơ chế 6/20 và 12/20 treo, bật 0/20; 10 lượt e2e liên tiếp đạt trong lúc Project Owner dùng máy, 7 lần mở lại. Orchestrator (Linux, icewm): cơ chế mở lại đúng; hai lượt e2e có vòng lặp thu nhỏ mỗi 9 s đạt 70/70, 35 lần mở lại. Phần còn hở: `main_layout.spec.ts` chưa gắn cơ chế (UI-17).
+
 **Dữ liệu:**
 - phiên 19, mốc đầu phiên: `client_detail` S4 (backend tắt), có đặt runner;
 - phiên 20: `main_layout.spec.ts`, có đặt runner;
@@ -512,6 +514,8 @@ Hỏng một lần ở phiên 22 và một lần ở lần chạy mốc của ph
 
 ### UI-13 — Lỗi "trùng mốc" nhảy sang dòng khác sau "Bỏ mốc này" (thấp; audit phiên 27 §5.3) — **plan phiên 28** (việc 3)
 
+> **ĐÃ ĐÓNG 2026-10-04, phiên 28.** Hàm thuần `dropLeadTimeErrors` ở Services của `send_reminder`; hook gọi khi thêm hay bỏ dòng mốc. Kiểm thử dựng trang hỏng trước, đạt sau; phép cắn của Orchestrator ở hook và Services đều làm kiểm thử hỏng. Project Owner bấm tay ngày 2026-10-04: đúng.
+
 Trang `reminder_settings` gắn lỗi của form theo vị trí dòng mốc (`deadline.lead_times.<i>`) và giữ lỗi tới lần lưu kế tiếp. Tái hiện bằng kiểm thử dựng trang tạm của Orchestrator:
 1. ba dòng [1 ngày, 24 giờ, 5 ngày];
 2. lưu: lỗi "Mốc nhắc này trùng với một mốc khác" ở dòng 2;
@@ -542,11 +546,44 @@ Không chặn `hoàn_tất` của `reminder_settings`.
 
 ### UI-15 — Dữ liệu mẫu D6 phải chịu được `reminder_ticker` (trung bình; điều kiện trước của DSK-17; phát hiện khi lập plan phiên 28) — **plan phiên 28** (việc 4)
 
+> **ĐÃ ĐÓNG 2026-10-04, phiên 28.** `seedReminderSample` khẳng định trên `GET /reminders/pending`; ca tất định `UI/tests/e2e/reminder_seed_ticker.spec.ts` (một lời gọi `check_due` đóng vai ticker). Phép cắn của Orchestrator: khẳng định cũ thì ca hỏng ("check_due produced 0"). DSK-17 không còn bị chặn.
+
 `seedReminderSample` (`UI/tests/tools/walkthrough_lib.mjs`) gọi `POST /reminders/checks` một lần rồi đòi kết quả có **đúng hai** nhắc việc. Theo hợp đồng, mỗi nhắc việc đến hạn chỉ được trao ra **một lần** (`send_reminder.description`). Khi desktop có `reminder_ticker` (DSK-17), ticker trong ứng dụng mà e2e mở cũng gọi `check_due` theo nhịp, và có thể nhận trước một hoặc cả hai nhắc việc. Khi đó lần gọi của công cụ nhận ít hơn hai, và `reminder_list_walkthrough.spec`, cùng `npm run walkthrough:app -- --reminders`, hỏng không tất định.
 
 **Việc:** công cụ kiểm thử vẫn gọi `check_due` như cũ, nhưng điều nó khẳng định là **danh sách đang chờ** (`GET /reminders/pending`) có đúng hai nhắc việc mong đợi, không phụ thuộc bên nào đã nhận chúng trước. Kịch bản và ảnh bằng chứng không đổi.
 
 **Tiêu chí đóng:** một kiểm thử của công cụ (hoặc một lần chạy có chủ đích) cho thấy: khi nhắc việc đã bị một lời gọi `check_due` khác nhận trước, dữ liệu mẫu vẫn đạt; trước khi sửa thì hỏng.
+
+## Layer giao diện — sau audit phiên 28
+
+### UI-16 — `main.test.tsx` hỏng ngắt quãng trên Windows khi máy tải (trung bình; audit phiên 28 §5.1) — **plan phiên 29** (việc 4)
+
+Ca "no bridge on the global object" (ca đầu của `UI/tests/main/main.test.tsx`) hết giờ 5 s ở 3 trong 5 lần `npm run check` lúc máy Project Owner đang tải; chạy riêng thì đạt. Ca đầu là nơi nạp lần đầu toàn bộ `src/main.tsx` và mọi workflow, nên phải trả chi phí biến đổi mã; chi phí này tăng theo mỗi workflow mới. Linux (Orchestrator): 0,9–1,2 s, kể cả khi máy tải; không tái hiện được.
+
+**Việc:** tách chi phí nạp mã khỏi ca kiểm thử (ví dụ nạp trước cây mô-đun một lần trong `beforeAll`), để không ca nào trả chi phí đó trong giới hạn 5 s. Không nới thời gian chờ, không `retries`.
+
+**Tiêu chí đóng:** `npm run check` 10 lần liên tiếp đạt trên Windows khi máy đang dùng bình thường.
+
+### UI-17 — Dọn dẹp sau phiên 28 (thấp; audit phiên 28 §5.2, §5.3) — **plan phiên 29** (việc 3, 5)
+
+- `UI/tests/e2e/main_layout.spec.ts` tự mở Electron, không qua `launch()` của harness, nên chưa gắn cơ chế mở lại cửa sổ (UI-11). Gắn cùng cơ chế sau `firstWindow()` của spec đó.
+- NOTES cũ trong checkpoint: `screens` còn ba NOTES của phiên 21, 22 (đề xuất trạng thái đã thực hiện, sự cố quy trình); `main` còn NOTE về `StageChange.test.tsx:183` (UI-12, đã đóng). Chuyển phần còn giá trị sang EXPERIENCES, xóa phần còn lại, theo Giao thức 07.
+
+### UI-18 — Cửa sổ e2e được mở lại thì giành tiêu điểm của người đang dùng máy (trung bình; audit phiên 28 §5.4) — **plan phiên 29** (việc 2)
+
+Cơ chế của UI-11 (`UI/tests/tools/window_guard.mjs`) gọi `restore()`. Project Owner xác nhận ngày 2026-10-04: trên Windows, cửa sổ bật lại **và lấy tiêu điểm**, nhảy lên trên ứng dụng đang dùng. Linux (Orchestrator, icewm) cũng thấy `focused: true` sau mỗi lần mở lại. Mã không gọi `focus()`; việc kích hoạt đến từ `restore()` của hệ điều hành.
+
+Vì sao trung bình, không phải chỉ phiền:
+- người vận hành đang gõ phím ở ứng dụng khác thì phím có thể rơi vào cửa sổ ứng dụng đang chạy kiểm thử, làm sai dữ liệu một bước và làm e2e hỏng không tất định;
+- quyết định của Project Owner (phương án A) là để người vận hành dùng máy bình thường khi e2e chạy.
+
+**Việc:** cửa sổ phải hết bị thu nhỏ để lệnh chụp và cú bấm không treo, nhưng **không** được kích hoạt. Ứng viên: `BrowserWindow.showInactive()` (Electron: "Shows the window but doesn't focus on it"). Orchestrator **không nắm chắc** `showInactive()` có đưa một cửa sổ đang thu nhỏ về trạng thái thường trên Windows mà không kích hoạt hay không: agent tra `electron.d.ts` 44.4.5 và **đo** trên Windows.
+
+**Tiêu chí đóng:**
+- probe điều kiện `reminimized` 20 lần: 0 lần treo, và mỗi lần mở lại cửa sổ ứng dụng **không** thành cửa sổ có tiêu điểm (ghi `isFocused()` sau khi mở lại; cửa sổ đang có tiêu điểm trước đó vẫn giữ);
+- 10 lượt e2e liên tiếp đạt trong lúc Project Owner dùng máy, và Project Owner xác nhận không bị giành tiêu điểm.
+
+Nếu đo cho thấy không có cách nào hết thu nhỏ mà không kích hoạt trên Windows: dừng, báo số đo; Project Owner quyết giữ cách hiện tại hay quay về quy ước không thu nhỏ.
 
 ## Môi trường và vận hành (không phải việc của coding agent)
 
