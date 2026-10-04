@@ -204,6 +204,8 @@ Chưa có thành phần này thì trong dùng thật danh sách nhắc việc đ
 
 **Thứ tự (chốt 2026-10-03, sửa 2026-10-04):** phiên 28 (giao diện) làm UI-15 trước, để e2e của giao diện không hỏng khi ticker xuất hiện (xong). Phiên 29 (giao diện) vá UI-16, UI-17, UI-18 theo lựa chọn của Project Owner ngày 2026-10-04. Phiên 30 (desktop) làm DSK-17.
 
+> **Plan phiên 30 đã phát hành 2026-10-04** (`.plan/desktop_plan.md`, việc 2 và 4). Đặc tả dưới đây đã được chốt trong plan, mục "ĐẶC TẢ ĐÃ CHỐT"; chỗ nào khác thì theo plan.
+
 **Đặc tả dự kiến cho phiên 30** (Orchestrator, 2026-10-03; chốt hẳn khi viết plan phiên 30):
 - **Vị trí:** `Desktop/src/cross_cutting/reminder_ticker/`, đúng bố cục ở `CLAUDE.md` mục 4. Không có năm lớp; không quyết định nghiệp vụ (lý thuyết WCA §5).
 - **Khởi động:** Main khởi động ticker sau khi backend READY và cửa sổ đã nạp lần đầu. Lần kiểm đầu tiên chạy ngay, để nhắc việc đến hạn trong lúc ứng dụng đóng hiện ra khi mở; sau đó theo nhịp cố định. Ticker dừng trước khi Main dừng backend.
@@ -217,6 +219,16 @@ Chưa có thành phần này thì trong dùng thật danh sách nhắc việc đ
 - **Kiểm được không cần mắt người:** mỗi thông báo ghi một dòng log có chữ của nó. Cờ kiểm thử chỉ cho bản chạy từ mã nguồn để rút ngắn nhịp; bản đóng gói bỏ qua cờ đó.
 - **Mắt người:** Project Owner thấy thông báo thật và bấm thử, trên bản chạy từ mã nguồn (`npm run walkthrough:app -- --reminders`).
 
+
+### DSK-18 — Cửa sổ ứng dụng giành tiêu điểm khi khởi động trong e2e (trung bình; audit phiên 29 §5.1) — **plan phiên 30** (việc 3)
+
+> **Project Owner chọn phương án A, 2026-10-04.** Đặc tả chốt ở `.plan/desktop_plan.md` (phiên 30), mục "ĐẶC TẢ ĐÃ CHỐT": cờ `--ct-test-show-inactive`, chỉ cho bản chạy từ mã nguồn.
+
+`Desktop/src/main.ts` tạo `BrowserWindow` hiện ra ngay, nên cửa sổ được kích hoạt. Với người dùng thật, đó là hành vi đúng. Với e2e, mỗi lượt khoảng 16 lần khởi động, mỗi lần có thể giành tiêu điểm và nhận phím người vận hành đang gõ ở ứng dụng khác (UI-18). Agent phiên 29 đo: 2/3 lần khởi động vào nền trước, sau 2,3 s và 3,8 s.
+
+**Phương án:**
+- **A (Orchestrator khuyến nghị):** một cờ kiểm thử mới chỉ cho bản chạy từ mã nguồn (ví dụ `--ct-test-show-inactive`): có cờ thì Main tạo cửa sổ với `show: false` rồi `showInactive()` khi sẵn sàng. Hành vi khi người dùng mở ứng dụng không đổi; bản đóng gói bỏ qua cờ như mọi cờ `--ct-test-*` khác. Kiểm thử của Desktop: có cờ thì cửa sổ không lấy tiêu điểm, không cờ thì như cũ. Gộp vào phiên desktop 30 cùng DSK-17. Bước giao diện ghi ở UI-18.
+- **B:** chấp nhận ở V1; người vận hành tránh gõ phím ở ứng dụng khác khi e2e chạy.
 
 ## Hợp đồng — chờ Project Owner duyệt
 
@@ -558,6 +570,8 @@ Không chặn `hoàn_tất` của `reminder_settings`.
 
 ### UI-16 — `main.test.tsx` hỏng ngắt quãng trên Windows khi máy tải (trung bình; audit phiên 28 §5.1) — **plan phiên 29** (việc 4)
 
+> **ĐÃ ĐÓNG 2026-10-04, phiên 29** (`coding-agent@2026-10-04#1`; `.reviews/audits/ui/audit_ui_session29.md`). `beforeAll` nạp trước `src/main` một lần (giới hạn riêng 60 s); ca đầu từ ~1000 ms xuống ~100 ms; `npm run check` 10/10 lần liên tiếp trên Windows khi máy dùng bình thường. Phép cắn của Orchestrator (biến đổi `src/main.tsx` chậm 7 s): tệp mới 17/17, tệp cũ 16/17 hỏng.
+
 Ca "no bridge on the global object" (ca đầu của `UI/tests/main/main.test.tsx`) hết giờ 5 s ở 3 trong 5 lần `npm run check` lúc máy Project Owner đang tải; chạy riêng thì đạt. Ca đầu là nơi nạp lần đầu toàn bộ `src/main.tsx` và mọi workflow, nên phải trả chi phí biến đổi mã; chi phí này tăng theo mỗi workflow mới. Linux (Orchestrator): 0,9–1,2 s, kể cả khi máy tải; không tái hiện được.
 
 **Việc:** tách chi phí nạp mã khỏi ca kiểm thử (ví dụ nạp trước cây mô-đun một lần trong `beforeAll`), để không ca nào trả chi phí đó trong giới hạn 5 s. Không nới thời gian chờ, không `retries`.
@@ -566,10 +580,14 @@ Ca "no bridge on the global object" (ca đầu của `UI/tests/main/main.test.ts
 
 ### UI-17 — Dọn dẹp sau phiên 28 (thấp; audit phiên 28 §5.2, §5.3) — **plan phiên 29** (việc 3, 5)
 
+> **ĐÃ ĐÓNG 2026-10-04, phiên 29.** `main_layout.spec.ts` gắn cơ chế mở lại cửa sổ; NOTES cũ đã dọn (`main` xóa 2, `screens` xóa 4; nội dung còn giá trị ở `main-EXP-029`, `screens-EXP-048`).
+
 - `UI/tests/e2e/main_layout.spec.ts` tự mở Electron, không qua `launch()` của harness, nên chưa gắn cơ chế mở lại cửa sổ (UI-11). Gắn cùng cơ chế sau `firstWindow()` của spec đó.
 - NOTES cũ trong checkpoint: `screens` còn ba NOTES của phiên 21, 22 (đề xuất trạng thái đã thực hiện, sự cố quy trình); `main` còn NOTE về `StageChange.test.tsx:183` (UI-12, đã đóng). Chuyển phần còn giá trị sang EXPERIENCES, xóa phần còn lại, theo Giao thức 07.
 
 ### UI-18 — Cửa sổ e2e được mở lại thì giành tiêu điểm của người đang dùng máy (trung bình; audit phiên 28 §5.4) — **plan phiên 29** (việc 2)
+
+> **Phần mở lại cửa sổ ĐÃ ĐÓNG 2026-10-04, phiên 29:** `window_guard.mjs` dùng `showInactive()` thay `restore()`. Đo trên Windows, 20 lần mỗi cách, một tiến trình khác giữ nền trước: `restore()` giành nền trước 18/20, `showInactive()` 0/20, hết thu nhỏ, không treo. **Phần còn lại vẫn mở:** Project Owner vẫn bị giành tiêu điểm trong 10 lượt e2e. Nguồn chính là lúc ứng dụng khởi động (mỗi spec một cửa sổ mới, hiện ra kích hoạt; agent đo 2/3 lần khởi động vào nền trước), nằm ở `Desktop/`: xem **DSK-18**. Sau khi DSK-18 có cờ (phiên desktop 30), phiên giao diện kế tiếp, cùng với UI-19, thêm cờ đó vào `launchArgs` của công cụ kiểm thử và vào `main_layout.spec.ts`; tiêu chí đóng: Project Owner xác nhận không còn bị giành tiêu điểm sau 10 lượt e2e. Ghi chú: trên Linux với icewm, `showInactive()` không đưa cửa sổ khỏi trạng thái thu nhỏ; vô hại vì Linux không treo.
 
 Cơ chế của UI-11 (`UI/tests/tools/window_guard.mjs`) gọi `restore()`. Project Owner xác nhận ngày 2026-10-04: trên Windows, cửa sổ bật lại **và lấy tiêu điểm**, nhảy lên trên ứng dụng đang dùng. Linux (Orchestrator, icewm) cũng thấy `focused: true` sau mỗi lần mở lại. Mã không gọi `focus()`; việc kích hoạt đến từ `restore()` của hệ điều hành.
 
@@ -584,6 +602,14 @@ Vì sao trung bình, không phải chỉ phiền:
 - 10 lượt e2e liên tiếp đạt trong lúc Project Owner dùng máy, và Project Owner xác nhận không bị giành tiêu điểm.
 
 Nếu đo cho thấy không có cách nào hết thu nhỏ mà không kích hoạt trên Windows: dừng, báo số đo; Project Owner quyết giữ cách hiện tại hay quay về quy ước không thu nhỏ.
+
+## Layer giao diện — sau audit phiên 29
+
+### UI-19 — `app_root.test.tsx`, ca D6, hỏng ngắt quãng (thấp; audit phiên 29 §5.3) — cho phiên giao diện kế tiếp
+
+Dòng 291 `expect(loadPending).toHaveBeenCalledTimes(3)` nhận 2, một lần trong 5 lần `npm run check` lúc máy Project Owner tải (mốc đầu phiên 29). Linux (Orchestrator): 0/25. Giả thuyết: câu "Đã lưu cài đặt nhắc việc." hiện ngay lúc `reminder_list` dựng xong, còn lần gọi `loadPending` thứ ba nằm trong `useEffect`, chạy sau; khẳng định ngay sau `findByText` có thể chạy trước nó. Cùng loại `screens-EXP-012`.
+
+**Việc:** chờ bằng `vi.waitFor` thay vì khẳng định ngay. Phép cắn tất định: làm lần gọi thứ ba đến chậm thì kiểm thử cũ hỏng, mới đạt. Không nới thời gian chờ.
 
 ## Môi trường và vận hành (không phải việc của coding agent)
 
