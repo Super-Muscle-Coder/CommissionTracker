@@ -17,10 +17,14 @@
 // ("Restores the window from minimized state to its previous state", line 3153),
 // isMinimized() (line 3036). A window already minimized when the listener goes
 // in has emitted its event already: it is checked once at installation.
-// Only restore(): no focus(), no moveTop(), no setAlwaysOnTop(), no resize.
-// The restore is called from setImmediate, out of the event handler itself.
+// UI-18 (session 29): the way back is showInactive() ("Shows the window but doesn't
+// focus on it", line 3632), not restore() (line 3153): measured by tests/tools/ui18_probe.mjs
+// with another PROCESS holding the foreground, 20 trials per way: restore() took the foreground
+// 18/20; showInactive() left the window not minimized, never took the foreground, no hang, 20/20.
+// No focus(), no moveTop(), no setAlwaysOnTop(), no resize.
+// The call is made from setImmediate, out of the event handler itself.
 //
-// Every restore is kept in globalThis.__ctRestoreGuard.restores (main process);
+// Every reopening is kept in globalThis.__ctRestoreGuard.restores (main process);
 // drainRestores() hands them to the Node side and empties the list.
 
 const READ_LIMIT_MS = 3_000
@@ -43,8 +47,10 @@ export async function installRestoreGuard(app) {
     const restoreIfMinimized = (w) => {
       setImmediate(() => {
         if (state.disabled || w.isDestroyed() || !w.isMinimized()) return
-        w.restore()
-        state.restores.push({ at: new Date().toISOString(), windowId: w.id })
+        // UI-18: showInactive(), not restore(): restore() activates the window and takes the
+        // foreground from the application the person is using (measured 18/20 in session 29).
+        w.showInactive()
+        state.restores.push({ at: new Date().toISOString(), windowId: w.id, way: 'showInactive', focusedAfter: w.isFocused() })
       })
     }
     const attach = (w) => {

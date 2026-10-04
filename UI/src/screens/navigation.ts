@@ -2,8 +2,8 @@
 // workflow: screens
 // clause: external
 // component: screens
-// last_updated_by: coding-agent@2026-10-03#2
-// last_updated_at: 2026-10-03T22:34:39.8051501+07:00
+// last_updated_by: coding-agent@2026-10-04#1
+// last_updated_at: 2026-10-04T12:56:44.6836972+07:00
 //
 // EXPERIENCES:
 //   - id: screens-EXP-001
@@ -427,7 +427,7 @@
 //       khoản này" là action của ItemList (row.canVoid do Services quyết định; khoản đã hủy không
 //       có). Hai quyết định của TRANG (không phải nghiệp vụ): trong lúc khung xác nhận chờ hoặc
 //       lúc đang gửi, mọi "Hủy khoản này" bị vô hiệu (câu hỏi nói về đúng một khoản mà khung
-//       không nêu tên; đặc tả chỉ đòi vô hiệu lúc gửi, nên đây là phần thêm, ghi ở NOTES).
+//       không nêu tên; đặc tả chỉ đòi vô hiệu lúc gửi, nên đây là phần thêm, ghi ở screens-EXP-048).
 //   - id: screens-EXP-029
 //     content: >
 //       Hook use_payment_list (gọi, giữ, chuyển): giữ list (kết quả tải gần nhất), question
@@ -695,6 +695,19 @@
 //       giữ nguyên. fake_logic.tsx: fakeSendReminder có thêm dropLeadTimeErrors, và hàm này không được tính là lời gọi
 //       tải (như ba hàm biến đổi bản nháp) ở renderFirstCommit. Hai kiểm thử dựng trang mới (bỏ dòng 1 của [1 ngày, 24
 //       giờ, 5 ngày] sau khi lỗi trùng ở dòng 2; và thêm dòng), hỏng trên mã cũ.
+//   - id: screens-EXP-048
+//     content: >
+//       Phiên 29: dọn bốn NOTE của phiên 21 và 22 (Giao thức 07, UI-17); phần còn giá trị: (1) hai đề xuất trạng thái (I6)
+//       đã thực hiện: năm trang D2, D3 hoàn_tất ở phiên 21; payment_list, payment_form, commission_detail hoàn_tất ở
+//       phiên 22 (Project Owner chạy tay xong), không còn gì để theo dõi. (2) Các chỗ D4 để Orchestrator quyết, đã
+//       thành hành vi: tải lại lặng lẽ sau mọi rejected của void_payment (screens-EXP-029; muốn khác chỉ sửa
+//       use_payment_list.ts); các "Hủy khoản này" còn lại bị vô hiệu lúc khung xác nhận chờ (screens-EXP-028); "làm
+//       tròn tới phút" của ngày giờ mặc định là cắt giây; số 0 dùng violates_type_constraint, sai cú pháp not_number,
+//       quá lớn not_integer (record_payment-EXP-005). (3) Bài học quy trình: một lượt e2e chạy nền có vòng lặp tự thử
+//       tiếp thì KHÔNG được chạy thêm e2e khác, hai lượt dùng chung tệp phiên, thư mục kết quả và cổng (đã ở
+//       main-EXP-025). (4) Kiểm thử StageChange "focus ở Xác nhận" hỏng không tất định đã vá ở phiên 25 (UI-12;
+//       screens-EXP-012: chờ bằng vi.waitFor). (5) Cảnh báo cũ "chụp ảnh hết 30 s ở bước backend down không tất định"
+//       đã giải ở UI-11 (cửa sổ bị thu nhỏ; main-EXP-026, main-EXP-027).
 //
 // UNSOLVED_PROBLEMS: []
 //
@@ -1046,8 +1059,8 @@
 //       tip 4.500.000/4.500.000; "Đã thu dư 2,50 USD"; "Đã thu đủ"; khung xác nhận có focus ở "Xác
 //       nhận", các nút khác vô hiệu, "Quay lại" không đổi gì; focus ở "Khoản" (payment_form S1, hai
 //       lần); ô đơn vị tiền vô hiệu; hàng nút trên ô đầu theo vị trí thật. Hai lần hỏng KHÔNG tính (xem
-//       NOTES): lần 5 của lượt đầu (chụp ảnh hết giờ ở payment_form-S1-errors, backend đang bật), và một
-//       lượt bị hỏng vì chạy TRÙNG (xem NOTES).
+//       screens-EXP-048): lần 5 của lượt đầu (chụp ảnh hết giờ ở payment_form-S1-errors, backend đang bật), và một
+//       lượt bị hỏng vì chạy TRÙNG (xem screens-EXP-048).
 //     recorded_at: 2026-09-30T09:12:00+07:00
 //   - claim: >
 //       Phiên 22, UI-11 (thu dữ liệu): thời gian chụp ảnh của harness, tổng hợp từ nhật ký.
@@ -1140,44 +1153,7 @@
 //       %APPDATA%. git status chỉ có tệp trong UI/. Không eslint-disable, không ngoại lệ lint mới, không phụ thuộc mới.
 //     recorded_at: 2026-10-03T10:42:22.0487385+07:00
 //
-// NOTES:
-//   - content: >
-//       Đề xuất trạng thái (I6, phiên 22): payment_list, payment_form và commission_detail (có phần Thanh
-//       toán) đều hoàn_tất; chờ Orchestrator audit và Project Owner tự chạy tay (npm run
-//       walkthrough:app -- --payments cho payment_list S1..S5 và commission_detail S6; -- --commissions
-//       cho payment_form S1..S6 và commission_detail S1..S5). record_payment còn đang_triển_khai ở hợp
-//       đồng do BE-7 (backend chưa từ chối phương thức trống), việc của phiên backend, không chặn giao diện.
-//       Coding agent không sửa ui_decomposition.md.
-//     written_at: 2026-09-30
-//   - content: >
-//       Cho Orchestrator (không chặn): (1) đặc tả D4 nói tải lại sau 404 và 409 của void_payment nhưng
-//       giữ danh sách sau 500, còn I3.4 gộp mọi lỗi khai báo thành rejected; phiên 22 chọn tải lại lặng lẽ
-//       sau mọi rejected (screens-EXP-029). Nếu muốn khác, chỉ sửa use_payment_list.ts. (2) Trong lúc khung
-//       xác nhận chờ, các "Hủy khoản này" còn lại bị vô hiệu: phần thêm ngoài đặc tả (screens-EXP-028).
-//       (3) "Làm tròn tới phút" của ngày giờ mặc định làm là cắt giây. (4) Số 0 dùng
-//       violates_type_constraint, sai cú pháp not_number, quá lớn not_integer (record_payment-EXP-005).
-//       (5) Kiểm thử StageChange "focus ở Xác nhận" hỏng đúng một lần khi chạy cả bộ vitest lúc đang thêm
-//       tệp mới (isFocused false), các lần khác đạt (bộ 1100 đạt nhiều lần liên tiếp); không tái hiện,
-//       ghi nhận.
-//     written_at: 2026-09-30
-//   - content: >
-//       Sự cố quy trình của phiên (không phải của sản phẩm): trong lúc lượt e2e đầu chạy nền, một
-//       vòng lặp thứ hai (payment_form ×10) được khởi chạy cùng lúc; lượt nền không dừng sau lần hỏng
-//       thứ năm mà tiếp tục lần 6, nên hai lượt dùng chung một tệp phiên, thư mục test-results và cổng,
-//       và 7 lần của vòng thứ hai cùng lần 6 hỏng ("element(s) not found" ở nhiều bước). Đã dừng lượt
-//       nền, không tính các lần đó, và chạy lại từng lượt một, không song song. Bài học: một lượt nền có
-//       vòng lặp tự thử tiếp thì không được chạy thêm e2e khác.
-//     written_at: 2026-09-30
-//   - content: >
-//       Đề xuất trạng thái (I6, phiên 21): commission_list, commission_detail,
-//       commission_form, progress_board, stage_change đều hoàn_tất (UI-10 đã vá:
-//       screens-EXP-026; UI-9: screens-EXP-019); chờ Orchestrator audit và Project Owner
-//       tự chạy tay (npm run walkthrough:app -- --progress cho hai trang D3 và các bước
-//       mới của commission_detail; -- --commissions cho D2; -- --empty cho S1 của
-//       commission_list và progress_board). Coding agent không sửa ui_decomposition.md.
-//       Cảnh báo cho audit: chụp ảnh hết 30 s ở bước backend down khi chạy không biến
-//       (client_detail S4, stage_change S4) không tất định trên máy Windows này.
-//     written_at: 2026-09-29
+// NOTES: []
 // ===WCA-CHECKPOINT-END===
 /**
  * Navigation table of the screens zone. A page that is not in this table does

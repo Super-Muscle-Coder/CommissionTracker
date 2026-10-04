@@ -171,7 +171,7 @@ async function logRestores(app: ElectronApplication | null, step: string): Promi
   if (restores.length === 0) return
   const file = path.join(UI_ROOT, 'test-results', 'window-restore.log')
   fs.mkdirSync(path.dirname(file), { recursive: true })
-  for (const r of restores) fs.appendFileSync(file, `${r.at}\t${currentSpec}\t${step}\trestored\twindow=${r.windowId}\n`)
+  for (const r of restores) fs.appendFileSync(file, `${r.at}\t${currentSpec}\t${step}\trestored\twindow=${r.windowId}\tway=${r.way}\tfocused_after=${r.focusedAfter}\n`)
 }
 
 // The one place a screenshot is taken (the walkthrough recorder and

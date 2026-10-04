@@ -2,8 +2,8 @@
 // workflow: main
 // clause: external
 // component: main
-// last_updated_by: coding-agent@2026-10-03#2
-// last_updated_at: 2026-10-03T22:33:18.0540800+07:00
+// last_updated_by: coding-agent@2026-10-04#1
+// last_updated_at: 2026-10-04T13:20:16.5016162+07:00
 //
 // EXPERIENCES:
 //   - id: main-EXP-001
@@ -379,6 +379,48 @@
 //       bước đó hoặc ngay trước nó. Nhật ký trạng thái cửa sổ của phiên 27 giữ nguyên. Công cụ ui11_probe.mjs có
 //       thêm cờ --guard=on|off (mặc định off), điều kiện 'reminimized' (thu nhỏ lại TRƯỚC MỖI lần chụp, không nghỉ),
 //       và coi một cú click quá hạn là treo (không chỉ chụp ảnh).
+//   - id: main-EXP-027
+//     content: >
+//       UI-18 (phiên 29): cơ chế mở lại cửa sổ của main-EXP-026 nay gọi BrowserWindow.showInactive(), KHÔNG còn restore():
+//       restore() kích hoạt cửa sổ và giành nền trước của ứng dụng người dùng đang dùng. ĐO trước khi chọn bằng công cụ
+//       mới tests/tools/ui18_probe.mjs: "ứng dụng khác" là một TIẾN TRÌNH riêng (PowerShell + cửa sổ WinForms, chạy bằng
+//       -File) được xin nền trước trước mỗi lần thử; nền trước của hệ điều hành đọc bằng GetForegroundWindow +
+//       GetWindowThreadProcessId, so với pid của tiến trình chính Electron lấy bằng process.pid BÊN TRONG Electron (pid
+//       Playwright sinh ra là pid khác: lần thử đầu của tôi so nhầm pid và báo sai). Một cửa sổ cùng tiến trình sẽ không
+//       đủ, vì Windows cho một tiến trình đẩy cửa sổ của chính nó lên dễ hơn của tiến trình khác. Bốn cách, 20 lần mỗi
+//       cách, nguồn electron.d.ts 44.4.5: restore() (dòng 3153), showInactive() (dòng 3632: "Shows the window but doesn't
+//       focus on it"), show() (dòng 3622, đối chứng), maximize() rồi unmaximize() (dòng 3110: "will also show (but not
+//       focus)"). Số đo ở EVIDENCE: chỉ showInactive() đạt cả ba (hết thu nhỏ, không giành nền trước, không treo, 20/20);
+//       maximize() cũng giành nền trước 20/20 dù tài liệu nói "not focus" (tài liệu không đáng tin ở điểm này, chỉ số đo).
+//       window_guard.mjs ghi thêm cách đã dùng và isFocused() ngay sau khi mở lại; harness ghi hai trường đó vào
+//       test-results/window-restore.log ("way=showInactive focused_after=false"). Không focus(), không moveTop(), không
+//       setAlwaysOnTop(), không đổi focusable; không đổi UI/src, Desktop/, không cờ --ct-test-*. Công cụ ui18_probe.mjs
+//       chiếm nền trước của máy trong vài phút khi chạy: báo người dùng trước.
+//   - id: main-EXP-028
+//     content: >
+//       UI-16 (phiên 29): tests/main/main.test.tsx nạp trước cây mô-đun của src/main một lần trong beforeAll (giới hạn
+//       riêng 60 s, ghi lý do ngay tại hook), nên ca đầu không còn trả chi phí nạp mã lần đầu trong giới hạn 5 s. Đo
+//       trước: chạy riêng tệp ca đầu ~1000 ms, ca hai ~15 ms (khoảng 985 ms là nạp mã); cả bộ lúc máy tải 5,09 s và 5,47 s
+//       (hết giờ ở 2 trong 5 lần). Sau: ca đầu ~100 ms. beforeEach vẫn vi.resetModules() nên mỗi ca vẫn chạy Main từ đầu;
+//       chỉ phần biến đổi mã đã làm sẵn (suy từ số đo: ca hai ~15 ms sau khi ca đầu nạp, và phép cắn dưới đây). Phép cắn: một
+//       cấu hình vitest tạm (đã xóa) làm chậm biến đổi src/main.tsx 7 s như một lần nạp lạnh chậm: tệp cũ HỎNG ở ca đầu
+//       (5018 ms, rồi các ca sau hỏng theo vì mô-đun còn dở), tệp mới 17/17 đạt. Không nới giới hạn ca, không retries,
+//       không bỏ ca. Lưu ý: giới hạn 60 s của beforeAll là giới hạn của việc nạp, không phải của một ca.
+//   - id: main-EXP-029
+//     content: >
+//       UI-17 (phiên 29): (1) main_layout.spec.ts gắn installRestoreGuard ngay sau firstWindow() (spec này tự mở Electron,
+//       không qua launch() của harness); các lần mở lại được ghi bởi timedScreenshot như mọi spec. (2) Dọn NOTES theo
+//       Giao thức 07: xóa khỏi main hai NOTE cũ: StageChange.test.tsx:183 (phiên 24; UI-12 đã đóng ở phiên 25, nội dung
+//       đã ở screens-EXP-012) và NOTE về main.test.tsx của phiên 28 (nay là UI-16, xử lý ở main-EXP-028). Xóa khỏi screens
+//       bốn NOTE phiên 21 và 22 (hai đề xuất trạng thái đã thực hiện, một sự cố quy trình, một ghi chú cho Orchestrator);
+//       phần còn giá trị đã chuyển sang screens-EXP-048. Giữ NOTES còn đúng (UI.esproj, cách chạy e2e, hai ghi chú sửa main.test.tsx).
+//   - id: main-EXP-030
+//     content: >
+//       Phát hiện ngoài plan (phiên 29, không sửa, ghi cho Orchestrator): npm run check hỏng ngắt quãng ở MỘT CA KHÁC,
+//       src/screens/tests/app_root.test.tsx, ca D6 "Nhắc việc → ... reminder_list with the notice, once": dòng 291
+//       expect(loadPending).toHaveBeenCalledTimes(3) nhận 2. Một lần trong 5 lần chạy mốc đầu phiên, lúc máy tải. Nguyên
+//       nhân CHƯA điều tra; giả thuyết (chưa kiểm): dòng 291 đếm lời gọi ngay sau findByText, có thể trước khi lần tải
+//       thứ ba xảy ra, cùng loại với screens-EXP-012 (chờ bằng vi.waitFor thay vì khẳng định ngay).
 //
 // UNSOLVED_PROBLEMS: []
 //
@@ -866,19 +908,59 @@
 //       phút). Cuối: check "Tests 1555 passed (1555)" (+5: hai kiểm thử trang và ba kiểm thử Services của UI-13); 120 tệp
 //       UI/evidence, so sánh từng SHA-256 với mốc: 0 khác biệt; data.db 114688 byte và data.db.lock 0 byte, giờ ghi
 //       2026-09-28 21:09, không đổi. Không eslint-disable, không ngoại lệ lint mới, không phụ thuộc mới.
-//       LƯU Ý (xem NOTES): npm run check hỏng ngắt quãng ở một ca của tests/main/main.test.tsx do hết 5 s khi máy đang tải.
+//       LƯU Ý (xem main-EXP-028, đã vá ở phiên 29): npm run check hỏng ngắt quãng ở một ca của tests/main/main.test.tsx do hết 5 s khi máy đang tải.
 //     recorded_at: 2026-10-03T22:33:18.0540800+07:00
+//   - claim: >
+//       UI-18: bảng số đo bốn cách đưa cửa sổ đang thu nhỏ về lại, với một TIẾN TRÌNH khác giữ nền trước; cách chọn.
+//     how: >
+//       Trong UI/: node tests/tools/ui18_probe.mjs --n=20 --label=ui18_run1 (Electron 44.4.5, Windows 11, người dùng
+//       dùng máy bình thường lúc đó). Mỗi lần: một tiến trình PowerShell xin nền trước; thu nhỏ cửa sổ chính; áp cách đo;
+//       đọc isMinimized, isFocused, chủ nền trước của hệ điều hành (GetForegroundWindow); click + chụp ảnh với hạn 10 s.
+//       Bản ghi từng lần: UI/test-results/ui18_probe/ui18_run1.jsonl (git bỏ qua). Kiểm cơ chế thật: node
+//       tests/tools/ui11_probe.mjs --guard=on --only=reminimized --n=20 --label=guard_s29.
+//     result: >
+//       cách / số lần hợp lệ / còn thu nhỏ / ứng dụng giành nền trước / Electron isFocused / treo:
+//       restore 20 / 0 / 18 / 18 / 0; showInactive 20 / 0 / 0 / 0 / 0; show 20 / 0 / 20 / 20 / 0; maximize+unmaximize
+//       20 / 0 / 20 / 20 / 0. CHỌN showInactive (đạt cả ba, 20/20), đã áp vào window_guard.mjs. Cơ chế thật với
+//       showInactive: ui11_probe reminimized 20 lần thu nhỏ trước mỗi lần chụp, 20 lần mở lại, 0 treo, trung vị 100 ms,
+//       lớn nhất 116 ms, focused:false sau mỗi lần. Trong 10 lượt e2e cuối phiên: 2 lần mở lại (lượt 4,
+//       commission_form-S1-filled; lượt 5, reminder_settings-S5-unreachable), cả hai "way=showInactive focused_after=false".
+//     recorded_at: 2026-10-04T12:56:44.6836972+07:00
+//   - claim: >
+//       UI-16: số đo trước và sau, phép cắn.
+//     how: >
+//       Trước: npm run check ×5 đầu phiên; npx vitest run tests/main --reporter=verbose ×3. Sau: cùng lệnh. Phép cắn:
+//       cấu hình vitest tạm (đã xóa) làm chậm biến đổi src/main.tsx 7 s; chạy tệp cũ (git show HEAD, bản tạm đã xóa) và tệp mới.
+//     result: >
+//       Trước: ca đầu 1004, 1066, 964 ms chạy riêng (ca hai 14-25 ms); trong 5 lần check cả bộ: hỏng 3 lần, trong đó ca
+//       đầu hết giờ 2 lần (5093 ms, 5470 ms), một lần là ca app_root (main-EXP-030). Sau: ca đầu 103 ms chạy riêng. Phép cắn: tệp
+//       cũ "no bridge on the global object 5018ms" hỏng (và các ca theo sau), tệp mới "Tests 17 passed (17)". npm run
+//       check 10 lần liên tiếp đạt ("Tests 1555 passed (1555)" mỗi lần, lần hỏng đầu tiên của vòng: không có).
+//     recorded_at: 2026-10-04T12:56:44.6836972+07:00
+//   - claim: >
+//       Điều kiện cuối phiên 29.
+//     how: >
+//       npm run e2e KHÔNG đặt CT_WALKTHROUGH_RUNNER, 10 lượt liên tiếp từng lượt một; SHA-256 từng tệp UI/evidence (120 tệp)
+//       và tên, kích thước, giờ ghi tệp trong %APPDATA%\CommissionTracker, trước và sau; git status --short.
+//     result: >
+//       Mốc đầu phiên: Node v24.14.1, npm 11.11.0, e2e 70 passed (5,4 phút). 10 lượt: "70 passed" mỗi lượt (4,8-5,9 phút),
+//       0 lần hỏng, 2 lần mở lại cửa sổ trong tổng 700 ca. UI/evidence: 0 khác biệt. data.db 114688 byte, data.db.lock 0
+//       byte, giờ ghi 2026-09-28 21:09, không đổi. git status chỉ có tệp trong UI/. Không eslint-disable, không ngoại lệ
+//       lint mới, không phụ thuộc mới. Câu trả lời của Project Owner về tiêu điểm (sau 10 lượt): CÒN bị giành tiêu điểm và chiếm phím, dù chỉ 2 lần mở lại trong 10 lượt. UI-18 CHƯA đạt tiêu chí cuối (xem NOTES).
+//     recorded_at: 2026-10-04T12:56:44.6836972+07:00
 //
 // NOTES:
 //   - content: >
-//       PHÁT HIỆN MỚI (phiên 28, chưa vá, ngoài plan): npm run check hỏng ngắt quãng ở tests/main/main.test.tsx >
-//       "Main, launch value missing or malformed → startup error screen" > "no bridge on the global object" với "Test
-//       timed out in 5000ms" (ca ĐẦU của tệp: lần đầu nạp cả ứng dụng, 5,1-5,4 s khi cả 35 tệp khởi động cùng lúc). 3
-//       trong 5 lần chạy check liên tiếp lúc máy đang tải (CPU ~36%, ứng dụng khác của người dùng chạy); lúc máy rảnh ở
-//       mốc đầu phiên đạt; chạy riêng tests/main 6/6 đạt (2,4-2,7 s cả tệp). Mã của phiên này không chạm Main hay tệp đó.
-//       Không nới thời gian chờ, không retries. Đề xuất cho Orchestrator: mục tồn đọng mới (kiểm thử phụ thuộc thời
-//       gian nạp lạnh; cách chữa không nới giờ, ví dụ nạp trước mô-đun ở đầu tệp).
-//     written_at: 2026-10-03T22:34:05.4351922+07:00
+//       UI-18 CHƯA ĐÓNG (phiên 29): Project Owner xác nhận sau 10 lượt e2e rằng cửa sổ ứng dụng vẫn nhảy lên giành tiêu
+//       điểm và chiếm phím. showInactive() đã loại việc mở lại (chỉ 2 lần trong 10 lượt), nên nguồn chính là LÚC KHỞI ĐỘNG
+//       ứng dụng: Desktop/src/main.ts tạo BrowserWindow hiện thường (không show:false, không showInactive), và mỗi spec
+//       e2e khởi động ứng dụng riêng (khoảng 16 lần mỗi lượt). Số đo tests/tools/ui18_launch_probe.mjs (3 lần, máy đang
+//       dùng): ứng dụng vào nền trước 2/3 lần, sau 2322 ms và 3835 ms kể từ lệnh khởi động; lần thứ ba không (12 s). Hạn
+//       chế của số đo: tiến trình PowerShell mồi KHÔNG giữ được nền trước (ứng dụng của Project Owner giữ nó), nên chỉ khẳng
+//       định "khởi động giành nền trước từ ứng dụng khác", chưa tách được từng nguyên nhân phụ. Không chữa được trong
+//       UI/: cần đổi cách Desktop mở cửa sổ (ví dụ show:false rồi showInactive) hoặc một cờ --ct-test-*, cả hai ngoài
+//       phiên này. Đề xuất cho Orchestrator: mục mới (có thể ở Desktop), hoặc chấp nhận cho V1 và chạy e2e lúc không dùng máy.
+//     written_at: 2026-10-04T13:20:16.5016162+07:00
 //   - content: >
 //       UI.esproj: StartupCommand = npm run build (giao diện không tự chạy được;
 //       chạy thật là npm run build trong UI/ rồi npm start trong Desktop/),
@@ -916,12 +998,6 @@
 //       một lời gọi GET <backendBaseUrl>/clients. Hành vi mới theo plan việc 4 và
 //       7, không phải nới kiểm thử.
 //     written_at: 2026-09-28
-//   - content: >
-//       Cho Orchestrator (phiên 24, không sửa vì ngoài plan): src/screens/pages/stage_change/tests/StageChange.test.tsx
-//       dòng 183 khẳng định isFocused(select()) NGAY sau findByRole('alert'), không dùng vi.waitFor như
-//       screens-EXP-012 đã khuyên; hỏng 1 lần trong lần chạy mốc đầu phiên (1099/1100) rồi đạt cả bốn lần chạy lại. Cùng
-//       loại với lỗi focus đã vá ở client_form (phiên 17).
-//     written_at: 2026-10-01
 // ===WCA-CHECKPOINT-END===
 /**
  * Main of the interface layer (iwca_theory.md §4; i2-scaffold.md, Step I2.6).

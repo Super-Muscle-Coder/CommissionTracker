@@ -7,12 +7,29 @@
 // vi.stubGlobal and never touches window directly (R12).
 import { act } from 'react'
 import { screen } from '@testing-library/react'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { LAYER_CONFIGS } from '../../src/configs/layer_configs'
 
 const { rendererBridge } = LAYER_CONFIGS.launch
 const failure = LAYER_CONFIGS.startupFailure
 const APP_TITLE = 'Commission Tracker'
+
+// UI-16: the first import of src/main pays the one-time cost of loading and transforming the
+// whole module tree (every workflow). It is paid HERE, once, with a limit of its own, so that no
+// test spends its 5 s on it. Measured in session 29 (Windows): ~1.0 s alone for the first test
+// against ~15 ms for the next; 5.1-5.5 s, past the limit, in 2 of 5 runs of the whole suite
+// with the machine in use. 60 s is the limit for the loading alone (about ten times the worst
+// time seen). The tests below keep the default limit and still reset the module registry, so
+// each one evaluates Main afresh; only the loading work is already done.
+beforeAll(async () => {
+  vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
+  document.body.innerHTML = `<div id="${LAYER_CONFIGS.rootElementId}"></div>`
+  await act(async () => {
+    await import('../../src/main')
+  })
+  document.body.innerHTML = ''
+  vi.unstubAllGlobals()
+}, 60_000)
 
 let fetchSpy: ReturnType<typeof vi.fn>
 

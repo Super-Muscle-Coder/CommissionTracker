@@ -12,6 +12,7 @@ import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { evidenceRoot } from '../tools/walkthrough_lib.mjs'
+import { installRestoreGuard } from '../tools/window_guard.mjs'
 import { timedScreenshot } from './walkthrough_harness.js'
 
 const UI_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..')
@@ -60,6 +61,9 @@ test('the desktop app loads UI/dist: main frame, no startup error, no CSP violat
 
     try {
       const page = await app.firstWindow()
+      // UI-11 / UI-17: this spec starts the app itself, not through launch() of the harness,
+      // so it installs the same reopening mechanism (the reopenings are logged by timedScreenshot).
+      await installRestoreGuard(app)
       // Let the desktop Main's own first load finish: it treats an aborted first
       // load (ERR_ABORTED) as fatal and exits with code 1 (measured).
       await expect(page.getByRole('heading', { level: 1, name: APP_TITLE })).toBeVisible({ timeout: 60_000 })
