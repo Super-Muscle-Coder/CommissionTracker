@@ -167,6 +167,11 @@ export function createSendReminderRouters(services: SendReminderServices, rules:
     removeLeadTime(draft: ReminderSettingsDraft, index: number): ReminderSettingsDraft {
       return services.removeLeadTime(draft, index)
     },
+    // Page reminder_settings: the last save result once the rows of "Mốc nhắc"
+    // have changed (pure: no call): the errors bound to a row are gone (UI-13).
+    dropLeadTimeErrors(saved: ViewResult<SavedSettingsView>): ViewResult<SavedSettingsView> {
+      return services.dropLeadTimeErrors(saved)
+    },
   }
 }
 

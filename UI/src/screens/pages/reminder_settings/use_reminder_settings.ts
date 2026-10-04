@@ -131,8 +131,15 @@ export function useReminderSettings(onSaved: (view: SavedSettingsView) => void):
     setPeriodicUnit: (unit) => setDraft((d) => sendReminder.changePeriodicUnit(d, unit)),
     setLeadTime: (index, field, value) =>
       setDraft((d) => ({ ...d, leadTimes: d.leadTimes.map((row, i) => (i === index ? { ...row, [field]: value } : row)) })),
-    addLeadTime: () => setDraft((d) => sendReminder.addLeadTime(d)),
-    removeLeadTime: (index) => setDraft((d) => sendReminder.removeLeadTime(d, index)),
+    // hold: the rows change, so the errors bound to a place in the list go (UI-13; Services decides which).
+    addLeadTime: () => {
+      setDraft((d) => sendReminder.addLeadTime(d))
+      setSaved((s) => (s === null ? null : sendReminder.dropLeadTimeErrors(s)))
+    },
+    removeLeadTime: (index) => {
+      setDraft((d) => sendReminder.removeLeadTime(d, index))
+      setSaved((s) => (s === null ? null : sendReminder.dropLeadTimeErrors(s)))
+    },
     saved,
     saveCount,
     saving,

@@ -382,7 +382,11 @@ export async function seedIncomeSample(baseUrl) {
 // Sample data of the D6 walkthrough reminder_list (and the manual run npm run
 // walkthrough:app -- --reminders): reminders cannot be made by the interface
 // (only the desktop's reminder_ticker calls check_due, api_contract.yaml 4.0.0),
-// so THIS TOOL — a test, not the layer — calls POST /reminders/checks once.
+// so THIS TOOL — a test, not the layer — calls POST /reminders/checks once. What it
+// then asserts is the LIST OF REMINDERS WAITING (GET /reminders/pending), not what
+// its own call returned (UI-15): the contract hands each due reminder out once, so
+// when the ticker of the desktop exists it may receive one or both first, and the
+// waiting list has both whoever received them.
 //   - one client, three commissions: "Tranh hạn hôm nay" (deadline TODAY by the
 //     machine's date), "Minh họa bìa sách" (deadline 2026-01-01, long past) and
 //     "Chibi đôi" (no deadline); none has a stage, so all three are open;
@@ -391,8 +395,10 @@ export async function seedIncomeSample(baseUrl) {
 //     now + 3 s, rounded up to the minute);
 //   - once that minute has gone, check_due is called: it produces the deadline
 //     reminder (due 00:00 today: the deadline ends at 00:00 tomorrow, minus 24
-//     hours) and the digest (due at that minute), oldest first. The digest takes
-//     between 4 and 64 seconds to exist (less than 70).
+//     hours) and the digest (due at that minute), oldest first — unless another
+//     caller (the ticker) received them first; either way both are in the waiting
+//     list, which is what the sample checks. The digest takes between 4 and 64
+//     seconds to exist (less than 70).
 // What the list must show (D6_EXPECTED_REMINDERS): the deadline reminder, then
 // the digest "3 đơn đang mở", "2 đơn có hạn giao", earliest "Minh họa bìa
 // sách (01/01/2026)". The date of the run is in the lines (today, the due
@@ -404,7 +410,7 @@ const two = (n) => String(n).padStart(2, '0')
 export const localDate = (d) => `${d.getFullYear()}-${two(d.getMonth() + 1)}-${two(d.getDate())}`
 export const dmy = (iso) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}`
 
-export async function seedReminderSample(baseUrl) {
+export async function seedReminderSample(baseUrl, options = {}) {
   // Close to midnight "today" would change under the sample's feet: wait it out.
   const now0 = new Date()
   const midnight = new Date(now0.getFullYear(), now0.getMonth(), now0.getDate() + 1).getTime()
@@ -433,8 +439,29 @@ export async function seedReminderSample(baseUrl) {
   }, 200)
   // The check must come after the digest's minute (the backend's clock is this machine's).
   await pause(Math.max(0, target.getTime() + 1500 - Date.now()))
-  const produced = await call(baseUrl, 'POST', '/reminders/checks', undefined, 200)
-  if (produced.length !== 2) throw new Error(`check_due produced ${produced.length} reminders, expected 2: ${JSON.stringify(produced)}`)
+  // UI-15: the desktop's reminder_ticker also calls check_due, and the contract hands
+  // each due reminder out ONCE: this call may find two, one or none, according to
+  // who called first. `beforeCheck` lets a test play the ticker (a call made just before).
+  if (options.beforeCheck !== undefined) await options.beforeCheck()
+  await call(baseUrl, 'POST', '/reminders/checks', undefined, 200)
+  // What the sample guarantees is the list of reminders WAITING, which holds both until
+  // they are acknowledged, whoever received them: exactly the deadline reminder, then the digest.
+  const pending = await call(baseUrl, 'GET', '/reminders/pending', undefined, 200)
+  const [first, second] = pending
+  const wanted =
+    pending.length === 2 &&
+    first.kind === 'deadline' &&
+    first.deadline_item.commission_id === commissions.today &&
+    first.deadline_item.title === D6_TITLES.today &&
+    first.deadline_item.deadline === today &&
+    first.deadline_item.lead.amount === 1 &&
+    first.deadline_item.lead.unit === 'days' &&
+    second.kind === 'periodic_digest' &&
+    second.digest.open_count === 3 &&
+    second.digest.upcoming.length === 2 &&
+    second.digest.upcoming[0].title === D6_TITLES.past &&
+    second.digest.upcoming[0].deadline === '2026-01-01'
+  if (!wanted) throw new Error(`the pending list is not the two reminders of the sample: ${JSON.stringify(pending)}`)
   // The date of the digest: the minute's own day (it may differ from "today" only past midnight, which is waited out above).
   return { client, commissions, today, digestTime, digestDate: localDate(target) }
 }

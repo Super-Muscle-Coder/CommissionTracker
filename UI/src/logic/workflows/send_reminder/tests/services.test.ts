@@ -335,6 +335,39 @@ describe('reminder_settings: what a change does to the draft', () => {
   })
 })
 
+describe('dropLeadTimeErrors (UI-13): errors bound to a place in "Mốc nhắc" go when the rows change', () => {
+  const services = servicesOf({})
+  const rejectedWith = (fields: Record<string, string>): ViewResult<never> => ({ kind: 'rejected', origin: 'input', code: 'INPUT_FORMAT', message: 'summary', fieldErrors: fields })
+
+  it('drops the row errors (amount, unit, the duplicate of the row as a whole), keeps the others and the summary', () => {
+    const before = rejectedWith({
+      'periodic.every': 'a',
+      'periodic.at_time': 'b',
+      'deadline.lead_times.0.amount': 'c',
+      'deadline.lead_times.1.unit': 'd',
+      'deadline.lead_times.2': 'e',
+      'deadline.lead_times': 'f',
+    })
+    expect(services.dropLeadTimeErrors(before)).toEqual({ ...before, fieldErrors: { 'periodic.every': 'a', 'periodic.at_time': 'b' } })
+  })
+
+  it('does not drop a field that only starts with the same letters', () => {
+    const before = rejectedWith({ 'deadline.lead_times_other': 'x' })
+    expect(services.dropLeadTimeErrors(before)).toEqual(before)
+  })
+
+  it('every other kind of result is returned as it is', () => {
+    const results: ViewResult<never>[] = [
+      { kind: 'unreachable', message: 'u' },
+      { kind: 'contract_violation', message: 'v' },
+      { kind: 'rejected', origin: 'system', code: 'ERR_VALIDATION', message: 'm', fieldErrors: {} },
+    ]
+    for (const r of results) expect(services.dropLeadTimeErrors(r)).toEqual(r)
+    const saved: ViewResult<{ message: string }> = { kind: 'ok', view: { message: 'ok' } }
+    expect(services.dropLeadTimeErrors(saved)).toBe(saved)
+  })
+})
+
 describe('the words of each field error (rejectInput)', () => {
   const services = servicesOf({})
   const rejected = (fields: Parameters<typeof services.rejectInput>[0]) => {

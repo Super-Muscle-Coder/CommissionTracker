@@ -3,7 +3,10 @@ precondition: >
   Desktop đã build (npm run build trong Desktop/). Trong UI/: npm run walkthrough:app -- --reminders
   mở ứng dụng thật với thư mục dữ liệu tạm (không đụng %APPDATA%), Backend.py thật sau fixture
   bật/tắt được. Giao diện KHÔNG tự tạo nhắc việc (chỉ reminder_ticker của desktop gọi
-  POST /reminders/checks), nên công cụ này nạp dữ liệu mẫu D6 rồi tự gọi endpoint đó MỘT lần: một
+  POST /reminders/checks), nên công cụ này nạp dữ liệu mẫu D6 rồi tự gọi endpoint đó MỘT lần (UI-15:
+  điều công cụ khẳng định là DANH SÁCH ĐANG CHỜ, GET /reminders/pending, có đúng hai nhắc việc dưới
+  đây; hợp đồng chỉ trao mỗi nhắc việc một lần, nên khi desktop có reminder_ticker, lần gọi của công
+  cụ có thể nhận đủ hai, một, hay không nhắc việc nào, mà danh sách đang chờ vẫn đủ): một
   khách (Mai Anh), ba đơn "Tranh hạn hôm nay" (hạn giao là HÔM NAY theo ngày máy), "Minh họa bìa
   sách" (hạn 01/01/2026) và "Chibi đôi" (không hạn); cài đặt đã lưu với cả hai loại nhắc việc bật
   (nhắc trước hạn "1 ngày", nhắc định kỳ hằng ngày vào phút kế tiếp). Công cụ chờ qua phút đó (tối

@@ -12,6 +12,8 @@
 //   occluded     a second window of the same size, in front, covering it
 //   unfocused    a small second window at a corner, focused (the page loses
 //                the focus but stays fully visible)
+//   reminimized  (session 28) the window is minimized again BEFORE EVERY shot, with
+//                no pause, as a person using the machine may do at any moment
 // For each shot it records the milliseconds, the outcome, and the state of the
 // window as the page sees it (visibilityState, hasFocus) and as Electron sees it
 // (isMinimized, isFocused, isVisible).
@@ -19,6 +21,8 @@
 // Usage (from UI/):  node tests/tools/ui11_probe.mjs [--n=20] [--limit=10000]
 //                    [--only=normal,minimized,occluded,unfocused]
 //                    [--flags=--disable-renderer-backgrounding,...] [--label=name]
+//                    [--guard=on|off]  (default off; on = the restore mechanism of
+//                    tests/tools/window_guard.mjs, session 28: the same run with it)
 // --flags are Chromium switches put BEFORE the app path of the Electron binary
 // (step 4b: the same run with the flags). The tool then reads them back inside
 // the Electron process (app.commandLine) to prove they are in effect.
@@ -28,6 +32,7 @@ import { _electron as electron } from '@playwright/test'
 import fs from 'node:fs'
 import path from 'node:path'
 import { DESKTOP_ROOT, UI_ROOT, clearSession, electronBinary, launchArgs, makeDataDir, portFromLog } from './walkthrough_lib.mjs'
+import { drainRestores, installRestoreGuard } from './window_guard.mjs'
 
 const opt = (name, fallback) => {
   const hit = process.argv.find((a) => a.startsWith(`--${name}=`))
@@ -35,9 +40,10 @@ const opt = (name, fallback) => {
 }
 const N = Number(opt('n', '20'))
 const LIMIT = Number(opt('limit', '10000'))
-const ONLY = opt('only', 'normal,minimized,occluded,unfocused').split(',')
+const ONLY = opt('only', 'normal,minimized,occluded,unfocused,reminimized').split(',')
 const FLAGS = opt('flags', '') === '' ? [] : opt('flags', '').split(',')
-const LABEL = opt('label', FLAGS.length === 0 ? 'baseline' : 'flags')
+const GUARD = opt('guard', 'off') === 'on'
+const LABEL = opt('label', GUARD ? 'guard' : FLAGS.length === 0 ? 'baseline' : 'flags')
 const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
 const outDir = path.join(UI_ROOT, 'test-results', 'ui11_probe')
@@ -66,6 +72,7 @@ try {
   const page = await app.firstWindow()
   await page.getByRole('heading', { level: 2, name: 'Khách hàng' }).waitFor({ timeout: 60_000 })
   await page.waitForLoadState('load')
+  if (GUARD) console.log(`restore guard: ${await installRestoreGuard(app)}`)
 
   // Proof of the flags inside the Electron process (4b).
   const switches = await app.evaluate(({ app: a }) => ({
@@ -93,25 +100,34 @@ try {
   async function measure(condition) {
     const times = []
     let hangs = 0
+    let restoredTotal = 0
     for (let i = 0; i < N; i += 1) {
-      // A change the page really draws: the other navigation entry.
-      await nav.getByRole('button', { name: names[i % 2] }).click({ timeout: LIMIT })
+      if (condition === 'reminimized') await app.evaluate(({ BrowserWindow }, id) => BrowserWindow.fromId(id).minimize(), mainId)
+      let outcome = 'ok'
+      // A change the page really draws: the other navigation entry. A click that
+      // cannot finish in the limit is a hang as well (UI-11: not only screenshots).
+      try {
+        await nav.getByRole('button', { name: names[i % 2] }).click({ timeout: LIMIT })
+      } catch (e) {
+        outcome = /Timeout/i.test(String(e)) ? 'click-timeout' : `click-error: ${String(e).slice(0, 120)}`
+      }
       const startedAt = new Date()
       const t0 = performance.now()
-      let outcome = 'ok'
       try {
-        await page.screenshot({ path: shotFile, timeout: LIMIT })
+        if (outcome === 'ok') await page.screenshot({ path: shotFile, timeout: LIMIT })
       } catch (e) {
         outcome = /Timeout/i.test(String(e)) ? 'timeout' : `error: ${String(e).slice(0, 120)}`
       }
       const ms = Math.round(performance.now() - t0)
       if (outcome !== 'ok') hangs += 1
       const seen = await page.evaluate('({ visibility: document.visibilityState, hasFocus: document.hasFocus() })').catch(() => ({ visibility: '?', hasFocus: '?' }))
-      const record = { label: LABEL, condition, i, startedAt: startedAt.toISOString(), ms, outcome, ...seen, window: await windowState() }
+      const restores = GUARD ? (await drainRestores(app)).length : null
+      restoredTotal += restores ?? 0
+      const record = { label: LABEL, condition, i, restores, startedAt: startedAt.toISOString(), ms, outcome, ...seen, window: await windowState() }
       fs.appendFileSync(outFile, `${JSON.stringify(record)}\n`)
       times.push(ms)
     }
-    rows.push({ condition, shots: N, hangs, maxMs: Math.max(...times), medianMs: [...times].sort((a, b) => a - b)[Math.floor(N / 2)] })
+    rows.push({ condition, shots: N, hangs, restored: GUARD ? restoredTotal : null, maxMs: Math.max(...times), medianMs: [...times].sort((a, b) => a - b)[Math.floor(N / 2)] })
   }
 
   // Second windows are made inside the Electron process (BrowserWindow of the
@@ -154,6 +170,10 @@ try {
         await measure('occluded')
         await closeOthers()
         break
+      case 'reminimized':
+        await measure('reminimized')
+        await closeOthers()
+        break
       case 'unfocused':
         await secondWindow('corner')
         await pause(1500)
@@ -166,8 +186,8 @@ try {
     await pause(500)
   }
 
-  console.log('\ncondition   shots  hangs  median ms  max ms')
-  for (const r of rows) console.log(`${r.condition.padEnd(11)} ${String(r.shots).padStart(5)}  ${String(r.hangs).padStart(5)}  ${String(r.medianMs).padStart(9)}  ${String(r.maxMs).padStart(6)}`)
+  console.log('\ncondition    shots  hangs  restored  median ms  max ms')
+  for (const r of rows) console.log(`${r.condition.padEnd(12)} ${String(r.shots).padStart(5)}  ${String(r.hangs).padStart(5)}  ${String(r.restored ?? '-').padStart(8)}  ${String(r.medianMs).padStart(9)}  ${String(r.maxMs).padStart(6)}`)
   console.log(`per-shot records: ${path.relative(UI_ROOT, outFile)}`)
 } finally {
   if (app !== null) await app.close().catch(() => undefined)

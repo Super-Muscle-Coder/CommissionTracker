@@ -2,8 +2,8 @@
 // workflow: screens
 // clause: external
 // component: screens
-// last_updated_by: coding-agent@2026-10-03#1
-// last_updated_at: 2026-10-03T10:42:22.0487385+07:00
+// last_updated_by: coding-agent@2026-10-03#2
+// last_updated_at: 2026-10-03T22:34:39.8051501+07:00
 //
 // EXPERIENCES:
 //   - id: screens-EXP-001
@@ -686,6 +686,15 @@
 //       câu). (4) Checkpoint: bốn khối (send_reminder, kit, screens, main). (5) Bằng chứng: xem các EVIDENCE.
 //       ĐỀ XUẤT: reminder_list và reminder_settings → hoàn_tất, sau audit của Orchestrator và Project Owner chạy
 //       tay hai kịch bản.
+//   - id: screens-EXP-047
+//     content: >
+//       UI-13 (phiên 28), phần của phân khu màn hình: use_reminder_settings.ts, khi addLeadTime/removeLeadTime, gọi thêm
+//       sendReminder.dropLeadTimeErrors(saved) qua setSaved (hook chỉ gọi, giữ, chuyển; việc chọn lỗi nào bỏ do Services
+//       quyết, xem send_reminder-EXP-006). Trang ReminderSettings.tsx không đổi: nó vẫn đọc fieldErrors của kết quả lưu
+//       đang giữ, nên lỗi của dòng biến mất khỏi mọi dòng, còn lỗi "Nhắc định kỳ" và câu "Chưa lưu được" (InlineAlert)
+//       giữ nguyên. fake_logic.tsx: fakeSendReminder có thêm dropLeadTimeErrors, và hàm này không được tính là lời gọi
+//       tải (như ba hàm biến đổi bản nháp) ở renderFirstCommit. Hai kiểm thử dựng trang mới (bỏ dòng 1 của [1 ngày, 24
+//       giờ, 5 ngày] sau khi lỗi trùng ở dòng 2; và thêm dòng), hỏng trên mã cũ.
 //
 // UNSOLVED_PROBLEMS: []
 //

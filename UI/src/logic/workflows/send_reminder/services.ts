@@ -2,8 +2,8 @@
 // workflow: send_reminder
 // clause: external
 // component: services
-// last_updated_by: coding-agent@2026-10-03#1
-// last_updated_at: 2026-10-03T10:42:22.0487385+07:00
+// last_updated_by: coding-agent@2026-10-03#2
+// last_updated_at: 2026-10-03T22:34:16.6621162+07:00
 //
 // EXPERIENCES:
 //   - id: send_reminder-EXP-001
@@ -68,6 +68,28 @@
 //       POST /reminders/checks một lần (chờ 4–64 s; gần nửa đêm thì chờ qua nửa đêm trước). Ra đúng hai
 //       nhắc việc: hạn giao (đến hạn 00:00 hôm nay) rồi tổng hợp (3 đơn mở, 2 có hạn, sớm nhất 01/01/2026).
 //       Ngày giờ trong ảnh bằng chứng đổi theo ngày chạy (đã ghi trong walkthrough.yaml).
+//       CẬP NHẬT phiên 28 (UI-15): "ra đúng hai nhắc việc" KHÔNG còn là điều công cụ khẳng định về lời gọi của chính nó.
+//       Hợp đồng trao mỗi nhắc việc đến hạn đúng MỘT lần, nên khi desktop có reminder_ticker (DSK-17) lần gọi
+//       POST /reminders/checks của công cụ có thể nhận đủ hai, một, hay không cái nào. seedReminderSample vẫn gọi
+//       check_due như cũ, nhưng điều nó khẳng định là DANH SÁCH ĐANG CHỜ (GET /reminders/pending): đúng hai phần tử,
+//       theo thứ tự hợp đồng: hạn giao (kind deadline, đúng đơn "Tranh hạn hôm nay", hạn là hôm nay, mốc 1 ngày) rồi
+//       tổng hợp (open_count 3, upcoming 2 phần tử, phần tử đầu "Minh họa bìa sách" 2026-01-01). Danh sách đang chờ giữ
+//       đủ cho tới khi được đánh dấu đã xem, bất kể bên nào đã nhận. Hàm nhận thêm đối số tùy chọn { beforeCheck }:
+//       một lời gọi chạy ngay trước lời gọi của công cụ, để một kiểm thử đóng vai ticker (spec
+//       tests/e2e/reminder_seed_ticker.spec.ts, chạy trong npm run e2e).
+//   - id: send_reminder-EXP-006
+//     content: >
+//       UI-13 (phiên 28): lỗi gắn với một dòng "Mốc nhắc" nhảy sang dòng khác sau "Bỏ mốc này". Nguyên nhân: Routers khóa
+//       lỗi theo vị trí dòng (deadline.lead_times.<i>…), hook giữ kết quả lưu tới lần lưu kế tiếp, còn thêm hay bỏ dòng
+//       làm các vị trí dịch đi. SỬA Ở SERVICES, theo phép thử §5: "lỗi nào còn hiện khi các dòng đổi" là QUYẾT ĐỊNH
+//       trình bày (cách khác, ví dụ giữ lỗi theo nội dung dòng, cho ra kết quả khác mà cách nào cũng hợp lý), nên thuộc
+//       Services: dropLeadTimeErrors(saved) bỏ mọi khóa lỗi bằng "deadline.lead_times" hoặc bắt đầu bằng
+//       "deadline.lead_times." (đường dẫn trường là Configs: leadTimeErrorPath, [CONTRACT]); giữ lỗi của "Nhắc định kỳ"
+//       và câu tổng của lần lưu trước; các loại kết quả khác trả nguyên. Hàm thuần, không gọi gì; Routers chuyển tiếp
+//       (như addLeadTime/removeLeadTime); hook use_reminder_settings CHỈ gọi nó (setSaved) cùng lúc với
+//       addLeadTime/removeLeadTime, giữ kết quả, chuyển cho trang; trang không đổi. Không quyết định ở hook (R: hook
+//       gọi, giữ, chuyển). Gõ vào một ô của dòng KHÔNG xóa lỗi (kế hoạch chỉ nêu thêm/bỏ dòng; không đổi hành vi khác).
+//       Không đổi chữ, không đổi ảnh bằng chứng.
 //
 // UNSOLVED_PROBLEMS: []
 //
@@ -124,6 +146,32 @@
 //       08:15, Thứ Năm; hai mốc 1 ngày và 12 giờ). Hai nhắc việc của mẫu: hạn giao (00:00 hôm nay) rồi tổng hợp
 //       ("3 đơn đang mở", "2 đơn có hạn giao", "sớm nhất: Minh họa bìa sách (01/01/2026)").
 //     recorded_at: 2026-10-03T10:42:22.0487385+07:00
+//   - claim: >
+//       UI-13: kiểm thử dựng trang tái hiện đúng bốn bước, hỏng trước khi sửa, đạt sau khi sửa; phép cắn; mọi kiểm thử cũ đạt.
+//     how: >
+//       Trong UI/: npx vitest run src/screens/pages/reminder_settings (kiểm thử viết TRƯỚC khi sửa); sau sửa: cùng lệnh,
+//       npx vitest run src/logic/workflows/send_reminder, và lặp kiểm thử trang 20 lần. Phép cắn: thay dòng setSaved(...
+//       dropLeadTimeErrors ...) trong use_reminder_settings.ts bằng "void 0", chạy lại, rồi khôi phục (cp từ bản sao).
+//     result: >
+//       Trước sửa (mã cũ): "2 failed | 27 passed (29)" — "AssertionError: expected <p …(2)></p> to be null" ở
+//       queryByText('Mốc nhắc này trùng với một mốc khác') sau khi bỏ dòng 1 của [1 ngày, 24 giờ, 5 ngày], và sau khi
+//       thêm dòng. Sau sửa: "Tests 29 passed (29)" ở trang, "Tests 230 passed (230)" ở trang + send_reminder; 20 lần
+//       liên tiếp kiểm thử trang: 20/20 đạt. Phép cắn: "2 failed | 27 passed (29)"; khôi phục: "29 passed (29)". Ba kiểm
+//       thử Services mới (bỏ lỗi dòng giữ lỗi khác và câu tổng; không bỏ khóa chỉ trùng chữ đầu; loại khác trả nguyên).
+//     recorded_at: 2026-10-03T22:34:16.6621162+07:00
+//   - claim: >
+//       UI-15: dữ liệu mẫu D6 chịu được việc một bên khác đã nhận nhắc việc trước; ca tất định đạt với mã mới, hỏng với mã cũ.
+//     how: >
+//       Trong UI/ (Desktop đã build, không đặt CT_WALKTHROUGH_RUNNER): npx playwright test -c tests/e2e/playwright.config.ts
+//       reminder_seed_ticker. Spec gọi seedReminderSample với beforeCheck = một POST /reminders/checks đóng vai ticker, rồi
+//       khẳng định ticker nhận đủ [deadline, periodic_digest] và danh sách đang chờ vẫn đúng hai phần tử đó. Phép cắn:
+//       tạm đặt lại khẳng định cũ (produced.length !== 2 thì throw) trong seedReminderSample, chạy lại, khôi phục.
+//     result: >
+//       Mã mới: "1 passed (15.5s)". Mã cũ (phép cắn): "Error: OLD ASSERTION: check_due produced 0", "1 failed" (lời gọi của
+//       công cụ không còn gì để nhận vì ticker nhận trước). Khôi phục: grep "OLD ASSERTION" ra 0. reminder_list_walkthrough
+//       chạy riêng 10/10 đạt ("5 passed" mỗi lần); 10 lượt e2e đầy đủ đều 70 passed (xem EVIDENCE của main). Kịch bản,
+//       bước và ảnh bằng chứng của reminder_list không đổi; mã trong UI/src không gọi POST /reminders/checks.
+//     recorded_at: 2026-10-03T22:34:16.6621162+07:00
 //
 // NOTES: []
 // ===WCA-CHECKPOINT-END===
@@ -333,6 +381,26 @@ export function createSendReminderServices(adapters: SendReminderAdapters, cfg: 
     removeLeadTime(draft: ReminderSettingsDraft, index: number): ReminderSettingsDraft {
       if (draft.leadTimes.length <= limits.leadTimes.min) return draft
       return { ...draft, leadTimes: draft.leadTimes.filter((_, i) => i !== index) }
+    },
+
+    // Presentation decision (UI-13): the errors of the last save that are bound to
+    // a row of "Mốc nhắc" are bound to its place in the list ('deadline.lead_times.<i>…').
+    // Once a row is added or removed the places move, and such an error would
+    // show under another row: those errors are dropped. What does not belong to a
+    // row (the cadence's fields) and the summary of the save stay.
+    dropLeadTimeErrors(saved: ViewResult<SavedSettingsView>): ViewResult<SavedSettingsView> {
+      switch (saved.kind) {
+        case 'rejected': {
+          const own = (field: string) => field === cfg.leadTimeErrorPath || field.startsWith(`${cfg.leadTimeErrorPath}.`)
+          return { ...saved, fieldErrors: Object.fromEntries(Object.entries(saved.fieldErrors).filter(([field]) => !own(field))) }
+        }
+        case 'ok':
+        case 'unreachable':
+        case 'contract_violation':
+          return saved
+        default:
+          return assertNever(saved)
+      }
     },
 
     // The fixed rejection function for Routers (i3-logic.md, Step I3.4):

@@ -104,6 +104,11 @@ export const SEND_REMINDER_CONFIGS = {
   // row added by "Thêm mốc nhắc" when the list is empty ("1 ngày"), the unit of a row
   // added to a list that already has one (the amount is left empty).
   defaults: { weekday: '1', newLeadTime: { amount: '1', unit: 'days' }, newLeadTimeFollowing: { amount: '', unit: 'days' } },
+  // [CONTRACT] reminder_settings_record, deadline.lead_times: the field path every
+  // error bound to a row of the list starts with ('deadline.lead_times.<i>…'). Those
+  // errors name a PLACE in the list, so they stop meaning anything once a row is
+  // added or removed (UI-13).
+  leadTimeErrorPath: 'deadline.lead_times',
 
   // [UI-ONLY] Message shown for each error code the endpoints above declare,
   // by call: the same code means different things on different calls.

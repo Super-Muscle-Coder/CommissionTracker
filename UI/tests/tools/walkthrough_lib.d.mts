@@ -85,5 +85,5 @@ export type ReminderSample = {
   digestTime: string
   digestDate: string
 }
-export declare function seedReminderSample(baseUrl: string): Promise<ReminderSample>
+export declare function seedReminderSample(baseUrl: string, options?: { beforeCheck?: () => Promise<void> }): Promise<ReminderSample>
 export declare function d6ExpectedReminders(sample: ReminderSample): [string, string][]

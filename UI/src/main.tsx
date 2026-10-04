@@ -2,8 +2,8 @@
 // workflow: main
 // clause: external
 // component: main
-// last_updated_by: coding-agent@2026-10-03#1
-// last_updated_at: 2026-10-03T10:42:22.0487385+07:00
+// last_updated_by: coding-agent@2026-10-03#2
+// last_updated_at: 2026-10-03T22:33:18.0540800+07:00
 //
 // EXPERIENCES:
 //   - id: main-EXP-001
@@ -358,6 +358,27 @@
 //       chép vào UI/test-results/ui11_traces/ ở cuối phiên, sau lượt chạy cuối); TaskStop trên một tập lệnh bash KHÔNG
 //       dừng vòng lặp bên trong, và hai lượt Playwright chạy chồng nhau hỏng cả hai (SESSION_FILE và thư mục kết quả
 //       dùng chung): đừng bao giờ chạy hai lệnh e2e cùng lúc.
+//   - id: main-EXP-026
+//     content: >
+//       UI-11 bước (4), phương án A của Project Owner (phiên 28): công cụ kiểm thử tự mở lại cửa sổ bị thu nhỏ.
+//       Mô-đun tests/tools/window_guard.mjs (cùng window_guard.d.mts) gắn MỘT trình nghe sự kiện 'minimize' vào mọi
+//       BrowserWindow ngay trong tiến trình chính (electronApp.evaluate, kèm 'browser-window-created' cho cửa sổ tạo
+//       sau); mỗi lần thu nhỏ thì gọi restore() từ setImmediate (không gọi trong chính trình xử lý sự kiện) và ghi
+//       {at, windowId} vào globalThis.__ctRestoreGuard trong tiến trình chính. Cửa sổ đã thu nhỏ trước khi gắn thì
+//       được kiểm một lần lúc gắn (sự kiện của nó đã qua). CHỌN CÁCH NÀY thay vì "restore() trước mỗi lần chụp" vì
+//       dữ liệu phiên 27 cho thấy thu nhỏ cũng làm treo locator.click: trình nghe nằm trong tiến trình chính nên phủ
+//       MỌI thao tác và không phụ thuộc phía Playwright còn phản hồi. Chỉ restore(): không focus(), không moveTop(),
+//       không setAlwaysOnTop(), không đổi kích thước; không đổi UI/src, Desktop/, không thêm cờ --ct-test-*. NGUỒN
+//       TÀI LIỆU: electron.d.ts của đúng bản cài trong Desktop/node_modules/electron (44.4.5): sự kiện 'minimize'
+//       ("Emitted when the window is minimized", dòng 2268; ghi chú Wayland không áp dụng cho Windows), restore()
+//       ("Restores the window from minimized state to its previous state", dòng 3153), isMinimized() (dòng 3036).
+//       Harness (walkthrough_harness.ts) gắn trình nghe ngay sau app.firstWindow() trong launch(), và đọc các lần
+//       mở lại ra test-results/window-restore.log (cạnh screenshot-timing.log; Playwright xóa cả hai ở đầu mỗi
+//       lượt): mỗi dòng "thời điểm (giờ của tiến trình chính, UTC)\tspec\tbước\trestored\twindow=<id>". Bước là bước
+//       kết thúc bằng lần chụp mà nhật ký được đọc ra (hoặc "closing" khi đóng ứng dụng): lần mở lại xảy ra trong
+//       bước đó hoặc ngay trước nó. Nhật ký trạng thái cửa sổ của phiên 27 giữ nguyên. Công cụ ui11_probe.mjs có
+//       thêm cờ --guard=on|off (mặc định off), điều kiện 'reminimized' (thu nhỏ lại TRƯỚC MỖI lần chụp, không nghỉ),
+//       và coi một cú click quá hạn là treo (không chỉ chụp ảnh).
 //
 // UNSOLVED_PROBLEMS: []
 //
@@ -807,8 +828,57 @@
 //       tôi không thu nhỏ cửa sổ nào, nhưng cửa sổ vẫn bị thu nhỏ nhiều lần (nguồn chưa rõ: có thể Windows hoặc ứng dụng
 //       khác khi máy đang dùng); người vận hành nên đối chiếu.
 //     recorded_at: 2026-10-03T10:42:22.0487385+07:00
+//   - claim: >
+//       UI-11 bước (4): với cơ chế mở lại cửa sổ, probe điều kiện "thu nhỏ" 0/20 treo; tắt cơ chế thì treo trở lại.
+//     how: >
+//       Trong UI/ (Windows 11, Electron 44.4.5, Chromium 152.0.7977.130, giới hạn mỗi lệnh 10 s, 20 lần mỗi điều kiện):
+//       node tests/tools/ui11_probe.mjs --guard=on --only=normal,minimized,reminimized --label=guard_on; rồi cùng lệnh với
+//       --guard=off --label=guard_off (phép cắn). Bản ghi từng lần: test-results/ui11_probe/guard_on.jsonl, guard_off.jsonl.
+//     result: >
+//       CÓ cơ chế: normal 0 treo (lớn nhất 84 ms); minimized (thu nhỏ một lần, nghỉ 1 s) 0/20 treo, 1 lần mở lại, lớn nhất
+//       87 ms; reminimized (thu nhỏ trước MỖI lần chụp) 0/20 treo, 20 lần mở lại, lớn nhất 85 ms. TẮT cơ chế: normal 0;
+//       minimized 6/20 treo (lớn nhất 10017 ms); reminimized 12/20 treo (trung vị 10004 ms). (Phiên 25, không cơ chế:
+//       minimized 11/20; số treo mỗi lần chạy thay đổi, nhưng luôn > 0 khi tắt và luôn 0 khi bật.)
+//     recorded_at: 2026-10-03T22:33:18.0540800+07:00
+//   - claim: >
+//       UI-11, tiêu chí đóng: 10 lượt npm run e2e liên tiếp đạt, không đặt CT_WALKTHROUGH_RUNNER, trong lúc người vận hành dùng
+//       máy bình thường (có thu nhỏ cửa sổ); số lần công cụ phải mở lại cửa sổ.
+//     how: >
+//       Desktop đã build. Trong UI/: tập lệnh chạy 10 lần "npm run e2e", từng lượt một, dừng ở lần hỏng đầu; sau mỗi lượt
+//       chép test-results/window-restore.log và screenshot-timing.log ra ngoài. Lượt 1 bắt đầu 2026-10-03T21:40:47+07:00,
+//       lượt 10 kết thúc 22:32:33+07:00.
+//     result: >
+//       Cả 10 lượt "70 passed" (69 test cũ + reminder_seed_ticker), lượt nào cũng 107 lần chụp, 0 lần chụp lỗi hay hết giờ,
+//       0 lần chụp ghi minimized:true. Số lần mở lại cửa sổ: lượt 1-3: 0; lượt 4: 1 (income_report-S1); lượt 5: 4
+//       (income_report-S1; reminder_list lúc đóng, hai lần liền cách nhau 2 s; reminder_settings-S5-unreachable); lượt 6: 1
+//       (commission_detail-S1); lượt 7-8: 0; lượt 9: 1 (commission_form-S3); lượt 10: 0. TỔNG 7 lần ở 4 lượt trên 10,
+//       mỗi lần cửa sổ được mở lại thì bước đó vẫn đạt, không lần chụp nào hết giờ. Trước đó (không phải lượt tính): reminder_list_walkthrough chạy riêng 10/10 đạt
+//       (0 lần mở lại); mốc đầu phiên 69/69 đạt, không có cơ chế, không có lần hết giờ.
+//     recorded_at: 2026-10-03T22:33:18.0540800+07:00
+//   - claim: >
+//       Môi trường, mốc, và điều kiện cuối phiên 28; mốc %APPDATA% và UI/evidence không đổi.
+//     how: >
+//       node --version; npm --version; npm ci; npm run check (mốc và cuối); git status --short; SHA-256 từng tệp
+//       UI/evidence trước và sau (120 tệp); tên, kích thước, giờ ghi tệp trong %APPDATA%\CommissionTracker đầu (21:03) và
+//       cuối phiên (22:32).
+//     result: >
+//       Node v24.14.1; npm 11.11.0; git status đầu phiên trống. Mốc check "Tests 1550 passed (1550)", e2e 69 passed (5,3
+//       phút). Cuối: check "Tests 1555 passed (1555)" (+5: hai kiểm thử trang và ba kiểm thử Services của UI-13); 120 tệp
+//       UI/evidence, so sánh từng SHA-256 với mốc: 0 khác biệt; data.db 114688 byte và data.db.lock 0 byte, giờ ghi
+//       2026-09-28 21:09, không đổi. Không eslint-disable, không ngoại lệ lint mới, không phụ thuộc mới.
+//       LƯU Ý (xem NOTES): npm run check hỏng ngắt quãng ở một ca của tests/main/main.test.tsx do hết 5 s khi máy đang tải.
+//     recorded_at: 2026-10-03T22:33:18.0540800+07:00
 //
 // NOTES:
+//   - content: >
+//       PHÁT HIỆN MỚI (phiên 28, chưa vá, ngoài plan): npm run check hỏng ngắt quãng ở tests/main/main.test.tsx >
+//       "Main, launch value missing or malformed → startup error screen" > "no bridge on the global object" với "Test
+//       timed out in 5000ms" (ca ĐẦU của tệp: lần đầu nạp cả ứng dụng, 5,1-5,4 s khi cả 35 tệp khởi động cùng lúc). 3
+//       trong 5 lần chạy check liên tiếp lúc máy đang tải (CPU ~36%, ứng dụng khác của người dùng chạy); lúc máy rảnh ở
+//       mốc đầu phiên đạt; chạy riêng tests/main 6/6 đạt (2,4-2,7 s cả tệp). Mã của phiên này không chạm Main hay tệp đó.
+//       Không nới thời gian chờ, không retries. Đề xuất cho Orchestrator: mục tồn đọng mới (kiểm thử phụ thuộc thời
+//       gian nạp lạnh; cách chữa không nới giờ, ví dụ nạp trước mô-đun ở đầu tệp).
+//     written_at: 2026-10-03T22:34:05.4351922+07:00
 //   - content: >
 //       UI.esproj: StartupCommand = npm run build (giao diện không tự chạy được;
 //       chạy thật là npm run build trong UI/ rồi npm start trong Desktop/),

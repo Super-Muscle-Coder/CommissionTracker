@@ -3,7 +3,7 @@
 // app, with the D6 reminder sample: the interface cannot make a reminder (only
 // the desktop's reminder_ticker calls check_due), so seedReminderSample — test
 // tooling — calls POST /reminders/checks once, after the minute of the digest
-// has gone (it waits up to about a minute). Steps S1 → S5 follow each other in
+// has gone (it waits up to about a minute), and the sample asserts the WAITING list, not what its own call received (UI-15). Steps S1 → S5 follow each other in
 // one app launch. Screenshots and the run record:
 // <evidence>/walkthroughs/reminder_list/. The dates in the lines are those of
 // the day of the run: the images change from day to day.

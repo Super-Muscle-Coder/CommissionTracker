@@ -107,6 +107,10 @@ export function fakeSendReminder(over: Partial<SendReminderRouters>): SendRemind
     changePeriodicUnit: vi.fn((d, unit) => ({ ...d, periodicUnit: unit, weekday: unit === 'weeks' ? (d.weekday === '' ? '1' : d.weekday) : '' })),
     addLeadTime: vi.fn((d) => ({ ...d, leadTimes: [...d.leadTimes, { amount: '', unit: 'days' }] })),
     removeLeadTime: vi.fn((d, index) => ({ ...d, leadTimes: d.leadTimes.filter((_row: unknown, i: number) => i !== index) })),
+    // UI-13: the errors bound to a row of "Mốc nhắc" go once the rows change.
+    dropLeadTimeErrors: vi.fn((saved) =>
+      saved.kind === 'rejected' ? { ...saved, fieldErrors: Object.fromEntries(Object.entries(saved.fieldErrors).filter(([f]) => !f.startsWith('deadline.lead_times'))) } : saved,
+    ),
     ...over,
   }
 }
@@ -171,9 +175,9 @@ export function renderFirstCommit(
       ...Object.values(logic.manageCommission),
       ...Object.values(logic.updateProgress),
       ...Object.values(logic.recordPayment),
-      // The three operations that reshape the draft are synchronous and not calls that load: not counted.
+      // The operations that reshape the draft or its errors are synchronous and not calls that load: not counted.
       ...Object.entries(logic.sendReminder)
-        .filter(([name]) => !['changePeriodicUnit', 'addLeadTime', 'removeLeadTime'].includes(name))
+        .filter(([name]) => !['changePeriodicUnit', 'addLeadTime', 'removeLeadTime', 'dropLeadTimeErrors'].includes(name))
         .map(([, fn]) => fn),
       // defaultPeriod is a synchronous read the page makes while it renders (its first draft), not a call that loads: not counted.
       ...Object.entries(logic.viewIncomeReport)

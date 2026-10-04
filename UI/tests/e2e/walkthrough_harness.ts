@@ -30,10 +30,17 @@ import {
   walkthroughRunner,
   writeSession,
 } from '../tools/walkthrough_lib.mjs'
+import { drainRestores, installRestoreGuard } from '../tools/window_guard.mjs'
 
 // The app of the running spec (one launch per spec file, so one per process):
 // the screenshot timing log reads the state of its window through it (UI-11).
 let launchedApp: ElectronApplication | null = null
+// The spec of the run, for the window restore log (UI-11 step 4). The restore
+// itself is done in the Electron main process (tests/tools/window_guard.mjs); it
+// is read from there at each screenshot and when the app closes, so the step
+// logged is the one ending with that screenshot (the restore happened in it, or
+// just before it).
+let currentSpec = 'unknown'
 
 export type Launched = { app: ElectronApplication; page: Page; dataDir: string; baseUrl: string; log: () => string; exited: Promise<number | null> }
 
@@ -55,6 +62,8 @@ export async function launch(options: { seed: boolean }): Promise<Launched> {
     const baseUrl = baseUrlFor(portFromLog(log) as number)
     writeSession({ dataDir, baseUrl, pid: proc.pid ?? null })
     const page = await app.firstWindow()
+    // UI-11 step 4: from now on a minimized window is restored (and each restore logged).
+    await installRestoreGuard(app)
     // Let the desktop Main's first load finish, and the start page's first list
     // load end: the data folder is new, so the loaded content is the empty state.
     await expect(page.getByRole('heading', { level: 2, name: 'Khách hàng' })).toBeVisible({ timeout: 60_000 })
@@ -77,6 +86,7 @@ export async function launch(options: { seed: boolean }): Promise<Launched> {
 export async function close(l: Launched): Promise<void> {
   let code: number | null
   launchedApp = null
+  await logRestores(l.app, 'closing')
   try {
     await l.app.close()
     code = await l.exited
@@ -150,10 +160,26 @@ function logScreenshotTiming(spec: string, step: string, startedAt: Date, ms: nu
   fs.appendFileSync(file, `${startedAt.toISOString()}\t${spec}\t${step}\t${ms}\tbackend=${backendDown ? 'down' : 'up'}\t${outcome}\t${windowState}\n`)
 }
 
+// UI-11 step 4: one line per restore of a minimized window in
+// test-results/window-restore.log (git ignores test-results; emptied by Playwright
+// at the start of every run): time of the restore (taken in the main process),
+// spec, step, window id. The number of lines of a run is the number of times the
+// tooling had to reopen the window.
+async function logRestores(app: ElectronApplication | null, step: string): Promise<void> {
+  if (app === null) return
+  const restores = await drainRestores(app)
+  if (restores.length === 0) return
+  const file = path.join(UI_ROOT, 'test-results', 'window-restore.log')
+  fs.mkdirSync(path.dirname(file), { recursive: true })
+  for (const r of restores) fs.appendFileSync(file, `${r.at}\t${currentSpec}\t${step}\trestored\twindow=${r.windowId}\n`)
+}
+
 // The one place a screenshot is taken (the walkthrough recorder and
 // main_layout.spec.ts go through it): the window state is read first, then the
 // screenshot, timed, exactly as before.
 export async function timedScreenshot(page: Page, specFile: string, step: string, file: string, app: ElectronApplication | null = launchedApp): Promise<void> {
+  currentSpec = specFile
+  await logRestores(app, step)
   const windowState = await readWindowState(page, app)
   const startedAt = new Date()
   const t0 = performance.now()

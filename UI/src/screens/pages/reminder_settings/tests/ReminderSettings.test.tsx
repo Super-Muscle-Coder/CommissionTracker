@@ -324,6 +324,45 @@ describe('page reminder_settings: saving', () => {
     await waitFor(() => expect(isFocused(field('Mốc nhắc 2: số'))).toBe(true))
   })
 
+  // UI-13: the error of a row is bound to its place in the list; once a row is
+  // added or removed the places move, so the errors of rows are not shown any more.
+  const DUPLICATE = 'Mốc nhắc này trùng với một mốc khác'
+  const THREE_ROWS = { leadTimes: [{ amount: '1', unit: 'days' }, { amount: '24', unit: 'hours' }, { amount: '5', unit: 'days' }] }
+
+  it('UI-13: the duplicate of row 2 is shown; row 1 is removed; the sentence is under no row (the other errors and the summary stay)', async () => {
+    renderWith(
+      [{ kind: 'ok', view: view({}, THREE_ROWS) }],
+      [rejectedInput({ 'deadline.lead_times.1': DUPLICATE, 'periodic.every': 'Nhập số ngày hoặc số tuần' })],
+    )
+    await loaded()
+    press('Lưu')
+    await screen.findByRole('alert')
+    expect(screen.getAllByText(DUPLICATE)).toHaveLength(1)
+    expect(field('Mốc nhắc 2: số').getAttribute('aria-invalid')).toBe('true')
+    fireEvent.click(buttons('Bỏ mốc này')[0])
+    expect(buttons('Bỏ mốc này')).toHaveLength(2)
+    expect(field('Mốc nhắc 1: số').value).toBe('24')
+    expect(field('Mốc nhắc 2: số').value).toBe('5')
+    expect(screen.queryByText(DUPLICATE)).toBeNull()
+    expect(field('Mốc nhắc 1: số').getAttribute('aria-invalid')).toBe('false')
+    expect(field('Mốc nhắc 2: số').getAttribute('aria-invalid')).toBe('false')
+    // What does not belong to a row stays: the cadence's error and the summary of the last save.
+    expect(screen.getByText('Nhập số ngày hoặc số tuần')).toBeTruthy()
+    expect(field('Mỗi').getAttribute('aria-invalid')).toBe('true')
+    expect((screen.getByRole('alert')).textContent).toContain('Một số ô chưa đúng định dạng. Vui lòng kiểm tra lại.')
+  })
+
+  it('UI-13: adding a row also hides the errors of rows', async () => {
+    renderWith([{ kind: 'ok', view: view({}, THREE_ROWS) }], [rejectedInput({ 'deadline.lead_times.1': DUPLICATE })])
+    await loaded()
+    press('Lưu')
+    await screen.findByRole('alert')
+    expect(screen.getAllByText(DUPLICATE)).toHaveLength(1)
+    press('Thêm mốc nhắc')
+    expect(buttons('Bỏ mốc này')).toHaveLength(4)
+    expect(screen.queryByText(DUPLICATE)).toBeNull()
+  })
+
   it('a second rejection asks for the cursor again', async () => {
     renderWith([OPEN], [rejectedInput({ 'periodic.every': 'Nhập số ngày hoặc số tuần' }), rejectedInput({ 'periodic.every': 'Nhập số ngày hoặc số tuần' })])
     await loaded()
