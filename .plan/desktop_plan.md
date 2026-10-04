@@ -1,120 +1,166 @@
 # ===WCA-PLAN===
 # session_for: desktop
 # drafted_by: Orchestrator + Project Owner
-# drafted_at: 2026-10-01T23:00:00+07:00
+# drafted_at: 2026-10-04T20:10:00+07:00
 # contract: data_schema 9.0.2, api_contract 4.0.0 (approved)
 
 ## MỤC TIÊU PHIÊN NÀY
 
-Phiên 26 của dự án, phiên desktop thứ tư (sau phiên 10, 13 và 14). Đây là **phiên dọn dẹp và vá nhỏ của desktop Main**, gom bốn mục còn mở, theo thứ tự ưu tiên:
+Phiên 30 của dự án, phiên desktop thứ năm (sau phiên 10, 13, 14 và 26). Hai mục:
 
 | Mục | Việc | Mức |
 |---|---|---|
-| **DSK-15** | Ô ngày của giao diện hiện kiểu tháng/ngày/năm vì Electron dùng `en-US`. Đổi ngôn ngữ ứng dụng sang tiếng Việt, **đo** xem ô ngày có thật sự đổi không | trung bình |
-| **DSK-13** | Hộp thoại lỗi của desktop đang là tiếng Anh kỹ thuật: chuyển sang câu tiếng Việt dễ hiểu, giữ chi tiết kỹ thuật ở dòng sau | thấp, đã duyệt |
-| **DSK-14** | AVG chặn tiến trình theo dõi của `measure_startup.cjs` vì nó gọi PowerShell bằng `-EncodedCommand` | thấp |
-| **DSK-12** | Dọn checkpoint Main: `main-PROB-001` thành EXPERIENCES, sửa NOTE "V2" thành "V4 trở đi", xử lý NOTE cũ của phiên 13 | thấp |
+| **DSK-17** | Thành phần cắt ngang `reminder_ticker`: gọi `send_reminder.check_due` theo nhịp, hiện một thông báo Windows cho mỗi nhắc việc trả về. Đây là phần còn lại của chặng D6 | trung bình, thuộc V1 |
+| **DSK-18** | Cờ kiểm thử mới, chỉ cho bản chạy từ mã nguồn: cửa sổ hiện lên **không** giành tiêu điểm, để e2e không chiếm phím của người đang dùng máy | trung bình (Project Owner chọn phương án A, 2026-10-04) |
 
-Chi tiết từng mục ở `.plan/open_issues.md`. Plan này chỉ ghi cách làm và tiêu chí.
+Đặc tả dự kiến của `reminder_ticker` nằm ở `.plan/open_issues.md`, mục DSK-17 ("Đặc tả dự kiến cho phiên 30"). Plan này **chốt** đặc tả đó, kèm cách làm và tiêu chí. Chỗ nào plan nói khác `open_issues` thì theo plan.
 
 **Điểm dừng:**
-- bốn mục có bằng chứng;
 - `npm test` và `npm run test:packaged` của Desktop đạt;
+- thông báo Windows đã hiện thật, Project Owner xác nhận bằng mắt;
 - `npm run e2e` của UI đạt với Main mới;
 - mốc `%APPDATA%` không đổi.
 
-Không có workflow mới, không có lối vào `ipc` mới, không đổi thứ tự khởi động hay cách dừng backend.
+Không có workflow mới của desktop, không có lối vào `ipc` mới, không đổi preload, không đổi thứ tự khởi động hay cách dừng backend.
+
+## ĐẶC TẢ ĐÃ CHỐT
+
+### `reminder_ticker` (DSK-17)
+
+Căn cứ: API Contract 4.0.0, `clause_a_common.cross_cutting.reminder_ticker`, `send_reminder.check_due`; Data Schema 9.0.2, `send_reminder` (`new_notifications`, `description`), `types.reminder_notification_record`; lý thuyết WCA §5 (hạ tầng cắt ngang).
+
+- **Vị trí:** `Desktop/src/cross_cutting/reminder_ticker/` (`CLAUDE.md` mục 4). Không có năm lớp. Không quyết định nghiệp vụ: không lọc, không chọn, không sắp lại; không đánh dấu đã xem; không giữ dữ liệu nghiệp vụ.
+- **Nhận từ Main lúc khởi tạo:** địa chỉ backend, các giá trị cấu hình của ticker, chữ thông báo, và một hàm "đưa cửa sổ lên trước" (công cụ của Main, như lúc có lần mở thứ hai). Ticker không tự đọc `configs/desktop.json`.
+- **Khởi động:**
+  - Main khởi động ticker sau khi backend `READY` **và** cửa sổ đã nạp lần đầu, kể cả trường hợp nạp lần đầu bị bỏ dở mà không lỗi (`ERR_ABORTED`).
+  - Lần kiểm đầu tiên chạy **ngay**, để nhắc việc đến hạn trong lúc ứng dụng đóng hiện ra khi mở. Sau đó theo nhịp cố định.
+- **Nhịp:** giá trị nội bộ của ticker trong `configs/desktop.json`, mặc định **60 000 ms**.
+  - Không bắt đầu lần kiểm mới khi lần trước chưa xong.
+  - Mỗi lời gọi có hạn chờ riêng, trong config (đề xuất 10 000 ms).
+- **Lời gọi:** `POST /reminders/checks`, không thân; nhãn khai báo: 200 `new_notifications`, 500 `ERR_STORAGE_IO`.
+- **Mỗi nhắc việc trả về, một thông báo Windows**, theo thứ tự trả về. Chữ tiếng Việt nằm trong `configs/desktop.json`, dựng từ các trường của nhắc việc, cùng lời với trang `reminder_list`:
+  - `kind = 'deadline'`: tiêu đề "Sắp tới hạn giao: `<title>`"; nội dung "Hạn giao `dd/mm/yyyy` · nhắc trước `<amount>` ngày|giờ". Ngày cắt từ chuỗi `deadline`, không đổi múi giờ.
+  - `kind = 'periodic_digest'`: tiêu đề "Tổng hợp định kỳ: `<open_count>` đơn đang mở"; nội dung "`<số phần tử của upcoming>` đơn có hạn giao", thêm " · sớm nhất: `<title>` (`dd/mm/yyyy`)" lấy phần tử đầu khi `upcoming` không rỗng.
+- **Bấm thông báo:** chỉ đưa cửa sổ lên trước (mở lại nếu đang thu nhỏ, rồi focus). Không mở trang nào, không đánh dấu đã xem. Nếu cửa sổ đã đóng thì không làm gì.
+- **Lỗi:** 500, không tới được, hết hạn chờ, hay thân trả về sai hình dạng: ghi log, không hiện gì, thử lại ở nhịp sau; ứng dụng không dừng.
+  - Một phần tử sai hình dạng (thiếu trường, `kind` lạ, trường bắt buộc theo `kind` là `null`): bỏ riêng phần tử đó, ghi log; các phần tử khác vẫn hiện.
+  - Kiểm hình dạng ở mức tối thiểu đủ để dựng chữ, không kiểm lại luật nghiệp vụ.
+- **Dừng:** ticker dừng (hủy hẹn giờ, bỏ qua kết quả của lời gọi đang dở) **trước** khi Main dừng backend, ở mọi đường thoát: đóng cửa sổ, `before-quit`, tín hiệu, `fatal`.
+- **Kiểm được không cần mắt người:**
+  - mỗi thông báo ghi một dòng log có `notification_id`, tiêu đề và nội dung, ví dụ `reminder toast: {"notification_id":"…","title":"…","body":"…"}`;
+  - mỗi lần kiểm hỏng ghi một dòng log có lý do;
+  - sự kiện `show` và `failed` của thông báo (nếu Electron 44.4.5 có) cũng ghi log.
+- **Cờ kiểm thử, chỉ cho bản chạy từ mã nguồn:** `--ct-test-reminder-interval-ms=<số>` rút ngắn nhịp cho kiểm thử. Thêm vào `test_flags` và vào `packaged.ignored_test_flags` của `configs/desktop.json`, để bản đóng gói bỏ qua như mọi cờ khác.
+
+### Cờ hiện cửa sổ không giành tiêu điểm (DSK-18)
+
+- Cờ mới `--ct-test-show-inactive`, chỉ cho bản chạy từ mã nguồn; thêm vào `test_flags` và `packaged.ignored_test_flags`.
+- **Có cờ:** Main tạo `BrowserWindow` với `show: false`, rồi gọi `showInactive()` khi cửa sổ sẵn sàng hiện (`ready-to-show`, hoặc sự kiện tương đương mà agent tra trong `electron.d.ts` 44.4.5; ghi nguồn).
+- **Không cờ:** hành vi như hiện nay, cửa sổ hiện ra và được kích hoạt. Đây là hành vi đúng khi người dùng mở ứng dụng.
+- Mọi điều khác của cửa sổ không đổi: kích thước, `webPreferences`, preload, chặn điều hướng.
+- Bước giao diện (thêm cờ vào `launchArgs` của công cụ kiểm thử và vào `main_layout.spec.ts`) làm ở **phiên giao diện sau**, không làm ở phiên này (UI-18).
 
 ## VIỆC CẦN LÀM, THEO THỨ TỰ
 
 0. **Đọc tài liệu** theo `08-operating-protocol.md`, Phần 1:
-   - `CLAUDE.md`: mục 2 (git), mục 5 (Desktop, điều kiện build), mục 6;
-   - `.plan/open_issues.md`: **DSK-15, DSK-13, DSK-14, DSK-12**, cùng DSK-3, DSK-9 (bối cảnh ký số, không làm), ENV-2 (ngoại lệ antivirus cho thư mục build), BE-8 (quy ước giờ trong checkpoint);
-   - hợp đồng: `data_schema.yaml` `clause_a_common.mandatory_rules` (luật renderer, luật dừng backend), `shared_values`; `clause_d_desktop`;
-   - `Desktop/configs/desktop.json`; toàn bộ khối checkpoint ở đầu `Desktop/src/main.ts`; `Desktop/src/main.ts` quanh `fatal()` và `whenReady()`;
-   - `Desktop/tests/desktop_main.spec.ts`, `Desktop/tests/packaged/packaged_app.spec.ts`, `Desktop/tests/packaged/measure_startup.cjs`, `Desktop/tests/helpers.ts`;
-   - `.design/ui_decomposition.md` §7.2, nguyên tắc 3 (nhãn tiếng Việt), cho DSK-13;
+   - `CLAUDE.md`: mục 2 (git), mục 4 (bố cục `Desktop/`, `cross_cutting/`), mục 5 (Desktop, cờ kiểm thử, đóng gói), mục 6;
+   - lý thuyết WCA §5 (hạ tầng cắt ngang); `04-implement.md` về hạ tầng cắt ngang và Main;
+   - `.plan/open_issues.md`: **DSK-17**, **DSK-18**, UI-18 (bối cảnh), UI-15 (vì sao ticker không phá e2e của giao diện), DSK-16 (`test:packaged`), BE-8 (giờ trong checkpoint);
+   - hợp đồng:
+     - `api_contract.yaml`: `clause_a_common.cross_cutting.reminder_ticker`, `endpoint_forms.http`, `error_body`, `send_reminder.check_due`;
+     - `data_schema.yaml`: `send_reminder` (toàn mục, nhất là `description`), `types.reminder_notification_record`, `formats.date`, `clause_a_common.mandatory_rules`, `shared_values`;
+   - `.design/ui_decomposition.md`, mục "Chặng D6", phần chữ của `reminder_list` (để thông báo cùng lời);
+   - `Desktop/configs/desktop.json`; toàn bộ khối checkpoint ở đầu `Desktop/src/main.ts`; `main()` và `startLayer()`;
+   - `Desktop/tests/desktop_main.spec.ts`, `Desktop/tests/helpers.ts`, `Desktop/tests/packaged/packaged_app.spec.ts`;
    - plan này sau cùng.
 
-   Xác nhận Data Schema **`9.0.2`** và API Contract **`4.0.0`**, cả hai `approved`. Sai thì dừng lại và báo.
+   Xác nhận Data Schema **`9.0.2`** và API Contract **`4.0.0`**, cả hai `approved`, và `send_reminder` ở `đã_hoàn_thiện`. Sai thì dừng lại và báo.
 
 1. **Môi trường và mốc.**
    - Ghi phiên bản Node, npm, Electron, Python; trạng thái AVG và ReasonLabs theo lời Project Owner.
-   - Trong `Desktop/`: `npm ci`; `npm run lint`; `npm test` (mốc **14 đạt**).
-   - Trong `UI/`: `npm run build` (Desktop nạp `UI/dist`).
-   - Chụp mốc `%APPDATA%\CommissionTracker` (tồn tại hay không; kích thước, SHA-256 và thời điểm ghi của `data.db`).
+   - Trong `Desktop/`: `npm ci`; `npm run lint`; `npm test` (mốc **17 đạt**). Trên Windows, mọi ca phải đạt.
+   - Trong `UI/`: `npm run build`.
+   - Chụp mốc `%APPDATA%\CommissionTracker` (kích thước, SHA-256 và thời điểm ghi của từng tệp).
    - Ghi `git status --short` (chỉ đọc).
-   - **Ảnh "trước" của DSK-15:** mở ứng dụng từ mã nguồn, có `--ct-test-data-dir` trỏ vào thư mục tạm và dữ liệu mẫu. Cách dễ nhất là `npm run walkthrough:app -- --income` trong `UI/`, công cụ có sẵn. Chụp ảnh ô "Hạn giao" của form đơn hàng và hai ô ngày của trang "Thu nhập". Ghi `app.getLocale()`.
 
-2. **DSK-15: ngôn ngữ ứng dụng tiếng Việt.**
-   - Thêm khóa ngôn ngữ vào `configs/desktop.json`, ví dụ `"app": { "locale": "vi" }`. Không viết cứng trong mã.
-   - Main đặt ngôn ngữ **trước** `app.whenReady()`, bằng cách Electron 44.4.5 hỗ trợ.
-     - Tra tài liệu Electron của đúng phiên bản, ghi nguồn. Ứng viên: switch dòng lệnh `lang` qua `app.commandLine.appendSwitch`. Còn cách nào khác thì so sánh và ghi lý do chọn.
-     - Orchestrator **không nắm chắc** cách nào đổi được định dạng của `<input type="date">` trên Windows: Chromium có thể theo ngôn ngữ ứng dụng hoặc theo thiết lập vùng của hệ điều hành. Chỉ kết luận bằng đo.
-   - **Đo:**
-     - `app.getLocale()` sau khi đặt;
-     - ảnh "sau" của đúng các ô ở việc 1, trên bản chạy từ mã nguồn;
-     - sau `npm run dist`, ảnh trên **bản đóng gói** (`release\win-unpacked`, với `--ct-test-data-dir`).
-   - **Kiểm thử tự động**, không phụ thuộc mắt người: một ca trong `desktop_main.spec.ts` (hoặc tệp mới cạnh nó) khẳng định ngôn ngữ ứng dụng là giá trị trong config (ví dụ đọc `app.getLocale()` qua `electronApp.evaluate`, hoặc `navigator.language` của trang). Ca này phải **hỏng** khi bỏ dòng đặt ngôn ngữ. Ghi bằng chứng cắn.
-   - **Nếu đo cho thấy ô ngày không đổi** dù `getLocale()` đã là `vi`: dừng DSK-15 ở đó, giữ thay đổi chỉ khi nó vô hại, ghi kết quả đo và cách đã thử, **không** tự viết ô ngày riêng hay đổi gì ở `UI/`. Orchestrator sẽ đề xuất hướng khác.
-   - **Ảnh hưởng tới UI:** giao diện luôn định dạng ngày, tiền bằng `Intl` với `'vi-VN'` viết rõ. Ô ngày gốc vẫn gửi `YYYY-MM-DD`, nên logic không đổi. Chạy `npm run e2e` của UI để xác nhận (việc 6). Ảnh bằng chứng trong `UI/evidence` có ô ngày sẽ cũ sau phiên này; **không** chạy e2e với `CT_WALKTHROUGH_RUNNER` để làm mới chúng. Phiên giao diện sau sẽ làm.
+2. **Tra cứu và đo thông báo Windows** (trước khi viết ticker).
+   - Tra `electron.d.ts` của Electron 44.4.5 cho `Notification` (hàm dựng, `isSupported()`, `show()`, sự kiện `show`, `click`, `failed`, `close`), và cho `app.setAppUserModelId`. Ghi nguồn và số dòng.
+   - **Orchestrator không nắm chắc** thông báo của Electron 44 trên Windows có cần Application User Model ID hay không, và cần khi nào: khi chạy từ mã nguồn, từ `release\win-unpacked`, hay từ bản cài. **Đo**, không đoán:
+     - viết một công cụ đo nhỏ trong `Desktop/tests/` (không phải mã của Main) hiện một thông báo thử và ghi `isSupported()` cùng các sự kiện nhận được;
+     - đo khi chạy từ mã nguồn, có và không có `app.setAppUserModelId(<appId>)`;
+     - nếu cần AUMID: giá trị lấy từ config, và phải khớp `appId` của `electron-builder.yml` (`com.commissiontracker.desktop`). Có kiểm thử khẳng định hai giá trị khớp.
+   - **Không** sửa registry, không tự tạo lối tắt Start Menu, không cài bộ cài NSIS lên máy.
+   - Lưu ý: Windows có thể ẩn thông báo khi đang bật Focus Assist hay Do Not Disturb. Hỏi Project Owner trạng thái đó trước khi kết luận "không hiện".
+   - **Nếu đo cho thấy thông báo không hiện được khi chạy từ mã nguồn** dù đã thử AUMID: dừng DSK-17 ở đó, báo số đo. Không tìm cách vòng.
 
-3. **DSK-13: hộp thoại lỗi tiếng Việt.**
-   - Câu chữ đặt trong `configs/desktop.json`, ví dụ `"main": { "error_dialog": { "summary": "…", "detail_label": "…" } }`.
-     - Câu chung đề xuất (agent được chỉnh cho tự nhiên hơn, ghi lại câu cuối cùng): "Commission Tracker không khởi động được hoặc vừa gặp lỗi và phải đóng. Hãy mở lại ứng dụng; nếu lỗi vẫn còn, gửi tệp nhật ký cho người hỗ trợ."
-     - Nếu ngắn gọn được, phân biệt hai trường hợp "không khởi động được" và "đang chạy thì dừng"; không bắt buộc.
-   - Hộp thoại có dòng tiếng Việt trước, chi tiết kỹ thuật tiếng Anh ở dòng sau (thông điệp hiện tại của `fatal()`).
-   - **Dòng log `FATAL:` giữ nguyên tiếng Anh** như cũ; mọi kiểm thử đang so trên dòng đó không đổi.
-   - **Kiểm thử:** kiểm thử chạy với `--ct-test-no-dialog`, nên hộp thoại không hiện. Nội dung hộp thoại phải kiểm được mà không cần bấm. Ví dụ: tách hàm dựng nội dung hộp thoại và ghi thêm một dòng log `error dialog text: …` khi không hiện hộp thoại; hoặc cách khác tương đương, ghi lý do chọn. Ít nhất một ca khẳng định câu tiếng Việt và chi tiết kỹ thuật cùng có mặt.
-   - **Ảnh thật:** chạy một lần **không** có `--ct-test-no-dialog`, với lỗi giả lập có sẵn trong kiểm thử (ví dụ thư mục giao diện không tồn tại qua `--ct-test-renderer-root`, và `--ct-test-data-dir` tạm), chụp ảnh hộp thoại. Lần chạy này không được đụng `%APPDATA%`.
+3. **DSK-18: cờ `--ct-test-show-inactive`.** Làm sớm, để mọi lần chạy ứng dụng trong kiểm thử của Desktop sau đó dùng được nó.
+   - Thêm cờ theo "Đặc tả đã chốt".
+   - **Kiểm thử tự động** (trong `desktop_main.spec.ts` hoặc tệp mới cạnh nó):
+     - có cờ: sau khi cửa sổ nạp xong, cửa sổ hiện (`isVisible()` true) nhưng không phải cửa sổ có tiêu điểm của hệ điều hành, đo trong lúc một tiến trình khác giữ nền trước (tham khảo cách đo của `UI/tests/tools/ui18_probe.mjs`: một tiến trình PowerShell riêng giữ nền trước; đọc chủ nền trước bằng `GetForegroundWindow`);
+     - không cờ: cửa sổ vào nền trước như cũ;
+     - bản đóng gói bỏ qua cờ (ca trong `packaged_app.spec.ts`, hoặc khẳng định qua dòng log `argvForLog` như các cờ bị bỏ qua khác).
+   - **Phép cắn:** bỏ phần xử lý cờ thì ca "có cờ" hỏng. Ghi số liệu.
 
-4. **DSK-14: `measure_startup.cjs` không dùng `-EncodedCommand`.**
-   - Viết script theo dõi ra một tệp `.ps1` tạm trong thư mục tạm của lần đo, rồi chạy bằng `powershell.exe -NoProfile -NonInteractive -File <tệp>`; hoặc dùng cùng cách gọi `-Command` như `tests/helpers.ts`. Ghi lý do chọn. Xóa tệp tạm khi xong.
-   - **Kiểm lại:** chạy công cụ đo trên bản đóng gói, **khi AVG và ReasonLabs đều bật**: `node tests/packaged/measure_startup.cjs 3 release/win-unpacked A`.
-     - Tiến trình theo dõi phải sống suốt lần đo.
-     - Không có cảnh báo AVG mới. Hỏi Project Owner nếu cần nhìn lịch sử cảnh báo.
-   - **Không** thêm ngoại lệ antivirus cho `powershell.exe`, không đổi cấu hình antivirus.
+4. **DSK-17: `reminder_ticker`.**
+   - Viết theo "Đặc tả đã chốt". Hàm dựng chữ thông báo là hàm thuần, kiểm được riêng.
+   - Main: đọc config, khởi tạo ticker, trao các giá trị và hàm "đưa cửa sổ lên trước", khởi động đúng lúc, dừng trước backend.
+   - **Kiểm thử tự động**, chạy với backend thật và `--ct-test-data-dir` tạm:
+     - **dựng chữ** (hàm thuần): nhắc việc hạn giao, mốc ngày và mốc giờ; tổng hợp có và không có `upcoming`; phần tử sai hình dạng bị bỏ;
+     - **luồng thật:** tạo dữ liệu qua HTTP tới backend của ứng dụng đang chạy (một đơn có hạn giao hôm nay, cài đặt bật nhắc trước hạn giao "1 ngày"), dùng `--ct-test-reminder-interval-ms` nhịp ngắn; khẳng định có dòng log `reminder toast:` đúng tiêu đề và nội dung; khẳng định `GET /reminders/pending` vẫn còn nhắc việc đó (ticker không đánh dấu đã xem);
+     - **lần kiểm đầu chạy ngay:** nhắc việc đã đến hạn trước khi mở ứng dụng thì hiện ở lần kiểm đầu, không chờ hết một nhịp;
+     - **lỗi:** một backend giả trong `tests/fixtures/` trả 500, rồi trả thân sai hình dạng, cho `POST /reminders/checks`: có dòng log lỗi, không có `reminder toast:`, ứng dụng vẫn chạy, rồi đóng sạch với mã 0;
+     - **không chồng lời gọi:** backend giả trả lời chậm hơn nhịp; khẳng định không có hai lời gọi `POST /reminders/checks` cùng lúc;
+     - **dừng trước backend:** trong log, ticker dừng trước dòng dừng backend, và không còn lời gọi nào sau đó.
+   - **Phép cắn:** ít nhất hai: (a) bỏ lần kiểm đầu chạy ngay thì ca tương ứng hỏng; (b) cho phép chồng lời gọi thì ca tương ứng hỏng. Ghi số liệu, khôi phục.
+   - **Thông báo thật:** chạy ứng dụng từ mã nguồn với dữ liệu mẫu có nhắc việc. Dữ liệu tạm, không đụng `%APPDATA%`. Cách dễ nhất: `npm run walkthrough:app -- --reminders` trong `UI/`. Xin Project Owner xác nhận bằng mắt:
+     - thông báo hiện, đúng chữ;
+     - bấm thông báo thì cửa sổ ứng dụng lên trước;
+     - trang "Nhắc việc" vẫn hiện nhắc việc đó cho tới khi bấm "Đã xem".
 
-5. **DSK-12: dọn checkpoint Main** (`Desktop/src/main.ts`, Giao thức 07).
-   - `main-PROB-001` (bản sao do antivirus chạy) → chuyển thành EXPERIENCES, dẫn nguồn theo `open_issues` DSK-12: khóa backend (BE-3, Data Schema 6.2.0); độ trễ lần mở đầu và ký số (DSK-3, DSK-9, chặng G); kết quả ENV-5.
-     - Giao thức 07 cho phép xóa mục `UNSOLVED_PROBLEMS` khi đã chuyển nội dung sang EXPERIENCES: ghi rõ id cũ trong EXPERIENCES mới.
-   - NOTE "Dịch vụ AI không được khởi động ở V1 (watermark để dành V2)" → "V4 trở đi", theo `.design/product_versions.md`. Mọi chỗ khác trong checkpoint Main còn ghi "V2" cho watermark cũng sửa.
-   - NOTE "Cách làm của phiên 13 so với plan": chuyển thành EXPERIENCES nếu còn giá trị, hoặc xóa. Ghi quyết định.
-   - Thêm EXPERIENCES và EVIDENCE cho DSK-15, DSK-13, DSK-14.
-   - **Giờ ghi trong checkpoint:** chép **nguyên** giá trị của `Get-Date -Format o` lấy ngay trước khi ghi; không ước lượng, không làm tròn (BE-8).
+     Chụp ảnh thông báo nếu được, đặt ở `Desktop/evidence/dsk17/`.
+
+5. **Checkpoint** (Giao thức 07):
+   - `reminder_ticker` là hạ tầng cắt ngang. Đặt khối checkpoint của nó ở tệp chính của `src/cross_cutting/reminder_ticker/`, theo vị trí Giao thức 07 quy định cho thành phần không có Services; ghi lý do chọn vị trí.
+   - Main (`src/main.ts`): EXPERIENCES và EVIDENCE cho việc ráp ticker, cờ DSK-18, kết quả đo thông báo (bước 2).
+   - **Giờ ghi:** chép **nguyên** giá trị của `Get-Date -Format o` lấy ngay trước khi ghi; không ước lượng, không làm tròn (BE-8).
 
 6. **Chạy toàn bộ**, khi AVG và ReasonLabs đều bật:
    - `Desktop`:
      - `npm run lint`;
-     - `npm test` đạt đủ (14 cộng số ca mới);
-     - xóa `packaging/stage` và `release` rồi chạy `npm run dist`;
-     - `npm run test:packaged` đạt **6/6** (hoặc hơn nếu thêm ca).
-   - `UI`: `npm run e2e` đạt **59/59**, **không** đặt `CT_WALKTHROUGH_RUNNER`; sau đó `git status --short UI/evidence` phải trống. Lần hỏng chỉ vì chụp ảnh hết giờ (UI-11) thì ghi tên bước, chạy lại, không tính. ⚠ Trong lúc e2e chạy, không thu nhỏ cửa sổ Electron (UI-11).
+     - `npm test` đạt đủ (17 cộng số ca mới), **3 lần liên tiếp**;
+     - xóa `packaging/stage` và `release` rồi `npm run dist`;
+     - `npm run test:packaged` đạt (6 cộng số ca mới). Ghi rõ: ticker có chạy trong bản đóng gói, và lần kiểm đầu không lỗi (đọc log).
+   - `UI`: `npm run e2e` **không** đặt `CT_WALKTHROUGH_RUNNER`, **3 lượt liên tiếp** đạt 70/70, chạy từng lượt một.
+     - Ticker giờ chạy trong mọi ứng dụng e2e mở và gọi `check_due`. Dữ liệu mẫu D6 đã chịu được điều này (UI-15). `reminder_seed_ticker.spec.ts` và `reminder_list_walkthrough.spec.ts` phải đạt.
+     - Sau đó `git status --short UI/evidence` phải trống.
+     - Trong các lượt có `reminder_list`, thông báo Windows thật sẽ hiện. Đó là hành vi đúng; báo trước cho Project Owner.
    - Chụp lại mốc `%APPDATA%`: phải giống mốc ở việc 1.
 
 ## KẾ THỪA TỪ CHECKPOINT — vấn đề tồn đọng
 
-- **DSK-9** (Q4, Q-C2, biểu tượng, ký số): không làm.
-- **DSK-11** (mã thoát 3): không làm ở V1.
-- **DSK-8:** chỉ quan sát.
-- **DSK-10** đã xong ở `.gitignore` gốc (`Desktop/startup-logs/`); không cần làm gì.
+- **DSK-9** (ký số, biểu tượng), **DSK-11** (mã thoát 3), **DSK-8** (chỉ quan sát): không làm.
+- **DSK-16:** `test:packaged` chạy trong phiên này (việc 6).
+- **ENV-7** (`npm audit`): không chạy `npm audit fix`, không đổi phụ thuộc.
 
 ## RÀNG BUỘC CẦN NHỚ TỪ HỢP ĐỒNG
 
+- `check_due` có `called_by: [reminder_ticker]`: chỉ ticker gọi nó. Giao diện không gọi.
+- Theo hợp đồng, mỗi nhắc việc đến hạn được trao ra **một lần**, rồi nằm trong danh sách đang chờ tới khi họa sĩ đánh dấu đã xem. Ticker không đánh dấu đã xem, không giữ, không gọi lại để "lấy lại" nhắc việc.
+- Hạ tầng cắt ngang chỉ làm việc kỹ thuật: kích hoạt theo thời gian, chuyển tiếp, trình bày. Dựng chữ thông báo từ các trường là trình bày, được phép. Lọc hay chọn nhắc việc nào để hiện là quyết định, không được phép.
 - `shared_values.db_file_path` là `%APPDATA%/CommissionTracker/data.db`. Mọi lần chạy ứng dụng trong phiên, kể cả bản đóng gói, đều kèm `--ct-test-data-dir` trỏ vào thư mục tạm.
 - Backend dừng bằng việc đóng stdin. Không đổi cách dừng, không đổi thứ tự khởi động.
 - Preload và bridge (`shared_values.renderer_bridge`) không đổi. Không thêm lối vào `ipc`.
-- Luật renderer và CORS của `clause_a_common.mandatory_rules` không đổi; `ui_origin` không đổi.
 
 ## CẢNH BÁO — điều KHÔNG được làm trong phiên này
 
 - Không sửa tệp nào ngoài `Desktop/`. Được **chạy** các lệnh của `Backend/` và `UI/`. Không chạy UI e2e với `CT_WALKTHROUGH_RUNNER`.
 - Không sửa `.contracts/`, `CLAUDE.md`, `.plan/`, `.design/`. Không đọc, không ghi `.reviews/`.
 - **Không tắt, gỡ hay đổi cấu hình phần mềm diệt virus nào**, kể cả tạm thời. Không thêm ngoại lệ cho `powershell.exe`.
-- Không đổi chữ của dòng log `FATAL:`.
-- Không tự viết component ô ngày, không đổi `UI/` để vá DSK-15.
-- Không ký số, không thêm biểu tượng, không auto-update, không màn hình chờ.
-- Không tăng `ready_timeout_ms` hay thời gian chờ nào khác.
+- Không sửa registry, không tạo lối tắt Start Menu, không cài bộ cài lên máy.
+- Không đổi chữ của dòng log `FATAL:`. Không đổi hành vi khi người dùng mở ứng dụng (không cờ thì cửa sổ vẫn hiện và được kích hoạt).
+- Không thêm workflow cho desktop, không lối vào `ipc` mới, không đổi preload.
+- Không ký số, không thêm biểu tượng, không auto-update, không khay hệ thống.
+- Không tăng `ready_timeout_ms` hay thời gian chờ nào sẵn có. Không `retries`, không `skip`.
 - Không tắt luật lint, không thêm `eslint-disable`, không viết kiểm thử luôn đạt.
 - Không chạy `git commit`, `push`, `reset`, `checkout`, `restore`, `stash` hay lệnh nào đổi trạng thái kho. Chỉ được đọc.
 - Không kiểm thử hay lần chạy nào đụng `%APPDATA%\CommissionTracker` thật.
@@ -125,19 +171,18 @@ Không có workflow mới, không có lối vào `ipc` mới, không đổi th�
 
 Phiên xong khi **tất cả** những điều dưới đây đúng, trên máy Project Owner, với antivirus đang bật:
 
-1. **DSK-15:**
-   - ngôn ngữ ứng dụng đặt từ config;
-   - có ca kiểm thử tự động và bằng chứng cắn;
-   - có ảnh trước và sau của ô "Hạn giao" và hai ô ngày của "Thu nhập", trên bản chạy từ mã nguồn **và** bản đóng gói;
-   - kết luận rõ ô ngày đã hiện ngày/tháng/năm hay chưa. Nếu chưa, có số đo và cách đã thử.
-2. **DSK-13:** hộp thoại tiếng Việt, chi tiết kỹ thuật ở dòng sau; câu chữ trong config; có ca kiểm thử; có ảnh hộp thoại thật; dòng `FATAL:` không đổi.
-3. **DSK-14:** `measure_startup.cjs` không còn `-EncodedCommand`; một lần đo đầy đủ khi AVG bật, tiến trình theo dõi sống tới cuối.
-4. **DSK-12:** checkpoint Main theo việc 5; YAML hợp lệ; không còn chữ "V2" gắn với watermark.
-5. `npm run lint`, `npm test`, `npm run dist` (từ trạng thái sạch), `npm run test:packaged` của Desktop, và `npm run e2e` của UI (59/59, `UI/evidence` không đổi) đều đạt.
-6. Mọi lần chụp mốc `%APPDATA%` giống nhau.
+1. **Đo thông báo (việc 2):** có nguồn tài liệu, có số đo khi chạy từ mã nguồn (có và không có AUMID), có kết luận. Nếu dùng AUMID thì giá trị lấy từ config và khớp `appId`, có kiểm thử.
+2. **DSK-18:** cờ `--ct-test-show-inactive` theo đặc tả; có kiểm thử có cờ và không cờ, phép cắn; bản đóng gói bỏ qua cờ.
+3. **DSK-17:**
+   - `reminder_ticker` theo đặc tả, ở `src/cross_cutting/reminder_ticker/`;
+   - đủ các ca kiểm thử ở việc 4, phép cắn (a) và (b);
+   - Project Owner xác nhận bằng mắt: thông báo hiện đúng chữ, bấm thì cửa sổ lên trước, nhắc việc còn trong danh sách.
+4. `npm run lint`; `npm test` 3 lần liên tiếp đạt; `npm run dist` từ trạng thái sạch; `npm run test:packaged` đạt; `npm run e2e` của UI 3 lượt liên tiếp đạt 70/70, `UI/evidence` không đổi.
+5. Mọi lần chụp mốc `%APPDATA%` giống nhau.
+6. Checkpoint của Main và của `reminder_ticker`: YAML hợp lệ, `UNSOLVED_PROBLEMS: []` hoặc ghi rõ việc còn lại; giờ đúng quy ước BE-8.
 7. `git status --short` cuối phiên chỉ có tệp trong `Desktop/`. Liệt kê trong báo cáo.
 8. Báo cáo cuối phiên theo `CLAUDE.md` mục 5, kèm:
-   - bảng DSK-12 tới DSK-15: trạng thái và bằng chứng;
-   - các ảnh (đường dẫn);
-   - các lệnh để Project Owner tự chạy lại;
+   - bảng DSK-17, DSK-18: trạng thái và bằng chứng;
+   - kết quả đo thông báo;
+   - các lệnh, và các bước để Project Owner tự xem thông báo;
    - danh sách ngoại lệ lint mới, nếu có.
