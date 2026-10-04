@@ -1,144 +1,134 @@
 # ===WCA-PLAN===
 # session_for: ui
 # drafted_by: Orchestrator + Project Owner
-# drafted_at: 2026-10-03T12:20:00+07:00
+# drafted_at: 2026-10-04T11:35:00+07:00
 # contract: data_schema 9.0.2, api_contract 4.0.0 (approved)
 
 ## MỤC TIÊU PHIÊN NÀY
 
-Phiên 28 của dự án, phiên giao diện thứ mười hai. Đây là **phiên vá ngắn**, ba mục, không có trang mới:
+Phiên 29 của dự án, phiên giao diện thứ mười ba. Đây là **phiên vá ngắn** cho công cụ kiểm thử, ba mục, không có trang mới, không đổi hành vi của giao diện:
 
 | Mục | Việc | Mức |
 |---|---|---|
-| **UI-11, bước (4)** | Công cụ kiểm thử tự mở lại cửa sổ Electron khi nó bị thu nhỏ, và ghi lại mỗi lần (phương án A, Project Owner chọn ngày 2026-10-03) | trung bình |
-| **UI-13** | Lỗi "trùng mốc" của `reminder_settings` nhảy sang dòng khác sau khi bấm "Bỏ mốc này" | thấp |
-| **UI-15** | Dữ liệu mẫu D6 phải chịu được `reminder_ticker` của desktop, làm ở phiên sau (DSK-17) | trung bình |
+| **UI-18** | Cửa sổ e2e được mở lại sau khi bị thu nhỏ thì giành tiêu điểm của người đang dùng máy. Phải hết thu nhỏ mà **không** kích hoạt | trung bình |
+| **UI-16** | Ca đầu của `tests/main/main.test.tsx` hết giờ 5 s ngắt quãng trên Windows khi máy tải | trung bình |
+| **UI-17** | `main_layout.spec.ts` chưa được cơ chế mở lại cửa sổ che; dọn NOTES cũ trong checkpoint `screens` và `main` | thấp |
 
 Chi tiết và dữ liệu từng mục ở `.plan/open_issues.md`. Plan này chỉ ghi cách làm và tiêu chí.
 
-**Vì sao làm phiên này trước `reminder_ticker`:** theo hợp đồng, mỗi nhắc việc đến hạn chỉ được trao ra một lần. Khi ticker xuất hiện, nó có thể nhận nhắc việc trước công cụ kiểm thử, và dữ liệu mẫu hiện tại sẽ hỏng (UI-15). Sửa phía công cụ trước thì e2e của giao diện không bao giờ hỏng giữa hai phiên.
+**Vì sao làm trước `reminder_ticker` (DSK-17):** mọi phiên sau, kể cả phiên desktop, đều chạy `npm run e2e` và `npm run check`. Project Owner chọn sửa hai chỗ này trước (2026-10-04).
 
-**⚠ Khác các phiên trước: trong phiên này, Project Owner dùng máy bình thường, kể cả thu nhỏ cửa sổ ứng dụng khi e2e đang chạy.** Đó chính là điều kiện mà UI-11 phải chịu được. Quy ước "không thu nhỏ cửa sổ khi e2e chạy" bỏ từ phiên này.
+**⚠ Như phiên 28, Project Owner dùng máy bình thường trong lúc e2e chạy, kể cả thu nhỏ cửa sổ và gõ phím ở ứng dụng khác.** Đó là điều kiện UI-18 phải chịu được.
 
-Không trang nào đổi trạng thái. `reminder_settings` giữ `hoàn_tất`; UI-13 chỉ sửa một lỗi hiển thị và được Project Owner xem lại một bước.
+Không trang nào đổi trạng thái. Mã trong `UI/src` không đổi, trừ khối checkpoint.
 
 **Điểm dừng:**
-- `npm run check` đạt;
-- `npm run e2e` đạt **10 lần liên tiếp**, trong lúc Project Owner dùng máy bình thường;
+- `npm run check` đạt **10 lần liên tiếp**;
+- `npm run e2e` đạt **10 lượt liên tiếp**, trong lúc Project Owner dùng máy;
+- Project Owner xác nhận cửa sổ e2e không giành tiêu điểm nữa;
 - `UI/evidence` không đổi.
 
 ## VIỆC CẦN LÀM, THEO THỨ TỰ
 
 0. **Đọc tài liệu** theo `08-operating-protocol.md`, Phần 1:
    - `CLAUDE.md`, mục 2 và mục 5;
-   - skill `iwca-implementation` v1.0: `iwca_theory.md` (§5, §6, §7 ma trận R1–R14), `i3-logic.md`, `i5-screens.md`;
-   - `.design/ui_decomposition.md`: mục **"Chặng D6 — Nhắc việc"** (trang `reminder_settings`, luật phủ D6), §7.2 nguyên tắc 4;
-   - `.plan/open_issues.md`:
-     - **UI-11**, toàn mục, nhất là "Dữ liệu phiên 25", "Dữ liệu phiên 27" và "Trả lời và quyết định của Project Owner, 2026-10-03";
-     - **UI-13**, **UI-15**;
-     - DSK-17 (bối cảnh: thành phần nào sẽ gọi `check_due`; không làm ở phiên này);
-     - UI-10 (luật `getByRole('status')`), BE-8 (giờ trong checkpoint);
-   - hợp đồng:
-     - `data_schema.yaml`: `send_reminder` (toàn mục, nhất là câu "Each due reminder is handed out exactly once for display, then stays pending until the artist acknowledges it");
-     - `api_contract.yaml`: `send_reminder.check_due`, `send_reminder.list_pending`, `cross_cutting.reminder_ticker`;
-   - mọi khối checkpoint của `UI/`, nhất là `send_reminder`, `screens`, `main` (`main-EXP-025`: cách ghi trạng thái cửa sổ của phiên 27);
-   - `UI/tests/e2e/walkthrough_harness.ts`, `UI/tests/tools/walkthrough_lib.mjs`, `UI/tests/tools/ui11_probe.mjs`, `UI/src/screens/pages/reminder_settings/`;
+   - `.plan/open_issues.md`: **UI-18**, **UI-16**, **UI-17**; UI-11 (đã đóng, để hiểu cơ chế mở lại cửa sổ và dữ liệu phiên 25, 27, 28); BE-8 (giờ trong checkpoint);
+   - skill `iwca-implementation` v1.0: `iwca_theory.md` §8 (checkpoint) và Giao thức 07 (`07-checkpoint-protocol.md`) cho việc dọn NOTES;
+   - mọi khối checkpoint của `UI/`, nhất là `main` (`main-EXP-025`, `main-EXP-026`, NOTES) và `screens` (NOTES);
+   - `UI/tests/tools/window_guard.mjs`, `UI/tests/tools/ui11_probe.mjs`, `UI/tests/e2e/walkthrough_harness.ts`, `UI/tests/e2e/main_layout.spec.ts`, `UI/tests/main/main.test.tsx`;
    - plan này sau cùng.
 
    Xác nhận Data Schema **`9.0.2`** và API Contract **`4.0.0`**, cả hai `approved`. Sai khác thì dừng lại và báo.
 
 1. **Môi trường và mốc.**
    - Ghi phiên bản Node, npm; chạy `npm ci`.
-   - `npm run check`: mốc **1550**.
-   - `npm run build` trong `Desktop/`, rồi `npm run e2e` **không** đặt `CT_WALKTHROUGH_RUNNER`: mốc **69**. Lần hỏng ở mốc thì ghi tên bước và trạng thái cửa sổ trong nhật ký; chưa sửa gì.
+   - `npm run check`: mốc **1555**. Chạy **5 lần**, ghi số lần ca "no bridge on the global object" hết giờ và thời gian của ca đó ở mỗi lần (mốc của UI-16).
+   - `npm run build` trong `Desktop/`, rồi `npm run e2e` **không** đặt `CT_WALKTHROUGH_RUNNER`: mốc **70**.
    - Băm toàn bộ `UI/evidence` (SHA-256 từng tệp) làm mốc.
    - Chụp mốc `%APPDATA%\CommissionTracker`. Ghi `git status --short` (chỉ đọc).
 
-2. **UI-11, bước (4): công cụ kiểm thử tự mở lại cửa sổ bị thu nhỏ.** Làm trước, để mọi lần e2e sau trong phiên đã có nó.
-   - **Chỉ ở công cụ kiểm thử** (`UI/tests/`). Không đổi `UI/src`, không đổi `Desktop/`, không thêm cờ `--ct-test-*`.
-   - **Phạm vi:** dữ liệu phiên 27 cho thấy cửa sổ thu nhỏ có thể làm treo cả thao tác khác (một lần `locator.click` không thấy nút), không chỉ lệnh chụp. Vì vậy cách làm phải phủ **mọi thao tác** trong lúc cửa sổ bị thu nhỏ, không chỉ trước lệnh chụp.
-     - Ứng viên Orchestrator đề nghị: ngay sau mỗi lần mở ứng dụng, harness gắn vào tiến trình chính (qua `electronApp.evaluate`) một trình nghe sự kiện thu nhỏ của cửa sổ chính; mỗi lần cửa sổ bị thu nhỏ thì gọi `restore()` và ghi một dòng nhật ký.
-     - Agent được chọn cách khác nếu tốt hơn; ghi lý do. Tra tài liệu Electron 44.4.5 cho sự kiện và hàm dùng tới, ghi nguồn.
-     - Chỉ mở lại cửa sổ. Không ép focus, không đưa cửa sổ lên trên cùng, không đổi kích thước.
-   - **Nhật ký:** mỗi lần mở lại, một dòng có thời điểm, spec, bước đang chạy (nếu biết). Đặt cạnh nhật ký thời gian chụp ảnh trong `UI/test-results/`. Nhật ký trạng thái cửa sổ trước mỗi lần chụp (phiên 27) giữ nguyên.
-   - **Bằng chứng có hiệu lực:**
-     - công cụ `tests/tools/ui11_probe.mjs`, điều kiện "thu nhỏ", 20 lần, **có** cơ chế mới: 0 lần treo (phiên 25, không có cơ chế: 11/20 treo);
-     - **phép cắn:** tắt tạm cơ chế, chạy lại cùng điều kiện, phải thấy treo trở lại. Khôi phục, ghi số liệu cả hai.
-   - Không nới thời gian chờ, không `retries`, không `skip`.
-   - Trace của mọi lần hỏng vẫn giữ ở `UI/test-results/ui11_traces/` như các phiên trước.
+2. **UI-18: mở lại cửa sổ mà không giành tiêu điểm.** Làm trước, để mọi lần e2e sau trong phiên đã dùng cách mới.
+   - **Đo trước, rồi mới chọn.** Mở rộng `ui11_probe.mjs` để đo, cho mỗi cách mở lại:
+     - cửa sổ có hết trạng thái thu nhỏ không (`isMinimized()` sau khi mở lại);
+     - cửa sổ ứng dụng có thành cửa sổ có tiêu điểm không (`isFocused()` của nó sau khi mở lại);
+     - lệnh chụp có treo không.
+   - **Điều kiện "người dùng đang ở ứng dụng khác"** phải có thật: trước mỗi lần thu nhỏ, một cửa sổ khác giữ tiêu điểm. Ví dụ, công cụ mở một `BrowserWindow` thứ hai làm "ứng dụng khác" và cho nó tiêu điểm; hoặc một cách tương đương agent chọn, ghi lý do. Ghi cửa sổ nào có tiêu điểm trước và sau mỗi lần mở lại.
+   - **Các cách cần đo**, ít nhất:
+     - `restore()` (cách hiện tại, làm mốc);
+     - `showInactive()` (Electron: "Shows the window but doesn't focus on it");
+     - cách nào khác agent thấy trong `electron.d.ts` của 44.4.5 có thể hết thu nhỏ mà không kích hoạt. Ghi nguồn từng cách.
+   - Orchestrator **không nắm chắc** `showInactive()` có đưa một cửa sổ đang thu nhỏ về trạng thái thường trên Windows hay không. Chỉ kết luận bằng số đo.
+   - **Chọn** cách nào đạt cả ba: hết thu nhỏ, không lấy tiêu điểm, không treo, 20/20 lần. Áp vào `window_guard.mjs`. Nhật ký `window-restore.log` ghi thêm cách đã dùng và tiêu điểm sau khi mở lại.
+   - **Nếu không cách nào đạt cả ba trên Windows:** dừng UI-18 ở đó, giữ nguyên cách hiện tại, báo bảng số đo. Project Owner sẽ quyết. Không tự tìm cách vòng (ví dụ đổi `focusable` của cửa sổ, hay sửa `Desktop/`).
+   - Chỉ ở công cụ kiểm thử. Không đổi `UI/src`, không đổi `Desktop/`, không thêm cờ `--ct-test-*`.
 
-3. **UI-13: lỗi "trùng mốc" không được nhảy dòng.**
-   - **Kiểm thử trước:** viết một kiểm thử dựng trang tái hiện đúng bốn bước ở `open_issues` UI-13: ba dòng [1 ngày, 24 giờ, 5 ngày]; lưu bị từ chối với lỗi trùng ở dòng 2; bỏ dòng 1; câu lỗi không được hiện dưới dòng nào. Chạy, thấy **hỏng** trên mã hiện tại, ghi lại.
-   - **Sửa:** khi thêm hay bỏ một dòng mốc, các lỗi đang gắn với dòng mốc không còn hiện. Lỗi của phần "Nhắc định kỳ" và câu tổng của lần lưu trước giữ nguyên.
-     - Chọn chỗ sửa theo iWCA (quyết định trình bày thuộc Services; hook chỉ gọi, giữ, chuyển; trang chỉ hiện). Ghi lý do vào checkpoint.
-   - Kiểm thử mới **đạt** sau khi sửa; mọi kiểm thử cũ của trang vẫn đạt. Ghi phép cắn: bỏ phần sửa thì kiểm thử mới hỏng.
-   - Không đổi hành vi nào khác của trang. Không đổi chữ, không đổi ảnh bằng chứng.
+3. **UI-17, phần 1: `main_layout.spec.ts` dùng cơ chế mở lại cửa sổ.**
+   - Spec này tự mở Electron, không qua `launch()` của harness. Gắn cùng cơ chế (`installRestoreGuard`) ngay sau `firstWindow()`, và ghi nhật ký mở lại như các spec khác.
+   - Không đổi điều spec khẳng định.
 
-4. **UI-15: dữ liệu mẫu D6 chịu được `reminder_ticker`.**
-   - `seedReminderSample` vẫn gọi `POST /reminders/checks` như cũ, sau phút của nhắc việc tổng hợp. Điều nó khẳng định đổi thành: **danh sách đang chờ** (`GET /reminders/pending`) có đúng hai nhắc việc mong đợi (hạn giao rồi tổng hợp, đúng nội dung như hiện nay), dù kết quả của lời gọi `check_due` có đủ hai, có một, hay rỗng.
-   - Lý do: hợp đồng chỉ trao mỗi nhắc việc **một lần**. Khi có ticker, ticker có thể đã nhận trước. Danh sách đang chờ thì luôn có đủ, cho tới khi được đánh dấu đã xem.
-   - **Kiểm thử tất định:** một ca chứng minh dữ liệu mẫu vẫn đạt khi nhắc việc đã bị một lời gọi `check_due` khác nhận trước. Ví dụ: một lời gọi thêm, đặt ngay trước lời gọi của công cụ, đóng vai ticker. Ca này phải **hỏng** với mã cũ của `seedReminderSample`; ghi bằng chứng cắn.
-     - Ca này nằm trong `npm run e2e`, hoặc có lệnh riêng ghi trong checkpoint.
-   - Cập nhật chú thích của `seedReminderSample` và `walkthrough.yaml` của `reminder_list` cho khớp ("công cụ gọi `check_due` một lần" không còn là điều kiện để có dữ liệu).
-   - Kịch bản bấm thử, các bước và ảnh bằng chứng của `reminder_list` không đổi. Mã trong `UI/src` vẫn không bao giờ gọi `POST /reminders/checks`.
+4. **UI-16: ca đầu của `main.test.tsx` không còn trả chi phí nạp mã trong giới hạn 5 s.**
+   - **Đo trước:** trong lần chạy `npm run check` lúc máy tải, ca đầu mất bao lâu, và phần nào là nạp mã lần đầu (ví dụ chạy riêng tệp, chạy hai lần liền nhau, so thời gian của ca đầu và ca thứ hai).
+   - **Sửa:** tách chi phí nạp mã khỏi ca kiểm thử. Ứng viên: nạp trước cây mô-đun của `src/main.tsx` một lần trong `beforeAll` (với giới hạn riêng của `beforeAll`, ghi rõ con số và lý do), để các ca sau chỉ trả chi phí chạy. Agent được chọn cách khác nếu tốt hơn; ghi lý do.
+   - **Không** nới giới hạn của ca kiểm thử (`testTimeout`, đối số thứ ba của `it`), không `retries`, không bỏ ca nào. Điều các ca khẳng định không đổi.
+   - **Phép cắn:** chứng minh cách sửa có hiệu lực. Ví dụ: làm chậm giả tạo việc nạp mã (một mô-đun thử chờ vài giây khi được nạp, chỉ trên bản tạm), thấy mã cũ hỏng ở ca đầu và mã mới đạt; khôi phục, ghi số liệu.
 
-5. **Checkpoint** (Giao thức 07):
-   - `main`: EXPERIENCES và EVIDENCE cho UI-11 bước (4) (cách làm, nguồn tài liệu, số liệu probe có và không có cơ chế, số lần mở lại cửa sổ trong 10 lượt e2e);
-   - `screens` và `send_reminder` (nếu Services đổi): UI-13;
-   - `send_reminder`: UI-15 (sửa `send_reminder-EXP-005` cho khớp cách làm mới);
+5. **UI-17, phần 2: dọn NOTES cũ trong checkpoint** (Giao thức 07).
+   - `screens`: các NOTES của phiên 21 và 22 (đề xuất trạng thái đã thực hiện, sự cố quy trình). Phần còn giá trị chuyển sang EXPERIENCES; phần còn lại xóa.
+   - `main`: NOTE về `StageChange.test.tsx:183` (UI-12, đã đóng ở phiên 25), và NOTE về `main.test.tsx` của phiên 28 (nay là UI-16, xử lý ở việc 4).
+   - Ghi trong EXPERIENCES mới những id hay nội dung đã chuyển. Giữ NOTES nào còn đúng.
+
+6. **Checkpoint** (Giao thức 07):
+   - `main`: EXPERIENCES và EVIDENCE cho UI-18 (bảng số đo từng cách, cách đã chọn, nguồn), UI-16 (số đo trước và sau, phép cắn), UI-17;
+   - `screens`: phần dọn NOTES;
    - **giờ ghi:** chép **nguyên** giá trị của `Get-Date -Format o` lấy ngay trước khi ghi; không ước lượng, không làm tròn (BE-8).
 
-6. **Chạy toàn bộ:**
-   - `npm run check` đạt, hai lần.
-   - `reminder_settings` (kiểm thử dựng trang) chạy riêng 20 lần liên tiếp đạt.
-   - `reminder_list_walkthrough.spec.ts` chạy riêng 10 lần liên tiếp đạt.
-   - `npm run e2e` **không** đặt `CT_WALKTHROUGH_RUNNER`, **10 lượt liên tiếp đạt**, chạy từng lượt một. Trong lúc đó Project Owner dùng máy bình thường; báo Project Owner trước khi bắt đầu.
-     - **Mọi lần hỏng đều tính**, kể cả hết giờ chụp ảnh. Có lần hỏng thì giữ trace, ghi trạng thái cửa sổ và nhật ký mở lại, rồi bắt đầu đếm lại từ đầu.
-     - Hỏng ở cửa sổ **không** bị thu nhỏ là dữ liệu mới: dừng và báo, không tự vá thêm.
-   - Sau 10 lượt: băm lại `UI/evidence`, phải giống mốc ở việc 1; `git status --short UI/evidence` trống.
-   - Chụp lại mốc `%APPDATA%`: phải giống mốc ở việc 1.
+7. **Chạy toàn bộ:**
+   - `npm run check` **10 lần liên tiếp** đạt, trong lúc Project Owner dùng máy bình thường. Mọi lần hỏng đều tính và đếm lại từ đầu.
+   - `npm run e2e` **không** đặt `CT_WALKTHROUGH_RUNNER`, **10 lượt liên tiếp đạt**, chạy từng lượt một. Báo Project Owner trước khi bắt đầu; Project Owner dùng máy bình thường, thu nhỏ cửa sổ và gõ phím ở ứng dụng khác.
+     - Mọi lần hỏng đều tính, kể cả hết giờ chụp ảnh. Có lần hỏng thì giữ trace và nhật ký, rồi đếm lại từ đầu.
+   - Sau 10 lượt: hỏi Project Owner có còn bị cửa sổ e2e giành tiêu điểm không, ghi câu trả lời vào báo cáo.
+   - Băm lại `UI/evidence`: phải giống mốc; `git status --short UI/evidence` trống.
+   - Chụp lại mốc `%APPDATA%`: phải giống mốc.
 
 ## KẾ THỪA TỪ CHECKPOINT — vấn đề tồn đọng
 
 - **UI-6** (phần V2), **UI-7:** không làm.
-- **DSK-17:** không làm (desktop, phiên 29).
+- **DSK-17:** không làm (desktop, phiên sau).
 - **ENV-7** (`npm audit`): không chạy `npm audit fix`, không đổi phụ thuộc.
 
 ## RÀNG BUỘC CẦN NHỚ TỪ HỢP ĐỒNG
 
-- `send_reminder.check_due` có `called_by: [reminder_ticker]`. Mã trong `UI/src` không bao giờ gọi nó; chỉ công cụ kiểm thử trong `UI/tests/` được gọi, để tạo dữ liệu mẫu.
-- Mỗi nhắc việc đến hạn được trao ra đúng một lần, rồi nằm trong danh sách đang chờ tới khi được đánh dấu đã xem (`send_reminder.description`).
-- Luật kiểm form cài đặt nhắc việc là bản sao của `types.reminder_settings_record`; UI-13 không đổi luật nào.
+- Phiên này không đổi lời gọi nào tới backend. Mã trong `UI/src` vẫn không bao giờ gọi `POST /reminders/checks`.
+- Không có màn hình hồ sơ quyền sở hữu; không lời gọi nào tới `/watermark-profiles` hay `/watermark-strengths`.
 
 ## CẢNH BÁO — điều KHÔNG được làm trong phiên này
 
-- Không sửa tệp nào ngoài `UI/`. Được **chạy** các lệnh của `Desktop/` và `Backend/`, không sửa chúng. Không thêm cờ `--ct-test-*`.
+- Không sửa tệp nào ngoài `UI/`. Không sửa mã chạy trong `UI/src`; chỉ khối checkpoint. Được **chạy** các lệnh của `Desktop/` và `Backend/`, không sửa chúng. Không thêm cờ `--ct-test-*`.
 - Không sửa `.contracts/`, `CLAUDE.md`, `.plan/`, `.design/`. Không đọc, không ghi `.reviews/`.
-- Không nới thời gian chờ, không `retries`, không `skip`, `fixme`, `flaky`. Không viết kiểm thử luôn đạt.
-- Không ép focus hay đưa cửa sổ lên trên cùng; chỉ mở lại cửa sổ bị thu nhỏ.
-- Không đổi hành vi nào khác của các trang `hoàn_tất`. Không đổi chữ trên giao diện. Không chạy e2e có `CT_WALKTHROUGH_RUNNER`.
-- Không có màn hình hồ sơ quyền sở hữu; không lời gọi nào tới `/watermark-profiles` hay `/watermark-strengths`.
+- Không nới thời gian chờ của ca kiểm thử hay của Playwright, không `retries`, không `skip`, `fixme`, `flaky`. Không viết kiểm thử luôn đạt.
+- Không gọi `focus()`, `moveTop()`, `setAlwaysOnTop()` trên cửa sổ ứng dụng; không đổi `focusable`.
+- Không chạy e2e có `CT_WALKTHROUGH_RUNNER`.
 - Không tắt luật lint, không thêm `eslint-disable`.
 - Không tắt, không đổi cấu hình phần mềm diệt virus.
 - Không chạy `git commit`, `push`, `reset`, `checkout`, `restore`, `stash` hay lệnh nào đổi trạng thái kho. Chỉ được đọc.
 - Không kiểm thử hay lần chạy nào đụng `%APPDATA%\CommissionTracker` thật.
-- Không dùng sub-agent. Không chạy song song hai lệnh e2e hay hai bản ứng dụng.
+- Không dùng sub-agent. Không chạy song song hai lệnh e2e, hai lệnh `check`, hay hai bản ứng dụng.
 
 ## TIÊU CHÍ HOÀN TẤT PHIÊN
 
 Phiên xong khi **tất cả** những điều dưới đây đúng, trên máy Project Owner:
 
-1. **UI-11:**
-   - cơ chế mở lại cửa sổ nằm trong `UI/tests/`, có nguồn tài liệu Electron;
-   - probe điều kiện "thu nhỏ" 20 lần: 0 lần treo khi có cơ chế; phép cắn cho thấy treo trở lại khi tắt cơ chế;
-   - 10 lượt `npm run e2e` liên tiếp đạt trong lúc Project Owner dùng máy bình thường; nhật ký cho biết số lần phải mở lại cửa sổ.
-2. **UI-13:** kiểm thử dựng trang mới hỏng trước, đạt sau; phép cắn; mọi kiểm thử cũ đạt.
-3. **UI-15:** dữ liệu mẫu khẳng định trên danh sách đang chờ; ca tất định đạt với mã mới và hỏng với mã cũ.
-4. `npm run check` đạt; `UI/evidence` giống mốc; mọi lần chụp mốc `%APPDATA%` giống nhau.
-5. Checkpoint `main`, `screens`, `send_reminder`: YAML hợp lệ, `UNSOLVED_PROBLEMS: []` hoặc ghi rõ việc còn lại; giờ đúng quy ước BE-8.
+1. **UI-18:** có bảng số đo trên Windows cho từng cách mở lại (hết thu nhỏ, tiêu điểm trước và sau, treo hay không, 20 lần mỗi cách). Hoặc:
+   - có cách đạt cả ba, đã áp vào `window_guard.mjs`, và Project Owner xác nhận không còn bị giành tiêu điểm; hoặc
+   - không cách nào đạt, cách hiện tại giữ nguyên, bảng số đo gửi Project Owner quyết.
+2. **UI-16:** số đo trước và sau; phép cắn; `npm run check` 10 lần liên tiếp đạt khi Project Owner dùng máy.
+3. **UI-17:** `main_layout.spec.ts` dùng cơ chế mở lại cửa sổ; NOTES cũ đã dọn theo Giao thức 07.
+4. `npm run e2e` 10 lượt liên tiếp đạt; `UI/evidence` giống mốc; mọi lần chụp mốc `%APPDATA%` giống nhau.
+5. Checkpoint `main`, `screens`: YAML hợp lệ, `UNSOLVED_PROBLEMS: []` hoặc ghi rõ việc còn lại; giờ đúng quy ước BE-8.
 6. `git status --short` cuối phiên chỉ có tệp trong `UI/`. Liệt kê trong báo cáo.
 7. Báo cáo cuối phiên theo `CLAUDE.md` mục 5, kèm:
-   - bảng UI-11, UI-13, UI-15: trạng thái và bằng chứng;
-   - kết quả 10 lượt e2e và số lần mở lại cửa sổ;
-   - các lệnh, và một bước bấm tay để Project Owner xem lại UI-13;
+   - bảng UI-16, UI-17, UI-18: trạng thái và bằng chứng;
+   - bảng số đo của UI-18;
+   - kết quả 10 lần `check`, 10 lượt e2e, số lần mở lại cửa sổ, câu trả lời của Project Owner về tiêu điểm;
+   - các lệnh để chạy lại;
    - danh sách ngoại lệ lint mới, nếu có.
