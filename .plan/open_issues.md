@@ -198,6 +198,8 @@ Checkpoint ở đầu `record_payment/services.py` ghi `last_updated_at` và `re
 
 ### DSK-17 — `reminder_ticker` chưa có (trung bình; thuộc V1, chặng D6) — **phiên desktop 30**, sau phiên giao diện 29 (Project Owner chọn 2026-10-04)
 
+> **ĐÃ ĐÓNG 2026-10-05, phiên 30** (audit `.reviews/audits/desktop/audit_desktop_session30.md`). `Desktop/src/cross_cutting/reminder_ticker/`; 12 ca kiểm thử, ba phép cắn tái lập trên Linux; Project Owner xác nhận toast thật, bấm thì cửa sổ lên trước, nhắc việc còn trong danh sách. AUMID chỉ đặt ở bản đóng gói (số đo: AUMID không đăng ký làm toast vô hình dù `show` vẫn bắn). Chặng D6 xong hẳn. Việc nhỏ còn lại: DSK-19, DSK-20.
+
 Theo API Contract 4.0.0 (`cross_cutting.reminder_ticker`), desktop Main khởi động `reminder_ticker` sau khi backend READY. Nó gọi `send_reminder.check_due` (`POST /reminders/checks`) theo nhịp riêng, hiện một thông báo Windows cho mỗi nhắc việc trả về (chữ dựng từ các trường của nhắc việc), bấm thông báo chỉ đưa cửa sổ lên trước. Nó không quyết định gì và không đánh dấu đã xem.
 
 Chưa có thành phần này thì trong dùng thật danh sách nhắc việc đang chờ của giao diện (D6, phiên 27) luôn rỗng. Lập plan sau khi audit phiên 27; cần chốt: nhịp gọi, chữ thông báo tiếng Việt (trong `configs/desktop.json`), cách kiểm thử thông báo trên Windows.
@@ -222,6 +224,8 @@ Chưa có thành phần này thì trong dùng thật danh sách nhắc việc đ
 
 ### DSK-18 — Cửa sổ ứng dụng giành tiêu điểm khi khởi động trong e2e (trung bình; audit phiên 29 §5.1) — **plan phiên 30** (việc 3)
 
+> **ĐÃ ĐÓNG 2026-10-05, phiên 30.** Cờ `--ct-test-show-inactive` (chỉ bản chạy từ mã nguồn; bản đóng gói bỏ qua, P7). Có cờ: `isFocused()` false 5/5 (Windows) và 3/3 (Linux, Orchestrator); không cờ: true. Bước giao diện: UI-18.
+
 > **Project Owner chọn phương án A, 2026-10-04.** Đặc tả chốt ở `.plan/desktop_plan.md` (phiên 30), mục "ĐẶC TẢ ĐÃ CHỐT": cờ `--ct-test-show-inactive`, chỉ cho bản chạy từ mã nguồn.
 
 `Desktop/src/main.ts` tạo `BrowserWindow` hiện ra ngay, nên cửa sổ được kích hoạt. Với người dùng thật, đó là hành vi đúng. Với e2e, mỗi lượt khoảng 16 lần khởi động, mỗi lần có thể giành tiêu điểm và nhận phím người vận hành đang gõ ở ứng dụng khác (UI-18). Agent phiên 29 đo: 2/3 lần khởi động vào nền trước, sau 2,3 s và 3,8 s.
@@ -229,6 +233,41 @@ Chưa có thành phần này thì trong dùng thật danh sách nhắc việc đ
 **Phương án:**
 - **A (Orchestrator khuyến nghị):** một cờ kiểm thử mới chỉ cho bản chạy từ mã nguồn (ví dụ `--ct-test-show-inactive`): có cờ thì Main tạo cửa sổ với `show: false` rồi `showInactive()` khi sẵn sàng. Hành vi khi người dùng mở ứng dụng không đổi; bản đóng gói bỏ qua cờ như mọi cờ `--ct-test-*` khác. Kiểm thử của Desktop: có cờ thì cửa sổ không lấy tiêu điểm, không cờ thì như cũ. Gộp vào phiên desktop 30 cùng DSK-17. Bước giao diện ghi ở UI-18.
 - **B:** chấp nhận ở V1; người vận hành tránh gõ phím ở ứng dụng khác khi e2e chạy.
+
+## Layer desktop — sau audit phiên 30
+
+### DSK-19 — Dọn checkpoint và một ca kiểm thử của phiên 30 (thấp; audit phiên 30 §5.1–5.4) — cho phiên desktop kế tiếp
+
+1. **`main-PROB-001`** (hồ sơ Chromium `%APPDATA%\Commission Tracker` đổi trong phiên 30; thư mục dữ liệu thật không đổi): **Project Owner xác nhận 2026-10-05**: đã tự cài bản mới đè lên bản cũ rồi mở thử, đúng các thời điểm đó. Nguồn là bản cài lỗi (thiếu module ticker, Main ném lỗi trước `setPath`), không phải kiểm thử. Chuyển thành EXPERIENCE, kèm mục 2.
+2. **Định danh dùng lại:** `main-EXP-019` có `derived_from: main-PROB-001`, trỏ tới vấn đề cũ của phiên 26; vấn đề mới của phiên 30 lại tên `main-PROB-001`. Đổi vấn đề mới thành `main-PROB-002` (hoặc EXPERIENCE mới có `derived_from: main-PROB-002`).
+3. **`reminder_ticker-EXP-003`** ghi "lead không nguyên dương bị coi là sai hình dạng"; mã chấp nhận mọi số nguyên (đúng hợp đồng `amount: integer`). Sửa chữ thành "lead không nguyên".
+4. **Ca D2, lượt 1** (`tests/reminder_ticker.spec.ts`): chờ dòng `reminder check #1:` thay vì `reminder ticker started` trước khi tạo dữ liệu, như P8. Hiện có thể hỏng giả khi máy chậm.
+
+### DSK-20 — Bấm toast trong Action Center sau khi toast lui vào đó: chưa đo (thấp; V2; audit phiên 30 §5.7)
+
+Main bỏ tham chiếu tới `Notification` khi nhận `close`, mà agent đo được `close` sau khoảng 9,5 s, lúc toast lui vào Action Center. Bấm ở Action Center sau đó có tới tiến trình hay không: chưa đo. Đặc tả V1 không đòi. Xem lại ở V2, cùng việc đo trên bản cài sạch (ENV-8).
+
+### DSK-21 — Cài bản mới đè lên bản cũ chưa được định nghĩa và chưa được kiểm (trung bình; thuộc V1, chặng G; Project Owner nêu 2026-10-05) — **Project Owner duyệt 2026-10-05**: năm tiêu chí dưới đây vào tiêu chí chặng G (`.plan/v1_roadmap.md`)
+
+Người dùng thật cập nhật bằng cách chạy bộ cài mới; họ không gỡ bản cũ trước. Hiện chưa có quy định hay kiểm thử nào cho việc này.
+
+**Đã biết:**
+- `appId` cố định (`com.commissiontracker.desktop`); bộ cài NSIS `oneClick`, theo người dùng; gỡ cài đặt không xóa dữ liệu (`deleteAppDataOnUninstall: false`).
+- Dữ liệu ở `%APPDATA%\CommissionTracker`, ngoài thư mục cài, nên bộ cài không đụng tới.
+- Mỗi workflow tự nâng cấp cấu trúc bảng (`<workflow>_schema_version`); gặp phiên bản mới hơn bản build hiểu được thì backend dừng, không in `READY` (`CLAUDE.md` mục 5).
+- `Desktop/package.json` vẫn là `0.1.0` từ đầu: mọi bộ cài đến nay cùng số phiên bản.
+- Lỗi `Cannot find module` ngày 4/10 **không** do cài đè: bộ cài đó thiếu tệp (audit phiên 30 §5.5); cài sạch từ chính bộ cài đó cũng hỏng như vậy.
+
+**Orchestrator chưa nắm chắc** (đo, không đoán): electron-builder 26.15.3 với NSIS `oneClick` xử lý cài đè thế nào (gỡ bản cũ trước hay chép đè, có phát hiện ứng dụng đang chạy không); điều gì xảy ra khi ứng dụng, và `python.exe` của backend, đang mở lúc cài; cài bản cũ hơn đè bản mới có bị chặn không.
+
+**Tiêu chí** (đã đưa vào chặng G):
+1. Quy ước số phiên bản: mỗi bản phát hành tăng `version`.
+2. Cài N+1 đè N khi ứng dụng **đóng**: không cần gỡ; dữ liệu còn nguyên; ứng dụng mở được; lối tắt Start Menu và toast còn chạy.
+3. Cài đè khi ứng dụng **đang mở**: bộ cài báo hoặc tự đóng ứng dụng, không để lại bản cài nửa vời, không có `python.exe` sót.
+4. Dữ liệu tạo bởi N, có bước nâng cấp cấu trúc ở N+1: lần mở đầu của N+1 nâng cấp đúng.
+5. Cài bản cũ hơn đè bản mới: hoặc bị chặn, hoặc backend dừng có hộp thoại tiếng Việt rõ ràng; không hỏng dữ liệu.
+
+**Ai làm:** cần một máy Windows được phép cài. Plan hiện cấm agent cài bộ cài. Hướng khả dĩ: một runbook để Project Owner chạy tay, gộp với ENV-4 (máy sạch); hoặc một phiên desktop được phép cài trong môi trường cô lập. Windows Sandbox, theo hiểu biết của Orchestrator, không có trên Windows 11 Home; cần kiểm lại. Tự cập nhật (auto-update) vẫn ngoài V1.
 
 ## Hợp đồng — chờ Project Owner duyệt
 
@@ -585,9 +624,9 @@ Ca "no bridge on the global object" (ca đầu của `UI/tests/main/main.test.ts
 - `UI/tests/e2e/main_layout.spec.ts` tự mở Electron, không qua `launch()` của harness, nên chưa gắn cơ chế mở lại cửa sổ (UI-11). Gắn cùng cơ chế sau `firstWindow()` của spec đó.
 - NOTES cũ trong checkpoint: `screens` còn ba NOTES của phiên 21, 22 (đề xuất trạng thái đã thực hiện, sự cố quy trình); `main` còn NOTE về `StageChange.test.tsx:183` (UI-12, đã đóng). Chuyển phần còn giá trị sang EXPERIENCES, xóa phần còn lại, theo Giao thức 07.
 
-### UI-18 — Cửa sổ e2e được mở lại thì giành tiêu điểm của người đang dùng máy (trung bình; audit phiên 28 §5.4) — **plan phiên 29** (việc 2)
+### UI-18 — Cửa sổ e2e được mở lại thì giành tiêu điểm của người đang dùng máy (trung bình; audit phiên 28 §5.4) — **plan phiên 29** (việc 2); phần còn lại: **plan phiên 31** (việc 2)
 
-> **Phần mở lại cửa sổ ĐÃ ĐÓNG 2026-10-04, phiên 29:** `window_guard.mjs` dùng `showInactive()` thay `restore()`. Đo trên Windows, 20 lần mỗi cách, một tiến trình khác giữ nền trước: `restore()` giành nền trước 18/20, `showInactive()` 0/20, hết thu nhỏ, không treo. **Phần còn lại vẫn mở:** Project Owner vẫn bị giành tiêu điểm trong 10 lượt e2e. Nguồn chính là lúc ứng dụng khởi động (mỗi spec một cửa sổ mới, hiện ra kích hoạt; agent đo 2/3 lần khởi động vào nền trước), nằm ở `Desktop/`: xem **DSK-18**. Sau khi DSK-18 có cờ (phiên desktop 30), phiên giao diện kế tiếp, cùng với UI-19, thêm cờ đó vào `launchArgs` của công cụ kiểm thử và vào `main_layout.spec.ts`; tiêu chí đóng: Project Owner xác nhận không còn bị giành tiêu điểm sau 10 lượt e2e. Ghi chú: trên Linux với icewm, `showInactive()` không đưa cửa sổ khỏi trạng thái thu nhỏ; vô hại vì Linux không treo.
+> **Phần mở lại cửa sổ ĐÃ ĐÓNG 2026-10-04, phiên 29:** `window_guard.mjs` dùng `showInactive()` thay `restore()`. Đo trên Windows, 20 lần mỗi cách, một tiến trình khác giữ nền trước: `restore()` giành nền trước 18/20, `showInactive()` 0/20, hết thu nhỏ, không treo. **Phần còn lại vẫn mở:** Project Owner vẫn bị giành tiêu điểm trong 10 lượt e2e. Nguồn chính là lúc ứng dụng khởi động (mỗi spec một cửa sổ mới, hiện ra kích hoạt; agent đo 2/3 lần khởi động vào nền trước), nằm ở `Desktop/`: xem **DSK-18**. DSK-18 đã có cờ `--ct-test-show-inactive` (phiên 30, đóng 2026-10-05). Phiên giao diện kế tiếp, cùng với UI-19, thêm cờ đó vào `launchArgs` của công cụ kiểm thử và vào `main_layout.spec.ts`; tiêu chí đóng: Project Owner xác nhận không còn bị giành tiêu điểm sau 10 lượt e2e. Ghi chú: trên Linux với icewm, `showInactive()` không đưa cửa sổ khỏi trạng thái thu nhỏ; vô hại vì Linux không treo.
 
 Cơ chế của UI-11 (`UI/tests/tools/window_guard.mjs`) gọi `restore()`. Project Owner xác nhận ngày 2026-10-04: trên Windows, cửa sổ bật lại **và lấy tiêu điểm**, nhảy lên trên ứng dụng đang dùng. Linux (Orchestrator, icewm) cũng thấy `focused: true` sau mỗi lần mở lại. Mã không gọi `focus()`; việc kích hoạt đến từ `restore()` của hệ điều hành.
 
@@ -605,7 +644,7 @@ Nếu đo cho thấy không có cách nào hết thu nhỏ mà không kích ho�
 
 ## Layer giao diện — sau audit phiên 29
 
-### UI-19 — `app_root.test.tsx`, ca D6, hỏng ngắt quãng (thấp; audit phiên 29 §5.3) — cho phiên giao diện kế tiếp
+### UI-19 — `app_root.test.tsx`, ca D6, hỏng ngắt quãng (thấp; audit phiên 29 §5.3) — **plan phiên 31** (việc 3)
 
 Dòng 291 `expect(loadPending).toHaveBeenCalledTimes(3)` nhận 2, một lần trong 5 lần `npm run check` lúc máy Project Owner tải (mốc đầu phiên 29). Linux (Orchestrator): 0/25. Giả thuyết: câu "Đã lưu cài đặt nhắc việc." hiện ngay lúc `reminder_list` dựng xong, còn lần gọi `loadPending` thứ ba nằm trong `useEffect`, chạy sau; khẳng định ngay sau `findByText` có thể chạy trước nó. Cùng loại `screens-EXP-012`.
 
@@ -627,6 +666,7 @@ Dòng 291 `expect(loadPending).toHaveBeenCalledTimes(3)` nhận 2, một lần t
   - Sau đó **mỗi phiên đã audit đạt là một commit** do Project Owner tạo.
   - DSK-10 được giải quyết luôn trong `.gitignore` chung.
   - Chờ Project Owner quyết. Orchestrator soạn sẵn hai tệp cấu hình và các lệnh khi được yêu cầu.
+- **ENV-8** (Project Owner; audit phiên 30 §5.5) — **Project Owner chọn gỡ hẳn rồi cài lại, 2026-10-05.** máy Project Owner có (1) bản cài cũ ngày 2026-09-28 với lối tắt Start Menu mang AUMID `com.commissiontracker.desktop`, và (2) bản cài lúc 20:57 ngày 2026-10-04 thiếu module ticker (báo `Cannot find module`). Cần gỡ hẳn hoặc cài lại từ bộ cài mới trong `Desktop\release`. Bản cài dùng thư mục dữ liệu thật; đó là dùng thật, không phải kiểm thử. Việc đo thông báo trên bản cài sạch gộp vào ENV-4 (máy khác, chưa có bản cài).
 - **ENV-7** (Orchestrator, thấp; audit phiên 27 §5.5): `npm audit` báo lỗ hổng mới, chỉ ở công cụ phát triển.
   - UI: 5 lỗ hổng mức high, cùng một chuỗi `stylelint → globby → fast-glob → micromatch → braces` (GHSA-vfj7-8cjw-p6xm).
   - Desktop: 8 lỗ hổng mức high (ví dụ `http-cache-semantics`, GHSA-ch52-4w7c-c8xp).

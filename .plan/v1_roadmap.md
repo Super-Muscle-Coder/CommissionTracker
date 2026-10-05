@@ -175,7 +175,7 @@ Phần lớn nhất của V1. Chia thành nhiều phiên, mỗi phiên một nh�
 | D3 | Tiến độ: đổi giai đoạn, xem lịch sử, bảng tiến độ — **phiên 20**, vá ở phiên 21 (UI-10); **`hoàn_tất` 2026-09-29** | `update_progress` |
 | D4 | Thanh toán: ghi khoản, hủy khoản, xem số dư — **phiên 22** (`payment_list`, `payment_form`, phần Thanh toán của `commission_detail`); **`hoàn_tất` 2026-09-30**. Phần backend của CT-4 (BE-7): **phiên 23** (backend) xong 2026-09-30, audit đạt; Data Schema 9.0.1 duyệt 2026-09-30 | `record_payment` |
 | D5 | Báo cáo thu nhập — **phiên 24** xong 2026-10-01, audit đạt về chức năng (`income_report`, mục điều hướng "Thu nhập"); CT-5 duyệt (Data Schema 9.0.2); **`hoàn_tất` 2026-10-01** (Project Owner chạy tay). **Phiên 25** (giao diện, vá ngắn) xong 2026-10-01, audit đạt: CT-5 trong Configs, UI-12 đóng, thí nghiệm UI-11 cho thấy cửa sổ thu nhỏ làm treo | `view_income_report` |
-| D6 | Nhắc việc: cài đặt, danh sách chờ, xác nhận — phần giao diện là **phiên 27**, xong 2026-10-03, audit đạt (`reminder_list`, `reminder_settings`, mục điều hướng "Nhắc việc"); **`hoàn_tất` 2026-10-03** (Project Owner chạy tay). **Phiên 28** (giao diện, vá ngắn: UI-11 bước 4, UI-13, UI-15) xong 2026-10-04, audit đạt; UI-11 và UI-15 đóng; `reminder_ticker` (desktop, gọi `check_due` và hiện thông báo Windows) làm ở **phiên 30** (desktop, DSK-17, kèm DSK-18; plan phát hành 2026-10-04, `.plan/desktop_plan.md`), sau phiên 29 (giao diện, vá ngắn: UI-16, UI-17, UI-18; xong 2026-10-04, audit đạt). D6 xong hẳn khi có ticker | `send_reminder` |
+| D6 | Nhắc việc: cài đặt, danh sách chờ, xác nhận — phần giao diện là **phiên 27**, xong 2026-10-03, audit đạt (`reminder_list`, `reminder_settings`, mục điều hướng "Nhắc việc"); **`hoàn_tất` 2026-10-03** (Project Owner chạy tay). **Phiên 28** (giao diện, vá ngắn: UI-11 bước 4, UI-13, UI-15) xong 2026-10-04, audit đạt; UI-11 và UI-15 đóng; `reminder_ticker` (desktop, gọi `check_due` và hiện thông báo Windows) làm ở **phiên 30** (desktop, DSK-17, kèm DSK-18; plan phát hành 2026-10-04, `.plan/desktop_plan.md`), sau phiên 29 (giao diện, vá ngắn: UI-16, UI-17, UI-18; xong 2026-10-04, audit đạt). **Phiên 30** (desktop: `reminder_ticker` DSK-17, cờ `--ct-test-show-inactive` DSK-18) xong 2026-10-05, audit đạt (`.reviews/audits/desktop/audit_desktop_session30.md`); Project Owner xác nhận toast thật. **D6 xong hẳn 2026-10-05; chặng D hoàn tất.** | `send_reminder` |
 
 **Ràng buộc chung cho mọi phiên của chặng này:**
 
@@ -204,6 +204,15 @@ Workflow này thao tác trên cả tệp cơ sở dữ liệu qua `db_connection
 ## Chặng G — Hoàn thiện V1
 
 Đóng gói bản chính thức. Chạy thử trên một máy sạch. Kiểm tra lần cuối theo `.design/v1_scope.md`: mọi thứ trong mục 2 đã xong, không có gì ở mục 3 lọt vào.
+
+**Cài bản mới đè lên bản cũ** (DSK-21; Project Owner duyệt 2026-10-05). Người dùng cập nhật bằng cách chạy bộ cài mới, không gỡ bản cũ trước. Tiêu chí:
+1. Quy ước số phiên bản: mỗi bản phát hành tăng `version` của `Desktop/package.json` (hiện vẫn `0.1.0` từ đầu).
+2. Cài bản N+1 đè bản N khi ứng dụng **đóng**: không cần gỡ; dữ liệu còn nguyên; ứng dụng mở được; lối tắt Start Menu và thông báo Windows còn chạy.
+3. Cài đè khi ứng dụng **đang mở**: bộ cài báo hoặc tự đóng ứng dụng; không để lại bản cài nửa vời; không còn `python.exe` của backend sót lại.
+4. Dữ liệu do bản N tạo, có bước nâng cấp cấu trúc ở bản N+1: lần mở đầu của N+1 nâng cấp đúng.
+5. Cài bản cũ hơn đè bản mới: hoặc bị chặn, hoặc backend dừng với hộp thoại tiếng Việt rõ ràng; không hỏng dữ liệu.
+
+Cách làm: Orchestrator soạn runbook cho Project Owner chạy tay, gộp với ENV-4 (máy sạch); phần nào cần đổi mã (số phiên bản, hành vi khi đang mở) thì vào một phiên desktop trước khi chạy runbook. Tự cập nhật (auto-update) vẫn ngoài V1. `npm run test:packaged` là tiêu chí của chặng này (DSK-16).
 
 ---
 
