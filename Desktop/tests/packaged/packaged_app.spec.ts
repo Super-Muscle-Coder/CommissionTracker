@@ -384,3 +384,122 @@ function backendRequests(file: string, hostPort: string): SeenRequest[] {
   }
   return order
 }
+
+test('P7. DSK-17, DSK-18: the reminder ticker runs in the package (first check without error) and the two new test flags are ignored', async () => {
+  // Spawned directly, to read the Main's log from its first line.
+  const dataDir = tempDataDir()
+  const child = spawn(
+    EXE,
+    [`${flags.data_dir}${dataDir}`, flags.no_dialog, flags.show_inactive, `${flags.reminder_interval_ms}200`],
+    { cwd: UNPACKED, stdio: ['ignore', 'pipe', 'pipe'] },
+  )
+  const log = new LogCollector().attach(child)
+  try {
+    await log.waitFor(/reminder check #1: \d+ notification\(s\)/, 90_000)
+    // Flags named in the log, values hidden, no effect: the beat is the one of desktop.json, the window is not inactive.
+    expect(log.lines(/ignoring test flag/)).toEqual([
+      `[desktop-main] ignoring test flag ${flags.show_inactive}... in the packaged app`,
+      `[desktop-main] ignoring test flag ${flags.reminder_interval_ms}... in the packaged app`,
+    ])
+    expect(log.text).not.toContain(`${flags.reminder_interval_ms}200`)
+    expect(log.text).toContain(`[desktop-main] reminder ticker started: first check now, then every ${config.reminder_ticker.interval_ms} ms`)
+    expect(log.text).not.toMatch(/ready-to-show: showing the window without focus/)
+    expect(log.text).toContain(`[desktop-main] application user model id set to ${config.app.app_user_model_id}`)
+    // The first check ran against the packaged backend and ended without an error.
+    expect(log.lines(/reminder check #1: 0 notification\(s\)/)).toHaveLength(1)
+    expect(log.text).not.toMatch(/reminder check #\d+ failed|FATAL/)
+    // Beat of 60 s: still only one check after a couple of seconds.
+    await new Promise((r) => setTimeout(r, 2500))
+    expect(log.lines(/reminder check #\d+: /)).toHaveLength(1)
+
+    // Close the window (taskkill without /F sends WM_CLOSE): the ticker stops before the backend.
+    execFileSync(TASKKILL, ['/PID', String(child.pid)])
+    expect(await waitForExit(child)).toBe(0)
+    const lines = log.text.split(/\r?\n/)
+    const stoppedAt = lines.findIndex((l) => /reminder ticker stopped/.test(l))
+    const backendStopAt = lines.findIndex((l) => /stopping backend \(pid \d+\): closing its standard input/.test(l))
+    expect(stoppedAt).toBeGreaterThan(-1)
+    expect(stoppedAt).toBeLessThan(backendStopAt)
+  } finally {
+    console.log(log.text)
+    if (child.exitCode === null && child.signalCode === null) child.kill()
+  }
+})
+
+test('P8. DSK-17: a real Windows toast from the package: shown or failed is reported by Electron (measured on release\\win-unpacked)', async () => {
+  const dataDir = tempDataDir()
+  const spawnPackaged = () => {
+    const child = spawn(EXE, [`${flags.data_dir}${dataDir}`, flags.no_dialog], { cwd: UNPACKED, stdio: ['ignore', 'pipe', 'pipe'] })
+    return { child, log: new LogCollector().attach(child) }
+  }
+  const close = async (child: ChildProcess) => {
+    execFileSync(TASKKILL, ['/PID', String(child.pid)])
+    expect(await waitForExit(child)).toBe(0)
+  }
+  const call = async (baseUrl: string, method: string, route: string, body: unknown, expected: number): Promise<unknown> => {
+    const response = await fetch(`${baseUrl}${route}`, { method, headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
+    const text = await response.text()
+    if (response.status !== expected) throw new Error(`${method} ${route}: expected ${expected}, got ${response.status} ${text}`)
+    return JSON.parse(text)
+  }
+  const two = (n: number) => String(n).padStart(2, '0')
+  const title = 'Tranh thử thông báo gói'
+
+  // Run 1: create a commission due today with the deadline reminder on (no toast yet: nothing existed at its first check).
+  const first = spawnPackaged()
+  try {
+    const port = Number((await first.log.waitFor(/backend READY on port (\d+)/, 90_000))[1])
+    await first.log.waitFor(/reminder check #1: \d+ notification\(s\)/, 30_000)
+    const baseUrl = `http://${HOST}:${port}`
+    const now = new Date()
+    const today = `${now.getFullYear()}-${two(now.getMonth() + 1)}-${two(now.getDate())}`
+    const client = (await call(baseUrl, 'POST', '/clients', { client_input: { display_name: 'Mai Anh', contacts: [], note: null } }, 201)) as { client_id: string }
+    await call(
+      baseUrl,
+      'POST',
+      '/commissions',
+      {
+        commission_input: {
+          client_id: client.client_id,
+          title,
+          commission_type: null,
+          agreed_price: { amount_minor: 1500000, currency: 'VND' },
+          deadline: today,
+          description: null,
+          reference_links: [],
+        },
+      },
+      201,
+    )
+    await call(
+      baseUrl,
+      'PUT',
+      '/reminders/settings',
+      {
+        reminder_settings_input: {
+          periodic: { enabled: false, every: 1, unit: 'weeks', at_time: '09:00', weekday: 1 },
+          deadline: { enabled: true, lead_times: [{ amount: 1, unit: 'days' }] },
+        },
+      },
+      200,
+    )
+    expect(first.log.lines(/reminder toast:/)).toEqual([])
+  } finally {
+    await close(first.child)
+  }
+
+  // Run 2: the first check finds it; the toast is shown by the packaged exe.
+  const second = spawnPackaged()
+  try {
+    await second.log.waitFor(new RegExp(`reminder toast: .*${title}`), 90_000)
+    await second.log.waitFor(/reminder toast [^:]+: (show|failed)/, 20_000)
+    // Give 'close' (or a failure after show) a moment: measured, not asserted.
+    await new Promise((r) => setTimeout(r, 12_000))
+    console.log(`MEASURED toast events of the package: ${JSON.stringify(second.log.lines(/reminder toast/))}`)
+    expect(second.log.lines(/reminder toast [^:]+: failed/)).toEqual([])
+    expect(second.log.lines(/reminder toast [^:]+: show/)).toHaveLength(1)
+  } finally {
+    await close(second.child)
+    console.log(second.log.text)
+  }
+})

@@ -9,11 +9,13 @@ productName: Commission Tracker
 directories:
   output: release
 
-# app.asar: only the Main, its preload script, its configuration and
-# package.json. No tests and no fixtures.
+# app.asar: only the Main, its preload script, the cross-cutting components the
+# Main requires (dist/cross_cutting/, since desktop session 30), its
+# configuration and package.json. No tests and no fixtures.
 files:
   - dist/main.js
   - dist/preload.js
+  - dist/cross_cutting/**/*.js
   - configs/desktop.json
   - package.json
 

@@ -28,6 +28,8 @@ export interface RunOptions {
   rendererRoot?: string
   fakeBackend?: string // file name in tests/fixtures
   firstBackendPort?: number
+  showInactive?: boolean
+  reminderIntervalMs?: number
 }
 
 /** Command-line arguments for the Main; always without dialogs and with a
@@ -41,6 +43,8 @@ export function mainArgs(o: RunOptions): string[] {
     args.push(`${flags.backend_working_dir}${FIXTURES}`)
   }
   if (o.firstBackendPort !== undefined) args.push(`${flags.first_backend_port}${o.firstBackendPort}`)
+  if (o.showInactive === true) args.push(flags.show_inactive)
+  if (o.reminderIntervalMs !== undefined) args.push(`${flags.reminder_interval_ms}${o.reminderIntervalMs}`)
   return args
 }
 
@@ -88,8 +92,12 @@ export function spawnMain(args: string[]): SpawnedMain {
   return { child, log, exited }
 }
 
-export async function launchMain(args: string[]): Promise<{ app: ElectronApplication; log: LogCollector }> {
-  const app = await _electron.launch({ args, cwd: LAYER_ROOT })
+export async function launchMain(
+  args: string[],
+  extraEnv?: Record<string, string>,
+): Promise<{ app: ElectronApplication; log: LogCollector }> {
+  const env = extraEnv === undefined ? undefined : { ...(process.env as Record<string, string>), ...extraEnv }
+  const app = await _electron.launch({ args, cwd: LAYER_ROOT, ...(env === undefined ? {} : { env }) })
   const log = new LogCollector().attach(app.process())
   return { app, log }
 }
@@ -177,6 +185,67 @@ export function stillAlive(rows: ProcessRow[]): ProcessRow[] {
   return rows.filter((row) =>
     now.some((r) => r.ProcessId === row.ProcessId && r.Name === row.Name && r.Created === row.Created),
   )
+}
+
+/** "The person works in another application": a separate PowerShell process
+ * (tests/fixtures/foreground_holder.ps1) that takes the foreground on request
+ * and tells which process owns the foreground window. DSK-18. */
+export class ForegroundHolder {
+  pid = 0
+  private buffer = ''
+  private waiting: Array<(line: string) => void> = []
+  private constructor(private readonly child: ChildProcess) {
+    child.stdout?.setEncoding('utf8')
+    child.stdout?.on('data', (chunk: string) => {
+      this.buffer += chunk
+      let nl: number
+      while ((nl = this.buffer.indexOf('\n')) >= 0) {
+        const line = this.buffer.slice(0, nl).trim()
+        this.buffer = this.buffer.slice(nl + 1)
+        this.waiting.shift()?.(line)
+      }
+    })
+  }
+
+  static async start(): Promise<ForegroundHolder> {
+    const script = path.join(FIXTURES, 'foreground_holder.ps1')
+    const child = spawn(POWERSHELL, ['-NoProfile', '-NonInteractive', '-File', script], { stdio: ['pipe', 'pipe', 'ignore'] })
+    const holder = new ForegroundHolder(child)
+    const ready = await holder.nextLine(30_000)
+    holder.pid = Number(ready.split(' ')[1])
+    return holder
+  }
+
+  private nextLine(timeoutMs = 10_000): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error('foreground holder did not answer')), timeoutMs)
+      this.waiting.push((line) => {
+        clearTimeout(timer)
+        resolve(line)
+      })
+    })
+  }
+
+  private async ask(command: string): Promise<string> {
+    const answer = this.nextLine()
+    this.child.stdin?.write(`${command}\n`)
+    return answer
+  }
+
+  async grab(): Promise<void> {
+    await this.ask('grab')
+  }
+
+  /** Process id that owns the foreground window now. */
+  async foregroundPid(): Promise<number> {
+    return Number((await this.ask('fg')).split(' ')[1])
+  }
+
+  async stop(): Promise<void> {
+    this.child.stdin?.write('quit\n')
+    await new Promise((r) => setTimeout(r, 500))
+    this.child.kill()
+  }
 }
 
 /** Python processes running Backend.py or one of the fake backends. */

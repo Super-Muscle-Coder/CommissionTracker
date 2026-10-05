@@ -2,8 +2,8 @@
 // workflow: main
 // clause: clause_d_desktop
 // component: main
-// last_updated_by: coding-agent@2026-10-02#1
-// last_updated_at: 2026-10-02T16:26:47.6226621+07:00
+// last_updated_by: coding-agent@2026-10-05#1
+// last_updated_at: 2026-10-05T11:16:31.4746772+07:00
 //
 // EXPERIENCES:
 //   - id: main-EXP-001
@@ -414,7 +414,121 @@
 //       ở main-EXP-008 tới main-EXP-017. Ghi chú "Cách làm của phiên 14 so với
 //       plan" giữ nguyên (ngoài phạm vi của plan này).
 //
-// UNSOLVED_PROBLEMS: []
+//   - id: main-EXP-024
+//     content: >
+//       Cờ --ct-test-show-inactive (DSK-18, phiên 30; test_flags.show_inactive,
+//       chỉ bản chạy từ mã nguồn, bản đóng gói bỏ qua và ghi log như các cờ
+//       khác). Có cờ: BrowserWindow tạo với show false, rồi win.once
+//       ('ready-to-show') gọi showInactive() (electron.d.ts 44.4.5: showInactive
+//       dòng 3632 "Shows the window but doesn't focus on it"; ready-to-show dòng
+//       4706, không bắn khi paintWhenInitiallyHidden là false, mặc định true).
+//       Không cờ: show true như cũ. Đo cái gì: win.isFocused() là chỉ báo TẤT
+//       ĐỊNH (có cờ false, không cờ true); tiêu điểm của HỆ ĐIỀU HÀNH thì không:
+//       Windows có khi không trao nền trước cho cửa sổ mới (không cờ: Electron
+//       giành nền trước 0/5 lượt ở một lần đo, 1/5 ở lần khác), nên kiểm thử chỉ
+//       khẳng định chủ nền trước sau lượt chạy không thuộc cây tiến trình
+//       Electron khi có cờ, còn không cờ thì ghi số đo. Tiến trình PowerShell
+//       phụ (tests/fixtures/foreground_holder.ps1) KHÔNG giành được nền trước
+//       khi người dùng đang ở cửa sổ khác (helperWasInFront false hầu hết lượt):
+//       khi đó cửa sổ người dùng đang dùng chính là "ứng dụng khác". Không dùng
+//       phím giả để lách khóa nền trước, vì phím đó tới ứng dụng người đang gõ.
+//       Ca không cờ chỉ yêu cầu focused true ở ít nhất 3/5 lượt: người dùng đổi
+//       cửa sổ giữa chừng làm một lượt focused false (đo được).
+//   - id: main-EXP-025
+//     content: >
+//       reminder_ticker trong Main (DSK-17, phiên 30; mã ở
+//       src/cross_cutting/reminder_ticker/, khối checkpoint riêng ở đó). Main nạp
+//       cấu hình reminder_ticker từ desktop.json (interval_ms 60000,
+//       request_timeout_ms 10000, chữ thông báo), tiêm vào ticker địa chỉ
+//       backend, hàm hiện toast (showWindowsToast: Notification, giữ trong
+//       liveToasts tới close, failed hoặc click) và log. Khởi động ở cuối
+//       startLayer, SAU khi backend READY và lần nạp đầu của cửa sổ (kể cả
+//       ERR_ABORTED), trừ khi shutdown đã bắt đầu. Dừng: shutdown() gọi
+//       await reminderTicker?.stop() TRƯỚC backend.stop(), nên mọi đường thoát
+//       (window-all-closed, before-quit, SIGINT, SIGTERM, fatal) đều dừng ticker
+//       trước. Bấm toast: bringWindowToFront() (dùng chung với second-instance;
+//       khôi phục nếu thu nhỏ rồi focus; cửa sổ đã đóng thì không làm gì), log
+//       "click (window brought to the front: true|false)". Cờ
+//       --ct-test-reminder-interval-ms=<số nguyên dương> (chỉ bản chạy từ mã
+//       nguồn; giá trị sai bị bỏ và ghi log). Log kiểm được: "reminder ticker
+//       started", "reminder check #N: K notification(s)", "reminder toast:
+//       {notification_id, title, body}", "reminder toast <id>: show|click|close|
+//       failed", "reminder check #N failed: <lý do>", "reminder ticker stopped".
+//   - id: main-EXP-026
+//     content: >
+//       Thông báo Windows và Application User Model ID (DSK-17, phiên 30, đo
+//       trên máy Project Owner). Từ mã nguồn: isSupported() true ở mọi lượt.
+//       (A) không đặt AUMID (mặc định của Electron): sự kiện show, Project Owner
+//       thấy toast. (B) AUMID com.commissiontracker.desktop: show và close, thấy
+//       toast, NHƯNG máy có sẵn bản cài cũ với lối tắt Start Menu (ngày
+//       2026-09-28, đích ...\Programs\commission-tracker) nên AUMID này đã được
+//       đăng ký. Ở lần demo đầu (ứng dụng thật, AUMID đã đặt bằng appId) bấm toast
+//       KHÔNG tới tiến trình của demo: log không có click, cửa sổ demo không lên
+//       (giả thuyết, chưa chứng minh trực tiếp: Windows chuyển cú bấm cho lối tắt
+//       của bản cài cũ). (C) AUMID chưa
+//       đăng ký ở đâu (com.commissiontracker.desktop.probe-unregistered): show
+//       vẫn bắn nhưng Project Owner KHÔNG thấy toast. Kết luận: sự kiện show
+//       không chứng minh toast hiện; AUMID không đăng ký thì toast vô hình. Quyết
+//       định: chỉ bản đóng gói gọi app.setAppUserModelId(app.app_user_model_id
+//       của desktop.json = appId của electron-builder.yml, có kiểm thử A4), vì
+//       NSIS gắn lối tắt với đúng appId; từ mã nguồn giữ mặc định (A) và bấm toast
+//       tới đúng tiến trình (click ghi log, cửa sổ lên trước, Project Owner xác
+//       nhận). Bản đóng gói chạy từ release\win-unpacked (ca P8): show rồi click,
+//       Project Owner bấm và xác nhận nội dung khớp; kết quả này bị nhiễu bởi bản
+//       cài cũ (cùng AUMID đã đăng ký). Bản cài thật chưa đo vì plan cấm cài.
+//   - id: main-EXP-027
+//     content: >
+//       Đóng gói thành phần cắt ngang (phát hiện lúc Project Owner mở bản đóng
+//       gói). electron-builder.yml "files" liệt kê từng tệp của app.asar; module
+//       mới dist/cross_cutting/reminder_ticker/*.js không có trong gói nên Main
+//       đóng gói báo "Error: Cannot find module
+//       './cross_cutting/reminder_ticker/reminder_ticker'" (hộp thoại "A
+//       JavaScript error occurred in the main process") và mọi ca test:packaged
+//       sẽ hỏng. Đã thêm dist/cross_cutting/**/*.js vào files; kiểm bằng
+//       @electron/asar listPackage thấy reminder_ticker.js và toast_text.js. Bài
+//       học: thêm thư mục dist mới cho Main thì phải thêm vào files, và chạy
+//       test:packaged ngay sau khi đổi cấu trúc dist.
+//   - id: main-EXP-028
+//     content: >
+//       Công cụ đo và demo của phiên 30 (tests/, không phải mã của Main):
+//       tests/tools/toast_probe_main.cjs (một toast thử, in sự kiện show, click,
+//       close, failed; tham số --aumid, --label, --seconds; electron.exe là
+//       chương trình GUI nên phải chạy bằng Start-Process -Wait với
+//       -RedirectStandardOutput), tests/tools/toast_demo.cjs (ứng dụng thật trên
+//       dữ liệu tạm, nhịp 3 s, tạo đơn có hạn giao hôm nay và cài đặt nhắc việc;
+//       không gọi check_due, nên toast là của ticker, khác walkthrough:app
+//       --reminders của UI nơi công cụ tự gọi check_due có thể lấy mất nhắc việc
+//       trước ticker), tests/fixtures/fake_backend_reminders.py (backend giả điều
+//       khiển bằng CT_FAKE_CHECKS: ok, valid, two, mixed, http500, badshape,
+//       notjson, slow:<ms>; ghi "check #n start (in flight: k)" để thấy lời gọi
+//       chồng nhau), tests/fixtures/foreground_holder.ps1. Stderr của Main chỉ gắn
+//       sau launch() (main-EXP-014): dòng "main started" bị mất, lấy PID Main bằng
+//       app.evaluate(() => process.pid).
+//
+// UNSOLVED_PROBLEMS:
+//   - id: main-PROB-001
+//     description: >
+//       Thư mục %APPDATA%\Commission Tracker (hồ sơ Chromium theo productName,
+//       không phải thư mục dữ liệu CommissionTracker) đổi 49 dòng giữa mốc đầu
+//       và mốc cuối phiên 30, nên tiêu chí "mốc %APPDATA% giống nhau" không đạt
+//       theo câu chữ. Thư mục dữ liệu thật %APPDATA%\CommissionTracker (data.db,
+//       data.db.lock) GIỐNG HỆT (cùng kích thước, thời điểm ghi, SHA-256).
+//     attempts:
+//       - attempt: 1
+//         agent: coding-agent@2026-10-05#1
+//         tried: >
+//           Ba thí nghiệm có kiểm soát, mỗi cái chụp thư mục trước và sau: một ca
+//           npm test dùng _electron.launch (ca 1), test:packaged P1 (bản đóng gói,
+//           _electron.launch), test:packaged P7 (bản đóng gói, spawn trực tiếp).
+//         result: >
+//           Cả ba: 0 dòng đổi. Thời điểm ghi mới nhất của các dòng đổi là
+//           2026-10-04T14:05Z và 2026-10-05T03:45Z (tức 21:05 và 10:45 giờ máy),
+//           nằm trong khoảng Project Owner đang thử thủ công trên máy; UI npm run
+//           e2e (3 lượt, 11:00-11:14) không ghi gì sau 10:45. Nguồn nhiều khả
+//           năng là bản đã cài do Project Owner mở, nhưng CHƯA xác nhận.
+//     next_suggested: >
+//       Hỏi Project Owner có mở bản đã cài lúc 21:05 ngày 4/10 và 10:45 ngày 5/10
+//       không, và có kèm --ct-test-data-dir không; ghi mốc mới sau lần xác nhận.
 //
 // EVIDENCE:
 //   - claim: >
@@ -933,6 +1047,134 @@
 //       mã nguồn trước lần sửa cuối của khối checkpoint này (chỉ là chú thích,
 //       nhưng làm dist\main.js và app.asar đổi như đã ghi ở main-EXP-017).
 //     recorded_at: 2026-10-02T16:26:47.6226621+07:00
+//   - claim: >
+//       Phiên 30, môi trường: Node, npm, Electron, Python, antivirus.
+//     how: >
+//       Từ Desktop: node --version; npm --version; npx electron --version;
+//       ..\Backend\env\Scripts\python.exe --version; PowerShell: Get-CimInstance
+//       -Namespace root/SecurityCenter2 -ClassName AntiVirusProduct; Get-Process
+//       AVGSvc,rsEngineSvc,rsAppUI.
+//     result: >
+//       v24.14.1; 11.11.0; v44.4.5; Python 3.13.12. Reason Cybersecurity 266240
+//       và AVG Antivirus 266240 (bật), Windows Defender 393472 (tắt); AVGSvc,
+//       rsEngineSvc, bốn rsAppUI đang chạy suốt phiên. Windows 11 Home. Mốc đầu
+//       phiên: npm run lint sạch, npm test 17 passed (2,0 phút), UI npm run
+//       build đạt, git status --short trống.
+//     recorded_at: 2026-10-05T11:16:31.4746772+07:00
+//   - claim: >
+//       Thông báo Windows từ Electron 44.4.5 chạy từ mã nguồn: hiện được không
+//       cần AUMID tự đặt; AUMID chưa đăng ký làm toast vô hình dù sự kiện show
+//       vẫn bắn (main-EXP-026).
+//     how: >
+//       Từ Desktop: Start-Process node_modules\electron\dist\electron.exe
+//       -ArgumentList tests\tools\toast_probe_main.cjs, "--label=...",
+//       --seconds=14 (và --aumid=<id>) -RedirectStandardOutput <tệp> -Wait
+//       -NoNewWindow; mỗi lượt hiện một toast thử, Project Owner nhìn màn hình.
+//       Lượt A không --aumid, B --aumid=com.commissiontracker.desktop, C
+//       --aumid=com.commissiontracker.desktop.probe-unregistered --seconds=40.
+//     result: >
+//       A: isSupported true, sự kiện show, không close trong 14 s; Project Owner
+//       thấy toast. B: show, close sau khoảng 9,5 s; thấy toast (AUMID đã đăng ký
+//       bởi lối tắt Start Menu của bản cài cũ ngày 2026-09-28). C: show nhưng
+//       không thấy toast ("tôi còn chẳng thấy toast cơ"), không click, không
+//       close. Sau khi đổi Main (AUMID chỉ khi đóng gói): npm run build; node
+//       tests/tools/toast_demo.cjs; hai toast ("Sắp tới hạn giao: Tranh hạn hôm
+//       nay" / "Hạn giao 04/10/2026 · nhắc trước 1 ngày" và "Tổng hợp định kỳ: 3
+//       đơn đang mở" / "2 đơn có hạn giao · sớm nhất: Minh họa bìa sách
+//       (01/01/2026)"), mỗi cái show rồi click "(window brought to the front:
+//       true)"; Project Owner xác nhận: toast đúng chữ, cửa sổ lên trước, trang
+//       "Nhắc việc" còn đủ hai nhắc việc. Lần demo đầu (AUMID đã đặt bằng appId):
+//       show, close, không click, Project Owner bấm mà cửa sổ demo không lên.
+//       Chưa chụp ảnh toast. Chưa đo bản cài thật (plan cấm cài).
+//     recorded_at: 2026-10-05T11:16:31.4746772+07:00
+//   - claim: >
+//       DSK-18: có --ct-test-show-inactive thì cửa sổ hiện mà không nhận tiêu
+//       điểm; không cờ thì như cũ; bản đóng gói bỏ qua cờ.
+//     how: >
+//       cd Desktop; npm run build; npx playwright test tests/show_inactive.spec.ts
+//       (ca 15 có cờ, ca 16 không cờ, mỗi ca 5 lượt; _electron.launch, thư mục
+//       dữ liệu tạm; chủ nền trước đọc bằng GetForegroundWindow qua
+//       tests/fixtures/foreground_holder.ps1). Phép cắn: tạm đổi show:
+//       !settings.showInactive thành show: true, chạy ca 15, khôi phục. Bản đóng
+//       gói: ca P7 của npm run test:packaged.
+//     result: >
+//       Ca 15: 5/5 lượt visible true, focused false, nền trước không thuộc cây
+//       Electron, log có "ready-to-show: showing the window without focus". Ca
+//       16 (lần đo đầu): 5/5 focused true, Electron giành nền trước 0/5; (lần
+//       khác) focused true 4/5 vì người dùng đổi cửa sổ, Electron giành nền trước
+//       1/5. Phép cắn: ca 15 hỏng ở focused (5/5 lượt true, Electron giành nền
+//       trước 2/5); khôi phục thì 2 passed. P7: log "ignoring test flag
+//       --ct-test-show-inactive... in the packaged app", không có dòng ready-to-
+//       show.
+//     recorded_at: 2026-10-05T11:16:31.4746772+07:00
+//   - claim: >
+//       DSK-17 ráp vào Main: ticker khởi động sau READY và lần nạp đầu, lần kiểm
+//       đầu chạy ngay, dừng trước backend; chi tiết ca và phép cắn ở EVIDENCE của
+//       reminder_ticker.
+//     how: >
+//       cd Desktop; npm run build; npx playwright test tests/reminder_ticker.spec.ts
+//       (C4 dừng trước backend, D2 lần kiểm đầu chạy ngay); npm run test:packaged
+//       (P7, P8).
+//     result: >
+//       12 passed (52,3 s). D2: toast đầu 2056 ms sau khi cửa sổ mở, nhịp 600000
+//       ms. Phép cắn: bỏ this.tick() đầu tiên thì D2 hỏng ("not seen within 20000
+//       ms"); bỏ await reminderTicker?.stop() trong shutdown thì C4 hỏng (không có
+//       dòng "reminder ticker stopped"); khôi phục thì đạt. Bản đóng gói: P7 đạt
+//       (AUMID đặt từ config, lần kiểm đầu "0 notification(s)", một lần kiểm sau
+//       hơn 2,5 s, ticker dừng trước backend), P8 đạt (show rồi click).
+//     recorded_at: 2026-10-05T11:16:31.4746772+07:00
+//   - claim: >
+//       Gói không còn thiếu module của ticker (main-EXP-027); npm run dist từ
+//       trạng thái sạch đạt.
+//     how: >
+//       cd Desktop; xóa packaging\stage và release; ELECTRON_BUILDER_CACHE trỏ
+//       vào thư mục tạm (sandbox của agent chặn đổi tên trong
+//       %LOCALAPPDATA%\electron-builder\Cache, như phiên 14 và 26); npm run dist;
+//       node -e "require('@electron/asar').listPackage('release/win-unpacked/
+//       resources/app.asar')" lọc dist.
+//     result: >
+//       Lần dist đầu (không đặt cache) hỏng ở bước giải nén NSIS (lỗi môi trường
+//       của agent); với cache tạm thoát mã 0 sau khoảng 135 s. Trước khi sửa
+//       electron-builder.yml, app.asar thiếu dist\cross_cutting và bản đóng gói
+//       báo "Cannot find module" (Project Owner chụp hộp thoại). Sau khi sửa:
+//       app.asar có dist\cross_cutting\reminder_ticker\reminder_ticker.js,
+//       toast_text.js, dist\main.js, dist\preload.js. test:packaged: P1-P7
+//       passed (1,6 phút), P8 lần đầu hỏng vì regex của chính ca đó (id toast là
+//       UUID, không bắt đầu bằng n), sửa rồi P8 passed (25,6 s). Các số là của mã
+//       nguồn trước lần sửa cuối của khối checkpoint này.
+//     recorded_at: 2026-10-05T11:16:31.4746772+07:00
+//   - claim: >
+//       Phiên 30, chạy toàn bộ với AVG và ReasonLabs bật: lint, npm test 3 lượt
+//       liên tiếp, UI npm run e2e 3 lượt liên tiếp, UI/evidence không đổi.
+//     how: >
+//       cd Desktop; npm run lint; npm test (3 lần liên tiếp). cd UI; npm run build;
+//       npm run e2e (CT_WALKTHROUGH_RUNNER không đặt; 3 lần liên tiếp, từng lần
+//       một); git status --short UI/evidence.
+//     result: >
+//       lint sạch. npm test: 31 passed ở cả ba lượt (3,7; 3,7; 3,8 phút), sau bộ
+//       không còn python.exe của dự án (17 ca cũ cộng 14 ca mới: ca 15, 16 của
+//       show_inactive; A1-A4, B1, B2, C1-C4, D1, D2 của reminder_ticker). Một
+//       lượt chạy trước đó hỏng 1 ca (ca 16: focused false ở 1/5 lượt vì người
+//       dùng đổi cửa sổ giữa chừng); đã nới khẳng định đó (main-EXP-024) rồi chạy
+//       lại ba lượt. UI npm run e2e: 70 passed ở cả ba lượt (5,0; 4,9; 4,9 phút),
+//       cùng thông báo Windows thật ở các lượt có reminder_list; git status
+//       --short UI/evidence trống.
+//     recorded_at: 2026-10-05T11:16:31.4746772+07:00
+//   - claim: >
+//       Không test hay lần chạy nào của phiên đụng thư mục dữ liệu thật
+//       %APPDATA%\CommissionTracker.
+//     how: >
+//       PowerShell: liệt kê mọi tệp của %APPDATA%\CommissionTracker và
+//       %APPDATA%\Commission Tracker với kích thước, LastWriteTimeUtc, SHA-256, chụp
+//       lúc 2026-10-04T20:08:53+07:00 và 2026-10-05T11:14:47+07:00, so từng dòng;
+//       thêm ba thí nghiệm một-ca (xem main-PROB-001).
+//     result: >
+//       CommissionTracker: hai dòng (data.db 114688 byte, ghi
+//       2026-09-28T14:09:42.7922654Z, SHA-256 B1996554...390B, và data.db.lock)
+//       GIỐNG HỆT. Commission Tracker (hồ sơ Chromium): 70 dòng đầu phiên, 71 dòng
+//       cuối phiên, 49 dòng khác, mới nhất ghi lúc 2026-10-05T03:45Z; ba thí
+//       nghiệm cho 0 dòng đổi, nguồn chưa xác định (main-PROB-001).
+//     recorded_at: 2026-10-05T11:16:31.4746772+07:00
 //
 // NOTES:
 //   - content: >
@@ -996,6 +1238,24 @@
 //       (đợt C lượt 1), phiên chỉ vá công cụ đo và làm việc 8-10, không đo
 //       thêm DSK-2.
 //     written_at: 2026-09-27
+//   - content: >
+//       Phiên 30: hai cờ kiểm thử mới trong desktop.json test_flags, cả hai chỉ
+//       bản chạy từ mã nguồn (bản đóng gói bỏ qua và ghi log, nằm trong
+//       packaged.ignored_test_flags): --ct-test-show-inactive (không giá trị) và
+//       --ct-test-reminder-interval-ms=<số nguyên dương>. Bước giao diện của DSK-18
+//       (thêm cờ vào launchArgs của công cụ kiểm thử UI và main_layout.spec.ts) là
+//       việc của phiên giao diện sau (UI-18), không làm ở phiên desktop này.
+//     written_at: 2026-10-05
+//   - content: >
+//       Cho phiên sau: (1) máy Project Owner có bản Commission Tracker đã cài (lối
+//       tắt Start Menu ngày 2026-09-28) cùng AUMID com.commissiontracker.desktop,
+//       nên mọi phép đo thông báo của bản đóng gói trên máy này bị nhiễu; đo sạch
+//       cần máy không có bản cài, hoặc gỡ bản cài trước. (2) Bản đã cài từ bộ cài
+//       build lúc 20:58 ngày 2026-10-04 thiếu dist\cross_cutting (main-EXP-027):
+//       phải cài lại từ bộ cài build sau khi sửa. (3) npm run e2e của UI giờ hiện
+//       toast Windows thật ở các lượt có reminder_list (ticker chạy trong mọi ứng
+//       dụng e2e mở); đó là hành vi đúng.
+//     written_at: 2026-10-05
 // ===WCA-CHECKPOINT-END===
 /**
  * Main of the desktop layer (clause_d_desktop).
@@ -1005,14 +1265,17 @@
  * and wait for its READY line, serve the renderer from ui_origin, open the
  * window with the preload script, and stop the backend (close its stdin)
  * before the app exits (data_schema.yaml, clause_a_common.mandatory_rules).
- * No workflow and no cross-cutting component is wired yet.
+ * It also starts the cross-cutting reminder_ticker once the backend is READY
+ * and the window has loaded, and stops it before the backend. No workflow of
+ * this layer is wired yet.
  */
 
-import { app, BrowserWindow, dialog, Menu, protocol } from 'electron'
+import { app, BrowserWindow, dialog, Menu, Notification, protocol } from 'electron'
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process'
 import * as fs from 'node:fs'
 import * as net from 'node:net'
 import * as path from 'node:path'
+import { ReminderTicker, type ReminderTickerConfig, type Toast } from './cross_cutting/reminder_ticker/reminder_ticker'
 
 const LAYER_ROOT = path.resolve(__dirname, '..')
 const CONFIG_FILE = path.join(LAYER_ROOT, 'configs', 'desktop.json')
@@ -1043,7 +1306,8 @@ interface DesktopConfig {
     non_fatal_first_load_errors: string[]
   }
   preload: { arguments: { bridge_name: string; backend_base_url: string } }
-  app: { locale: string }
+  app: { locale: string; app_user_model_id: string }
+  reminder_ticker: ReminderTickerConfig
   main: {
     failure_exit_code: number
     error_dialog_title: string
@@ -1062,6 +1326,8 @@ interface DesktopConfig {
     backend_working_dir: string
     first_backend_port: string
     no_dialog: string
+    show_inactive: string
+    reminder_interval_ms: string
   }
 }
 
@@ -1072,6 +1338,13 @@ interface RunSettings {
   dataDir: string | null
   firstBackendPort: number | null
   showDialogs: boolean
+  /** Test flag (run from source only): the window appears without taking the
+   * focus (DSK-18). False for a person opening the app, and always in the
+   * packaged app. */
+  showInactive: boolean
+  /** Test flag (run from source only): the reminder ticker's interval, in ms
+   * (DSK-17). Null: the interval of desktop.json. */
+  reminderIntervalMs: number | null
 }
 
 interface BackendCommand {
@@ -1123,6 +1396,8 @@ function readRunSettings(config: DesktopConfig, argv: readonly string[], resourc
       },
       rendererRoot: fromResources(packaged.renderer_root_dir),
       firstBackendPort: null,
+      showInactive: false,
+      reminderIntervalMs: null,
     }
   }
 
@@ -1132,6 +1407,11 @@ function readRunSettings(config: DesktopConfig, argv: readonly string[], resourc
     return value === null || value === '' ? fallback : path.resolve(value)
   }
   const rawPort = flagValue(argv, flags.first_backend_port)
+  const rawInterval = flagValue(argv, flags.reminder_interval_ms)
+  const interval = rawInterval === null ? Number.NaN : Number(rawInterval)
+  if (rawInterval !== null && !(Number.isInteger(interval) && interval > 0)) {
+    log(`ignoring ${flags.reminder_interval_ms}${rawInterval}: not a positive whole number of milliseconds`)
+  }
   const src = config.backend.from_source
   return {
     ...common,
@@ -1142,6 +1422,8 @@ function readRunSettings(config: DesktopConfig, argv: readonly string[], resourc
     },
     rendererRoot: fromFlag(flags.renderer_root, fromLayer(config.renderer.root_dir)),
     firstBackendPort: rawPort === null ? null : Number.parseInt(rawPort, 10),
+    showInactive: argv.includes(flags.show_inactive),
+    reminderIntervalMs: Number.isInteger(interval) && interval > 0 ? interval : null,
   }
 }
 
@@ -1429,6 +1711,17 @@ function main(): void {
   app.commandLine.appendSwitch('lang', config.app.locale)
   log(`application language set to ${config.app.locale}`)
 
+  // Windows toasts (DSK-17). Packaged app only: the Application User Model ID
+  // is the appId of electron-builder.yml, which the NSIS installer also gives
+  // the Start Menu shortcut, so the toast and the installed app share one
+  // identity (a click then reaches this process). Run from source it is left at
+  // Electron's default: measured (desktop session 30, EVIDENCE), an ID that no
+  // shortcut registers makes the toast invisible although 'show' fires.
+  if (resourcesPath !== null) {
+    app.setAppUserModelId(config.app.app_user_model_id)
+    log(`application user model id set to ${config.app.app_user_model_id}`)
+  }
+
   // Test flag only: keep the database and Chromium's profile out of the
   // user's real app-data folder. Must happen before the instance lock, which
   // is keyed on userData.
@@ -1455,6 +1748,44 @@ function main(): void {
 
   let mainWindow: BrowserWindow | null = null
   let shutdownStarted = false
+  let reminderTicker: ReminderTicker | null = null
+  // Toasts still alive: a Notification that is garbage collected can lose its
+  // events, so each one is kept until it closes, fails or is clicked.
+  const liveToasts = new Set<Notification>()
+
+  /** Brings the window back: restores it when minimized, then focuses it. The
+   * second launch and a click on a toast both use it. False when no window. */
+  function bringWindowToFront(): boolean {
+    if (mainWindow === null) return false
+    if (mainWindow.isMinimized()) mainWindow.restore()
+    mainWindow.focus()
+    return true
+  }
+
+  /** The reminder_ticker's toast: a Windows notification whose click only
+   * brings the window to the front (nothing is opened, nothing acknowledged). */
+  function showWindowsToast(toast: Toast): void {
+    if (!Notification.isSupported()) {
+      log(`reminder toast ${toast.notificationId} not shown: notifications are not supported on this system`)
+      return
+    }
+    const notification = new Notification({ title: toast.title, body: toast.body })
+    liveToasts.add(notification)
+    notification.on('show', () => log(`reminder toast ${toast.notificationId}: show`))
+    notification.on('click', () => {
+      log(`reminder toast ${toast.notificationId}: click (window brought to the front: ${bringWindowToFront()})`)
+      liveToasts.delete(notification)
+    })
+    notification.on('close', () => {
+      log(`reminder toast ${toast.notificationId}: close`)
+      liveToasts.delete(notification)
+    })
+    notification.on('failed', (_event, error) => {
+      log(`reminder toast ${toast.notificationId}: failed (${error})`)
+      liveToasts.delete(notification)
+    })
+    notification.show()
+  }
 
   const launchEnv = config.backend.launch_env
   const dbFilePath = path.join(app.getPath('appData'), ...config.boundary.db_file_relative_to_app_data.split('/'))
@@ -1480,6 +1811,9 @@ function main(): void {
   async function shutdown(exitCode: number): Promise<void> {
     if (shutdownStarted) return
     shutdownStarted = true
+    // The ticker goes first: it calls the backend, so it must be gone before
+    // the backend is stopped (reminder_ticker is cross-cutting, WCA §5).
+    await reminderTicker?.stop()
     await backend.stop()
     log(`exiting with code ${exitCode}`)
     app.exit(exitCode)
@@ -1501,9 +1835,7 @@ function main(): void {
       `second-instance: another launch asked for this instance ` +
         `(argv ${JSON.stringify(argvForLog(config, argv, resourcesPath !== null))}, working directory ${workingDirectory})`,
     )
-    if (mainWindow === null) return
-    if (mainWindow.isMinimized()) mainWindow.restore()
-    mainWindow.focus()
+    bringWindowToFront()
   })
   app.on('window-all-closed', () => {
     log('window-all-closed')
@@ -1571,6 +1903,10 @@ function main(): void {
     const win = new BrowserWindow({
       width: config.renderer.window.width,
       height: config.renderer.window.height,
+      // Without the test flag the window shows itself (and takes the focus) as
+      // before. With it, it stays hidden until it can be painted, then
+      // showInactive() (DSK-18).
+      show: !settings.showInactive,
       webPreferences: {
         contextIsolation: true,
         sandbox: true,
@@ -1583,6 +1919,12 @@ function main(): void {
       },
     })
     mainWindow = win
+    if (settings.showInactive) {
+      win.once('ready-to-show', () => {
+        log('ready-to-show: showing the window without focus (test flag)')
+        win.showInactive()
+      })
+    }
     win.on('closed', () => {
       if (mainWindow === win) mainWindow = null
     })
@@ -1609,6 +1951,17 @@ function main(): void {
       if (typeof code !== 'string' || !config.renderer.non_fatal_first_load_errors.includes(code)) throw err
       log(`first load of ${entryUrl} was aborted (${code}, ${String(errno)}); continuing`)
     }
+
+    // i. Cross-cutting infrastructure, after the backend is READY and the
+    //    window has had its first load (also when that load was aborted).
+    if (shutdownStarted) return
+    reminderTicker = new ReminderTicker({
+      backendBaseUrl,
+      config: { ...config.reminder_ticker, interval_ms: settings.reminderIntervalMs ?? config.reminder_ticker.interval_ms },
+      showToast: showWindowsToast,
+      log: (message) => log(message),
+    })
+    reminderTicker.start()
   }
 
   app

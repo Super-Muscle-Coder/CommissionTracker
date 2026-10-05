@@ -45,7 +45,21 @@
     }
   },
   "app": {
-    "locale": "vi"
+    "locale": "vi",
+    "app_user_model_id": "com.commissiontracker.desktop"
+  },
+  "reminder_ticker": {
+    "interval_ms": 60000,
+    "request_timeout_ms": 10000,
+    "toast": {
+      "deadline_title": "Sắp tới hạn giao: {title}",
+      "deadline_body": "Hạn giao {date} · nhắc trước {amount} {unit}",
+      "unit_days": "ngày",
+      "unit_hours": "giờ",
+      "digest_title": "Tổng hợp định kỳ: {open_count} đơn đang mở",
+      "digest_body": "{count} đơn có hạn giao",
+      "digest_earliest": " · sớm nhất: {title} ({date})"
+    }
   },
   "main": {
     "failure_exit_code": 1,
@@ -63,7 +77,7 @@
       "working_dir": "backend"
     },
     "renderer_root_dir": "ui",
-    "ignored_test_flags": ["renderer_root", "backend_interpreter", "backend_script", "backend_working_dir", "first_backend_port"]
+    "ignored_test_flags": ["renderer_root", "backend_interpreter", "backend_script", "backend_working_dir", "first_backend_port", "show_inactive", "reminder_interval_ms"]
   },
   "test_flags": {
     "renderer_root": "--ct-test-renderer-root=",
@@ -72,6 +86,8 @@
     "backend_script": "--ct-test-backend-script=",
     "backend_working_dir": "--ct-test-backend-working-dir=",
     "first_backend_port": "--ct-test-first-backend-port=",
-    "no_dialog": "--ct-test-no-dialog"
+    "no_dialog": "--ct-test-no-dialog",
+    "show_inactive": "--ct-test-show-inactive",
+    "reminder_interval_ms": "--ct-test-reminder-interval-ms="
   }
 }
