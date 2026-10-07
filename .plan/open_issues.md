@@ -626,6 +626,8 @@ Ca "no bridge on the global object" (ca đầu của `UI/tests/main/main.test.ts
 
 ### UI-18 — Cửa sổ e2e được mở lại thì giành tiêu điểm của người đang dùng máy (trung bình; audit phiên 28 §5.4) — **plan phiên 29** (việc 2); phần còn lại: **plan phiên 31** (việc 2)
 
+> **ĐÃ ĐÓNG HẲN 2026-10-05, phiên 31** (audit `.reviews/audits/ui/audit_ui_session31.md`). Harness e2e và `main_layout.spec.ts` truyền `--ct-test-show-inactive`, trừ chế độ ghi bằng chứng; `walkthrough_app.mjs` không đổi. Project Owner xác nhận không còn bị giành sau 10 lượt e2e. Quan sát còn lại: UI-20.
+
 > **Phần mở lại cửa sổ ĐÃ ĐÓNG 2026-10-04, phiên 29:** `window_guard.mjs` dùng `showInactive()` thay `restore()`. Đo trên Windows, 20 lần mỗi cách, một tiến trình khác giữ nền trước: `restore()` giành nền trước 18/20, `showInactive()` 0/20, hết thu nhỏ, không treo. **Phần còn lại vẫn mở:** Project Owner vẫn bị giành tiêu điểm trong 10 lượt e2e. Nguồn chính là lúc ứng dụng khởi động (mỗi spec một cửa sổ mới, hiện ra kích hoạt; agent đo 2/3 lần khởi động vào nền trước), nằm ở `Desktop/`: xem **DSK-18**. DSK-18 đã có cờ `--ct-test-show-inactive` (phiên 30, đóng 2026-10-05). Phiên giao diện kế tiếp, cùng với UI-19, thêm cờ đó vào `launchArgs` của công cụ kiểm thử và vào `main_layout.spec.ts`; tiêu chí đóng: Project Owner xác nhận không còn bị giành tiêu điểm sau 10 lượt e2e. Ghi chú: trên Linux với icewm, `showInactive()` không đưa cửa sổ khỏi trạng thái thu nhỏ; vô hại vì Linux không treo.
 
 Cơ chế của UI-11 (`UI/tests/tools/window_guard.mjs`) gọi `restore()`. Project Owner xác nhận ngày 2026-10-04: trên Windows, cửa sổ bật lại **và lấy tiêu điểm**, nhảy lên trên ứng dụng đang dùng. Linux (Orchestrator, icewm) cũng thấy `focused: true` sau mỗi lần mở lại. Mã không gọi `focus()`; việc kích hoạt đến từ `restore()` của hệ điều hành.
@@ -646,9 +648,30 @@ Nếu đo cho thấy không có cách nào hết thu nhỏ mà không kích ho�
 
 ### UI-19 — `app_root.test.tsx`, ca D6, hỏng ngắt quãng (thấp; audit phiên 29 §5.3) — **plan phiên 31** (việc 3)
 
+> **ĐÃ ĐÓNG 2026-10-05, phiên 31.** `await vi.waitFor(...)`; 50 lần: trước 1 hỏng, sau 0. Phép cắn tất định tái lập trên Linux (bản cũ 3/3 hỏng, bản mới 3/3 đạt).
+
 Dòng 291 `expect(loadPending).toHaveBeenCalledTimes(3)` nhận 2, một lần trong 5 lần `npm run check` lúc máy Project Owner tải (mốc đầu phiên 29). Linux (Orchestrator): 0/25. Giả thuyết: câu "Đã lưu cài đặt nhắc việc." hiện ngay lúc `reminder_list` dựng xong, còn lần gọi `loadPending` thứ ba nằm trong `useEffect`, chạy sau; khẳng định ngay sau `findByText` có thể chạy trước nó. Cùng loại `screens-EXP-012`.
 
 **Việc:** chờ bằng `vi.waitFor` thay vì khẳng định ngay. Phép cắn tất định: làm lần gọi thứ ba đến chậm thì kiểm thử cũ hỏng, mới đạt. Không nới thời gian chờ.
+
+## Layer giao diện — sau audit phiên 31
+
+### UI-20 — Có cờ show-inactive, cửa sổ vẫn bị kích hoạt muộn khi khởi chạy từ cửa sổ đang ở nền trước (thấp; audit phiên 31 §5.1)
+
+> **ĐÃ ĐÓNG 2026-10-07, không phải lỗi.** Project Owner xác nhận: trong lần đo đó anh có bấm vào cửa sổ ứng dụng (nút chức năng, phóng to, thu nhỏ). Bấm vào cửa sổ thì cửa sổ được kích hoạt; đó là hành vi đúng. Các lần kích hoạt muộn 3,8–12 s là do người dùng, không do Electron hay Desktop. Bài học cho lần đo sau: probe đo tiêu điểm chỉ có nghĩa khi không ai chạm máy.
+
+Project Owner chạy `ui18_launch_probe.mjs --runs=20 --show-inactive` ngày 2026-10-07 từ PowerShell của mình: 8/20 lần ứng dụng vào nền trước và `isFocused()` true, **muộn** 3,8–12,1 s (không lần nào ở khoảng 2 s như khi không cờ). Agent đo 2/20 ở phiên 31.
+
+Chia theo tiến trình giữ nền trước lúc mở:
+- tiến trình phụ của probe giữ được: 1/10;
+- cửa sổ PowerShell đã khởi chạy probe: 6/9;
+- ứng dụng khác: 1/1.
+
+**Giả thuyết, chưa đo:** Windows cho tiến trình được khởi chạy từ ứng dụng đang ở nền trước quyền lấy nền trước; chưa biết bên nào gọi việc kích hoạt muộn (Electron, Chromium, hay thao tác của người dùng).
+
+Không ảnh hưởng điều kiện của UI-18: e2e do agent khởi chạy, Project Owner làm việc ở ứng dụng khác, đã xác nhận không bị giành.
+
+**Nếu cần làm:** công cụ đo ghi giờ sự kiện `focus` của `BrowserWindow`, chạy khi chắc chắn không ai chạm máy, để tách nguồn. Chờ Project Owner trả lời có chạm máy trong lần đo ngày 7/10 không.
 
 ## Môi trường và vận hành (không phải việc của coding agent)
 
