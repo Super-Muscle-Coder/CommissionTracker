@@ -14,7 +14,9 @@ export declare function walkthroughRunner(): string
 export declare function evidenceRoot(): string
 export declare function electronBinary(): string
 export declare function makeDataDir(): string
-export declare function launchArgs(dataDir: string, options: { noDialog: boolean }): string[]
+export declare function launchArgs(dataDir: string, options: { noDialog: boolean; showInactive?: boolean }): string[]
+export declare function showInactiveForRun(): boolean
+export declare const SHOW_INACTIVE_LOG_LINE: string
 export declare function portFromLog(log: string): number | null
 export declare function baseUrlFor(port: number): string
 export type WalkthroughSession = { dataDir: string; baseUrl: string; pid: number | null }

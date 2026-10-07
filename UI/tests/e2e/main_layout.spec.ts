@@ -11,9 +11,9 @@ import { createRequire } from 'node:module'
 import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { evidenceRoot } from '../tools/walkthrough_lib.mjs'
+import { evidenceRoot, showInactiveForRun } from '../tools/walkthrough_lib.mjs'
 import { installRestoreGuard } from '../tools/window_guard.mjs'
-import { timedScreenshot } from './walkthrough_harness.js'
+import { expectShowInactiveState, timedScreenshot } from './walkthrough_harness.js'
 
 const UI_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..')
 const DESKTOP_ROOT = path.resolve(UI_ROOT, '..', 'Desktop')
@@ -25,7 +25,7 @@ const APP_TITLE = 'Commission Tracker'
 type DesktopConfig = {
   boundary: { ui_origin: string }
   renderer: { root_dir: string }
-  test_flags: { data_dir: string; no_dialog: string }
+  test_flags: { data_dir: string; no_dialog: string; show_inactive: string }
 }
 const desktopConfig = JSON.parse(
   fs.readFileSync(path.join(DESKTOP_ROOT, 'configs', 'desktop.json'), 'utf8'),
@@ -49,7 +49,9 @@ test('the desktop app loads UI/dist: main frame, no startup error, no CSP violat
   try {
     const app = await electron.launch({
       executablePath: electronBinary,
-      args: [DESKTOP_ROOT, `${flags.data_dir}${dataDir}`, flags.no_dialog],
+      // UI-18: --ct-test-show-inactive unless this run writes evidence (this spec's screenshot
+      // is evidence under UI/evidence/b2a/ when CT_WALKTHROUGH_RUNNER is set); see showInactiveForRun.
+      args: [DESKTOP_ROOT, `${flags.data_dir}${dataDir}`, flags.no_dialog, ...(showInactiveForRun() ? [flags.show_inactive] : [])],
       cwd: DESKTOP_ROOT,
     })
     const electronProcess = app.process()
@@ -76,6 +78,7 @@ test('the desktop app loads UI/dist: main frame, no startup error, no CSP violat
 
       await expect(page.getByRole('heading', { level: 1, name: APP_TITLE })).toBeVisible({ timeout: 60_000 })
       await expect(page.getByRole('main')).toBeVisible()
+      await expectShowInactiveState(() => mainLog)
       await expect(page.getByRole('alert')).toHaveCount(0)
       expect(await page.evaluate('location.origin')).toBe(desktopConfig.boundary.ui_origin)
       const csp = await page.locator('meta[http-equiv="Content-Security-Policy"]').getAttribute('content')

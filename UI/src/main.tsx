@@ -2,8 +2,8 @@
 // workflow: main
 // clause: external
 // component: main
-// last_updated_by: coding-agent@2026-10-04#1
-// last_updated_at: 2026-10-04T13:20:16.5016162+07:00
+// last_updated_by: coding-agent@2026-10-05#2
+// last_updated_at: 2026-10-05T22:41:41.9720404+07:00
 //
 // EXPERIENCES:
 //   - id: main-EXP-001
@@ -421,6 +421,41 @@
 //       expect(loadPending).toHaveBeenCalledTimes(3) nhận 2. Một lần trong 5 lần chạy mốc đầu phiên, lúc máy tải. Nguyên
 //       nhân CHƯA điều tra; giả thuyết (chưa kiểm): dòng 291 đếm lời gọi ngay sau findByText, có thể trước khi lần tải
 //       thứ ba xảy ra, cùng loại với screens-EXP-012 (chờ bằng vi.waitFor thay vì khẳng định ngay).
+//       (Đã xử lý ở phiên 31: xem main-EXP-032.)
+//   - id: main-EXP-031
+//     derived_from: main-EXP-027
+//     content: >
+//       UI-18 phần còn lại (phiên 31): e2e mở ứng dụng với cờ --ct-test-show-inactive của Desktop (DSK-18, main-EXP-024 của
+//       Desktop), để cửa sổ không giành tiêu điểm của người đang dùng máy. Cách làm: walkthrough_lib.mjs, launchArgs nhận thêm
+//       tùy chọn showInactive (mặc định tắt) và đọc chuỗi cờ từ Desktop/configs/desktop.json test_flags.show_inactive, không gõ
+//       thẳng; showInactiveForRun() là NƠI DUY NHẤT quyết định "có bật hay không" (bật khi không có CT_WALKTHROUGH_RUNNER).
+//       walkthrough_harness.ts (launch, mọi spec đi qua) và main_layout.spec.ts (tự dựng mảng tham số) cùng dùng nó.
+//       KHÔNG bật ở chế độ ghi bằng chứng (CT_WALKTHROUGH_RUNNER đặt): ảnh trong UI/evidence phải được chụp trong đúng điều
+//       kiện cũ, vì cửa sổ không có tiêu điểm có thể vẽ vòng tiêu điểm và con trỏ nhập liệu khác đi (đây là lý do, chưa đo
+//       sự khác biệt vì không chạy chế độ ghi bằng chứng). walkthrough_app.mjs (Project Owner chạy tay) KHÔNG đổi: ở đó cửa
+//       sổ phải hiện ra trước mặt người dùng. ui11_probe.mjs, ui18_probe.mjs không đổi (tùy chọn mặc định tắt). Kiểm tự động
+//       việc truyền cờ: expectShowInactiveState (walkthrough_harness.ts) đọc log stderr của Main: có cờ thì phải có dòng
+//       "ready-to-show: showing the window without focus (test flag)" (SHOW_INACTIVE_LOG_LINE trong walkthrough_lib.mjs, chép
+//       từ Desktop/src/main.ts), không cờ (chế độ ghi bằng chứng) thì không được có. Chọn log thay vì win.isFocused() vì
+//       isFocused() hỏng khi người dùng bấm vào cửa sổ; log chỉ cho biết cờ đã tới Main và có hiệu lực. Không thêm ca vào
+//       npm run check vì vitest chỉ nạp src/ và tests/main/ (vite.config.ts), ngoài phạm vi phiên. ui18_launch_probe.mjs thêm
+//       --show-inactive, và cột isFocused() của Electron (chỉ báo tất định) vì số đo nền trước của hệ điều hành thưa
+//       (mốc đo lại: 1/20, trong khi phiên 29 đo 2/3): Windows không phải lần nào cũng trao nền trước cho cửa sổ mới. Probe
+//       nay chạy PowerShell không có -ExecutionPolicy Bypass (như Desktop/tests/helpers.ts, DSK-14), vẫn chạy được. Không
+//       focus(), không moveTop(), không setAlwaysOnTop(), không đổi focusable; không đổi UI/src, Desktop/, không cờ --ct-test-*
+//       mới. Giới hạn cần biết: có cờ, 2/20 lần đo vẫn thấy isFocused() true sau 3,0 s và 4,9 s (lần thử một-lần trước đó: 7,7 s),
+//       không phải lúc hiện cửa sổ; trong mã Desktop chỉ toast và second-instance gọi focus() (không xảy ra trong probe), nên
+//       nguồn nhiều khả năng là thao tác của người dùng hoặc hệ điều hành; không phân tách được. 10 lượt e2e: 1/1070 lần chụp
+//       ghi focused:true (lượt 10, payment_form-S6), cùng nguyên nhân chưa rõ.
+//   - id: main-EXP-032
+//     derived_from: main-EXP-030
+//     content: >
+//       UI-19 (phiên 31): ca D6 của src/screens/tests/app_root.test.tsx hỏng ngắt quãng ở khẳng định ngay sau findByText
+//       ("Đã lưu cài đặt nhắc việc."). Nguyên nhân: câu đó đến từ chính lần điều hướng và hiện ngay khi reminder_list dựng xong,
+//       còn lần gọi loadPending thứ ba nằm trong một effect chạy sau; findByText trả về trước effect đó thì loadPending mới được
+//       gọi 2 lần. Sửa: chờ bằng await vi.waitFor(() => expect(loadPending).toHaveBeenCalledTimes(3)) (thêm vi vào import);
+//       điều ca khẳng định không đổi: đúng ba lần gọi, câu vẫn hiện đúng một lần (findByText báo lỗi nếu có hai), sau khi sang
+//       "Khách hàng" câu không còn. Không nới testTimeout, không retries, không bỏ ca. Chỉ sửa tệp kiểm thử; không đổi UI/src.
 //
 // UNSOLVED_PROBLEMS: []
 //
@@ -948,19 +983,71 @@
 //       byte, giờ ghi 2026-09-28 21:09, không đổi. git status chỉ có tệp trong UI/. Không eslint-disable, không ngoại lệ
 //       lint mới, không phụ thuộc mới. Câu trả lời của Project Owner về tiêu điểm (sau 10 lượt): CÒN bị giành tiêu điểm và chiếm phím, dù chỉ 2 lần mở lại trong 10 lượt. UI-18 CHƯA đạt tiêu chí cuối (xem NOTES).
 //     recorded_at: 2026-10-04T12:56:44.6836972+07:00
+//   - claim: >
+//       Phiên 31, môi trường và mốc đầu phiên; mốc %APPDATA% và UI/evidence không đổi suốt phiên.
+//     how: >
+//       node --version; npm --version; Backend/env/Scripts/python.exe --version; git status --short; trong UI/: npm ci;
+//       npm run check ×5; trong Desktop/: npm run build; trong UI/: npm run e2e KHÔNG đặt CT_WALKTHROUGH_RUNNER; PowerShell:
+//       SHA-256 từng tệp UI/evidence (120 tệp); tên, kích thước, giờ ghi, SHA-256 mọi tệp trong %APPDATA%\CommissionTracker, ở
+//       đầu phiên (20:5x) và cuối phiên (22:3x), so từng dòng.
+//     result: >
+//       Node v24.14.1; npm 11.11.0; Python 3.13.12; git status đầu phiên trống; npm ci có "5 high severity vulnerabilities" (ENV-7,
+//       không chạy npm audit fix). Mốc: check 5/5 đạt, "Tests 1555 passed (1555)" mỗi lần (35 tệp), UI-19 hỏng 0/5; e2e "70 passed
+//       (5.4m)", 107 lần chụp, 0 lần chụp lỗi, 1 lần mở lại cửa sổ (progress_board-S4-unreachable). UI/evidence: 120 tệp, 0 khác
+//       biệt đầu so với cuối. %APPDATA%\CommissionTracker: data.db 114688 byte, data.db.lock 0 byte, giờ ghi 2026-09-28
+//       14:09:42 UTC, cùng SHA-256: 0 khác biệt; thư mục "Commission Tracker" (hồ sơ Chromium) giờ ghi 2026-10-05 03:45 UTC, không đổi.
+//     recorded_at: 2026-10-05T22:42:13.1836006+07:00
+//   - claim: >
+//       UI-18: bảng đo hai cách khởi động ứng dụng (không cờ / có --ct-test-show-inactive) khi một tiến trình khác giữ nền
+//       trước; kiểm tự động việc truyền cờ; phép cắn.
+//     how: >
+//       Trong UI/: node tests/tools/ui18_launch_probe.mjs --runs=20 (mốc đo bằng bản probe cũ, rồi bản mới không cờ), rồi
+//       node tests/tools/ui18_launch_probe.mjs --runs=20 --show-inactive. Mỗi lần: tiến trình PowerShell xin nền trước, mở ứng
+//       dụng như harness e2e, đọc chủ nền trước (GetForegroundWindow) và win.isFocused() mỗi 150 ms trong 12 s. Máy đang có
+//       người dùng. Kiểm tự động: npx playwright test -c tests/e2e/playwright.config.ts main_layout client_list_walkthrough
+//       (khẳng định expectShowInactiveState). Phép cắn: tạm sửa harness thành showInactive: false và bỏ cờ khỏi mảng tham số
+//       của main_layout.spec.ts (bản sao lưu ở thư mục tạm, đã khôi phục), chạy lại cùng lệnh.
+//     result: >
+//       cách / số lần / ứng dụng vào nền trước / isFocused() true: mốc bản probe cũ (không cờ) 20 / 1 (lần 18, sau 4379 ms) /
+//       không đo; không cờ (probe mới) 20 / 0 / 20 (lần đầu ở 1917-2366 ms); có cờ 20 / 2 (lần 5 sau 4935 ms, lần 6 sau 3054 ms)
+//       / 2 (4939 ms, 3056 ms). Lần thử một-lần trước đó (không tính vào bảng, để kiểm probe chạy khi bỏ -ExecutionPolicy Bypass):
+//       có cờ, vào nền trước và isFocused() ở 7679 ms và 7693 ms. Đọc số: cờ chặn việc kích hoạt lúc hiện cửa sổ (isFocused()
+//       từ 20/20 xuống 2/20, hai lần còn lại muộn 3-8 s, không phải lúc hiện cửa sổ; nguồn chưa rõ, xem main-EXP-031). Số đo nền
+//       trước của hệ điều hành một mình cắn yếu (mốc chỉ 1/20) nên cột isFocused() là chỉ báo chính. Kiểm tự động dương tính:
+//       "6 passed (35.3s)" (main_layout và các ca của client_list_walkthrough). Phép cắn: "2 failed", cả hai hỏng đúng ở "the
+//       desktop Main did not log that it showed the window without focus" sau 30 s (client_list S1 và main_layout); báo cáo chỉ
+//       có dòng "2 failed" (không kiểm các ca còn lại của client_list_walkthrough có chạy hay không); lần đo probe không cờ ở trên chính là mức
+//       mốc mà việc bỏ cờ đưa về. Mảng tham số của hai nơi đã khôi phục (đối chiếu bằng grep).
+//     recorded_at: 2026-10-05T22:42:13.1836006+07:00
+//   - claim: >
+//       UI-19: số đo 50 lần trước và sau, phép cắn tất định.
+//     how: >
+//       Trong UI/: 50 lần npx vitest run src/screens/tests/app_root.test.tsx trước khi sửa, rồi 50 lần sau. Phép cắn: hai bản
+//       tạm trong src/screens/tests/ (đã xóa): bản cũ (git show HEAD) và bản mới, đều bọc loadPending của ca D6 để mỗi lời gọi
+//       tới spy chậm 50 ms (setTimeout), chạy mỗi bản 3 lần.
+//     result: >
+//       Trước: 1/50 hỏng (lần 17), "expected vi.fn() to be called 3 times, but got 2 times" tại app_root.test.tsx:291, đúng điều
+//       kiện của UI-19. Sau: 0/50. Phép cắn: bản cũ "1 failed | 8 passed (9)" 3/3 lần với cùng thông báo (3 lần, nhận 2); bản mới
+//       "9 passed (9)" 3/3 lần. Đã xóa hai bản tạm (git status chỉ còn tệp phiên này).
+//     recorded_at: 2026-10-05T22:42:13.1836006+07:00
+//   - claim: >
+//       Điều kiện cuối phiên 31: check 10 lần, e2e 10 lượt trong lúc Project Owner dùng máy, UI/evidence và %APPDATA% không đổi.
+//     how: >
+//       Trong UI/: tập lệnh chạy npm run check 10 lần liên tiếp (dừng ở lần hỏng đầu), rồi 10 lần npm run e2e KHÔNG đặt
+//       CT_WALKTHROUGH_RUNNER, từng lượt một, dừng ở lượt hỏng đầu, chép test-results/screenshot-timing.log và
+//       window-restore.log của từng lượt ra ngoài. Lượt e2e 1 bắt đầu 2026-10-05T21:38:20+07:00, lượt 10 kết thúc 22:31:34+07:00.
+//       Hỏi Project Owner sau 10 lượt. SHA-256 UI/evidence và tệp %APPDATA%\CommissionTracker so với mốc.
+//     result: >
+//       check 10/10 đạt, "Tests 1555 passed (1555)" mỗi lần, từ 21:30:02 đến 21:37:14. e2e 10/10 "70 passed" (4,8-5,9 phút), mỗi
+//       lượt 107 lần chụp: 0 lần chụp lỗi hay hết giờ (lớn nhất 191 ms), 0 lần chụp ghi minimized:true (người dùng không thu nhỏ
+//       cửa sổ trong lượt nào), 0 lần công cụ phải mở lại cửa sổ (window-restore.log không có dòng), 1 lần ghi focused:true trên
+//       1070 lần chụp (lượt 10, payment_form-S6; nguyên nhân chưa rõ). Mọi lần hết giờ chụp ảnh: không có, nên không có trạng
+//       thái cửa sổ nào để ghi. UI/evidence 120 tệp, 0 khác biệt; %APPDATA%\CommissionTracker 0 khác biệt. Câu trả lời của
+//       Project Owner về tiêu điểm (hỏi sau 10 lượt, chọn trong hộp thoại): "Không còn bị giành". UI-18 đạt tiêu chí cuối.
+//       Không eslint-disable, không ngoại lệ lint mới, không phụ thuộc mới.
+//     recorded_at: 2026-10-05T22:42:13.1836006+07:00
 //
 // NOTES:
-//   - content: >
-//       UI-18 CHƯA ĐÓNG (phiên 29): Project Owner xác nhận sau 10 lượt e2e rằng cửa sổ ứng dụng vẫn nhảy lên giành tiêu
-//       điểm và chiếm phím. showInactive() đã loại việc mở lại (chỉ 2 lần trong 10 lượt), nên nguồn chính là LÚC KHỞI ĐỘNG
-//       ứng dụng: Desktop/src/main.ts tạo BrowserWindow hiện thường (không show:false, không showInactive), và mỗi spec
-//       e2e khởi động ứng dụng riêng (khoảng 16 lần mỗi lượt). Số đo tests/tools/ui18_launch_probe.mjs (3 lần, máy đang
-//       dùng): ứng dụng vào nền trước 2/3 lần, sau 2322 ms và 3835 ms kể từ lệnh khởi động; lần thứ ba không (12 s). Hạn
-//       chế của số đo: tiến trình PowerShell mồi KHÔNG giữ được nền trước (ứng dụng của Project Owner giữ nó), nên chỉ khẳng
-//       định "khởi động giành nền trước từ ứng dụng khác", chưa tách được từng nguyên nhân phụ. Không chữa được trong
-//       UI/: cần đổi cách Desktop mở cửa sổ (ví dụ show:false rồi showInactive) hoặc một cờ --ct-test-*, cả hai ngoài
-//       phiên này. Đề xuất cho Orchestrator: mục mới (có thể ở Desktop), hoặc chấp nhận cho V1 và chạy e2e lúc không dùng máy.
-//     written_at: 2026-10-04T13:20:16.5016162+07:00
 //   - content: >
 //       UI.esproj: StartupCommand = npm run build (giao diện không tự chạy được;
 //       chạy thật là npm run build trong UI/ rồi npm start trong Desktop/),

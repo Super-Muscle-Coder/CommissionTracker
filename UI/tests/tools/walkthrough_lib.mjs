@@ -43,9 +43,30 @@ export function walkthroughRunner() {
 // under UI/test-results/, which git ignores, so committed evidence is never
 // overwritten by a run nobody signed.
 export function evidenceRoot() {
-  const named = (process.env[RUNNER_VARIABLE] ?? '').trim() !== ''
-  return named ? path.join(UI_ROOT, 'evidence') : path.join(UI_ROOT, 'test-results', 'evidence')
+  return isEvidenceRun() ? path.join(UI_ROOT, 'evidence') : path.join(UI_ROOT, 'test-results', 'evidence')
 }
+
+// A run that writes the evidence kept in git: CT_WALKTHROUGH_RUNNER names the runner.
+function isEvidenceRun() {
+  return (process.env[RUNNER_VARIABLE] ?? '').trim() !== ''
+}
+
+// UI-18 (session 31): whether an automated run opens the app WITHOUT taking the
+// foreground (the Desktop test flag --ct-test-show-inactive, DSK-18), so that it does
+// not take the focus, and the keys, of the person using the machine. Yes for every
+// regression run (no CT_WALKTHROUGH_RUNNER). No for a run that writes evidence: the
+// images kept in UI/evidence must be taken under the conditions they were taken
+// under so far, and a window without focus may draw its focus ring and its text
+// caret differently. The manual tool walkthrough_app.mjs never asks for it either:
+// there the window must appear in front of the person.
+export function showInactiveForRun() {
+  return !isEvidenceRun()
+}
+
+// The line the desktop Main logs on stderr when it shows the window without
+// focus (Desktop/src/main.ts, checkpoint main-EXP-024). A test reads it to know
+// the flag reached Main and took effect.
+export const SHOW_INACTIVE_LOG_LINE = 'ready-to-show: showing the window without focus (test flag)'
 
 // require('electron') from Node answers the path of the Electron binary.
 export function electronBinary() {
@@ -57,7 +78,9 @@ export function makeDataDir() {
 }
 
 // Arguments of the Electron binary: the desktop app, with the fixture as backend.
-export function launchArgs(dataDir, { noDialog }) {
+// showInactive (UI-18) adds the Desktop flag test_flags.show_inactive, read from
+// Desktop/configs/desktop.json; it is off unless the caller asks.
+export function launchArgs(dataDir, { noDialog, showInactive = false }) {
   const flags = desktopConfig.test_flags
   return [
     DESKTOP_ROOT,
@@ -65,6 +88,7 @@ export function launchArgs(dataDir, { noDialog }) {
     `${flags.backend_script}${FIXTURE}`,
     `${flags.backend_working_dir}${BACKEND_ROOT}`,
     ...(noDialog ? [flags.no_dialog] : []),
+    ...(showInactive ? [flags.show_inactive] : []),
   ]
 }
 

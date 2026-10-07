@@ -27,10 +27,25 @@ import {
   makeDataDir,
   portFromLog,
   seedSampleData,
+  SHOW_INACTIVE_LOG_LINE,
+  showInactiveForRun,
   walkthroughRunner,
   writeSession,
 } from '../tools/walkthrough_lib.mjs'
 import { drainRestores, installRestoreGuard } from '../tools/window_guard.mjs'
+
+// UI-18 (session 31): a regression run opens the app with the Desktop flag
+// --ct-test-show-inactive, so that no window takes the foreground from the person using
+// the machine; a run that writes evidence (CT_WALKTHROUGH_RUNNER) does not (see
+// showInactiveForRun). Both the harness and main_layout.spec.ts check, from the Main log,
+// that the flag reached Main and took effect (or, for evidence, that it did not).
+export async function expectShowInactiveState(log: () => string): Promise<void> {
+  if (showInactiveForRun()) {
+    await expect.poll(() => log().includes(SHOW_INACTIVE_LOG_LINE), { timeout: 30_000, message: 'the desktop Main did not log that it showed the window without focus' }).toBe(true)
+  } else {
+    expect(log(), 'an evidence run must show the window as before').not.toContain(SHOW_INACTIVE_LOG_LINE)
+  }
+}
 
 // The app of the running spec (one launch per spec file, so one per process):
 // the screenshot timing log reads the state of its window through it (UI-11).
@@ -51,7 +66,7 @@ export async function launch(options: { seed: boolean }): Promise<Launched> {
   let app: ElectronApplication | null = null
   let log = ''
   try {
-    app = await electron.launch({ executablePath: electronBinary(), args: launchArgs(dataDir, { noDialog: true }), cwd: DESKTOP_ROOT })
+    app = await electron.launch({ executablePath: electronBinary(), args: launchArgs(dataDir, { noDialog: true, showInactive: showInactiveForRun() }), cwd: DESKTOP_ROOT })
     launchedApp = app
     const proc = app.process()
     const exited = new Promise<number | null>((resolve) => proc.once('exit', (code) => resolve(code)))
@@ -67,6 +82,7 @@ export async function launch(options: { seed: boolean }): Promise<Launched> {
     // Let the desktop Main's first load finish, and the start page's first list
     // load end: the data folder is new, so the loaded content is the empty state.
     await expect(page.getByRole('heading', { level: 2, name: 'Khách hàng' })).toBeVisible({ timeout: 60_000 })
+    await expectShowInactiveState(() => log)
     await page.waitForLoadState('load')
     await expect(page.getByText(EMPTY_LIST_TEXT)).toBeVisible({ timeout: 30_000 })
     await expect(page.getByRole('status')).toHaveCount(0)

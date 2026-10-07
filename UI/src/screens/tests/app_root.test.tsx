@@ -8,7 +8,7 @@
 // wrong parameter is a compile error (checked by tsc -b: each wrong route
 // below carries an expect-error directive, and tsc fails on an unused one).
 import { cleanup, fireEvent, screen, within } from '@testing-library/react'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import type {
   ClientDetailView,
   ClientFormDraft,
@@ -288,7 +288,10 @@ describe('AppRoot', () => {
     fireEvent.click(screen.getAllByRole('button', { name: 'Cài đặt nhắc việc' })[0])
     fireEvent.click(await screen.findByRole('button', { name: 'Lưu' }))
     expect(await screen.findByText('Đã lưu cài đặt nhắc việc.')).toBeTruthy()
-    expect(loadPending).toHaveBeenCalledTimes(3)
+    // The notice comes from the navigation itself and shows as soon as reminder_list is built; the
+    // third read of the list is made by an effect that runs after it (UI-19, same kind as
+    // screens-EXP-012): wait for that call instead of asserting right after the notice. Still three.
+    await vi.waitFor(() => expect(loadPending).toHaveBeenCalledTimes(3))
     fireEvent.click(within(screen.getByRole('navigation')).getByRole('button', { name: 'Khách hàng' }))
     expect(await screen.findByRole('heading', { level: 2, name: 'Khách hàng' })).toBeTruthy()
     expect(screen.queryByText('Đã lưu cài đặt nhắc việc.')).toBeNull()
