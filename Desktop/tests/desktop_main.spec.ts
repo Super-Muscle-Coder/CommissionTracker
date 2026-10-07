@@ -62,9 +62,10 @@ test('1. success path with the real backend: READY, bridge, origin, GET /clients
   expect(log.lines(/backend READY on port/)).toHaveLength(1)
   expect(log.lines(/backend stdout \(unexpected\)/)).toEqual([])
 
-  // The bridge: one frozen object, one property, nothing of Node.
+  // The bridge: one frozen object, two properties (backendBaseUrl and, since
+  // the first ipc entry exists, invoke), nothing of Node.
   const bridge = JSON.parse(await page.locator('#bridge').innerText())
-  expect(bridge).toEqual({ keys: ['backendBaseUrl'], frozen: true, invoke: 'undefined', nodeRequire: 'undefined', nodeProcess: 'undefined' })
+  expect(bridge).toEqual({ keys: ['backendBaseUrl', 'invoke'], frozen: true, invoke: 'function', nodeRequire: 'undefined', nodeProcess: 'undefined' })
   const baseUrl = await page.locator('#backend-base-url').innerText()
   expect(baseUrl).toBe(`http://${HOST}:${readyPort}`)
   const reassigned = await page.evaluate((name) => {

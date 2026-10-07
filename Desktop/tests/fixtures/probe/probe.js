@@ -49,6 +49,18 @@ async function runProbe() {
   document.getElementById('done').hidden = false
 }
 
+// "Chọn thư mục": the answer (or the rejection) of the native folder dialog,
+// shown as it arrives.
+document.getElementById('pick-folder').addEventListener('click', async () => {
+  show('pick-folder-answer', '(waiting for the dialog)')
+  try {
+    const answer = await window[BRIDGE_NAME].invoke('dialog:pick-folder', {})
+    show('pick-folder-answer', JSON.stringify(answer))
+  } catch (err) {
+    show('pick-folder-answer', 'rejected: ' + (err && err.message ? err.message : String(err)))
+  }
+})
+
 window.addEventListener('error', (event) => addError('error: ' + event.message))
 window.addEventListener('unhandledrejection', (event) => addError('unhandled rejection: ' + String(event.reason)))
 document.getElementById('rerun').addEventListener('click', () => {

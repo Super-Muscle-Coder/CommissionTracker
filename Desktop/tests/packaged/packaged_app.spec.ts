@@ -503,3 +503,43 @@ test('P8. DSK-17: a real Windows toast from the package: shown or failed is repo
     console.log(second.log.text)
   }
 })
+
+test('P9. desktop session 33: the packaged bridge has invoke; dialog:pick-folder answers 200 for a chosen folder and a cancel (dialog replaced); an unknown address is rejected', async () => {
+  const bridge: string = config.boundary.renderer_bridge
+  const address: string = config.native_dialogs.pick_folder.address
+  await withPackaged(async (l) => {
+    const tree = await expectPackagedRun(l)
+    const shape = await l.page.evaluate((name) => {
+      const b = (window as unknown as Record<string, Record<string, unknown>>)[name]
+      return { keys: Object.keys(b), frozen: Object.isFrozen(b), invoke: typeof b.invoke }
+    }, bridge)
+    expect(shape).toEqual({ keys: ['backendBaseUrl', 'invoke'], frozen: true, invoke: 'function' })
+
+    const invoke = (addr: string, arg: unknown) =>
+      l.page.evaluate(
+        async ({ name, addr, arg }) => {
+          const b = (window as unknown as Record<string, { invoke: (a: string, b?: unknown) => Promise<unknown> }>)[name]
+          try {
+            return { ok: true, value: await b.invoke(addr, arg) }
+          } catch (err) {
+            return { ok: false, message: err instanceof Error ? err.message : String(err) }
+          }
+        },
+        { name: bridge, addr, arg },
+      )
+    // The real folder dialog is replaced inside the Main: nothing opens on screen.
+    const stub = (answer: { canceled: boolean; filePaths: string[] }) =>
+      l.app.evaluate(({ dialog }, a) => {
+        ;(dialog as unknown as { showOpenDialog: () => Promise<unknown> }).showOpenDialog = async () => a
+      }, answer)
+
+    const chosen = path.join(l.dataDir, 'chosen folder')
+    await stub({ canceled: false, filePaths: [chosen] })
+    expect(await invoke(address, {})).toEqual({ ok: true, value: { status: 200, body: { canceled: false, path: chosen } } })
+    await stub({ canceled: true, filePaths: [] })
+    expect(await invoke(address, {})).toEqual({ ok: true, value: { status: 200, body: { canceled: true, path: null } } })
+    expect(await invoke('dialog:open-file', {})).toEqual({ ok: false, message: expect.stringMatching(/ipc address not implemented/) })
+    expect(l.log.text).not.toMatch(/FATAL/)
+    await closeWindow(l, tree)
+  })
+})

@@ -2,8 +2,8 @@
 // workflow: main
 // clause: clause_d_desktop
 // component: main
-// last_updated_by: coding-agent@2026-10-05#1
-// last_updated_at: 2026-10-05T11:16:31.4746772+07:00
+// last_updated_by: coding-agent@2026-10-07#2
+// last_updated_at: 2026-10-07T15:33:24.1521449+07:00
 //
 // EXPERIENCES:
 //   - id: main-EXP-001
@@ -42,7 +42,8 @@
 //       window.commissionTracker không đổi được giá trị. tsc xuất
 //       "use strict" + exports cho preload.js và preload sandbox chạy được tệp
 //       đó. Không dùng IPC đồng bộ: không cần kênh nào, nên không có kênh để
-//       lộ ra.
+//       lộ ra. (Từ phiên 33 bridge có thêm invoke và preload nhận thêm đối số
+//       --ct-ipc-addresses=: xem main-EXP-029.)
 //   - id: main-EXP-003
 //     content: >
 //       protocol.handle('app'). Scheme được đăng ký standard, secure,
@@ -204,7 +205,8 @@
 //       trong URL. CSP do UI tự đặt bằng thẻ meta (connect-src
 //       http://127.0.0.1:*); vì vậy từ renderer của giao diện thật không fetch
 //       được app://... (kiểm thử phải dùng net.fetch ở tiến trình chính). Bridge
-//       đọc từ window.commissionTracker.backendBaseUrl, chưa có invoke.
+//       đọc từ window.commissionTracker.backendBaseUrl; từ phiên 33 có thêm
+//       invoke (main-EXP-029).
 //   - id: main-EXP-013
 //     content: >
 //       Công cụ đóng gói (npm run dist = build, rồi node
@@ -504,31 +506,55 @@
 //       chồng nhau), tests/fixtures/foreground_holder.ps1. Stderr của Main chỉ gắn
 //       sau launch() (main-EXP-014): dòng "main started" bị mất, lấy PID Main bằng
 //       app.evaluate(() => process.pid).
+//   - id: main-EXP-029
+//     content: >
+//       invoke trong bridge và native_dialogs trong Main (phiên 33; lối vào ipc
+//       đầu tiên, API Contract 4.0.0 endpoint_forms.ipc; mã của thành phần ở
+//       src/cross_cutting/native_dialogs/, khối checkpoint riêng ở đó). Bridge
+//       window.commissionTracker vẫn đóng băng và có đúng hai khóa:
+//       backendBaseUrl và invoke(address, argument). Preload (sandbox, chỉ
+//       require được 'electron') chuyển lời gọi sang ipcRenderer.invoke; renderer
+//       không bao giờ chạm ipcRenderer. Danh sách địa chỉ đã hiện thực đi từ Main
+//       sang preload qua đối số thứ ba của additionalArguments,
+//       --ct-ipc-addresses=dialog:pick-folder (các địa chỉ cách nhau bằng dấu
+//       phẩy); tên đối số nằm ở desktop.json preload.arguments.ipc_addresses và,
+//       như hai đối số cũ, được viết lại thành hằng số trong preload.ts (phải
+//       trùng). Địa chỉ ngoài danh sách (hay không phải chuỗi): preload trả
+//       Promise bị từ chối "ipc address not implemented: <địa chỉ>", không gửi gì
+//       sang Main; đó là lỗi lập trình của bên gọi, không phải một nhãn kết quả
+//       của hợp đồng. Địa chỉ và tiêu đề của pick_folder nằm ở desktop.json
+//       native_dialogs.pick_folder; danh sách địa chỉ của Main được dựng từ đó.
+//       Thứ tự trong startLayer: backend READY, kiểm thư mục giao diện,
+//       protocol.handle, rồi registerNativeDialogs (trình xử lý ipc), rồi mới tạo
+//       BrowserWindow (.design/03_classification.md: native_dialogs sẵn sàng trước
+//       khi mở cửa sổ). registerNativeDialogs nhận getMainWindow: () => mainWindow,
+//       nên dùng đúng cửa sổ đang mở. Ca 1 của npm test khẳng định bridge nay có
+//       keys ['backendBaseUrl','invoke'] và invoke 'function' (dòng cũ: keys
+//       ['backendBaseUrl'], invoke 'undefined'); các khẳng định khác của ca 1
+//       không đổi. Trang thử tests/fixtures/probe có thêm nút "Chọn thư mục" cho
+//       Project Owner (npm run probe). electron-builder.yml không cần sửa:
+//       dist/cross_cutting/**/*.js (main-EXP-027) đã phủ native_dialogs, và
+//       @electron/asar listPackage xác nhận. Hộp thoại lỗi fatal của Main
+//       (showErrorBox) và --ct-test-no-dialog không liên quan tới hộp thoại chọn
+//       thư mục.
+//   - id: main-EXP-030
+//     derived_from: main-PROB-002
+//     content: >
+//       Hồ sơ Chromium %APPDATA%\Commission Tracker đổi giữa mốc đầu và cuối phiên
+//       30 (chuyển từ vấn đề của phiên 30 theo DSK-19; id main-PROB-001 của vấn đề
+//       đó trùng với id đã dùng ở phiên 26 nên đổi thành main-PROB-002 rồi đúc kết
+//       ở đây). Nguồn đã được Project Owner xác nhận (2026-10-05): anh tự cài bản mới
+//       đè lên bản cũ rồi mở thử, đúng các thời điểm 21:05 ngày 4/10 và 10:45 ngày
+//       5/10 mà các dòng đổi mang. Đó là bản cài lỗi (thiếu dist\cross_cutting, Main
+//       ném lỗi trước setPath, main-EXP-027), không phải kiểm thử; ba thí nghiệm có
+//       kiểm soát của phiên 30 (một ca npm test, test:packaged P1 và P7) cho 0 dòng
+//       đổi, khớp. Thư mục dữ liệu thật %APPDATA%\CommissionTracker (data.db,
+//       data.db.lock) giống hệt (kích thước, thời điểm ghi, SHA-256). Cách đọc tiêu
+//       chí "mốc %APPDATA% giống nhau": so cả hai thư mục; hồ sơ Chromium chỉ đổi khi
+//       người vận hành mở ứng dụng không có --ct-test-data-dir (bản cài hoặc exe) giữa
+//       hai mốc. Phiên 33: hai mốc giống hệt ở cả hai thư mục (69 dòng, 0 khác biệt).
 //
-// UNSOLVED_PROBLEMS:
-//   - id: main-PROB-001
-//     description: >
-//       Thư mục %APPDATA%\Commission Tracker (hồ sơ Chromium theo productName,
-//       không phải thư mục dữ liệu CommissionTracker) đổi 49 dòng giữa mốc đầu
-//       và mốc cuối phiên 30, nên tiêu chí "mốc %APPDATA% giống nhau" không đạt
-//       theo câu chữ. Thư mục dữ liệu thật %APPDATA%\CommissionTracker (data.db,
-//       data.db.lock) GIỐNG HỆT (cùng kích thước, thời điểm ghi, SHA-256).
-//     attempts:
-//       - attempt: 1
-//         agent: coding-agent@2026-10-05#1
-//         tried: >
-//           Ba thí nghiệm có kiểm soát, mỗi cái chụp thư mục trước và sau: một ca
-//           npm test dùng _electron.launch (ca 1), test:packaged P1 (bản đóng gói,
-//           _electron.launch), test:packaged P7 (bản đóng gói, spawn trực tiếp).
-//         result: >
-//           Cả ba: 0 dòng đổi. Thời điểm ghi mới nhất của các dòng đổi là
-//           2026-10-04T14:05Z và 2026-10-05T03:45Z (tức 21:05 và 10:45 giờ máy),
-//           nằm trong khoảng Project Owner đang thử thủ công trên máy; UI npm run
-//           e2e (3 lượt, 11:00-11:14) không ghi gì sau 10:45. Nguồn nhiều khả
-//           năng là bản đã cài do Project Owner mở, nhưng CHƯA xác nhận.
-//     next_suggested: >
-//       Hỏi Project Owner có mở bản đã cài lúc 21:05 ngày 4/10 và 10:45 ngày 5/10
-//       không, và có kèm --ct-test-data-dir không; ghi mốc mới sau lần xác nhận.
+// UNSOLVED_PROBLEMS: []
 //
 // EVIDENCE:
 //   - claim: >
@@ -1144,37 +1170,45 @@
 //       nguồn trước lần sửa cuối của khối checkpoint này.
 //     recorded_at: 2026-10-05T11:16:31.4746772+07:00
 //   - claim: >
-//       Phiên 30, chạy toàn bộ với AVG và ReasonLabs bật: lint, npm test 3 lượt
-//       liên tiếp, UI npm run e2e 3 lượt liên tiếp, UI/evidence không đổi.
+//       Phiên 33, chạy toàn bộ với AVG và ReasonLabs bật: lint, npm test 3 lượt
+//       liên tiếp, dist từ trạng thái sạch, test:packaged, UI npm run e2e,
+//       UI/evidence không đổi.
 //     how: >
-//       cd Desktop; npm run lint; npm test (3 lần liên tiếp). cd UI; npm run build;
-//       npm run e2e (CT_WALKTHROUGH_RUNNER không đặt; 3 lần liên tiếp, từng lần
-//       một); git status --short UI/evidence.
+//       cd Desktop; npm run lint; npm test (3 lần liên tiếp); xóa packaging\stage và
+//       release; ELECTRON_BUILDER_CACHE trỏ vào thư mục tạm; npm run dist; npm run
+//       test:packaged. cd UI; npm run build; npm run e2e (CT_WALKTHROUGH_RUNNER không
+//       đặt; một lượt); git status --short UI/evidence.
 //     result: >
-//       lint sạch. npm test: 31 passed ở cả ba lượt (3,7; 3,7; 3,8 phút), sau bộ
-//       không còn python.exe của dự án (17 ca cũ cộng 14 ca mới: ca 15, 16 của
-//       show_inactive; A1-A4, B1, B2, C1-C4, D1, D2 của reminder_ticker). Một
-//       lượt chạy trước đó hỏng 1 ca (ca 16: focused false ở 1/5 lượt vì người
-//       dùng đổi cửa sổ giữa chừng); đã nới khẳng định đó (main-EXP-024) rồi chạy
-//       lại ba lượt. UI npm run e2e: 70 passed ở cả ba lượt (5,0; 4,9; 4,9 phút),
-//       cùng thông báo Windows thật ở các lượt có reminder_list; git status
-//       --short UI/evidence trống.
-//     recorded_at: 2026-10-05T11:16:31.4746772+07:00
+//       lint sạch, không ngoại lệ eslint mới. npm test: 40 passed ở cả ba lượt (4,1;
+//       4,1; 4,2 phút), sau bộ không còn python.exe của dự án (31 ca cũ cộng 9 ca
+//       native_dialogs: N1-N9; ca 1 sửa một khẳng định, main-EXP-029). Mốc đầu phiên
+//       trên mã cũ: 31 passed (4,1 phút). npm run dist: lần đầu hỏng ở NSIS với EXDEV
+//       (sandbox của agent, như phiên 14, 26, 30; electron-builder đã dọn "stale
+//       extracting state" của nsis-3.0.4.1 và 7zip@1.0.0 trong
+//       %LOCALAPPDATA%\electron-builder\Cache trước khi hỏng, nên lần dist sau ngoài
+//       sandbox sẽ tải lại hai gói đó); với cache tạm thoát mã 0 sau khoảng 1,2 phút,
+//       sinh Commission Tracker Setup 0.1.0.exe và win-unpacked. app.asar có
+//       dist\main.js, preload.js, cross_cutting\native_dialogs\{native_dialogs,
+//       request_checks}.js, cross_cutting\reminder_ticker\{reminder_ticker,
+//       toast_text}.js. test:packaged: 9 passed (1,1 phút; P1-P8 và P9). UI npm run
+//       e2e: 70 passed (5,1 phút); git status --short UI/evidence trống. Các số là
+//       của mã nguồn trước lần sửa cuối của các khối checkpoint (chỉ đổi chú thích).
+//     recorded_at: 2026-10-07T15:33:24.1521449+07:00
 //   - claim: >
 //       Không test hay lần chạy nào của phiên đụng thư mục dữ liệu thật
 //       %APPDATA%\CommissionTracker.
 //     how: >
-//       PowerShell: liệt kê mọi tệp của %APPDATA%\CommissionTracker và
-//       %APPDATA%\Commission Tracker với kích thước, LastWriteTimeUtc, SHA-256, chụp
-//       lúc 2026-10-04T20:08:53+07:00 và 2026-10-05T11:14:47+07:00, so từng dòng;
-//       thêm ba thí nghiệm một-ca (xem main-PROB-001).
+//       PowerShell (script tạm ngoài dự án): liệt kê mọi tệp của
+//       %APPDATA%\CommissionTracker và %APPDATA%\Commission Tracker với kích thước,
+//       LastWriteTimeUtc và (cho CommissionTracker) SHA-256, chụp lúc
+//       2026-10-07T14:51:57.9364677+07:00 (đầu phiên) và 2026-10-07T15:32:41.4902860+07:00
+//       (cuối phiên, sau npm test, dist, test:packaged và UI e2e), so từng dòng. Lần
+//       npm run probe của Project Owner chạy giữa hai mốc, với --ct-test-data-dir tạm.
 //     result: >
-//       CommissionTracker: hai dòng (data.db 114688 byte, ghi
-//       2026-09-28T14:09:42.7922654Z, SHA-256 B1996554...390B, và data.db.lock)
-//       GIỐNG HỆT. Commission Tracker (hồ sơ Chromium): 70 dòng đầu phiên, 71 dòng
-//       cuối phiên, 49 dòng khác, mới nhất ghi lúc 2026-10-05T03:45Z; ba thí
-//       nghiệm cho 0 dòng đổi, nguồn chưa xác định (main-PROB-001).
-//     recorded_at: 2026-10-05T11:16:31.4746772+07:00
+//       Cả hai thư mục: 69 dòng ở mỗi mốc, 0 dòng khác nhau. CommissionTracker: data.db
+//       114688 byte, ghi 2026-09-28T14:09:42.7922654Z, SHA-256 B1996554...390B, và
+//       data.db.lock; không đổi.
+//     recorded_at: 2026-10-07T15:33:24.1521449+07:00
 //
 // NOTES:
 //   - content: >
@@ -1266,7 +1300,9 @@
  * window with the preload script, and stop the backend (close its stdin)
  * before the app exits (data_schema.yaml, clause_a_common.mandatory_rules).
  * It also starts the cross-cutting reminder_ticker once the backend is READY
- * and the window has loaded, and stops it before the backend. No workflow of
+ * and the window has loaded, and stops it before the backend. It registers the
+ * cross-cutting entry native_dialogs (ipc) before the window opens, and hands
+ * the preload script the ipc addresses that are implemented. No workflow of
  * this layer is wired yet.
  */
 
@@ -1275,6 +1311,7 @@ import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process'
 import * as fs from 'node:fs'
 import * as net from 'node:net'
 import * as path from 'node:path'
+import { registerNativeDialogs } from './cross_cutting/native_dialogs/native_dialogs'
 import { ReminderTicker, type ReminderTickerConfig, type Toast } from './cross_cutting/reminder_ticker/reminder_ticker'
 
 const LAYER_ROOT = path.resolve(__dirname, '..')
@@ -1305,7 +1342,8 @@ interface DesktopConfig {
     default_content_type: string
     non_fatal_first_load_errors: string[]
   }
-  preload: { arguments: { bridge_name: string; backend_base_url: string } }
+  preload: { arguments: { bridge_name: string; backend_base_url: string; ipc_addresses: string } }
+  native_dialogs: { pick_folder: { address: string; title: string } }
   app: { locale: string; app_user_model_id: string }
   reminder_ticker: ReminderTickerConfig
   main: {
@@ -1897,7 +1935,20 @@ function main(): void {
     // tools. Run from source keeps it.
     if (app.isPackaged) Menu.setApplicationMenu(null)
 
-    // f-g. Window; the preload script receives the single launch value.
+    // Cross-cutting entry native_dialogs (ipc): its handler is registered
+    // before the window opens (.design/03_classification.md), so the first
+    // invoke from the renderer already has an answerer.
+    registerNativeDialogs({
+      uiOrigin,
+      pickFolder: config.native_dialogs.pick_folder,
+      getMainWindow: () => mainWindow,
+      log: (message) => log(message),
+    })
+    // The ipc addresses implemented here; the preload relays only these.
+    const ipcAddresses = [config.native_dialogs.pick_folder.address]
+
+    // f-g. Window; the preload script receives the launch value and the
+    //      implemented ipc addresses.
     const backendBaseUrl = `http://${host}:${backend.port}`
     const args = config.preload.arguments
     const win = new BrowserWindow({
@@ -1915,6 +1966,7 @@ function main(): void {
         additionalArguments: [
           `${args.bridge_name}${config.boundary.renderer_bridge}`,
           `${args.backend_base_url}${backendBaseUrl}`,
+          `${args.ipc_addresses}${ipcAddresses.join(',')}`,
         ],
       },
     })

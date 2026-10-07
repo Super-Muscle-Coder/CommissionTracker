@@ -41,7 +41,14 @@
   "preload": {
     "arguments": {
       "bridge_name": "--ct-renderer-bridge=",
-      "backend_base_url": "--ct-backend-base-url="
+      "backend_base_url": "--ct-backend-base-url=",
+      "ipc_addresses": "--ct-ipc-addresses="
+    }
+  },
+  "native_dialogs": {
+    "pick_folder": {
+      "address": "dialog:pick-folder",
+      "title": "Chọn thư mục"
     }
   },
   "app": {

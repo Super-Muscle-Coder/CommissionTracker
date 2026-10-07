@@ -2,8 +2,8 @@
 // workflow: reminder_ticker
 // clause: clause_d_desktop
 // component: cross_cutting
-// last_updated_by: coding-agent@2026-10-05#1
-// last_updated_at: 2026-10-05T11:16:31.4746772+07:00
+// last_updated_by: coding-agent@2026-10-07#2
+// last_updated_at: 2026-10-07T15:33:24.1521449+07:00
 //
 // EXPERIENCES:
 //   - id: reminder_ticker-EXP-001
@@ -43,7 +43,8 @@
 //       mở" / "<số upcoming> đơn có hạn giao" cộng " · sớm nhất: <title> (<ngày>)"
 //       khi upcoming không rỗng. Hợp đồng cho deadline là kiểu date; phần tử có
 //       kind lạ, thiếu notification_id, trường bắt buộc theo kind là null, ngày
-//       sai dạng hay lead không nguyên dương bị coi là sai hình dạng.
+//       sai dạng hay lead không nguyên bị coi là sai hình dạng (hợp đồng chỉ nói
+//       amount: integer; mã chấp nhận mọi số nguyên, kể cả không dương).
 //
 // UNSOLVED_PROBLEMS: []
 //
@@ -101,6 +102,17 @@
 //       giao: Tranh thử thông báo gói" show rồi click, Project Owner bấm và xác
 //       nhận khớp.
 //     recorded_at: 2026-10-05T11:16:31.4746772+07:00
+//   - claim: >
+//       Ca D2 chờ đúng lúc: lần kiểm đầu của lượt 1 đã kết thúc (không còn hỏng giả
+//       khi máy chậm; DSK-19 mục 4).
+//     how: >
+//       cd Desktop; tests/reminder_ticker.spec.ts, ca D2, lượt 1 chờ dòng
+//       "reminder check #1: N notification(s)" (như P8) thay cho "reminder ticker
+//       started" trước khi tạo dữ liệu; chạy trong npm test.
+//     result: >
+//       D2 đạt ở cả ba lượt npm test của phiên 33 (40 passed mỗi lượt). Không thử cố
+//       tình làm chậm máy để tái hiện lỗi cũ.
+//     recorded_at: 2026-10-07T15:33:24.1521449+07:00
 //
 // NOTES:
 //   - content: >

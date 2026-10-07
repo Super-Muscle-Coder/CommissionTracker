@@ -13,6 +13,7 @@
   <body>
     <h1>Desktop probe (test page, not the product UI)</h1>
     <button id="rerun" type="button">Run again</button>
+    <button id="pick-folder" type="button">Chọn thư mục</button>
     <dl>
       <dt>Bridge (window.commissionTracker)</dt>
       <dd id="bridge">…</dd>
@@ -24,6 +25,8 @@
       <dd id="status">…</dd>
       <dt>GET &lt;backendBaseUrl&gt;/clients — body</dt>
       <dd id="body">…</dd>
+      <dt>invoke('dialog:pick-folder', {}) — answer</dt>
+      <dd id="pick-folder-answer">(not called)</dd>
       <dt>Errors</dt>
       <dd id="error" class="error"></dd>
     </dl>

@@ -346,7 +346,9 @@ test('D2. the first check runs at once: a reminder that fell due while the app w
   const first = await launchMain(mainArgs({ dataDir, rendererRoot: PROBE_ROOT, reminderIntervalMs: 600_000 }))
   await first.app.firstWindow()
   const baseUrl = `http://127.0.0.1:${(await first.log.waitFor(/backend READY on port (\d+)/))[1]}`
-  await first.log.waitFor(/reminder ticker started/, 30_000)
+  // The first check must have ended (before the data exists), not only started: on a slow
+  // machine it could otherwise run after the data is created and show the toast in run 1.
+  await first.log.waitFor(/reminder check #1: \d+ notification\(s\)/, 30_000)
   await seedDueDeadline(baseUrl, title)
   expect(toastLines(first.log)).toEqual([])
   await closeCleanly(first.app, first.log)
