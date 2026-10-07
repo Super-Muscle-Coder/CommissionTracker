@@ -1,0 +1,57 @@
+{
+  "page": "backup",
+  "walkthrough": "src/screens/pages/backup/walkthrough.yaml",
+  "steps": [
+    {
+      "step": "S1",
+      "passed": true,
+      "runner": "coding-agent@2026-10-07#3 (Playwright, tests/e2e/backup_walkthrough.spec.ts)",
+      "finished_at": "2026-10-07T13:26:50.225Z",
+      "screenshot": "evidence/walkthroughs/backup/backup-S1.png",
+      "covers": [
+        "ok"
+      ]
+    },
+    {
+      "step": "S2",
+      "passed": true,
+      "runner": "coding-agent@2026-10-07#3 (Playwright, tests/e2e/backup_walkthrough.spec.ts)",
+      "finished_at": "2026-10-07T13:26:50.587Z",
+      "screenshot": "evidence/walkthroughs/backup/backup-S2.png",
+      "covers": [
+        "ok"
+      ]
+    },
+    {
+      "step": "S3",
+      "passed": true,
+      "runner": "coding-agent@2026-10-07#3 (Playwright, tests/e2e/backup_walkthrough.spec.ts)",
+      "finished_at": "2026-10-07T13:26:50.840Z",
+      "screenshot": "evidence/walkthroughs/backup/backup-S3.png",
+      "covers": [
+        "ok"
+      ]
+    },
+    {
+      "step": "S4",
+      "passed": true,
+      "runner": "coding-agent@2026-10-07#3 (Playwright, tests/e2e/backup_walkthrough.spec.ts)",
+      "finished_at": "2026-10-07T13:26:51.066Z",
+      "screenshot": "evidence/walkthroughs/backup/backup-S4.png",
+      "covers": [
+        "rejected_system"
+      ]
+    },
+    {
+      "step": "S5",
+      "passed": true,
+      "runner": "coding-agent@2026-10-07#3 (Playwright, tests/e2e/backup_walkthrough.spec.ts)",
+      "finished_at": "2026-10-07T13:26:57.767Z",
+      "screenshot": "evidence/walkthroughs/backup/backup-S5.png",
+      "covers": [
+        "unreachable",
+        "ok"
+      ]
+    }
+  ]
+}

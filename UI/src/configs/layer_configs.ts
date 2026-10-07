@@ -16,6 +16,12 @@ export const LAYER_CONFIGS = {
     // [CONTRACT] data_schema.yaml 6.1.0 clause_a_common.mandatory_rules (renderer
     // rule): the launch value is the string property backendBaseUrl of the bridge.
     backendBaseUrlProperty: 'backendBaseUrl',
+    // [CONTRACT] data_schema.yaml 6.1.0 clause_a_common.mandatory_rules (renderer
+    // rule) and api_contract.yaml 4.0.0 endpoint_forms.ipc: the function
+    // invoke(address, argument) is the second property of the bridge. Required
+    // since session 34: the desktop always sets it, so a bridge without it means
+    // the renderer runs outside the desktop, or under an older desktop.
+    invokeProperty: 'invoke',
     // [CONTRACT] data_schema.yaml 6.1.0 clause_a_common.shared_values.loopback_host:
     // the backend base URL is http://<loopback_host>:<port>.
     loopbackHost: '127.0.0.1',
@@ -34,6 +40,7 @@ export const LAYER_CONFIGS = {
     bridgeMissing: 'Thiếu đối tượng khởi động do ứng dụng desktop cung cấp',
     valueNotString: 'Giá trị khởi động bị thiếu hoặc không phải chuỗi',
     valueMalformed: 'Giá trị khởi động sai định dạng (cần http://127.0.0.1:<cổng 1–65535>)',
+    functionMissing: 'Hàm khởi động bị thiếu hoặc không phải hàm',
   },
 
   // [UI-ONLY] Messages every Services needs (iwca_theory.md §6, ResultMessages).

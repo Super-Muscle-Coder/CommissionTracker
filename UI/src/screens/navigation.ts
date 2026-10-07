@@ -2,8 +2,8 @@
 // workflow: screens
 // clause: external
 // component: screens
-// last_updated_by: coding-agent@2026-10-04#1
-// last_updated_at: 2026-10-04T12:56:44.6836972+07:00
+// last_updated_by: coding-agent@2026-10-07#3
+// last_updated_at: 2026-10-07T20:44:38.4471702+07:00
 //
 // EXPERIENCES:
 //   - id: screens-EXP-001
@@ -708,10 +708,66 @@
 //       main-EXP-025). (4) Kiểm thử StageChange "focus ở Xác nhận" hỏng không tất định đã vá ở phiên 25 (UI-12;
 //       screens-EXP-012: chờ bằng vi.waitFor). (5) Cảnh báo cũ "chụp ảnh hết 30 s ở bước backend down không tất định"
 //       đã giải ở UI-11 (cửa sổ bị thu nhỏ; main-EXP-026, main-EXP-027).
+//   - id: screens-EXP-049
+//     content: >
+//       Phiên 34 (chặng E): trang backup (pages/backup/{Backup.tsx, use_backup.ts, walkthrough.yaml, tests/Backup.test.tsx}), khóa 'backup' (params
+//       null, section 'backup', menu "Sao lưu" đứng SAU "Nhắc việc"; năm mục cũ giữ vị trí; PageParams thêm backup: null). Trang chỉ có MỘT nút, "Tạo
+//       bản sao lưu" (primary) ngay dưới tiêu đề "Sao lưu dữ liệu", rồi dòng Caption cố định, rồi (khi có) LoadingIndicator "Đang tạo bản sao lưu…" và
+//       kết quả. Hook use_backup: gọi Routers.createBackup(onCreating) MỘT lần mỗi luồng (ref chặn bấm hai lần trong cùng một nhịp, trước khi nút kịp
+//       vẽ vô hiệu), giữ ba thứ: result, running (từ lúc bấm tới hết luồng; nút busy nên vô hiệu và aria-busy), creating (chỉ sau onCreating, tức khi
+//       đã có thư mục). Kết quả hủy KHÔNG được giữ (ShownResult là kiểu hẹp không có 'canceled'), nên trang giữ nguyên thông báo và khung cũ; mọi kết
+//       quả khác thay result nên khung của lần bấm trước biến mất khi lần này hỏng. Khung kết quả dùng DescriptionList có sẵn (term "Tệp", "Dung
+//       lượng", "Tạo lúc"; dd đã có overflow-wrap: anywhere và pre-wrap nên đường dẫn dài xuống dòng, e2e đọc computed style = "anywhere"): KHÔNG
+//       thêm hay mở rộng component kit nào, nên khối kit và check_contrast không đổi. Ba tiêu đề của khung lỗi: rejected (400, 500, hộp thoại hỏng)
+//       "Chưa tạo được bản sao lưu"; unreachable "Không kết nối được"; contract_violation "Có lỗi không mong đợi". Trang không nhận thông báo chuyển
+//       trang (chỉ mở từ mục điều hướng) nên không dùng props. fake_logic.tsx: fakeBackupData và tham số thứ bảy của renderWithLogic,
+//       renderFirstCommit (Object.values của backupData tính là "đã gọi Routers"). Kiểm thử dựng trang 17 ca (khung đầu, nút và dòng chữ,
+//       không câu hỏi, 201, đường dẫn dài, hủy trên trang trống, hủy sau thành công giữ nguyên, năm lỗi mỗi cái xóa khung cũ, thành công lần hai thay
+//       khung, bấm hai lần một luồng, nút chờ khi hộp thoại mở rồi khi tạo, luồng hỏng thả nút, rời trang giữa chừng không ném lỗi); app_root.test.tsx
+//       chỉ thêm mục "Sao lưu" (sáu mục đúng thứ tự, mười bốn trang, items[5] không aria-current, ts-expect-error cho params).
+//   - id: screens-EXP-050
+//     content: >
+//       Tự kiểm I6 của trang backup (năm góc; đề xuất trạng thái ở cuối). (1) HỢP ĐỒNG: Configs trỏ Data Schema 9.0.3, API Contract 4.0.0; bảng nhãn
+//       create_backup { 201 ok, 400 ERR_VALIDATION, 500 ERR_STORAGE_IO } khớp từng dòng, POST /backups, thân { backup_request: { destination_dir,
+//       purpose: 'manual' } } (purpose luôn 'manual'); pick_folder qua ipc 'dialog:pick-folder', đối số {}, trả { status: 200, body: { canceled, path } }
+//       kiểm đúng luật canceled/path; mọi mã lỗi có câu (kiểm thử đi từ bảng nhãn). Tìm trong src: không có "watermark-profiles", "watermark-strengths",
+//       "restore-preparations" (chỉ trong chú thích và walkthrough.yaml), "dialog:open-file", "dialog:save-file", localStorage, confirm, alert.
+//       size_bytes kiểm số nguyên an toàn >= 0. (2) RANH GIỚI: Services chỉ quyết định trình bày (câu cho từng nhãn, dung lượng, giờ, luồng hai
+//       bước); phép thử §5: nếu backend đổi luật mà không đổi hợp đồng, không dòng nào thành sai. Routers không kiểm gì vì trang không có ô nhập (thư mục
+//       do hệ điều hành trao, backend kiểm file_path). Hook viết lại được bằng "gọi, giữ, chuyển" (ngoại lệ có chủ ý: hai cờ ref và setCreating
+//       trong onCreating là thời điểm kỹ thuật, không phải quyết định). Không component kit mới. Chỗ máy không kiểm: ánh xạ Promise bị từ chối của ipc
+//       sang rejected/DIALOG_FAILED ở Services (backup_data-EXP-002). (3) NGƯỜI DÙNG: walkthrough.yaml S1..S5 (ok, ok, ok, rejected_system chỉ ở lần
+//       chạy tự động, unreachable + ok); không rejected_input vì trang không có ô nhập (ghi trong precondition); chạy tự động trên ứng dụng thật,
+//       ảnh trong UI/evidence/walkthroughs/backup/ (backup-S1-open, S1-created, S1, S2, S3, S4, S5-unreachable, S5) và backup-run.json với runner
+//       "coding-agent@2026-10-07#3 (Playwright, tests/e2e/backup_walkthrough.spec.ts)"; lần chạy tay với hộp thoại THẬT là việc của Project Owner.
+//       Nguyên tắc §7.2: (1) một hành động chính: một nút duy nhất, primary; (4) phản hồi sau thao tác: thông báo "Đã tạo bản sao lưu." kèm khung ba
+//       dòng khi thành công, khung báo lỗi bằng lời riêng cho 400, 500, hộp thoại hỏng, không tới được, và hủy thì im lặng đúng đặc tả (người dùng tự
+//       đóng hộp thoại, không có gì mới để báo); (5) không hỏi xác nhận, lý do: tạo bản sao lưu không ghi đè gì (backend thêm hậu tố khi trùng tên, e2e S2
+//       thấy hai tệp) và không đổi dữ liệu nên không phải thao tác khó quay lại có hậu quả; (7) nút ngay dưới tiêu đề, mục điều hướng mới đứng cuối, năm
+//       mục cũ không đổi vị trí; (2) không hiện sha256 hay app_version; (3) nhãn tiếng Việt ("Tạo bản sao lưu", "Tệp", "Dung lượng", "Tạo lúc").
+//       (4) CHECKPOINT: bốn khối (backup_data mới, scaffold_ui, main, screens); kit không đổi. (5) BẰNG CHỨNG: xem EVIDENCE của main và của khối này.
+//       ĐỀ XUẤT: backup -> hoan_tat sau khi Orchestrator audit và Project Owner chạy tay kịch bản với hộp thoại thật (tiêu đề hộp thoại có đúng "Chọn
+//       thư mục" không; mở thư mục thấy tệp .ctbackup). Chặng E xong khi trang đó hoàn tất. Không đảo thứ tự việc nào của plan; việc thêm ngoài plan:
+//       hai dòng UI/.gitignore và exact: true cho 11 locator e2e (main-EXP-033).
 //
 // UNSOLVED_PROBLEMS: []
 //
 // EVIDENCE:
+//   - claim: >
+//       Trang backup: kiểm thử dựng trang phủ mọi kết quả; chạy thật trên ứng dụng thật qua Desktop với hộp thoại thay thế; tệp tạo từ giao diện qua được
+//       prepare_restore; không có lời gọi prepare_restore trong UI/src.
+//     how: >
+//       Trong UI/: npm run check (src/screens/pages/backup/tests/Backup.test.tsx, src/screens/tests/app_root.test.tsx); npx playwright test -c
+//       tests/e2e/playwright.config.ts backup_walkthrough (10 lần); npm run e2e (5 lượt có CT_WALKTHROUGH_RUNNER=coding-agent@2026-10-07#3, 1 lượt không
+//       biến); grep -rn "restore-preparations" src.
+//     result: >
+//       check "Tests 1679 passed (1679)". Spec riêng 10/10 "5 passed". e2e 5/5 "75 passed" (mốc 70), lượt không biến "75 passed", UI/evidence nguyên vẹn.
+//       Bước S1 của e2e: tệp nằm trong thư mục chọn (path.dirname bằng thư mục tạm ct-ui-backup-*), đuôi .ctbackup, công cụ gọi POST
+//       /backups/restore-preparations trả is_valid true và is_compatible true; S2: tệp thứ hai tên khác, hai tệp cùng qua prepare_restore; S3: hủy, số tệp
+//       không đổi, khung giữ nguyên; S4: thư mục không tồn tại trả 400 và đúng câu "Không dùng được thư mục này. Hãy chọn thư mục khác.", khung cũ biến mất,
+//       thư mục không được tạo; S5: backend tắt hiện "Không kết nối được tới phần xử lý của ứng dụng. Vui lòng thử lại.", không tệp mới, bật lại thì tạo
+//       được. Dung lượng thật trong e2e dạng "3,2 KB".
+//     recorded_at: 2026-10-07T20:44:38.4471702+07:00
 //   - claim: >
 //       UI-12: StageChange.test.tsx hết không tất định.
 //     how: >
@@ -1165,6 +1221,7 @@
  * (CLAUDE.md §5).
  */
 import type { ComponentType } from 'react'
+import { Backup } from './pages/backup/Backup'
 import { ClientDetail } from './pages/client_detail/ClientDetail'
 import { ClientForm } from './pages/client_form/ClientForm'
 import { ClientList } from './pages/client_list/ClientList'
@@ -1186,7 +1243,8 @@ export type LayoutKey = 'main_layout'
 // The parameters each page opens with, typed per page
 // (ui_decomposition.md §5, "Điều hướng giữa các trang khách hàng";
 // "Chặng D2", "Điều hướng của D2"; "Chặng D3", "Điều hướng của D3";
-// "Chặng D4", "Điều hướng của D4"; "Chặng D5", "Điều hướng của D5"; "Chặng D6", "Điều hướng của D6").
+// "Chặng D4", "Điều hướng của D4"; "Chặng D5", "Điều hướng của D5"; "Chặng D6", "Điều hướng của D6";
+// "Chặng E", "Điều hướng của chặng E").
 // stage_change receives the commission's title to show, handed by
 // commission_detail (it does not call get_commission again); so do
 // payment_list and payment_form (D4).
@@ -1204,6 +1262,7 @@ export type PageParams = {
   income_report: null
   reminder_list: null
   reminder_settings: null
+  backup: null
 }
 
 // Keys of the pages (ui_decomposition.md §5), one per page that is built.
@@ -1241,7 +1300,7 @@ export const START_ROUTE: Route = { page: START_PAGE, params: null }
 
 // One entry per page. The type ties each page to the component that takes
 // exactly its parameters. The navigation region lists the entries that have a
-// menu, in this order: "Khách hàng", "Đơn hàng", "Tiến độ", "Thu nhập", then "Nhắc việc" (§5); a later
+// menu, in this order: "Khách hàng", "Đơn hàng", "Tiến độ", "Thu nhập", "Nhắc việc", then "Sao lưu" (§5); a later
 // stage adds its entries after these, never moving them. stage_change is a
 // step of the commission detail: its item is "Đơn hàng" (D3).
 export const NAVIGATION: { readonly [K in PageKey]: NavigationEntry<K> } = {
@@ -1285,4 +1344,10 @@ export const NAVIGATION: { readonly [K in PageKey]: NavigationEntry<K> } = {
   },
   // The settings are a step of the reminder list (D6): the "Nhắc việc" item is the current one.
   reminder_settings: { layout: 'main_layout', component: ReminderSettings, section: 'reminder_list', menu: null },
+  backup: {
+    layout: 'main_layout',
+    component: Backup,
+    section: 'backup',
+    menu: { label: 'Sao lưu', route: { page: 'backup', params: null } },
+  },
 }

@@ -71,11 +71,14 @@ export const WRONG_ROUTES: Route[] = [
   { page: 'reminder_list', params: { commission_id: ID } },
   // @ts-expect-error reminder_settings takes no parameter
   { page: 'reminder_settings', params: { commission_id: ID } },
+  // @ts-expect-error backup takes no parameter
+  { page: 'backup', params: { commission_id: ID } },
 ]
 
 describe('navigation table', () => {
-  it('has exactly the thirteen pages of ui_decomposition.md §5 (D1 to D6), and opens on client_list', () => {
+  it('has exactly the fourteen pages of ui_decomposition.md §5 (D1 to D6, and E), and opens on client_list', () => {
     expect(Object.keys(NAVIGATION).sort()).toEqual([
+      'backup',
       'client_detail',
       'client_form',
       'client_list',
@@ -93,12 +96,12 @@ describe('navigation table', () => {
     expect(START_PAGE).toBe('client_list')
   })
 
-  it('the navigation region lists "Khách hàng", "Đơn hàng", "Tiến độ", "Thu nhập", then "Nhắc việc"; D2 pages, stage_change and the payment pages belong to "Đơn hàng"', () => {
+  it('the navigation region lists "Khách hàng", "Đơn hàng", "Tiến độ", "Thu nhập", "Nhắc việc", then "Sao lưu"; D2 pages, stage_change and the payment pages belong to "Đơn hàng"', () => {
     const menu = (Object.keys(NAVIGATION) as (keyof typeof NAVIGATION)[]).flatMap((k) => {
       const m = NAVIGATION[k].menu
       return m === null ? [] : [m.label]
     })
-    expect(menu).toEqual(['Khách hàng', 'Đơn hàng', 'Tiến độ', 'Thu nhập', 'Nhắc việc'])
+    expect(menu).toEqual(['Khách hàng', 'Đơn hàng', 'Tiến độ', 'Thu nhập', 'Nhắc việc', 'Sao lưu'])
     expect([
       NAVIGATION.commission_list.section,
       NAVIGATION.commission_detail.section,
@@ -122,12 +125,13 @@ describe('AppRoot', () => {
     expect(await screen.findByRole('heading', { level: 2, name: 'Khách hàng' })).toBeTruthy()
     const nav = screen.getByRole('navigation', { name: 'Điều hướng chính' })
     const items = within(nav).getAllByRole('button')
-    expect(items.map((b) => b.textContent)).toEqual(['Khách hàng', 'Đơn hàng', 'Tiến độ', 'Thu nhập', 'Nhắc việc'])
+    expect(items.map((b) => b.textContent)).toEqual(['Khách hàng', 'Đơn hàng', 'Tiến độ', 'Thu nhập', 'Nhắc việc', 'Sao lưu'])
     expect(items[0].getAttribute('aria-current')).toBe('page')
     expect(items[1].getAttribute('aria-current')).toBeNull()
     expect(items[2].getAttribute('aria-current')).toBeNull()
     expect(items[3].getAttribute('aria-current')).toBeNull()
     expect(items[4].getAttribute('aria-current')).toBeNull()
+    expect(items[5].getAttribute('aria-current')).toBeNull()
   })
 
   it('"Tiến độ" opens progress_board, marked current; a commission of the board → its detail, "Đơn hàng" current', async () => {
@@ -154,6 +158,7 @@ describe('AppRoot', () => {
       ['Tiến độ', 'page'],
       ['Thu nhập', null],
       ['Nhắc việc', null],
+      ['Sao lưu', null],
     ])
     fireEvent.click(await screen.findByRole('button', { name: /^Chân dung/ }))
     expect(await screen.findByRole('heading', { level: 2, name: 'Chi tiết đơn hàng' })).toBeTruthy()
@@ -164,6 +169,7 @@ describe('AppRoot', () => {
       ['Tiến độ', null],
       ['Thu nhập', null],
       ['Nhắc việc', null],
+      ['Sao lưu', null],
     ])
   })
 
@@ -191,6 +197,7 @@ describe('AppRoot', () => {
       ['Tiến độ', null],
       ['Thu nhập', null],
       ['Nhắc việc', null],
+      ['Sao lưu', null],
     ])
     fireEvent.click(await screen.findByRole('button', { name: /^Chân dung/ }))
     expect(await screen.findByRole('heading', { level: 2, name: 'Chi tiết đơn hàng' })).toBeTruthy()
@@ -201,6 +208,7 @@ describe('AppRoot', () => {
       ['Tiến độ', null],
       ['Thu nhập', null],
       ['Nhắc việc', null],
+      ['Sao lưu', null],
     ])
   })
 
@@ -227,6 +235,7 @@ describe('AppRoot', () => {
       ['Tiến độ', null],
       ['Thu nhập', 'page'],
       ['Nhắc việc', null],
+      ['Sao lưu', null],
     ])
     await screen.findByText('Không có gì')
     expect(viewIncomeReport).toHaveBeenCalledExactlyOnceWith({ periodFrom: '2026-01-01', periodTo: '2026-09-30' })
@@ -274,6 +283,7 @@ describe('AppRoot', () => {
       ['Tiến độ', null],
       ['Thu nhập', null],
       ['Nhắc việc', 'page'],
+      ['Sao lưu', null],
     ])
     // The way to the settings: the item "Nhắc việc" stays the current one.
     fireEvent.click(screen.getAllByRole('button', { name: 'Cài đặt nhắc việc' })[0])

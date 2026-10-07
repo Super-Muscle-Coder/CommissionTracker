@@ -1,7 +1,8 @@
 // Tests of the http_client resource of scaffold_ui, with a fake fetch.
 // Runs in the node environment: the logic zone needs no DOM.
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { createHttpClient } from '../adapters'
+import type { IpcInvoke } from '../../../shared/resources'
+import { createHttpClient, createIpcBridge } from '../adapters'
 
 const BASE = 'http://127.0.0.1:51062'
 
@@ -80,5 +81,48 @@ describe('createHttpClient', () => {
     stubFetch(async () => new Response('Internal Server Error', { status: 500 }))
     const t = await createHttpClient(BASE, 1000).send('GET', '/clients', { query: null, body: null })
     expect(t).toEqual({ kind: 'response', label: 500, body: null })
+  })
+})
+
+describe('createIpcBridge', () => {
+  it('passes the address and the argument to invoke exactly as given', async () => {
+    const invoke = vi.fn<IpcInvoke>(async () => ({ status: 200, body: { canceled: true, path: null } }))
+    const argument = { filters: null }
+    await createIpcBridge(invoke).call('dialog:pick-folder', argument)
+    expect(invoke).toHaveBeenCalledTimes(1)
+    expect(invoke.mock.calls[0]?.[0]).toBe('dialog:pick-folder')
+    // The very same object: nothing is copied, wrapped or filled in.
+    expect(invoke.mock.calls[0]?.[1]).toBe(argument)
+  })
+
+  it('answers what invoke answered, unchecked: a value of any shape comes back as it is', async () => {
+    const shapes: unknown[] = [{ status: 200, body: { canceled: false, path: 'C:\\x' } }, { status: 400 }, 'abc', null, 42]
+    for (const shape of shapes) {
+      const answer = await createIpcBridge(async () => shape).call('dialog:pick-folder', {})
+      expect(answer).toBe(shape)
+    }
+  })
+
+  it('keeps a rejected Promise rejected, with the same error', async () => {
+    const error = new Error("Error invoking remote method 'dialog:pick-folder': Error: boom")
+    await expect(createIpcBridge(() => Promise.reject(error)).call('dialog:pick-folder', {})).rejects.toBe(error)
+  })
+
+  it('waits as long as invoke does: it sets no time limit of its own', async () => {
+    let release: (value: unknown) => void = () => {}
+    const slow = new Promise<unknown>((resolve) => {
+      release = resolve
+    })
+    let settled = false
+    const waiting = createIpcBridge(() => slow)
+      .call('dialog:pick-folder', {})
+      .then((v) => {
+        settled = true
+        return v
+      })
+    await new Promise((resolve) => setTimeout(resolve, 50))
+    expect(settled).toBe(false)
+    release({ status: 200, body: { canceled: true, path: null } })
+    expect(await waiting).toEqual({ status: 200, body: { canceled: true, path: null } })
   })
 })

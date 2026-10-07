@@ -32,6 +32,8 @@ beforeAll(async () => {
 }, 60_000)
 
 let fetchSpy: ReturnType<typeof vi.fn>
+// The invoke function of the bridge (session 34): a valid launch value is a function.
+const fakeInvoke = async () => ({ status: 200, body: { canceled: true, path: null } })
 
 beforeEach(() => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
@@ -75,12 +77,12 @@ describe('Main, launch value missing or malformed → startup error screen', () 
   })
 
   it('bridge without backendBaseUrl', async () => {
-    await startMain(Object.freeze({}))
+    await startMain(Object.freeze({ invoke: fakeInvoke }))
     expectStartupError(`${failure.valueNotString}: window.${rendererBridge}.backendBaseUrl`)
   })
 
   it('backendBaseUrl is not a string', async () => {
-    await startMain(Object.freeze({ backendBaseUrl: 51062 }))
+    await startMain(Object.freeze({ backendBaseUrl: 51062, invoke: fakeInvoke }))
     expectStartupError(`${failure.valueNotString}: window.${rendererBridge}.backendBaseUrl`)
   })
 
@@ -96,8 +98,31 @@ describe('Main, launch value missing or malformed → startup error screen', () 
     ' http://127.0.0.1:51062', // leading space
     '', // empty
   ])('backendBaseUrl is malformed: %j', async (value) => {
-    await startMain(Object.freeze({ backendBaseUrl: value }))
+    await startMain(Object.freeze({ backendBaseUrl: value, invoke: fakeInvoke }))
     expectStartupError(`${failure.valueMalformed}: window.${rendererBridge}.backendBaseUrl = ${JSON.stringify(value)}`)
+  })
+})
+
+describe('Main, invoke missing or not a function → startup error screen (session 34)', () => {
+  const where = `window.${rendererBridge}.invoke`
+  it('bridge with backendBaseUrl but without invoke', async () => {
+    await startMain(Object.freeze({ backendBaseUrl: 'http://127.0.0.1:51062' }))
+    expectStartupError(`${failure.functionMissing}: ${where}`)
+  })
+
+  it.each([
+    ['a string', 'invoke'],
+    ['null', null],
+    ['an object', {}],
+    ['a number', 1],
+  ])('invoke is %s, not a function', async (_name, value) => {
+    await startMain(Object.freeze({ backendBaseUrl: 'http://127.0.0.1:51062', invoke: value }))
+    expectStartupError(`${failure.functionMissing}: ${where}`)
+  })
+
+  it('a malformed backendBaseUrl is still reported first, whatever invoke is', async () => {
+    await startMain(Object.freeze({ backendBaseUrl: 'http://localhost:1' }))
+    expectStartupError(`${failure.valueMalformed}: window.${rendererBridge}.backendBaseUrl`)
   })
 })
 
@@ -105,7 +130,7 @@ describe('Main, valid launch value → main frame', () => {
   it.each(['http://127.0.0.1:51062', 'http://127.0.0.1:1', 'http://127.0.0.1:65535'])(
     'backendBaseUrl %s',
     async (value) => {
-      await startMain(Object.freeze({ backendBaseUrl: value }))
+      await startMain(Object.freeze({ backendBaseUrl: value, invoke: fakeInvoke }))
       expect(screen.getByRole('heading', { level: 1, name: APP_TITLE })).toBeTruthy()
       expect(screen.getByRole('main')).toBeTruthy()
       expect(screen.queryByRole('alert')).toBeNull()

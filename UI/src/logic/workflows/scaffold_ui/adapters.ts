@@ -2,8 +2,8 @@
 // workflow: scaffold_ui
 // clause: external
 // component: adapters
-// last_updated_by: coding-agent@2026-09-27#2
-// last_updated_at: 2026-09-27T12:20:00+07:00
+// last_updated_by: coding-agent@2026-10-07#3
+// last_updated_at: 2026-10-07T20:44:38.4471702+07:00
 //
 // EXPERIENCES:
 //   - id: scaffold_ui-EXP-001
@@ -25,6 +25,13 @@
 //       như 200. JSON.stringify của thân yêu cầu nằm ngoài khối try, để một lỗi
 //       lập trình nổi lên như lỗi thật, không bị giả làm unreachable. Thân yêu
 //       cầu null thì không gửi thân và không có Content-Type.
+//   - id: scaffold_ui-EXP-003
+//     content: >
+//       Tài nguyên thứ hai, ipc_bridge (phiên 34, chặng E): createIpcBridge(invoke) trả { call(address, argument): Promise<unknown> },
+//       chuyển NGUYÊN lời gọi sang invoke và trả NGUYÊN Promise của nó. Không kiểm hình dạng (việc của Adapters của workflow dùng nó, nơi
+//       biết địa chỉ trả gì), không hạn chờ (hộp thoại chờ người dùng), không bắt lỗi (Promise bị từ chối đi thẳng lên). Kiểu IpcInvoke và
+//       IpcBridge nằm ở logic/shared/resources.ts (R2, như HttpClient). Chỉ Main đọc invoke từ bridge (R12) rồi trao vào đây; lời gọi là
+//       invoke(address, argument) không có this, vì preload của Desktop là hàm thường (đã kiểm Desktop/src/preload.ts).
 //
 // UNSOLVED_PROBLEMS: []
 //
@@ -60,12 +67,20 @@
 //       thì bấm "Tải lại" hiện lại danh sách. Xem EVIDENCE của manage_client và
 //       screens.
 //     recorded_at: 2026-09-27T12:02:15+07:00
+//   - claim: >
+//       ipc_bridge chuyển đúng địa chỉ và đối số (cùng một đối tượng), trả đúng giá trị mọi hình dạng không kiểm, giữ Promise bị từ chối bị
+//       từ chối với cùng lỗi, và không đặt hạn chờ nào; chạy thật qua Desktop: invoke('dialog:pick-folder', {}) trả { status: 200, body }.
+//     how: >
+//       Trong UI/: npm run check (src/logic/workflows/scaffold_ui/tests/adapters.test.ts, bốn ca mới của createIpcBridge); chạy thật: spec
+//       tests/e2e/backup_walkthrough.spec.ts trong npm run e2e; và một script đo tạm ngoài dự án (việc 2) gọi invoke trên ứng dụng thật.
+//     result: >
+//       Bốn ca đạt trong "Tests 1679 passed". Script đo: bridge có đúng hai khóa ["backendBaseUrl","invoke"]; hộp thoại thay thế trả
+//       { status: 200, body: { canceled: false, path: "C:\stub\folder" } } rồi { canceled: true, path: null }; không hộp thoại thật nào mở
+//       (hàm thay thế nhận 3/3 lời gọi, số cửa sổ giữ 1); khi hàm thay thế ném lỗi thì Promise bị từ chối với message nguyên văn "Error
+//       invoking remote method 'dialog:pick-folder': Error: boom from the stub", và lời gọi sau vẫn chạy. Trong e2e: 5 bước backup đạt.
+//     recorded_at: 2026-10-07T20:44:38.4471702+07:00
 //
-// NOTES:
-//   - content: >
-//       Tài nguyên ipc_bridge thêm vào đây khi desktop có lối vào ipc đầu tiên
-//       (ui_decomposition.md §2, §3).
-//     written_at: 2026-09-27
+// NOTES: []
 // ===WCA-CHECKPOINT-END===
 /**
  * Adapters of the foundation workflow scaffold_ui: the http_client resource.
@@ -77,7 +92,23 @@
  * the contract: that is the job of each interface workflow's Adapters, the
  * only ones that know which labels an endpoint declares.
  */
-import type { HttpClient, HttpMethod, HttpRequestOptions, Transport } from '../../shared/resources'
+import type { HttpClient, HttpMethod, HttpRequestOptions, IpcBridge, IpcInvoke, Transport } from '../../shared/resources'
+
+/**
+ * The ipc_bridge resource, built from the invoke function Main read from the
+ * renderer bridge (R12): passes the call to invoke as it is and answers its
+ * Promise as it is. Nothing else: no shape check (that is the job of the
+ * Adapters of the workflow that calls, which know what the address answers), no
+ * time limit (a dialog waits for the person), no catch (a rejected Promise goes
+ * up to those Adapters).
+ */
+export function createIpcBridge(invoke: IpcInvoke): IpcBridge {
+  return {
+    call(address: string, argument: unknown): Promise<unknown> {
+      return invoke(address, argument)
+    },
+  }
+}
 
 export function createHttpClient(backendBaseUrl: string, timeoutMs: number): HttpClient {
   return {

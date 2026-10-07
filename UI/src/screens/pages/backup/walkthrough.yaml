@@ -1,0 +1,71 @@
+page: backup
+precondition: >
+  Desktop đã build (npm run build trong Desktop/). Trong UI/: npm run walkthrough:app -- --empty mở
+  ứng dụng thật với thư mục dữ liệu tạm (không đụng %APPDATA%), Backend.py thật sau fixture bật/tắt
+  được; cơ sở dữ liệu trống là đủ, vì bản sao lưu chứa mọi dữ liệu kể cả khi ít. Bật/tắt backend:
+  npm run walkthrough:backend -- down|up (từ UI/, cửa sổ lệnh khác). Các bước nối tiếp nhau trong cùng
+  một lần mở ứng dụng. Trước khi chạy, đặt CT_WALKTHROUGH_RUNNER là tên người chạy.
+  HAI CÁCH CHẠY. (1) Tự động (npm run e2e, spec tests/e2e/backup_walkthrough.spec.ts): hộp thoại chọn thư mục
+  được công cụ kiểm thử THAY (tests/tools/folder_dialog_stub.mjs gán đè dialog.showOpenDialog trong tiến
+  trình chính), thư mục "được chọn" là một thư mục tạm của lần chạy (cạnh thư mục dữ liệu tạm, xóa sau lần
+  chạy); sau bản sao lưu đầu tiên, công cụ kiểm tra tệp tồn tại rồi gọi POST /backups/restore-preparations
+  (giao diện KHÔNG gọi; chỉ restore_data gọi) và khẳng định is_valid và is_compatible đều true. (2) Tay, do
+  Project Owner (npm run walkthrough:app -- --empty): hộp thoại THẬT của Windows; chọn hay tạo một thư mục
+  bất kỳ ngoài thư mục dự án, ví dụ một thư mục mới trên Desktop. Lần chạy tay không gây được 400 bằng hộp
+  thoại thật nên bước S4 chỉ có ở lần chạy tự động; 500 và hộp thoại hỏng được chứng minh bằng kiểm thử
+  dựng trang. Trang không có ô nhập, nên kịch bản không có bước rejected_input.
+  LƯU Ý: ảnh bằng chứng có giờ tạo ("Tạo lúc") và đường dẫn thư mục tạm, nên đổi theo mỗi lần chạy; chấp
+  nhận, vì ảnh được chụp lại mỗi lần chạy có runner. Dưới đây <thư mục> là thư mục đã chọn.
+steps:
+  - id: S1
+    setup: null
+    action: >
+      Bấm mục "Sao lưu" ở vùng điều hướng. Bấm "Tạo bản sao lưu". Ở lần chạy tay: GHI LẠI tiêu đề của hộp
+      thoại (kỳ vọng "Chọn thư mục"), chọn <thư mục>, bấm nút xác nhận của hộp thoại.
+    expect: >
+      Trang "Sao lưu dữ liệu"; ngay dưới tiêu đề là hàng nút chỉ có "Tạo bản sao lưu"; dưới đó dòng chữ
+      phụ "Bản sao lưu là một tệp chứa toàn bộ dữ liệu của ứng dụng. Nên lưu ở ổ đĩa khác hoặc ổ USB, để
+      vẫn còn dữ liệu nếu máy hỏng." Vùng điều hướng có sáu mục, "Sao lưu" là mục đang mở. Lúc mới mở:
+      không thông báo, không khung kết quả, hộp thoại chưa hiện. Sau khi chọn: thông báo "Đã tạo bản sao
+      lưu." và khung ba dòng "Tệp" (đường dẫn nằm trong <thư mục>, đuôi .ctbackup, xuống dòng được nếu
+      dài), "Dung lượng" (dạng "12,4 KB"), "Tạo lúc" (HH:mm dd/mm/yyyy). Không hiện mã băm hay phiên bản.
+      Ở lần chạy tay, mở <thư mục> trong Explorer: thấy đúng một tệp .ctbackup có tên như dòng "Tệp". Ở lần
+      chạy tự động: công cụ kiểm tra tệp tồn tại rồi gọi prepare_restore: is_valid và is_compatible đều true.
+    covers: [ok]
+  - id: S2
+    setup: null
+    action: >
+      Bấm "Tạo bản sao lưu" lần nữa, chọn cùng <thư mục>.
+    expect: >
+      Thành công; khung kết quả được THAY bằng tệp mới, tên khác tệp thứ nhất; <thư mục> có hai tệp
+      .ctbackup (tệp cũ không bị ghi đè). Chỉ còn một thông báo và một khung.
+    covers: [ok]
+  - id: S3
+    setup: null
+    action: >
+      Bấm "Tạo bản sao lưu", rồi hủy hộp thoại (Cancel hoặc đóng hộp thoại).
+    expect: >
+      Không có tệp mới trong <thư mục>; trang giữ nguyên thông báo và khung kết quả của lần trước; không
+      có khung báo lỗi; nút "Tạo bản sao lưu" bấm lại được.
+    covers: [ok]
+  - id: S4
+    setup: >
+      CHỈ Ở LẦN CHẠY TỰ ĐỘNG: hộp thoại thay thế trả về một thư mục không tồn tại.
+    action: >
+      Bấm "Tạo bản sao lưu" (hộp thoại thay thế "chọn" thư mục không tồn tại).
+    expect: >
+      Khung báo lỗi "Chưa tạo được bản sao lưu" với câu "Không dùng được thư mục này. Hãy chọn thư mục
+      khác."; khung kết quả và thông báo của các lần trước biến mất; không có tệp nào và thư mục không
+      tồn tại không được tạo ra.
+    covers: [rejected_system]
+  - id: S5
+    setup: >
+      Chạy npm run walkthrough:backend -- down (ứng dụng vẫn mở).
+    action: >
+      Bấm "Tạo bản sao lưu", chọn <thư mục>. Khi khung báo lỗi hiện ra, chạy npm run walkthrough:backend --
+      up, rồi bấm "Tạo bản sao lưu" và chọn lại <thư mục>.
+    expect: >
+      Lần đầu: khung "Không kết nối được" với câu "Không kết nối được tới phần xử lý của ứng dụng. Vui lòng
+      thử lại."; không khung kết quả; không tệp mới. Sau khi backend chạy lại: thành công, thông báo "Đã
+      tạo bản sao lưu." và khung kết quả của tệp mới.
+    covers: [unreachable, ok]

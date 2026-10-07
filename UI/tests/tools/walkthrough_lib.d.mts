@@ -89,3 +89,14 @@ export type ReminderSample = {
 }
 export declare function seedReminderSample(baseUrl: string, options?: { beforeCheck?: () => Promise<void> }): Promise<ReminderSample>
 export declare function d6ExpectedReminders(sample: ReminderSample): [string, string][]
+export declare function makeBackupDir(): string
+export type RestoreStaging = {
+  archive_path: string
+  is_valid: boolean
+  is_compatible: boolean
+  app_version: string | null
+  created_at: string | null
+  reason: string | null
+  staged_db_path: string | null
+}
+export declare function prepareRestore(baseUrl: string, archivePath: string): Promise<RestoreStaging>

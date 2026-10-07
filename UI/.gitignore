@@ -27,3 +27,8 @@ playwright-report
 *.njsproj
 *.sln
 *.sw?
+
+# Commission Tracker: backup_data (workflow) and backup (page) are source code, not Visual Studio backup folders
+# (Backup*/ in the root .gitignore matches them where git ignores case, as on Windows). Same case as ENV-9 of the backend.
+!src/logic/workflows/backup_data/
+!src/screens/pages/backup/

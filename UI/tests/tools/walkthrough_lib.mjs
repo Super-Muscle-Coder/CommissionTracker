@@ -512,3 +512,21 @@ export async function seedSampleData(baseUrl) {
     await call(baseUrl, 'PUT', `/clients/${created.client_id}/archived`, { is_archived: true }, 200)
   }
 }
+
+// --- Chặng E: backup ----------------------------------------------------------------
+
+// A temporary folder for the backup files of one run, next to the temporary data
+// folder (both under the system temp folder) and never in UI/, in %APPDATA% or in
+// a folder of the person. The caller removes it, as it removes the data folder.
+export function makeBackupDir() {
+  return fs.mkdtempSync(path.join(os.tmpdir(), 'ct-ui-backup-'))
+}
+
+// prepare_restore (POST /backups/restore-preparations, input archive_path): called
+// from test tooling ONLY, to prove that a file made from the interface is one the
+// backend accepts (the criterion of stage E). The interface never calls it: only
+// restore_data does (api_contract.yaml 4.0.0). The staging file it makes lies in the
+// temporary data folder. Answers the 200 body; any other label throws.
+export async function prepareRestore(baseUrl, archivePath) {
+  return call(baseUrl, 'POST', '/backups/restore-preparations', { archive_path: archivePath }, 200)
+}

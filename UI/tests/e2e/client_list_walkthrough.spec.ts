@@ -86,7 +86,7 @@ test.describe.serial('walkthrough client_list', () => {
         await expect(l.page.getByLabel('Tên hiển thị')).toHaveValue('')
         await expect(l.page.getByLabel('Kênh 1')).toHaveCount(0)
         await expect(l.page.getByLabel('Ghi chú')).toHaveValue('')
-        await expect(l.page.getByRole('button', { name: 'Lưu' })).toBeEnabled()
+        await expect(l.page.getByRole('button', { name: 'Lưu', exact: true })).toBeEnabled()
         await expect(l.page.getByRole('button', { name: 'Hủy' })).toBeEnabled()
       })
     } finally {

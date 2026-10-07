@@ -4,8 +4,8 @@
  * the shape of the resource Main hands them without importing scaffold_ui
  * (R2).
  *
- * Only http_client exists today. ipc_bridge is added once the desktop layer
- * implements its first ipc entry (.design/ui_decomposition.md §2, §3).
+ * Two resources: http_client, and (from the desktop layer's first ipc entry,
+ * session 33; .design/ui_decomposition.md §2, §3) ipc_bridge.
  */
 
 // HTTP methods used by api_contract.yaml 4.0.0 http addresses.
@@ -29,4 +29,19 @@ export type HttpRequestOptions = {
 export interface HttpClient {
   // path: the path of the address, with every {name} segment already filled.
   send(method: HttpMethod, path: string, options: HttpRequestOptions): Promise<Transport>
+}
+
+// The function the desktop preload script places on the renderer bridge
+// (data_schema.yaml 6.1.0 renderer rule; api_contract.yaml 4.0.0
+// endpoint_forms.ipc): invoke(address, argument). It answers a Promise that is
+// rejected when the address is not implemented, the argument is refused, the
+// sending frame is refused, or the handler throws (e.g. the dialog fails).
+export type IpcInvoke = (address: string, argument: unknown) => Promise<unknown>
+
+// The ipc_bridge resource: one call to an ipc address, passed on as it is.
+// It checks nothing and decides nothing: the shape of the answer is checked by
+// the Adapters of the workflow that calls, and a rejected Promise goes up to
+// those Adapters untouched. No time limit, since a dialog waits for the person.
+export interface IpcBridge {
+  call(address: string, argument: unknown): Promise<unknown>
 }

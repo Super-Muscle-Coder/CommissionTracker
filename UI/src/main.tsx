@@ -2,8 +2,8 @@
 // workflow: main
 // clause: external
 // component: main
-// last_updated_by: coding-agent@2026-10-05#2
-// last_updated_at: 2026-10-05T22:41:41.9720404+07:00
+// last_updated_by: coding-agent@2026-10-07#3
+// last_updated_at: 2026-10-07T20:44:38.4471702+07:00
 //
 // EXPERIENCES:
 //   - id: main-EXP-001
@@ -456,10 +456,72 @@
 //       gọi 2 lần. Sửa: chờ bằng await vi.waitFor(() => expect(loadPending).toHaveBeenCalledTimes(3)) (thêm vi vào import);
 //       điều ca khẳng định không đổi: đúng ba lần gọi, câu vẫn hiện đúng một lần (findByText báo lỗi nếu có hai), sau khi sang
 //       "Khách hàng" câu không còn. Không nới testTimeout, không retries, không bỏ ca. Chỉ sửa tệp kiểm thử; không đổi UI/src.
+//   - id: main-EXP-033
+//     content: >
+//       Phiên 34 (chặng E), nền. (1) invoke là giá trị khởi động BẮT BUỘC thứ hai: LAYER_CONFIGS.launch.invokeProperty = 'invoke' ([CONTRACT]
+//       data_schema 6.1.0 luật renderer; api_contract 4.0.0 endpoint_forms.ipc) và startupFailure.functionMissing. readLaunchValues đọc
+//       backendBaseUrl trước (hỏng thì báo nó trước), rồi invoke: không phải hàm thì FatalMessage kèm "window.commissionTracker.invoke". Trả
+//       { ok: true, backendBaseUrl, invoke }. Chỉ Main đọc bridge (R12). (2) Bước 3: createIpcBridge(launch.invoke) cạnh createHttpClient. Bước 4: ráp
+//       backup_data theo mẫu nhưng Adapters nhận THÊM ipc_bridge: createBackupDataAdapters(httpClient, ipcBridge, BACKUP_DATA_CONFIGS) →
+//       createBackupDataServices(adapters, BACKUP_DATA_CONFIGS, LAYER_CONFIGS.resultMessages) → createBackupDataRouters(services) (Routers không cần
+//       giá trị Configs), đặt vào LogicRouters.backupData. Không có đồng hồ. (3) tests/main/main.test.tsx: mọi bridge giả có thêm khóa invoke
+//       (fakeInvoke, hàm), đúng như plan; ca "bridge không có backendBaseUrl" nay là { invoke } (chỉ một lỗi mỗi ca); thêm 6 ca: bridge không có invoke,
+//       invoke là chuỗi, null, đối tượng, số, và "backendBaseUrl sai dạng vẫn được báo trước". (4) Công cụ kiểm thử (không thuộc npm run check):
+//       tests/tools/folder_dialog_stub.mjs (cùng .d.mts) thay dialog.showOpenDialog trong tiến trình chính bằng electronApp.evaluate (cùng cách với
+//       native_dialogs-EXP-003 của Desktop, không cờ, không sửa Desktop): trả chọn thư mục / hủy / ném lỗi theo lệnh của kiểm thử, và đếm số lần
+//       "mở"; đặt trong tests/tools vì luật R12 cấm globalThis có kiểu trong tests/e2e. walkthrough_lib.mjs thêm makeBackupDir() (thư mục tạm
+//       ct-ui-backup-* cạnh thư mục dữ liệu tạm, spec xóa trong finally) và prepareRestore() (POST /backups/restore-preparations từ công cụ,
+//       không từ UI/src). (5) PHÁT HIỆN NGOÀI PLAN, đã xử lý: .gitignore gốc có "Backup*/" (mẫu của Visual Studio), trên Windows git bỏ qua không
+//       phân biệt hoa thường nên bỏ qua cả UI/src/logic/workflows/backup_data/ và UI/src/screens/pages/backup/ (cùng loại ENV-9 của Backend, nơi
+//       .gitignore gốc đã có "!Backend/workflows/backup_data/"). Tôi không sửa .gitignore gốc (ngoài UI/); thêm hai dòng phủ định vào UI/.gitignore
+//       (nằm trong UI/): git check-ignore -v hết báo bỏ qua, git status thấy hai thư mục. Nếu Project Owner đổi sang sửa tệp gốc thì bỏ hai dòng đó.
+//       (6) Mục "Sao lưu" làm HỎNG 2 ca e2e ở lượt đầu, KHÔNG phải ngẫu nhiên: getByRole('button', { name: 'Lưu' }) khớp theo chuỗi con không phân biệt
+//       hoa thường nên trùng cả nút "Lưu" lẫn mục "Sao lưu" (strict mode violation) ở client_form (mọi chỗ) và client_list S4. Sửa: thêm exact: true cho
+//       đúng 11 locator 'Lưu' của hai spec đó; không đổi gì khác. Cùng loại với việc thêm ['Sao lưu', null] vào các danh sách mục điều hướng của
+//       commission_list, progress_board và app_root.test.tsx (chỉ thêm mục mới). Lượt hỏng đó tính là hỏng và 5 lượt đếm lại từ đầu. Phiên sau thêm
+//       một mục điều hướng có chữ trùng chuỗi con của nhãn nút khác sẽ gặp lại điều này.
+//   - id: main-EXP-034
+//     content: >
+//       Việc 2 của plan phiên 34 (đo trước khi viết): thay hộp thoại từ công cụ e2e của giao diện được, không cần cờ mới. Chi tiết số đo ở EVIDENCE
+//       bên dưới và ở EVIDENCE của scaffold_ui. Điều giao diện KHÔNG được dựa vào: chữ của message khi hàm thay thế ném lỗi (Electron bọc thêm
+//       "Error invoking remote method '<địa chỉ>': Error: …"); Adapters chỉ biết "Promise bị từ chối".
 //
 // UNSOLVED_PROBLEMS: []
 //
 // EVIDENCE:
+//   - claim: >
+//       Phiên 34 (chặng E, giao diện): môi trường, mốc và kết quả cuối; mốc %APPDATA% không đổi; mọi tiêu chí kiểm bằng máy đạt.
+//     how: >
+//       node --version; npm --version; git status --short; trong UI/: npm ci; npm run check (mốc và cuối); npm run build trong Desktop/ rồi
+//       CT_WALKTHROUGH_RUNNER=coding-agent@2026-10-07#3 npm run e2e (mốc; rồi 5 lượt liên tiếp, từng lượt một, bằng script bọc); spec riêng
+//       npx playwright test -c tests/e2e/playwright.config.ts backup_walkthrough (10 lần liên tiếp); một lượt npm run e2e KHÔNG đặt biến, băm
+//       SHA-256 toàn thư mục UI/evidence (sort + sha256sum) trước và sau; trong Desktop/: xóa packaging\stage và release,
+//       ELECTRON_BUILDER_CACHE đặt vào thư mục tạm (npm run dist hỏng EXDEV ở lần đầu, như phiên 33), npm run dist, npm run test:packaged;
+//       tên, kích thước, giờ ghi và SHA-256 của tệp trong %APPDATA%\CommissionTracker đầu và cuối phiên.
+//     result: >
+//       Node v24.14.1; npm 11.11.0; Python của Backend/env (qua fixture); git status đầu phiên rỗng; npm ci xong (npm audit còn báo lỗ hổng của công cụ
+//       phát triển như ENV-7; không chạy npm audit fix). Mốc: check "Tests 1555 passed (1555)", e2e "70 passed (5.4m)". Cuối: check exit 0 (tsc -b,
+//       eslint --max-warnings 0, stylelint, "check_contrast: 19 text pairs >= 4.5:1 and 13 non-text pairs >= 3:1 checked, all pass.", "check_layer: 179
+//       files under src/ checked", "check_e2e_status: no unfiltered text assertion", "Test Files 39 passed (39)", "Tests 1679 passed (1679)"). Spec backup
+//       riêng 10/10 lần "5 passed" (mỗi lần dưới 15 giây). e2e: lượt đầu hỏng 2 ca ("Lưu" trùng "Sao lưu", xem main-EXP-033), sau khi sửa 5/5 lượt liên
+//       tiếp "75 passed" (5,8–6,0 phút; 115 lần chụp ảnh mỗi lượt, lớn nhất 224 ms); lượt không biến "75 passed (5.4m)", UI/evidence giữ 129 tệp và cùng
+//       băm (310cfae630b39275) trước và sau. dist: sau lần EXDEV, với cache tạm, "Commission Tracker Setup 0.1.0.exe" được dựng; test:packaged "9 passed
+//       (1.1m)", sau bộ không còn python.exe của gói. %APPDATA%: data.db 114688 byte và data.db.lock 0 byte, cùng giờ ghi 2026-09-28 21:09:42, cùng băm
+//       B1996554… — không đổi. Không eslint-disable, không ngoại lệ lint mới, không phụ thuộc mới, không sửa Desktop/ hay Backend/.
+//     recorded_at: 2026-10-07T20:44:38.4471702+07:00
+//   - claim: >
+//       Việc 2: hộp thoại thay thế được từ công cụ e2e; câu trả lời của invoke; không hộp thoại thật; message khi hàm thay thế ném lỗi.
+//     how: >
+//       Script tạm ngoài dự án (scratchpad, không giữ lại) mở ứng dụng thật như walkthrough_harness.ts (_electron.launch, launchArgs với
+//       noDialog và showInactive, cờ --ct-test-data-dir), gán dialog.showOpenDialog bằng app.evaluate, rồi page.evaluate gọi
+//       window.commissionTracker.invoke('dialog:pick-folder', {}) cho ba chế độ (chọn, hủy, ném lỗi).
+//     result: >
+//       bridge keys ["backendBaseUrl","invoke"]; chọn → {"status":200,"body":{"canceled":false,"path":"C:\\stub\\folder"}}; hủy →
+//       {"status":200,"body":{"canceled":true,"path":null}}; ném lỗi → Promise bị từ chối, message nguyên văn: Error invoking remote method
+//       'dialog:pick-folder': Error: boom from the stub; sau lỗi, chọn lại vẫn trả 200 và ứng dụng chạy tiếp. Hàm thay thế nhận 3/3 lời gọi, số
+//       cửa sổ trước và sau đều 1, options { properties: ["openDirectory"], title: "Chọn thư mục" }. Log của Main: "native_dialogs:
+//       dialog:pick-folder -> chosen …", "-> canceled", "failed: boom from the stub".
+//     recorded_at: 2026-10-07T20:44:38.4471702+07:00
 //   - claim: >
 //       Phiên 25: môi trường, mốc, và kết quả cuối; mốc %APPDATA% không đổi.
 //     how: >
@@ -1085,6 +1147,11 @@
 //       một lời gọi GET <backendBaseUrl>/clients. Hành vi mới theo plan việc 4 và
 //       7, không phải nới kiểm thử.
 //     written_at: 2026-09-28
+//   - content: >
+//       Phiên 34 sửa tests/main/main.test.tsx: mọi bridge giả có thêm khóa invoke (hàm) vì invoke nay bắt buộc; ca "bridge không có backendBaseUrl" nay
+//       là { invoke } để chỉ có một lỗi. Hành vi mới theo plan việc 3, không phải nới kiểm thử. Phiên 34 cũng sửa e2e: thêm exact: true cho 11
+//       locator 'Lưu' (client_form, client_list) và thêm ['Sao lưu', null] vào ba danh sách mục điều hướng; xem main-EXP-033.
+//     written_at: 2026-10-07
 // ===WCA-CHECKPOINT-END===
 /**
  * Main of the interface layer (iwca_theory.md §4; i2-scaffold.md, Step I2.6).
@@ -1126,19 +1193,25 @@ import { createSendReminderAdapters } from './logic/workflows/send_reminder/adap
 import { SEND_REMINDER_CONFIGS } from './logic/workflows/send_reminder/configs'
 import { createSendReminderRouters } from './logic/workflows/send_reminder/routers'
 import { createSendReminderServices } from './logic/workflows/send_reminder/services'
-import { createHttpClient } from './logic/workflows/scaffold_ui/adapters'
+import { createBackupDataAdapters } from './logic/workflows/backup_data/adapters'
+import { BACKUP_DATA_CONFIGS } from './logic/workflows/backup_data/configs'
+import { createBackupDataRouters } from './logic/workflows/backup_data/routers'
+import { createBackupDataServices } from './logic/workflows/backup_data/services'
+import type { IpcInvoke } from './logic/shared/resources'
+import { createHttpClient, createIpcBridge } from './logic/workflows/scaffold_ui/adapters'
 import { SCAFFOLD_UI_CONFIGS } from './logic/workflows/scaffold_ui/configs'
 import { AppRoot } from './screens/app_root'
 import { LogicContext, type LogicRouters } from './screens/logic_context'
 
-type LaunchValues = { ok: true; backendBaseUrl: string } | { ok: false; detail: string }
+type LaunchValues = { ok: true; backendBaseUrl: string; invoke: IpcInvoke } | { ok: false; detail: string }
 
-// Step 1. The launch value (.design/ui_decomposition.md §3): the string
-// property backendBaseUrl of the frozen object window.<renderer_bridge>,
-// shaped http://<loopback_host>:<port 1..65535> (data_schema.yaml 6.1.0,
-// clause_a_common.mandatory_rules, renderer rule). No default, no guess.
+// Step 1. The launch values (.design/ui_decomposition.md §3), both properties
+// of the frozen object window.<renderer_bridge> (data_schema.yaml 6.1.0,
+// clause_a_common.mandatory_rules, renderer rule): the string backendBaseUrl,
+// shaped http://<loopback_host>:<port 1..65535>, and (from session 34) the
+// function invoke. No default, no guess.
 function readLaunchValues(): LaunchValues {
-  const { rendererBridge, backendBaseUrlProperty, loopbackHost } = LAYER_CONFIGS.launch
+  const { rendererBridge, backendBaseUrlProperty, invokeProperty, loopbackHost } = LAYER_CONFIGS.launch
   const failure = LAYER_CONFIGS.startupFailure
   const bridgeName = `window.${rendererBridge}`
   const valueName = `${bridgeName}.${backendBaseUrlProperty}`
@@ -1156,7 +1229,13 @@ function readLaunchValues(): LaunchValues {
   if (!/^[1-9][0-9]{0,4}$/.test(port) || Number(port) > 65535) {
     return { ok: false, detail: `${failure.valueMalformed}: ${valueName} = ${JSON.stringify(value)}` }
   }
-  return { ok: true, backendBaseUrl: value }
+  const invoke: unknown = Reflect.get(bridge, invokeProperty)
+  if (typeof invoke !== 'function') {
+    return { ok: false, detail: `${failure.functionMissing}: ${bridgeName}.${invokeProperty}` }
+  }
+  // Read once and kept: the preload's invoke does not use `this`, so it is
+  // handed on as a plain function. Its type is the contract's invoke(address, argument).
+  return { ok: true, backendBaseUrl: value, invoke: invoke as IpcInvoke }
 }
 
 const root = createRoot(document.getElementById(LAYER_CONFIGS.rootElementId)!)
@@ -1173,8 +1252,10 @@ if (!launch.ok) {
   // Step 2. Configs: LAYER_CONFIGS (layer) and SCAFFOLD_UI_CONFIGS (workflow),
   // imported above as static data.
 
-  // Step 3. Foundation workflow scaffold_ui: the http_client resource.
+  // Step 3. Foundation workflow scaffold_ui: the http_client resource, and (from
+  // session 34) the ipc_bridge resource built from the invoke function read in step 1.
   const httpClient = createHttpClient(launch.backendBaseUrl, SCAFFOLD_UI_CONFIGS.timeoutMs)
+  const ipcBridge = createIpcBridge(launch.invoke)
 
   // Step 4. Wire each interface workflow, in the order of
   // .design/ui_decomposition.md §2:
@@ -1213,6 +1294,10 @@ if (!launch.ok) {
   // reminder_ticker's, never the interface's (api_contract.yaml 4.0.0).
   const sendReminderAdapters = createSendReminderAdapters(httpClient, SEND_REMINDER_CONFIGS)
   const sendReminderServices = createSendReminderServices(sendReminderAdapters, SEND_REMINDER_CONFIGS, LAYER_CONFIGS.resultMessages)
+  // backup_data: the one workflow that also gets the ipc_bridge (the folder dialog,
+  // native_dialogs.pick_folder). prepare_restore is restore_data's, never the interface's.
+  const backupDataAdapters = createBackupDataAdapters(httpClient, ipcBridge, BACKUP_DATA_CONFIGS)
+  const backupDataServices = createBackupDataServices(backupDataAdapters, BACKUP_DATA_CONFIGS, LAYER_CONFIGS.resultMessages)
   const routers: LogicRouters = {
     manageClient: createManageClientRouters(manageClientServices, MANAGE_CLIENT_CONFIGS.limits),
     manageCommission: createManageCommissionRouters(manageCommissionServices, {
@@ -1234,6 +1319,7 @@ if (!launch.ok) {
       periodicUnits: SEND_REMINDER_CONFIGS.periodicUnits,
       leadUnits: SEND_REMINDER_CONFIGS.leadUnits,
     }),
+    backupData: createBackupDataRouters(backupDataServices),
   }
 
   // Step 5. Hand the Routers to the screens zone and render the root.

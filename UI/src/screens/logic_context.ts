@@ -4,6 +4,7 @@
  * through useLogic(), never by importing a Routers value (R8).
  */
 import { createContext, useContext } from 'react'
+import type { BackupDataRouters } from '../logic/workflows/backup_data/routers'
 import type { ManageClientRouters } from '../logic/workflows/manage_client/routers'
 import type { ManageCommissionRouters } from '../logic/workflows/manage_commission/routers'
 import type { RecordPaymentRouters } from '../logic/workflows/record_payment/routers'
@@ -20,6 +21,7 @@ export type LogicRouters = {
   recordPayment: RecordPaymentRouters
   viewIncomeReport: ViewIncomeReportRouters
   sendReminder: SendReminderRouters
+  backupData: BackupDataRouters
 }
 
 export const LogicContext = createContext<LogicRouters | null>(null)
