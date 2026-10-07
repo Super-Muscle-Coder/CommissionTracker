@@ -236,7 +236,7 @@ Chưa có thành phần này thì trong dùng thật danh sách nhắc việc đ
 
 ## Layer desktop — sau audit phiên 30
 
-### DSK-19 — Dọn checkpoint và một ca kiểm thử của phiên 30 (thấp; audit phiên 30 §5.1–5.4) — cho phiên desktop kế tiếp
+### DSK-19 — Dọn checkpoint và một ca kiểm thử của phiên 30 (thấp; audit phiên 30 §5.1–5.4) — **plan phiên 33** (mục "Kế thừa")
 
 1. **`main-PROB-001`** (hồ sơ Chromium `%APPDATA%\Commission Tracker` đổi trong phiên 30; thư mục dữ liệu thật không đổi): **Project Owner xác nhận 2026-10-05**: đã tự cài bản mới đè lên bản cũ rồi mở thử, đúng các thời điểm đó. Nguồn là bản cài lỗi (thiếu module ticker, Main ném lỗi trước `setPath`), không phải kiểm thử. Chuyển thành EXPERIENCE, kèm mục 2.
 2. **Định danh dùng lại:** `main-EXP-019` có `derived_from: main-PROB-001`, trỏ tới vấn đề cũ của phiên 26; vấn đề mới của phiên 30 lại tên `main-PROB-001`. Đổi vấn đề mới thành `main-PROB-002` (hoặc EXPERIENCE mới có `derived_from: main-PROB-002`).
@@ -278,6 +278,8 @@ Phiên 32 cho `app_version` là tham số từ khóa tùy chọn, vì 20 chỗ g
 ## Hợp đồng — chờ Project Owner duyệt
 
 ### CT-6 — `backup_data` lên `đã_hoàn_thiện` (đề xuất 2026-10-07, audit phiên 32 §6) — chờ Project Owner duyệt
+
+> **ĐÃ ĐÓNG 2026-10-07:** Project Owner duyệt; Orchestrator ghi Data Schema 9.0.3 kèm changelog.
 
 Data Schema `9.0.2` → `9.0.3`: chỉ đổi `clause_b_backend.backup_data.status` từ `đang_chờ_triển_khai` sang `đã_hoàn_thiện`. Không đổi hình dạng hay luật, nên là bản vá.
 

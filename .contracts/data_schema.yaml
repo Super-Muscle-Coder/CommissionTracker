@@ -305,9 +305,21 @@
 #            this is a clarification; the description keeps its sentence.
 #            api_contract.yaml does not change. Approved by the Project
 #            Owner on 2026-10-01.
+#   v9.0.3 — [Clause B, SỬA] status of backup_data: đang_chờ_triển_khai ->
+#            đã_hoàn_thiện — Stage-6 proposal of backend session #32 verified
+#            by the Orchestrator (08, Part 5; .reviews/audits/backend/
+#            audit_backend_session32.md): both endpoints (create_backup,
+#            prepare_restore) built as a storage-level operation (05, Step
+#            5.6) through db_connection only; independent re-run 564/564
+#            three times on another machine, 104 workflow tests including a
+#            round trip on a second backend process; the agent's three bite
+#            tests documented and four more by the Orchestrator; backup and
+#            restore preparation measured on the packaged build; no unsolved
+#            problem. Shapes, labels and rules unchanged. Approved by the
+#            Project Owner on 2026-10-07 (open_issues CT-6).
 # =============================================================================
 
-schema_version: 9.0.2
+schema_version: 9.0.3
 contract_state: approved
 
 # -----------------------------------------------------------------------------
@@ -635,7 +647,7 @@ clause_b_backend:
   backup_data:
     tag: "[Clause B]"
     workflow_type: nghiệp_vụ
-    status: đang_chờ_triển_khai
+    status: đã_hoàn_thiện
     description: "Storage-level operation (05-edge-cases.md, Step 5.6): writes a consistent snapshot of the whole database to one archive file, and prepares an archive for restore by checking it and extracting its database into a staging file. Works on the database as a whole through db_connection; never reads or interprets any workflow's records. Only this workflow knows the archive format. An archive is compatible when its app_version is not newer than the running app_version."
     input_expected:
       db_connection: { type: resource, from: scaffold_backend }
