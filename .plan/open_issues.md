@@ -238,6 +238,8 @@ Chưa có thành phần này thì trong dùng thật danh sách nhắc việc đ
 
 ### DSK-19 — Dọn checkpoint và một ca kiểm thử của phiên 30 (thấp; audit phiên 30 §5.1–5.4) — **plan phiên 33** (mục "Kế thừa")
 
+> **ĐÃ ĐÓNG 2026-10-07, phiên 33** (audit `.reviews/audits/desktop/audit_desktop_session33.md`, §4). Đủ bốn mục: `main-EXP-030` (`derived_from: main-PROB-002`), chữ của `reminder_ticker-EXP-003`, ca D2 chờ `reminder check #1:`.
+
 1. **`main-PROB-001`** (hồ sơ Chromium `%APPDATA%\Commission Tracker` đổi trong phiên 30; thư mục dữ liệu thật không đổi): **Project Owner xác nhận 2026-10-05**: đã tự cài bản mới đè lên bản cũ rồi mở thử, đúng các thời điểm đó. Nguồn là bản cài lỗi (thiếu module ticker, Main ném lỗi trước `setPath`), không phải kiểm thử. Chuyển thành EXPERIENCE, kèm mục 2.
 2. **Định danh dùng lại:** `main-EXP-019` có `derived_from: main-PROB-001`, trỏ tới vấn đề cũ của phiên 26; vấn đề mới của phiên 30 lại tên `main-PROB-001`. Đổi vấn đề mới thành `main-PROB-002` (hoặc EXPERIENCE mới có `derived_from: main-PROB-002`).
 3. **`reminder_ticker-EXP-003`** ghi "lead không nguyên dương bị coi là sai hình dạng"; mã chấp nhận mọi số nguyên (đúng hợp đồng `amount: integer`). Sửa chữ thành "lead không nguyên".
@@ -268,6 +270,13 @@ Người dùng thật cập nhật bằng cách chạy bộ cài mới; họ kh�
 5. Cài bản cũ hơn đè bản mới: hoặc bị chặn, hoặc backend dừng có hộp thoại tiếng Việt rõ ràng; không hỏng dữ liệu.
 
 **Ai làm:** cần một máy Windows được phép cài. Plan hiện cấm agent cài bộ cài. Hướng khả dĩ: một runbook để Project Owner chạy tay, gộp với ENV-4 (máy sạch); hoặc một phiên desktop được phép cài trong môi trường cô lập. Windows Sandbox, theo hiểu biết của Orchestrator, không có trên Windows 11 Home; cần kiểm lại. Tự cập nhật (auto-update) vẫn ngoài V1.
+
+## Layer desktop — sau audit phiên 33
+
+### DSK-22 — Hai việc nhỏ của `native_dialogs` (thấp; audit phiên 33 §5.1, §5.2) — làm ở phiên desktop kế tiếp, không mở phiên riêng
+
+1. **`native_dialogs-PROB-001`** (phép cắn (b) bị bộ phân loại quyền chặn): Orchestrator đã chạy phép cắn này trong audit phiên 33, trên bản sao Linux. Bỏ danh sách địa chỉ trong preload thì N2 hỏng ở `dialog:open-file`: spy trong Main nhận lời gọi và trả `{ok: true, value: {status: 200, …}}` thay vì bị từ chối "ipc address not implemented". **Việc:** chuyển mục PROB thành EXPERIENCE (`derived_from: native_dialogs-PROB-001`), ghi số trên làm kết quả, nói rõ Orchestrator chạy trên Linux; `UNSOLVED_PROBLEMS: []`.
+2. **Thứ tự đăng ký:** dời `registerNativeDialogs` xuống sau lần nạp đầu mà 9/9 vẫn đạt (phép cắn (g) của Orchestrator). **Việc:** thêm một ca trong đó trang gọi `invoke('dialog:pick-folder', {})` ngay lúc nạp (ví dụ một trang thử riêng, hoặc một tham số của trang thử), rồi khẳng định lời gọi đó có trả lời. Không đổi mã Main.
 
 ## Layer backend — sau audit phiên 32
 
