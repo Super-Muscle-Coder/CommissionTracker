@@ -2,8 +2,8 @@
 # workflow: main
 # clause: clause_b_backend
 # component: main
-# last_updated_by: coding-agent@2026-09-27#5
-# last_updated_at: 2026-09-27T22:30:00+07:00
+# last_updated_by: coding-agent@2026-10-07#1
+# last_updated_at: 2026-10-07T10:29:51.1415583+07:00
 #
 # EXPERIENCES:
 #   - id: main-EXP-001
@@ -221,6 +221,30 @@
 #       Backend/env. Không tệp nào ngoài tests/ và workflows/*/tests/ được import
 #       pytest hay httpx; thêm phụ thuộc lúc chạy mới thì ghi vào
 #       requirements.txt, công cụ kiểm thử thì ghi vào requirements-dev.txt.
+#   - id: main-EXP-015
+#     content: >
+#       Ráp nối backup_data (phiên 32), Order 2 ngay sau manage_client, trong
+#       wire_workflows: Main đọc configs.yaml của nó (thêm vào
+#       WORKFLOW_CONFIG_FILES), dựng ArchiveSettings và StagingSettings từ hai
+#       mục archive và staging, rồi trao cho Services: DatabaseSnapshots,
+#       ArchiveFiles và StagingArea (cả ba nhận db_connection hoặc giá trị từ
+#       Configs), đồng hồ máy (BackupClock, bản SystemClock riêng của
+#       backup_data), và app_version, chính giá trị main() đã đọc và kiểm từ
+#       CT_APP_VERSION (launch.app_version). Main không chứa dòng logic sao lưu
+#       nào. wire_workflows có thêm hai tham số từ khóa: app_version và
+#       backup_clock. app_version KHÔNG có giá trị mặc định: None nghĩa là không
+#       đăng ký backup_data. Lý do: 20 chỗ gọi wire_workflows(app, db, configs)
+#       trong kiểm thử của các workflow khác không truyền nó và không được sửa;
+#       đặt "0.0.0" làm mặc định thì bịa ra một phiên bản. Hệ quả: quên truyền ở
+#       main() sẽ làm mất hai điểm giao tiếp mà không báo lỗi (test_backup_is_not_wired_without_app_version
+#       và mọi kiểm thử tiến trình thật của backup_data bắt được). backup_clock
+#       giống reminder_clock (main-EXP-009): Main không bao giờ truyền, chỉ
+#       kiểm thử của workflow truyền đồng hồ giả. Bước 5.6 được giữ: backup_data
+#       chỉ chạm db_connection (chụp, và hỏi PRAGMA database_list), không có
+#       lời gọi in_process nào, không có bảng, không gọi ensure_storage.
+#       Bản đóng gói tự có workflow mới vì prepare_runtime chép mọi .py và .yaml
+#       dưới workflows/ (trừ tests); Python nhúng có zipfile, zlib, hashlib
+#       (đo ở EVIDENCE của backup_data).
 #
 # UNSOLVED_PROBLEMS: []
 #
@@ -419,6 +443,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from workflows.backup_data.adapters import ArchiveFiles, DatabaseSnapshots, StagingArea
+from workflows.backup_data.adapters import SystemClock as BackupClock
+from workflows.backup_data.entities import ArchiveSettings, StagingSettings
+from workflows.backup_data.routers import create_backup_data_routers
+from workflows.backup_data.services import BackupDataService
 from workflows.manage_client.adapters import ClientRepository
 from workflows.manage_client.routers import create_manage_client_routers
 from workflows.manage_client.services import ManageClientService
@@ -456,6 +485,7 @@ LAYER_CONFIG_FILE = LAYER_ROOT / "configs" / "backend.yaml"
 WORKFLOW_CONFIG_FILES = {
     "scaffold_backend": LAYER_ROOT / "workflows" / "scaffold_backend" / "configs.yaml",
     "manage_client": LAYER_ROOT / "workflows" / "manage_client" / "configs.yaml",
+    "backup_data": LAYER_ROOT / "workflows" / "backup_data" / "configs.yaml",
     "manage_commission": LAYER_ROOT / "workflows" / "manage_commission" / "configs.yaml",
     "record_payment": LAYER_ROOT / "workflows" / "record_payment" / "configs.yaml",
     "update_progress": LAYER_ROOT / "workflows" / "update_progress" / "configs.yaml",
@@ -685,22 +715,45 @@ def _stop_when_stdin_closes(server: uvicorn.Server) -> None:
 
 # --- wiring of the workflows -------------------------------------------------
 
-def wire_workflows(app: FastAPI, db, configs: dict, *, reminder_clock=None) -> dict:
+def wire_workflows(
+    app: FastAPI, db, configs: dict, *, app_version: str | None = None, reminder_clock=None, backup_clock=None
+) -> dict:
     """Wire business workflows in the order of .design/03_classification.md,
     Step 3.2. Returns the in_process entries kept for later callers.
 
-    reminder_clock: the clock handed to send_reminder's Services. The Main
-    never passes it: the machine clock (SystemClock) is used. Only workflow
-    tests pass a fake clock here."""
+    app_version: the CT_APP_VERSION the Main read at launch, handed to
+    backup_data. main() always passes it. It has no default value: when it is
+    None, backup_data is not wired (the workflow tests of the other workflows
+    call this function without it).
+    reminder_clock, backup_clock: the clocks handed to send_reminder's and
+    backup_data's Services. The Main never passes them: the machine clock is
+    used. Only workflow tests pass a fake clock here."""
     in_process = {}
 
-    # Order 2: manage_client (backup_data: later session)
+    # Order 2: manage_client
     client_repo = ClientRepository(db)
     client_repo.ensure_storage()
     client_service = ManageClientService(client_repo)
     client_router, get_client_summary = create_manage_client_routers(client_service)
     app.include_router(client_router)
     in_process["get_client_summary"] = get_client_summary
+
+    # Order 2: backup_data — storage-level operation: no table, no call to any
+    #          workflow. Its Adapters receive db_connection; its Services the
+    #          running app_version and the machine clock.
+    if app_version is not None:
+        backup_cfg = configs["backup_data"]
+        archive_settings = ArchiveSettings(**backup_cfg["archive"])
+        chunk_bytes = int(backup_cfg["io_chunk_bytes"])
+        backup_service = BackupDataService(
+            DatabaseSnapshots(db, chunk_bytes),
+            ArchiveFiles(archive_settings, chunk_bytes),
+            StagingArea(db, StagingSettings(**backup_cfg["staging"]), archive_settings.temp_suffix, chunk_bytes),
+            backup_clock if backup_clock is not None else BackupClock(),
+            archive_settings,
+            app_version,
+        )
+        app.include_router(create_backup_data_routers(backup_service))
 
     # Order 3: manage_commission — its Adapters receive get_client_summary.
     supported_currencies = [str(c) for c in configs["manage_commission"]["supported_currencies"]]
@@ -841,7 +894,7 @@ def _run(layer_cfg: dict, launch: LaunchValues, configs: dict, failure_code: int
         # 3-5. Business workflows: Adapters (and their storage), Services, Routers.
         app = create_http_app(layer_cfg)
         try:
-            wire_workflows(app, db, configs)
+            wire_workflows(app, db, configs, app_version=launch.app_version)
         except Exception:
             log.exception("cannot wire workflows")
             return failure_code

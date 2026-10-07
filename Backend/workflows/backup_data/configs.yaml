@@ -1,0 +1,30 @@
+# Configs of backup_data.
+#
+# No boundary value: the archive format is known only to this workflow (the
+# contract hands it over to nobody), so every value below is internal. The
+# contract's own values this workflow realizes (the two purposes, the
+# file_path rule) are format checks in the Routers, not configuration.
+
+# Archive file: <file_name_prefix>-<purpose>-<YYYYMMDD-HHMMSS><extension>
+# (a taken name gets a counter suffix: ...-2<extension>, ...-3<extension>).
+archive:
+  extension: ".ctbackup"
+  file_name_prefix: "commission-tracker"
+  file_name_time_format: "%Y%m%d-%H%M%S"   # machine local time
+  temp_suffix: ".part"                      # in-progress file, next to its final name
+  # Exactly two components, with these names. Anything else makes the archive invalid.
+  manifest_name: "manifest.json"
+  database_name: "data.db"
+  format: "commission-tracker-backup"
+  format_version: 1
+  manifest_max_bytes: 65536   # a larger manifest is not read: the archive is invalid
+  max_name_attempts: 1000     # names tried (base, -2, -3, ...) before giving up
+
+# Staging file for restore (prepare_restore): <folder of the running database>/<folder_name>/<file_name>.
+# Only one staging file exists at a time.
+staging:
+  folder_name: "restore-staging"
+  file_name: "data.db"
+
+# How many bytes are copied or hashed at a time.
+io_chunk_bytes: 1048576

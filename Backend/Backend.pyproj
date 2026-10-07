@@ -30,6 +30,13 @@
     <Compile Include="tests\test_cors.py" />
     <Compile Include="tests\test_database_ownership.py" />
     <Compile Include="workflows\__init__.py" />
+    <Compile Include="workflows\backup_data\__init__.py" />
+    <Compile Include="workflows\backup_data\adapters.py" />
+    <Compile Include="workflows\backup_data\entities.py" />
+    <Compile Include="workflows\backup_data\routers.py" />
+    <Compile Include="workflows\backup_data\services.py" />
+    <Compile Include="workflows\backup_data\tests\__init__.py" />
+    <Compile Include="workflows\backup_data\tests\test_backup_data.py" />
     <Compile Include="workflows\manage_client\__init__.py" />
     <Compile Include="workflows\manage_client\adapters.py" />
     <Compile Include="workflows\manage_client\entities.py" />
@@ -89,6 +96,7 @@
     <Content Include="pytest.ini" />
     <Content Include="requirements-dev.txt" />
     <Content Include="requirements.txt" />
+    <Content Include="workflows\backup_data\configs.yaml" />
     <Content Include="workflows\manage_client\configs.yaml" />
     <Content Include="workflows\manage_commission\configs.yaml" />
     <Content Include="workflows\manage_watermark_profile\configs.yaml" />
@@ -102,6 +110,8 @@
     <Folder Include="configs\" />
     <Folder Include="tests\" />
     <Folder Include="workflows\" />
+    <Folder Include="workflows\backup_data\" />
+    <Folder Include="workflows\backup_data\tests\" />
     <Folder Include="workflows\manage_client\" />
     <Folder Include="workflows\manage_client\tests\" />
     <Folder Include="workflows\manage_commission\" />
