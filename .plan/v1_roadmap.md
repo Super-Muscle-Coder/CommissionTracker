@@ -194,7 +194,7 @@ Một phiên backend ngắn, độc lập, không chặn ai. Chen vào bất c�
 Workflow này thao tác trên cả tệp cơ sở dữ liệu qua `db_connection`, không đọc bảng của workflow nào. Hợp đồng đã có `backup_request_record`, `backup_archive_record` và `restore_staging`. Lưu ý: `restore_staging` là output của `backup_data` nhưng do `restore_data` tiêu thụ — nên phần đó vẫn phải làm đúng dù `restore_data` chưa tồn tại.
 
 **Chia phiên (2026-10-07):**
-1. **Phiên 32 (backend):** workflow `backup_data`, cả hai điểm giao tiếp `create_backup` và `prepare_restore`. Plan ở `.plan/backend_plan.md`. `prepare_restore` vẫn làm ngay dù chặng F chưa quyết: phương án `restore_data` đầy đủ hay phương án đơn giản ("chuẩn bị rồi mở lại ứng dụng", `.design/v1_scope.md` mục 4) đều cần bước kiểm tệp sao lưu và chuẩn bị tệp đó.
+1. **Phiên 32 (backend):** workflow `backup_data`, cả hai điểm giao tiếp `create_backup` và `prepare_restore`. Plan ở `.plan/backend_plan.md`. **Xong 2026-10-07, audit đạt** (`.reviews/audits/backend/audit_backend_session32.md`); backend 564 kiểm thử; chạy được trên bản đóng gói. Chờ CT-6 (`backup_data` lên `đã_hoàn_thiện`). `prepare_restore` vẫn làm ngay dù chặng F chưa quyết: phương án `restore_data` đầy đủ hay phương án đơn giản ("chuẩn bị rồi mở lại ứng dụng", `.design/v1_scope.md` mục 4) đều cần bước kiểm tệp sao lưu và chuẩn bị tệp đó.
 2. **Phiên desktop:** `native_dialogs.pick_folder`, lối vào `ipc` đầu tiên (thêm `invoke` vào bridge theo API Contract 4.0.0).
 3. **Phiên giao diện:** làm lại I1 cho sao lưu, rồi trang sao lưu gọi `create_backup`.
 

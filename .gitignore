@@ -365,3 +365,6 @@ FodyWeavers.xsd
 Backend/env/
 .pytest_cache/
 Desktop/startup-logs/
+# Commission Tracker: the workflow backup_data is source code, not a Visual Studio backup folder
+# (Backup*/ above matches it where git ignores case, as on Windows).
+!Backend/workflows/backup_data/

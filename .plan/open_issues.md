@@ -269,7 +269,17 @@ Người dùng thật cập nhật bằng cách chạy bộ cài mới; họ kh�
 
 **Ai làm:** cần một máy Windows được phép cài. Plan hiện cấm agent cài bộ cài. Hướng khả dĩ: một runbook để Project Owner chạy tay, gộp với ENV-4 (máy sạch); hoặc một phiên desktop được phép cài trong môi trường cô lập. Windows Sandbox, theo hiểu biết của Orchestrator, không có trên Windows 11 Home; cần kiểm lại. Tự cập nhật (auto-update) vẫn ngoài V1.
 
+## Layer backend — sau audit phiên 32
+
+### BE-9 — `wire_workflows(app_version=None)` thì không ráp `backup_data` (thấp; audit phiên 32 §5.4)
+
+Phiên 32 cho `app_version` là tham số từ khóa tùy chọn, vì 20 chỗ gọi `wire_workflows(app, db, configs)` trong kiểm thử của các workflow khác không truyền nó, và agent không được sửa chúng. Quên truyền ở `main()` thì mất hai điểm giao tiếp mà không báo lỗi; kiểm thử tiến trình thật của `backup_data` chặn được điều đó. **Việc:** khi một phiên backend chạm lại các kiểm thử đó, cho chúng truyền `app_version`, rồi bỏ nhánh "không ráp".
+
 ## Hợp đồng — chờ Project Owner duyệt
+
+### CT-6 — `backup_data` lên `đã_hoàn_thiện` (đề xuất 2026-10-07, audit phiên 32 §6) — chờ Project Owner duyệt
+
+Data Schema `9.0.2` → `9.0.3`: chỉ đổi `clause_b_backend.backup_data.status` từ `đang_chờ_triển_khai` sang `đã_hoàn_thiện`. Không đổi hình dạng hay luật, nên là bản vá.
 
 ### CT-5 — Luật "ngày bắt đầu không sau ngày kết thúc" của `view_income_report` nằm ngoài `type` (trung bình; đề xuất của Orchestrator, 2026-10-01, audit phiên 24 §5.1)
 
@@ -690,6 +700,7 @@ Không ảnh hưởng điều kiện của UI-18: e2e do agent khởi chạy, Pr
   - DSK-10 được giải quyết luôn trong `.gitignore` chung.
   - Chờ Project Owner quyết. Orchestrator soạn sẵn hai tệp cấu hình và các lệnh khi được yêu cầu.
 - **ENV-8** (Project Owner; audit phiên 30 §5.5) — **Project Owner chọn gỡ hẳn rồi cài lại, 2026-10-05.** máy Project Owner có (1) bản cài cũ ngày 2026-09-28 với lối tắt Start Menu mang AUMID `com.commissiontracker.desktop`, và (2) bản cài lúc 20:57 ngày 2026-10-04 thiếu module ticker (báo `Cannot find module`). Cần gỡ hẳn hoặc cài lại từ bộ cài mới trong `Desktop\release`. Bản cài dùng thư mục dữ liệu thật; đó là dùng thật, không phải kiểm thử. Việc đo thông báo trên bản cài sạch gộp vào ENV-4 (máy khác, chưa có bản cài).
+- **ENV-9** (Orchestrator; audit phiên 32 §5.1): dòng `Backup*/` của `.gitignore` gốc (mẫu Visual Studio) khớp `Backend/workflows/backup_data/` khi git không phân biệt hoa thường (Windows), nên cả workflow không vào commit. Agent phát hiện và báo. **Đã sửa 2026-10-07:** Orchestrator thêm `!Backend/workflows/backup_data/` vào cuối `.gitignore`, kiểm với `core.ignorecase=true`. Commit `.gitignore` phải đi trước commit CAS32. Từ nay audit đối chiếu danh sách tệp trên đĩa với danh sách tệp sẽ vào commit, không chỉ clone kho.
 - **ENV-7** (Orchestrator, thấp; audit phiên 27 §5.5): `npm audit` báo lỗ hổng mới, chỉ ở công cụ phát triển.
   - UI: 5 lỗ hổng mức high, cùng một chuỗi `stylelint → globby → fast-glob → micromatch → braces` (GHSA-vfj7-8cjw-p6xm).
   - Desktop: 8 lỗ hổng mức high (ví dụ `http-cache-semantics`, GHSA-ch52-4w7c-c8xp).
