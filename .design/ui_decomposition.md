@@ -58,26 +58,26 @@ Mặc định của iWCA: mỗi workflow hệ thống mà giao diện dùng có 
 
 | Workflow giao diện | Loại | Đối ứng | Quyết định trình bày chính | Dùng lần đầu ở |
 |---|---|---|---|---|
-| `scaffold_ui` | `nền_tảng` | — | Không có quyết định. Chuẩn bị tài nguyên `http_client` từ `backendBaseUrl`; về sau thêm tài nguyên `ipc_bridge` từ `invoke`, khi có lối vào `ipc` đầu tiên. | B2a |
+| `scaffold_ui` | `nền_tảng` | — | Không có quyết định. Chuẩn bị tài nguyên `http_client` từ `backendBaseUrl`; **từ chặng E (phiên 34)** thêm tài nguyên `ipc_bridge` từ `invoke` (Desktop có lối vào `ipc` đầu tiên từ phiên 33). | B2a, E |
 | `manage_client` | `nghiệp_vụ` | `manage_client` | Sắp danh sách khách hàng theo thứ tự chữ cái tiếng Việt (backend trả theo `casefold`, nên "Ánh" đứng sau "z"); tách khách đang hoạt động và khách đã lưu trữ; chọn câu thông báo cho từng nhãn lỗi. **Từ D1:** kiểm dữ liệu form trước khi gửi (§5, trang `client_form`); định dạng ngày giờ để hiển thị. | B2b, D1 |
 | `manage_commission` | `nghiệp_vụ` | `manage_commission` | Ghép tên khách hàng vào danh sách và chi tiết đơn. Adapters của workflow này gọi luôn `GET /clients` và `GET /clients/{client_id}`: đây là trùng lặp có chủ đích theo I1.3, không đi qua `manage_client` của giao diện. Sắp danh sách đơn (hợp đồng không hứa thứ tự). Đọc và định dạng số tiền theo `currency_code`; định dạng ngày hạn giao. Kiểm dữ liệu form trước khi gửi (§5, trang `commission_form`). Chi tiết từ D2 ở §5. | D2 |
 | `update_progress` | `nghiệp_vụ` | `update_progress` | Nhóm bảng tiến độ theo giai đoạn, theo thứ tự của `list_stages`; ghép tiêu đề và hạn giao của đơn vào bảng (Adapters gọi luôn `GET /commissions`, trùng lặp có chủ đích theo I1.3). Đặt tên tiếng Việt cho từng giai đoạn. Kiểm form đổi giai đoạn. Chi tiết từ D3 ở §5. | D3 |
 | `record_payment` | `nghiệp_vụ` | `record_payment` | Trình bày số dư (gồm cả trường hợp thu dư) và các khoản đã hủy; tên tiếng Việt của chiều tiền và loại khoản; đọc số tiền và ngày giờ nhận tiền; kiểm form. Chi tiết từ D4 ở §5. | D4 |
 | `view_income_report` | `nghiệp_vụ` | `view_income_report` | Trình bày báo cáo theo tháng và theo tiền tệ. Không quy đổi tiền tệ (hợp đồng). Chọn khoảng thời gian mặc định, kiểm khoảng thời gian trước khi gửi. Chi tiết từ D5 ở §5. | D5 |
 | `send_reminder` | `nghiệp_vụ` | `send_reminder` | Trình bày danh sách nhắc việc đang chờ và phần cài đặt; tên tiếng Việt của thứ, đơn vị chu kỳ, mốc nhắc; kiểm form cài đặt. Không gọi `check_due` (chỉ `reminder_ticker` của desktop gọi). Chi tiết từ D6 ở §5. | D6 |
-| `backup_data` | `nghiệp_vụ` | `backup_data` | Để chi tiết ở lần làm lại I1 trước chặng E. | E |
+| `backup_data` | `nghiệp_vụ` | `backup_data` | Mở hộp thoại chọn thư mục (Adapters gọi `native_dialogs.pick_folder` qua `ipc_bridge`), rồi tạo bản sao lưu vào thư mục đó (`create_backup`, luôn `purpose: 'manual'`); trình bày kết quả (đường dẫn tệp, dung lượng, lúc tạo); chọn câu thông báo cho từng nhãn và cho lần hộp thoại hỏng. Chi tiết ở mục "Chặng E — Sao lưu". | E |
 | `restore_data` | `nghiệp_vụ` | `restore_data` (desktop, `ipc`) | Để chi tiết ở lần làm lại I1 trước chặng F. | F |
 
-**`native_dialogs`** là hạ tầng cắt ngang của desktop. Workflow giao diện nào cần chọn tệp (`backup_data`, `restore_data`) sẽ gọi nó qua Adapters của chính mình, dùng tài nguyên `ipc_bridge`. Chi tiết sẽ làm ở lần làm lại I1 trước chặng E.
+**`native_dialogs`** là hạ tầng cắt ngang của desktop, không có workflow giao diện đối ứng. Workflow giao diện nào cần chọn tệp hay thư mục (`backup_data`, sau này `restore_data`) gọi nó qua Adapters của chính mình, dùng tài nguyên `ipc_bridge`; mỗi workflow giữ bản riêng của địa chỉ và cách kiểm hình dạng câu trả lời (trùng lặp có chủ đích, như I1.3). Desktop hiện chỉ có `pick_folder` (phiên 33); `open_file`, `save_file` chưa có, và giao diện không gọi chúng.
 
 ## 3. Giá trị khởi động (Bước I1.4)
 
 | Giá trị | Là gì, định dạng | Trao bằng cách nào | Căn cứ trong hợp đồng |
 |---|---|---|---|
 | `backendBaseUrl` | Chuỗi `http://<loopback_host>:<port>`, ví dụ `http://127.0.0.1:51062`; cổng do desktop Main chọn lúc chạy | Thuộc tính của đối tượng đóng băng `window.<renderer_bridge>` (`window.commissionTracker`), do preload của desktop đặt trước khi code renderer chạy. **Chỉ Main của UI đọc nó** (R12). | Data Schema 6.1.0: `clause_a_common.mandatory_rules` (luật renderer), `shared_values.renderer_bridge`, `shared_values.loopback_host`. Đã đo thật ở B1 (`.reviews/audits/desktop/audit_desktop_session10.md`). |
-| `invoke` (về sau) | Hàm `invoke(address, argument)`, trả `{ status, body }` | Cùng đối tượng bridge. Chỉ có mặt khi desktop đã triển khai ít nhất một lối vào `ipc`. **Chưa có ở B2.** | Data Schema 6.1.0 (luật renderer); API Contract 4.0.0, `endpoint_forms.ipc`. |
+| `invoke` (từ chặng E) | Hàm `invoke(address, argument)`, trả Promise của `{ status, body }`; Promise bị từ chối khi địa chỉ chưa có, đối số sai, hộp thoại lỗi hay khung gửi bị từ chối (Desktop, `native_dialogs-EXP-002`) | Cùng đối tượng bridge. Desktop luôn đặt nó từ phiên 33 (bridge có đúng hai khóa `backendBaseUrl`, `invoke`). **Chỉ Main của UI đọc nó** (R12), rồi trao cho `scaffold_ui` để dựng `ipc_bridge`. | Data Schema 6.1.0 (luật renderer); API Contract 4.0.0, `endpoint_forms.ipc`. Đã đo thật ở phiên 33 (`.reviews/audits/desktop/audit_desktop_session33.md`). |
 
-⚠ Main của UI phải kiểm định dạng `backendBaseUrl`: là chuỗi, đúng dạng `http://127.0.0.1:<1..65535>`. Nếu thiếu bridge, thiếu thuộc tính, hoặc sai dạng, Main hiện màn hình lỗi khởi động và dừng (iWCA I2.6, bước 1). Nhánh này được chứng minh bằng kiểm thử dựng Main trong jsdom (không có bridge, bridge thiếu thuộc tính, `backendBaseUrl` sai dạng). Không dùng `file://` để thử: hợp đồng không bao giờ nạp renderer từ `file://`, và module script của bản build vốn không chạy được ở đó.
+⚠ Main của UI phải kiểm định dạng `backendBaseUrl`: là chuỗi, đúng dạng `http://127.0.0.1:<1..65535>`. Nếu thiếu bridge, thiếu thuộc tính, hoặc sai dạng, Main hiện màn hình lỗi khởi động và dừng (iWCA I2.6, bước 1). **Từ phiên 34**, `invoke` cũng là giá trị bắt buộc: không phải hàm thì cùng màn hình lỗi khởi động, kèm tên giá trị (`window.commissionTracker.invoke`). Lý do không cho nó tùy chọn: Desktop luôn đặt nó, nên thiếu nó nghĩa là renderer đang chạy ngoài Desktop hoặc với một Desktop cũ, và đó là lỗi khởi động như thiếu `backendBaseUrl`. Nhánh này được chứng minh bằng kiểm thử dựng Main trong jsdom (không có bridge, bridge thiếu thuộc tính, `backendBaseUrl` sai dạng). Không dùng `file://` để thử: hợp đồng không bao giờ nạp renderer từ `file://`, và module script của bản build vốn không chạy được ở đó.
 
 ## 4. Loại trừ có chủ đích (Bước I1.2)
 
@@ -90,7 +90,7 @@ Mặc định của iWCA: mỗi workflow hệ thống mà giao diện dùng có 
 
 ## 5. Trang và layout (Bước I1.5)
 
-Layout: `main_layout` (khung chính có điều hướng) — layout duy nhất. **Từ D1:** `main_layout` có một vùng điều hướng cố định, liệt kê các mục cấp cao nhất. Hiện có năm mục, theo thứ tự: "Khách hàng" (mở `client_list`), "Đơn hàng" (mở `commission_list`, từ D2), "Tiến độ" (mở `progress_board`, từ D3), "Thu nhập" (mở `income_report`, từ D5), rồi "Nhắc việc" (mở `reminder_list`, từ D6). Mỗi phiên sau thêm mục của mình vào đúng vùng này, không đổi vị trí các mục cũ (§7.2, nguyên tắc 7). Màn hình lỗi khởi động không phải layout và không phải đích điều hướng: Main dựng thẳng component kit `FatalMessage` khi giá trị khởi động hỏng, trước khi có trang nào (iWCA I2.6, bước 1).
+Layout: `main_layout` (khung chính có điều hướng) — layout duy nhất. **Từ D1:** `main_layout` có một vùng điều hướng cố định, liệt kê các mục cấp cao nhất. Hiện có sáu mục, theo thứ tự: "Khách hàng" (mở `client_list`), "Đơn hàng" (mở `commission_list`, từ D2), "Tiến độ" (mở `progress_board`, từ D3), "Thu nhập" (mở `income_report`, từ D5), "Nhắc việc" (mở `reminder_list`, từ D6), rồi "Sao lưu" (mở `backup`, từ chặng E). Mỗi phiên sau thêm mục của mình vào đúng vùng này, không đổi vị trí các mục cũ (§7.2, nguyên tắc 7). Màn hình lỗi khởi động không phải layout và không phải đích điều hướng: Main dựng thẳng component kit `FatalMessage` khi giá trị khởi động hỏng, trước khi có trang nào (iWCA I2.6, bước 1).
 
 | Trang (khóa điều hướng) | Mục đích | Workflow giao diện dùng Routers | Layout | Trạng thái |
 |---|---|---|---|---|
@@ -107,7 +107,8 @@ Layout: `main_layout` (khung chính có điều hướng) — layout duy nhất.
 | `income_report` | Xem thu nhập theo khoảng thời gian: thực nhận, tiền hoàn, còn phải thu, theo từng đơn vị tiền và theo tháng | `view_income_report` | `main_layout` | `hoàn_tất` (2026-10-01: audit phiên 24 và 25 đạt, CT-5 duyệt, Project Owner chạy tay D5) |
 | `reminder_list` | Xem nhắc việc đang chờ; đánh dấu đã xem; lối vào cài đặt và chi tiết đơn | `send_reminder` | `main_layout` | `hoàn_tất` (2026-10-03: audit phiên 27 đạt, Project Owner chạy tay) |
 | `reminder_settings` | Xem và sửa cài đặt nhắc định kỳ và nhắc trước hạn giao | `send_reminder` | `main_layout` | `hoàn_tất` (2026-10-03: audit phiên 27 đạt, Project Owner chạy tay) |
-| *(E, F)* sao lưu, khôi phục | — | `backup_data`, `restore_data` | `main_layout` | `chưa_làm` |
+| `backup` | Tạo một tệp sao lưu toàn bộ dữ liệu vào thư mục họa sĩ chọn | `backup_data` | `main_layout` | `đang_làm` (2026-10-07: plan phiên 34) |
+| *(F)* khôi phục | — | `restore_data` | `main_layout` | `chưa_làm` (chặng F chưa quyết) |
 
 **Chi tiết trang `client_list`** (phiên B2b):
 - **Thao tác duy nhất:** tải danh sách khi mở trang, và tải lại khi người dùng bấm nút tải lại. Dùng `list_clients` (`GET /clients`). Không có dữ liệu nhập, nên luật phủ của kịch bản bấm thử không đòi `rejected_input`.
@@ -697,12 +698,85 @@ Cùng "không tới được" và "vi phạm hợp đồng". Không có lời g�
 - Không đòi `rejected_system`: 400, 404 không gây ra được bằng thao tác bình thường. Kiểm thử dựng trang chứng minh chúng hiện đúng.
 - **Ảnh bằng chứng có ngày** (hạn giao là hôm nay, `due_at`, "Lưu lần cuối") thay đổi theo ngày chạy. Chấp nhận, vì ảnh được chụp lại mỗi lần chạy có runner; kịch bản ghi rõ điều này.
 
+## Chặng E — Sao lưu (làm lại I1 ngày 2026-10-07, trước phiên 34)
+
+Căn cứ: Data Schema **9.0.3** (`backup_data`: `backup_request`, `backup_archive`; `types.backup_request_record`, `types.backup_archive_record`, `types.file_path`, `formats.timestamp`), API Contract 4.0.0 (`backup_data.create_backup`; `cross_cutting.native_dialogs.pick_folder`; `endpoint_forms.ipc`). Hợp đồng không cần sửa cho chặng E.
+
+### Chặng E trải trên ba layer
+
+- **Backend (phiên 32, xong):** `create_backup` ghi tệp `.ctbackup` vào thư mục đích, không bao giờ ghi đè; `prepare_restore` kiểm một tệp sao lưu.
+- **Desktop (phiên 33, xong):** `invoke` trong bridge; `native_dialogs.pick_folder` mở hộp thoại chọn thư mục của Windows, modal với cửa sổ chính, tiêu đề "Chọn thư mục".
+- **Giao diện (phiên 34):** trang `backup`.
+- Giao diện **không** gọi `prepare_restore` (§4: chỉ `restore_data` gọi). Tiêu chí của chặng E ("tệp đó qua được `prepare_restore`") được chứng minh bằng **công cụ kiểm thử** gọi thẳng endpoint đó, như D6 làm với `check_due`.
+
+### Lời gọi của workflow giao diện `backup_data`
+
+| Lời gọi | Hình thức | Dùng ở | Kết quả phải xử lý |
+|---|---|---|---|
+| `native_dialogs.pick_folder` | `ipc`: `invoke('dialog:pick-folder', {})` qua `ipc_bridge` | `backup` | 200 `{ canceled, path }`; Promise bị từ chối; câu trả lời sai hình dạng |
+| `create_backup` | `http`: `POST /backups`, thân `{ "backup_request": { "destination_dir": <path>, "purpose": "manual" } }` | `backup` | 201, 400, 500 |
+
+Cùng "không tới được" và "vi phạm hợp đồng" cho `create_backup`. Không có lời gọi nào khác.
+
+**Kiểm hình dạng câu trả lời của `pick_folder`** (bản sao của hợp đồng, `[CONTRACT]`): `{ status: 200, body: { canceled: boolean, path: string|null } }`, với `canceled: true` đi cùng `path: null`, và `canceled: false` đi cùng `path` là chuỗi không rỗng. Lệch bất kỳ điều nào, hay `status` khác 200, là vi phạm hợp đồng. Giao diện không tự kiểm `path` có tuyệt đối không: đường dẫn do hệ điều hành trao, và backend kiểm `file_path` (400 nếu sai).
+
+**`purpose` luôn là `'manual'`** (`[CONTRACT]`: `'pre_restore'` chỉ dành cho `restore_data`).
+
+### Luật trình bày của chặng E (quyết định của `backup_data`, đều `[UI-ONLY]` trừ khi ghi khác)
+
+- **Dung lượng** (`size_bytes`, là dung lượng của chính tệp sao lưu): dưới 1024 byte thì "`<n>` byte"; dưới 1024 × 1024 thì KB, một chữ số thập phân; còn lại MB, một chữ số thập phân. Cơ số 1024, dấu thập phân là dấu phẩy, ví dụ "12,4 KB", "3,0 MB".
+- **Lúc tạo** (`created_at`): `HH:mm dd/mm/yyyy` theo giờ máy, như các trang khác.
+- **Đường dẫn tệp** hiện nguyên văn, xuống dòng được ở bất kỳ ký tự nào, để đường dẫn dài của Windows không tràn khung.
+- Không hiện `sha256` hay `app_version` (§7.2, nguyên tắc 2).
+- Workflow giữ bản riêng của cách định dạng ngày giờ (R2).
+
+### Chi tiết trang `backup` (chặng E)
+
+- **Mở từ:** mục **"Sao lưu"** của vùng điều hướng, đứng sau "Nhắc việc". Không tham số.
+- **Tiêu đề trang:** "Sao lưu dữ liệu".
+- **Hàng nút:** một nút duy nhất, **"Tạo bản sao lưu"** (hành động chính).
+- **Dòng chữ phụ cố định**, đặt dưới hàng nút: "Bản sao lưu là một tệp chứa toàn bộ dữ liệu của ứng dụng. Nên lưu ở ổ đĩa khác hoặc ổ USB, để vẫn còn dữ liệu nếu máy hỏng."
+- **Khi mở trang:** không gọi gì. Trang không nhớ lần sao lưu trước, cũng không nhớ thư mục đã chọn (`native_dialogs` không giữ gì; V1 không có nơi lưu tùy chọn của giao diện).
+- **Bấm "Tạo bản sao lưu"**, một luồng hai bước:
+  1. Gọi `pick_folder`. Nút bị vô hiệu từ lúc bấm tới khi xong cả luồng, nên bấm liên tiếp chỉ mở một hộp thoại và gửi nhiều nhất một yêu cầu.
+     - `canceled: true`: dừng. Không gửi gì, không hiện thông báo mới; trang giữ nguyên những gì đang hiện.
+     - Promise bị từ chối: "Không mở được hộp thoại chọn thư mục. Hãy thử lại." Không gửi gì.
+     - Sai hình dạng: câu "vi phạm hợp đồng" chung của layer. Không gửi gì.
+  2. Có `path`: hiện trạng thái "Đang tạo bản sao lưu…", gọi `create_backup` với `destination_dir = path`.
+     - 201: thông báo "Đã tạo bản sao lưu." và một khung kết quả gồm ba dòng: "Tệp: `<archive_path>`", "Dung lượng: `<dung lượng>`", "Tạo lúc: `HH:mm dd/mm/yyyy`".
+     - 400: "Không dùng được thư mục này. Hãy chọn thư mục khác." Không đọc `details`.
+     - 500: "Không ghi được tệp sao lưu vào thư mục này. Hãy chọn thư mục khác, hoặc kiểm tra ổ đĩa còn chỗ trống."
+     - Không tới được, vi phạm hợp đồng: câu chung của layer.
+     - Mọi kết quả không phải 201 đều xóa khung kết quả cũ, nếu có, để họa sĩ không nhầm kết quả cũ là của lần này.
+- **Không hỏi xác nhận.** Tạo bản sao lưu không ghi đè gì (backend thêm hậu tố khi trùng tên) và không đổi dữ liệu, nên không thuộc §7.2 nguyên tắc 5.
+- **Giới hạn đã biết của V1:** lời gọi `http` có hạn chờ chung 15 s (`scaffold_ui`). Với dữ liệu của một họa sĩ (cỡ KB tới vài MB), chụp và nén mất dưới một giây (đo ở phiên 32: 60 MB mất 0,25 s để chụp). Nếu có lúc hết hạn chờ, trang báo "không tới được" trong khi tệp có thể vẫn được tạo. Chấp nhận ở V1, không thêm hạn chờ riêng.
+
+### Điều hướng của chặng E
+
+- `backup` không có tham số.
+- Vùng điều hướng có sáu mục: "Khách hàng", "Đơn hàng", "Tiến độ", "Thu nhập", "Nhắc việc", "Sao lưu". Năm mục cũ giữ nguyên vị trí.
+
+### Luật phủ của kịch bản bấm thử ở chặng E (iWCA I6.3)
+
+- **Hộp thoại trong kịch bản chạy tự động** (e2e và lần chạy có runner): công cụ kiểm thử thay `dialog.showOpenDialog` trong tiến trình chính bằng `electronApp.evaluate`, đúng cách Desktop đã đo và dùng (`native_dialogs-EXP-003`). Không sửa tệp nào của Desktop, không thêm cờ. Thư mục đích là một thư mục tạm của lần chạy, không bao giờ nằm trong `%APPDATA%`.
+- **Hộp thoại trong lần Project Owner chạy tay:** hộp thoại thật. Project Owner ghi lại tiêu đề hộp thoại có đúng "Chọn thư mục" không (audit phiên 33 §5.3).
+- `ok`:
+  - mở trang từ mục "Sao lưu"; tạo bản sao lưu vào một thư mục: thông báo và khung kết quả hiện đúng; đường dẫn tệp nằm trong thư mục đã chọn và có đuôi `.ctbackup`;
+  - **công cụ kiểm thử** kiểm tệp đó tồn tại, rồi gọi `POST /backups/restore-preparations` với đường dẫn đó: `is_valid` và `is_compatible` đều `true` (tiêu chí chặng E);
+  - tạo bản thứ hai vào cùng thư mục: thành công, tên tệp khác tệp thứ nhất;
+  - hủy hộp thoại: không có tệp mới, trang giữ nguyên.
+- `rejected_input`: không có, vì trang không có ô nhập. Ghi lý do trong `walkthrough.yaml`.
+- `rejected_system`: một bước 400, với hộp thoại thay thế trả về một thư mục không tồn tại. Chỉ có ở lần chạy tự động; lần chạy tay của Project Owner không gây được 400 bằng hộp thoại thật. 500 và Promise bị từ chối được chứng minh bằng kiểm thử dựng trang.
+- Ít nhất một bước `unreachable`: tắt backend bằng công cụ có sẵn, bấm "Tạo bản sao lưu", chọn thư mục, thấy câu "không tới được".
+- **Ảnh bằng chứng có giờ tạo và đường dẫn tạm** thay đổi theo lần chạy. Chấp nhận, như D6; kịch bản ghi rõ điều này.
+
 ## 6. Đối chiếu độ phủ (Bước I1.6)
 
 - Mọi lối vào ở §1, hoặc có workflow giao diện đối ứng ở §2, hoặc nằm trong bảng loại trừ ở §4. Không lối vào nào ở trạng thái "chưa rõ".
 - Không có nhu cầu V1 nào mà thực đơn không đáp ứng được. Việc sắp xếp tên tiếng Việt là quyết định trình bày, không cần endpoint mới.
 - D2 (2026-09-28): mọi lời gọi D2 cần đều có trong hợp đồng (bảng lời gọi ở phần D2). Nhu cầu không có lối vào: mở liên kết tham khảo bằng trình duyệt ngoài. Ghi nhận cho phiên bản sau, không vá ở V1.
 - Giá trị khởi động đã trả lời đủ ba câu. Cách trao nằm trong hợp đồng và đã được đo.
+- Chặng E (2026-10-07): mọi lời gọi trang `backup` cần đều có trong hợp đồng (`create_backup`, `native_dialogs.pick_folder`). `prepare_restore` vẫn nằm trong bảng loại trừ (§4); chỉ công cụ kiểm thử gọi nó.
 
 ## 7. Hướng giao diện V1 (quyết định của Project Owner, 2026-09-28)
 
@@ -735,6 +809,7 @@ Kịch bản bấm thử và audit kiểm các điều sau.
 
 ## Lịch sử cập nhật
 
+- 2026-10-07: làm lại I1 cho chặng E, căn cứ Data Schema 9.0.3: trang `backup` → `đang_làm` (plan phiên 34); mục điều hướng thứ sáu "Sao lưu"; `scaffold_ui` thêm tài nguyên `ipc_bridge`; `invoke` thành giá trị khởi động bắt buộc (§3); luồng một nút (chọn thư mục rồi tạo bản sao lưu), không hỏi xác nhận; kiểm hình dạng câu trả lời `pick_folder`; luật phủ dùng hộp thoại thay thế cho lần chạy tự động, hộp thoại thật cho lần chạy tay; công cụ kiểm thử gọi `prepare_restore` để chứng minh tiêu chí chặng E. Hợp đồng không đổi.
 - 2026-09-26: bản đầu. Đủ ba bảng cho toàn V1; chi tiết trang `client_list`.
 - 2026-09-27: sau audit phiên 11 (B2a): màn hình lỗi khởi động không phải layout (sửa §5, không đổi hành vi).
 - 2026-09-27: `client_list` → `đang_làm` (plan phiên 12).
