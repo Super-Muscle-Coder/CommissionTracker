@@ -255,7 +255,15 @@ Generated_Code/
 # to a newer Visual Studio version. Backup files are not needed,
 # because we have git ;-)
 _UpgradeReport_Files/
-Backup*/
+# Commission Tracker: the template line was "Backup*/", which matched every folder named backup... at any depth
+# where git ignores case (Windows): Backend/workflows/backup_data/ (ENV-9, session 32), and in session 34
+# UI/src/logic/workflows/backup_data/, UI/src/screens/pages/backup/, UI/evidence/walkthroughs/backup/.
+# Visual Studio writes its upgrade backups next to the solution or next to a project file, so only those
+# places are ignored now.
+/Backup*/
+/Backend/Backup*/
+/Desktop/Backup*/
+/UI/Backup*/
 UpgradeLog*.XML
 UpgradeLog*.htm
 ServiceFabricBackup/

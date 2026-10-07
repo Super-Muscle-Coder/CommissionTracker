@@ -694,6 +694,12 @@ Không ảnh hưởng điều kiện của UI-18: e2e do agent khởi chạy, Pr
 
 **Nếu cần làm:** công cụ đo ghi giờ sự kiện `focus` của `BrowserWindow`, chạy khi chắc chắn không ai chạm máy, để tách nguồn. Chờ Project Owner trả lời có chạm máy trong lần đo ngày 7/10 không.
 
+## Layer giao diện — sau audit phiên 34
+
+### UI-21 — Dọn sau khi sửa `.gitignore` gốc (thấp; audit phiên 34 §5.1, §5.3) — làm ở phiên giao diện kế tiếp
+
+`main-EXP-033` (`UI/src/main.tsx`) ghi rằng hai dòng phủ định của `UI/.gitignore` giải quyết việc `Backup*/` bỏ qua thư mục mới. Sau ENV-9 (mở rộng), `.gitignore` gốc không còn khớp thư mục lồng nhau, nên hai dòng đó thừa, và câu trong EXP thiếu thư mục `UI/evidence/walkthroughs/backup/`. **Việc:** viết lại EXP cho đúng (giữ id), và bỏ hai dòng thừa của `UI/.gitignore` sau khi kiểm `git check-ignore` vẫn không bỏ qua tệp nào.
+
 ## Môi trường và vận hành (không phải việc của coding agent)
 
 - **ENV-1** (Project Owner): thêm vĩnh viễn `%SystemRoot%\System32\WindowsPowerShell\v1.0\` vào `Path` của System variables. **Đã làm, 2026-09-27.**
@@ -712,6 +718,7 @@ Không ảnh hưởng điều kiện của UI-18: e2e do agent khởi chạy, Pr
   - Chờ Project Owner quyết. Orchestrator soạn sẵn hai tệp cấu hình và các lệnh khi được yêu cầu.
 - **ENV-8** (Project Owner; audit phiên 30 §5.5) — **Project Owner chọn gỡ hẳn rồi cài lại, 2026-10-05.** máy Project Owner có (1) bản cài cũ ngày 2026-09-28 với lối tắt Start Menu mang AUMID `com.commissiontracker.desktop`, và (2) bản cài lúc 20:57 ngày 2026-10-04 thiếu module ticker (báo `Cannot find module`). Cần gỡ hẳn hoặc cài lại từ bộ cài mới trong `Desktop\release`. Bản cài dùng thư mục dữ liệu thật; đó là dùng thật, không phải kiểm thử. Việc đo thông báo trên bản cài sạch gộp vào ENV-4 (máy khác, chưa có bản cài).
 - **ENV-9** (Orchestrator; audit phiên 32 §5.1): dòng `Backup*/` của `.gitignore` gốc (mẫu Visual Studio) khớp `Backend/workflows/backup_data/` khi git không phân biệt hoa thường (Windows), nên cả workflow không vào commit. Agent phát hiện và báo. **Đã sửa 2026-10-07:** Orchestrator thêm `!Backend/workflows/backup_data/` vào cuối `.gitignore`, kiểm với `core.ignorecase=true`. Commit `.gitignore` phải đi trước commit CAS32. Từ nay audit đối chiếu danh sách tệp trên đĩa với danh sách tệp sẽ vào commit, không chỉ clone kho.
+  - **Mở rộng 2026-10-07, audit phiên 34 §5.1:** cùng mẫu còn khớp `UI/src/logic/workflows/backup_data/`, `UI/src/screens/pages/backup/` (agent vá bằng `UI/.gitignore`) và `UI/evidence/walkthroughs/backup/` (agent không thấy). **Sửa tận gốc:** Orchestrator thay dòng `Backup*/` của `.gitignore` gốc bằng `/Backup*/`, `/Backend/Backup*/`, `/Desktop/Backup*/`, `/UI/Backup*/` (nơi Visual Studio ghi bản sao lưu khi nâng cấp), kiểm với `core.ignorecase=true`. Các dòng phủ định cũ nay thừa, vô hại. Commit `.gitignore` phải đi trước commit CAS34. Kiểm tệp sẽ vào commit theo **từng tệp**, kể cả `UI/evidence`.
 - **ENV-7** (Orchestrator, thấp; audit phiên 27 §5.5): `npm audit` báo lỗ hổng mới, chỉ ở công cụ phát triển.
   - UI: 5 lỗ hổng mức high, cùng một chuỗi `stylelint → globby → fast-glob → micromatch → braces` (GHSA-vfj7-8cjw-p6xm).
   - Desktop: 8 lỗ hổng mức high (ví dụ `http-cache-semantics`, GHSA-ch52-4w7c-c8xp).
