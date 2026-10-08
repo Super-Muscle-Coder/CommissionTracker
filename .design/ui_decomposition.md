@@ -107,7 +107,7 @@ Layout: `main_layout` (khung chính có điều hướng) — layout duy nhất.
 | `income_report` | Xem thu nhập theo khoảng thời gian: thực nhận, tiền hoàn, còn phải thu, theo từng đơn vị tiền và theo tháng | `view_income_report` | `main_layout` | `hoàn_tất` (2026-10-01: audit phiên 24 và 25 đạt, CT-5 duyệt, Project Owner chạy tay D5) |
 | `reminder_list` | Xem nhắc việc đang chờ; đánh dấu đã xem; lối vào cài đặt và chi tiết đơn | `send_reminder` | `main_layout` | `hoàn_tất` (2026-10-03: audit phiên 27 đạt, Project Owner chạy tay) |
 | `reminder_settings` | Xem và sửa cài đặt nhắc định kỳ và nhắc trước hạn giao | `send_reminder` | `main_layout` | `hoàn_tất` (2026-10-03: audit phiên 27 đạt, Project Owner chạy tay) |
-| `backup` | Tạo một tệp sao lưu toàn bộ dữ liệu vào thư mục họa sĩ chọn | `backup_data` | `main_layout` | `đang_làm` (2026-10-07: plan phiên 34; audit phiên 34 đạt về chức năng, chờ Project Owner chạy tay với hộp thoại thật) |
+| `backup` | Tạo một tệp sao lưu toàn bộ dữ liệu vào thư mục họa sĩ chọn | `backup_data` | `main_layout` | `hoàn_tất` (2026-10-08: audit phiên 34 đạt, Project Owner chạy tay với hộp thoại thật) |
 | *(F)* khôi phục | — | `restore_data` | `main_layout` | `chưa_làm` (chặng F chưa quyết) |
 
 **Chi tiết trang `client_list`** (phiên B2b):
@@ -809,6 +809,7 @@ Kịch bản bấm thử và audit kiểm các điều sau.
 
 ## Lịch sử cập nhật
 
+- 2026-10-08: `backup` → `hoàn_tất`. Project Owner chạy tay kịch bản với hộp thoại thật của Windows (S1, S2, S3, S5; S4 chỉ có ở lần chạy tự động): ba tệp `.ctbackup` được tạo, không trùng tên, không ghi đè; hủy không tạo tệp; backend tắt thì báo không kết nối được, bật lại thì tạo được. Log của Desktop khớp: bốn lần `chosen`, một lần `canceled`. Bước tùy chọn `C:\Windows` không chạy. Tiêu đề hộp thoại ("Chọn thư mục") Project Owner chưa nêu lại; ca N3 của Desktop kiểm Main truyền đúng tiêu đề. Chặng E xong.
 - 2026-10-07: audit phiên 34 đạt về chức năng (`.reviews/audits/ui/audit_ui_session34.md`). Chấp nhận các chỗ agent tự quyết: hộp thoại hỏng hiện khung "Chưa tạo được bản sao lưu" với câu riêng (mã riêng của giao diện `DIALOG_FAILED`, không phải mã của hợp đồng); tiêu đề khung lỗi "Chưa tạo được bản sao lưu"; "Đang tạo bản sao lưu…" chỉ hiện ở bước 2, qua một hàm báo mà Routers nhận. `backup` giữ `đang_làm`, chờ Project Owner chạy tay.
 - 2026-10-07: làm lại I1 cho chặng E, căn cứ Data Schema 9.0.3: trang `backup` → `đang_làm` (plan phiên 34); mục điều hướng thứ sáu "Sao lưu"; `scaffold_ui` thêm tài nguyên `ipc_bridge`; `invoke` thành giá trị khởi động bắt buộc (§3); luồng một nút (chọn thư mục rồi tạo bản sao lưu), không hỏi xác nhận; kiểm hình dạng câu trả lời `pick_folder`; luật phủ dùng hộp thoại thay thế cho lần chạy tự động, hộp thoại thật cho lần chạy tay; công cụ kiểm thử gọi `prepare_restore` để chứng minh tiêu chí chặng E. Hợp đồng không đổi.
 - 2026-09-26: bản đầu. Đủ ba bảng cho toàn V1; chi tiết trang `client_list`.
