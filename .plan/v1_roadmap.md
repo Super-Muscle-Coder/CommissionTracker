@@ -208,7 +208,7 @@ Chặng E xong khi họa sĩ tạo được tệp sao lưu từ giao diện, và
 
 **Chia phiên:**
 1. **Phiên 35 (desktop): pha 1.** Workflow `restore_data` (workflow đầu tiên của desktop) với `restore:prepare`, `restore:status`, `restore:cancel`; `native_dialogs.open_file`; DSK-22. Plan: `.plan/desktop_plan.md`. **Xong 2026-10-08, audit đạt** (`.reviews/audits/desktop/audit_desktop_session35.md`); Desktop 62 kiểm thử, `test:packaged` 10; DSK-22 đóng; mở DSK-23 (theo dõi), DSK-24 (V2).
-2. **Phiên 36 (desktop): pha 2.** `backend_controller`, `apply_pending_restore`, `restore_trigger`, khứ hồi thật, hoàn tác, bản đóng gói.
+2. **Phiên 36 (desktop): pha 2.** `backend_controller`, `apply_pending_restore`, `restore_trigger`, khứ hồi thật, hoàn tác, bản đóng gói. Plan phát hành 2026-10-08: `.plan/desktop_plan.md`; đo trước khi viết (cùng cổng, đổi tên `data.db`, hộp thoại khi chưa có cửa sổ), có lần hỏng thì dừng và báo.
 3. **Phiên 37 (giao diện):** làm lại I1 cho khôi phục, rồi trang hoặc phần Khôi phục.
 
 **Chặng F xong khi:** họa sĩ chọn một tệp sao lưu từ giao diện, chuẩn bị, đóng rồi mở lại ứng dụng, và thấy đúng dữ liệu trong tệp; tệp hỏng hay mới hơn bị từ chối mà không có gì thay đổi; một lần áp dụng hỏng được hoàn tác về dữ liệu cũ; trang Khôi phục `hoàn_tất`.
