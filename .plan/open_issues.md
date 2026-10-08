@@ -284,11 +284,25 @@ Người dùng thật cập nhật bằng cách chạy bộ cài mới; họ kh�
 
 ### DSK-23 — Ứng dụng thoát một lần với mã 0xC0000005 trên trang thử (theo dõi; audit phiên 35 §5.2)
 
-Phiên 35: một lần chạy `npm run probe` thoát với mã 3221225477 (vi phạm truy cập bộ nhớ của tiến trình Electron), ngay sau ba lần hộp thoại chọn tệp **thật** trả "canceled". Log Main không có `FATAL`; các lượt khác của cùng phiên không sập; chưa tái hiện. Đường gọi chỉ có `dialog.showOpenDialog` của Electron. **Việc:** phiên 36 (cũng dùng hộp thoại thật) ghi lại nếu lặp lại; lặp lại thì đo (Windows Event Viewer, mục Application Error; số lần mở và hủy hộp thoại). Không lặp lại tới hết chặng F thì đóng.
+Phiên 35: một lần chạy `npm run probe` thoát với mã 3221225477 (vi phạm truy cập bộ nhớ của tiến trình Electron), ngay sau ba lần hộp thoại chọn tệp **thật** trả "canceled". Log Main không có `FATAL`; các lượt khác của cùng phiên không sập; chưa tái hiện. Đường gọi chỉ có `dialog.showOpenDialog` của Electron. **Việc:** phiên 36 (cũng dùng hộp thoại thật) ghi lại nếu lặp lại; lặp lại thì đo (Windows Event Viewer, mục Application Error; số lần mở và hủy hộp thoại). Không lặp lại tới hết chặng F thì đóng. **Phiên 36 (2026-10-08): không lặp lại** (một lần hộp thoại chọn tệp thật, một lần hộp thoại kết quả thật).
 
 ### DSK-24 — Bản sao lưu an toàn tích lũy (thấp; V2; audit phiên 35 §5.4)
 
 Mỗi lần `restore:prepare` thành công tạo thêm một bản sao lưu an toàn trong `safety-backups`; không có gì dọn. Đúng đặc tả V1. **V2:** dọn bản cũ (ví dụ chỉ giữ N bản gần nhất), kèm đặc tả và có thể cả sửa hợp đồng. Trang Khôi phục ở V1 nói rõ mỗi lần chuẩn bị tạo một bản an toàn.
+
+## Layer desktop — sau audit phiên 36
+
+### DSK-25 — Hộp thoại kết quả khôi phục không tự lên trên cùng (trung bình; audit phiên 36 §5.2)
+
+`restore_trigger` hiện hộp thoại thông báo khi chưa có cửa sổ ứng dụng; Main chờ hộp thoại đóng rồi mới mở cửa sổ. Đo ở phiên 36: hộp thoại có trên thanh tác vụ nhưng không chiếm tiêu điểm, nên người dùng có thể tưởng ứng dụng không mở. Hai lần đo đều mở ứng dụng từ một tiến trình khác (script, `npm run probe`); chưa đo khi người dùng tự mở bằng lối tắt. **Việc:** đo khi mở bản đóng gói bằng lối tắt hoặc bấm đúp `Commission Tracker.exe` (kèm `--ct-test-data-dir`), ở lần chạy tay của phiên 37 hoặc ở chặng G. Vẫn không lên trên cùng thì phiên desktop kế tiếp sửa và đo lại; Orchestrator đề xuất cách sửa khi có số đo (có thể đổi thứ tự trong `.design/03_classification.md`).
+
+### DSK-26 — Hoàn tác hỏng ở bước đổi tên: câu báo lỗi nói sai, lần mở sau có thể ra cơ sở dữ liệu rỗng (thấp; audit phiên 36 §5.3, §5.4) — phiên desktop kế tiếp
+
+`restore_data` `undo()` trả 500 ở ba chỗ: (1) dời tệp đã chuyển vào sang `-failed`, (2) đưa tệp cũ về `db_file_path`, (3) khởi động lại. Cả ba dùng chung câu `main.error_dialog.restore_failed_summary` ("Dữ liệu trước đó đã được đưa về chỗ cũ"), chỉ đúng với (3). Ở (2), `data.db` không còn ở chỗ cũ; lần mở sau backend tạo cơ sở dữ liệu rỗng, dữ liệu thật nằm trong `restore-previous/` mà không ai báo. Hiếm (đo phiên 36: 0/20 lần đổi tên hỏng), nhưng nặng. Chỗ hở là của đặc tả (`f_restore.md` §3 bước 9 chỉ nói lần khởi động hỏng). **Việc:** Orchestrator bổ sung `f_restore.md` §3 trước; phiên desktop kế tiếp tách câu báo lỗi theo tình huống (kèm đường dẫn tệp cũ trong `restore-previous`) và thêm một ca kiểm thử cho (2). **Gộp:** xem lại NOTES của Main ghi 2026-09-26, 09-27, 10-05 (hết hạn 14 ngày từ 2026-10-10): chuyển thành EXPERIENCES hoặc xóa.
+
+### DSK-27 — Kiểm thử Desktop chờ một dòng log có thể đã mất (trung bình; audit phiên 36 §5.7) — phiên desktop kế tiếp
+
+`launchMain()` (`Desktop/tests/helpers.ts`) gắn bộ gom log sau khi `_electron.launch` trả về, nên dòng `backend started (pid N)` ghi sớm có thể mất khi máy tải. Các hàm dọn dẹp chờ dòng đó (`closeCleanly()` của `native_dialogs`, `reminder_ticker`, `restore_data`; `backendPids()`) thì hết giờ. Lượt chạy lại của Project Owner ngày 2026-10-08: N14 và D2 hỏng sau khoảng 1 phút dù chức năng đúng; log N14 không có dòng đó. Trên Linux dòng đó luôn mất: đây là nguyên nhân của các ca `desktop_main` hỏng "do môi trường" trong mọi bản audit desktop. **Việc:** lấy PID không qua dòng log sớm (ví dụ `app.evaluate(() => process.pid)` cộng cây tiến trình, hoặc PID trong dòng `backend READY`); chạy `npm test` ba lượt trong lúc máy tải; không nới thời gian chờ.
 
 ## Layer backend — sau audit phiên 32
 
@@ -297,6 +311,10 @@ Mỗi lần `restore:prepare` thành công tạo thêm một bản sao lưu an t
 Phiên 32 cho `app_version` là tham số từ khóa tùy chọn, vì 20 chỗ gọi `wire_workflows(app, db, configs)` trong kiểm thử của các workflow khác không truyền nó, và agent không được sửa chúng. Quên truyền ở `main()` thì mất hai điểm giao tiếp mà không báo lỗi; kiểm thử tiến trình thật của `backup_data` chặn được điều đó. **Việc:** khi một phiên backend chạm lại các kiểm thử đó, cho chúng truyền `app_version`, rồi bỏ nhánh "không ráp".
 
 ## Hợp đồng — chờ Project Owner duyệt
+
+### CT-8 — `restore_data` lên `đã_hoàn_thiện` (đề xuất 2026-10-08, audit phiên 36 §6) — **chờ Project Owner duyệt**, và chỉ ghi sau khi Project Owner chạy lại một lượt trên mã cuối (audit phiên 36 §5.1, §7)
+
+Data Schema 10.0.0 → **10.0.1**, `clause_d_desktop.restore_data.status`: `đang_chờ_triển_khai` → `đã_hoàn_thiện`. Không phá vỡ (chỉ đổi `status`), như CT-6. Lý do: đủ năm lớp; ba lối vào `ipc` và `apply_pending_restore` đúng nhãn; `UNSOLVED_PROBLEMS: []` ở `restore_data`, `restore_trigger`, Main; EVIDENCE tái lập trên Windows và Linux; Project Owner chạy khứ hồi thật. DSK-25, DSK-26 là chuyện bên trong và trình bày, không đổi ranh giới.
 
 ### CT-7 — Khôi phục theo hướng B: "chuẩn bị, rồi mở lại để hoàn tất" (đề xuất 2026-10-08; Project Owner chọn hướng B ngày 2026-10-08) — **chờ Project Owner duyệt nội dung**
 
