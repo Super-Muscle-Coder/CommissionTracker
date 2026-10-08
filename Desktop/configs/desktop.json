@@ -49,6 +49,10 @@
     "pick_folder": {
       "address": "dialog:pick-folder",
       "title": "Chọn thư mục"
+    },
+    "open_file": {
+      "address": "dialog:open-file",
+      "title": "Chọn tệp"
     }
   },
   "app": {

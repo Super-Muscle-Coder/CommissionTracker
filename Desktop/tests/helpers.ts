@@ -10,6 +10,7 @@ export const PROJECT_ROOT = path.resolve(LAYER_ROOT, '..')
 export const FIXTURES = path.join(LAYER_ROOT, 'tests', 'fixtures')
 export const PROBE_ROOT = path.join(FIXTURES, 'probe')
 export const SLOW_FIRST_LOAD_ROOT = path.join(FIXTURES, 'slow_first_load')
+export const INVOKE_ON_LOAD_ROOT = path.join(FIXTURES, 'invoke_on_load')
 export const BACKEND_PYTHON = path.join(PROJECT_ROOT, 'Backend', 'env', 'Scripts', 'python.exe')
 
 export const config = JSON.parse(fs.readFileSync(path.join(LAYER_ROOT, 'configs', 'desktop.json'), 'utf8'))

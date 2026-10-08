@@ -14,6 +14,10 @@
     <h1>Desktop probe (test page, not the product UI)</h1>
     <button id="rerun" type="button">Run again</button>
     <button id="pick-folder" type="button">Chọn thư mục</button>
+    <button id="open-file" type="button">Chọn tệp sao lưu</button>
+    <button id="restore-prepare" type="button">Chuẩn bị khôi phục</button>
+    <button id="restore-status" type="button">Xem trạng thái</button>
+    <button id="restore-cancel" type="button">Hủy khôi phục</button>
     <dl>
       <dt>Bridge (window.commissionTracker)</dt>
       <dd id="bridge">…</dd>
@@ -27,6 +31,14 @@
       <dd id="body">…</dd>
       <dt>invoke('dialog:pick-folder', {}) — answer</dt>
       <dd id="pick-folder-answer">(not called)</dd>
+      <dt>invoke('dialog:open-file', { filters }) — answer (the chosen path is used by "Chuẩn bị khôi phục")</dt>
+      <dd id="open-file-answer">(not called)</dd>
+      <dt>invoke('restore:prepare', { archive_path }) — answer</dt>
+      <dd id="restore-prepare-answer">(not called)</dd>
+      <dt>invoke('restore:status', {}) — answer</dt>
+      <dd id="restore-status-answer">(not called)</dd>
+      <dt>invoke('restore:cancel', {}) — answer</dt>
+      <dd id="restore-cancel-answer">(not called)</dd>
       <dt>Errors</dt>
       <dd id="error" class="error"></dd>
     </dl>

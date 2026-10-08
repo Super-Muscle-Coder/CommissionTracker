@@ -2,8 +2,8 @@
 // workflow: native_dialogs
 // clause: clause_d_desktop
 // component: cross_cutting
-// last_updated_by: coding-agent@2026-10-07#2
-// last_updated_at: 2026-10-07T15:33:24.1521449+07:00
+// last_updated_by: coding-agent@2026-10-08#1
+// last_updated_at: 2026-10-08T14:59:36.1924815+07:00
 //
 // EXPERIENCES:
 //   - id: native_dialogs-EXP-001
@@ -12,15 +12,16 @@
 //       src/cross_cutting/native_dialogs/native_dialogs.ts, vì hạ tầng cắt ngang
 //       không có Services (Giao thức 07). request_checks.ts là các hàm thuần,
 //       không import Electron: senderRefusal (khung gửi có thuộc cửa sổ chính và có
-//       origin bằng ui_origin không), argumentRefusal (đối số hợp lệ là {} hoặc
-//       undefined), originOfUrl. native_dialogs.ts import dialog và ipcMain của
-//       Electron; Main tiêm ui_origin, địa chỉ và tiêu đề (đọc từ desktop.json,
-//       mục native_dialogs.pick_folder), hàm lấy cửa sổ chính và hàm log. Chỉ làm
-//       lối vào pick_folder (dialog:pick-folder): trang sao lưu của chặng E chỉ cần
-//       chọn thư mục đích; open_file (khôi phục, chặng F, chưa quyết) và save_file
-//       (chưa ai cần) vẫn nằm trong hợp đồng, chưa hiện thực, và không có địa chỉ
-//       ipc nào khác ngoài dialog:pick-folder (ca N2 khẳng định preload từ chối
-//       dialog:open-file và dialog:save-file).
+//       origin bằng ui_origin không), argumentRefusal (đối số hợp lệ của pick_folder là
+//       {} hoặc undefined), openFileArgument (đối số của open_file, từ phiên 35),
+//       originOfUrl. native_dialogs.ts import dialog và ipcMain của Electron; Main
+//       tiêm ui_origin, địa chỉ và tiêu đề (đọc từ desktop.json, mục
+//       native_dialogs.pick_folder và native_dialogs.open_file), hàm lấy cửa sổ chính
+//       và hàm log. Hai lối vào hiện thực: pick_folder (dialog:pick-folder, phiên 33) và
+//       open_file (dialog:open-file, phiên 35, cho khôi phục ở chặng F). save_file
+//       (dialog:save-file, chưa ai cần) vẫn nằm trong hợp đồng, chưa hiện thực: ca N2
+//       khẳng định preload từ chối dialog:save-file (từ phiên 35; trước đó danh sách
+//       gồm cả dialog:open-file) cùng các địa chỉ lạ khác.
 //   - id: native_dialogs-EXP-002
 //     content: >
 //       Hành vi (đặc tả đã chốt của plan phiên 33; API Contract 4.0.0
@@ -66,31 +67,49 @@
 //       Hệ quả đáng biết: bridge có mặt ở mọi trang mà cửa sổ này nạp; Main chỉ nạp
 //       ui_origin và chặn điều hướng, nên kiểm khung gửi là lớp phòng thủ thứ hai,
 //       không phải lớp duy nhất.
+//   - id: native_dialogs-EXP-004
+//     derived_from: native_dialogs-PROB-001
+//     content: >
+//       Phép cắn (b) của plan phiên 33 ("bỏ danh sách địa chỉ được phép trong
+//       preload thì N2 hỏng"; chuyển từ vấn đề theo DSK-22). Bộ phân loại quyền đã
+//       chặn lần sửa preload ở phiên 33 ("Security Weaken"), nên không có số liệu
+//       từ máy này. Số liệu thay thế: Orchestrator chạy phép cắn trong audit phiên
+//       33 trên bản sao Linux (không phải máy Windows này): bỏ danh sách địa chỉ
+//       trong preload thì N2 hỏng ở dialog:open-file, vì spy trong Main nhận lời gọi
+//       và trả { ok: true, value: { status: 200, ... } } thay vì bị từ chối "ipc
+//       address not implemented". Từ phiên 35 spy của N2 đặt trên dialog:save-file
+//       (open_file đã có trình xử lý thật), cùng cách khẳng định.
+//   - id: native_dialogs-EXP-005
+//     content: >
+//       open_file (phiên 35; API Contract 5.0.0 cross_cutting.native_dialogs.open_file,
+//       input { filters }, output 200 { canceled, path }). Cùng đường đi với
+//       pick_folder (hàm register trong native_dialogs.ts: kiểm khung gửi, kiểm đối
+//       số, hộp thoại, trả lời), chỉ khác đối số và options của hộp thoại:
+//       dialog.showOpenDialog(<cửa sổ chính>, { properties: ['openFile'], title:
+//       'Chọn tệp' (desktop.json), filters }). Đối số: undefined, {} hay { filters:
+//       null } nghĩa là không lọc (options không có khóa filters); { filters: [ { name:
+//       string, extensions: list[string] } ] } được chuyển nguyên; mọi hình dạng khác
+//       (không phải object, khóa thừa, filters không phải null hay list, phần tử thiếu name,
+//       extensions không phải list chuỗi, khóa thừa trong phần tử) bị TỪ CHỐI
+//       (Promise bị từ chối "call refused (...)", hộp thoại không mở), vì hợp đồng
+//       không có nhãn 400 cho lối vào này. Không kiểm nội dung extensions (dấu chấm,
+//       dấu sao): đó là việc của Electron. Trang thử gọi với { name: 'Tệp sao lưu
+//       Commission Tracker', extensions: ['ctbackup'] }. Project Owner xác nhận trên
+//       máy thật: tiêu đề "Chọn tệp" kèm icon ứng dụng, có bộ lọc loại tệp, chọn trả
+//       { status: 200, body: { canceled: false, path } }.
+//   - id: native_dialogs-EXP-006
+//     content: >
+//       Thứ tự đăng ký (DSK-22, phép cắn (g) của audit phiên 33). Ca N14: trang
+//       tests/fixtures/invoke_on_load gọi invoke('dialog:pick-folder', {}) và
+//       invoke('restore:status', {}) ngay khi trang nạp (script chạy lúc phân tích
+//       trang, không chờ bấm hay hẹn giờ), ghi từng câu trả lời lên trang. Hộp thoại
+//       thật được thay bằng hàm giả NGAY SAU launch (app.evaluate trước khi cửa sổ
+//       tồn tại): Main phải chờ backend (khoảng một giây) mới tạo cửa sổ nên hàm giả
+//       có trước dòng đầu của trang; không có cờ kiểm thử mới và không đổi mã Main.
+//       Nếu trình xử lý ipc chưa đăng ký lúc đó, Electron từ chối "No handler
+//       registered for 'dialog:pick-folder'".
 //
-// UNSOLVED_PROBLEMS:
-//   - id: native_dialogs-PROB-001
-//     description: >
-//       Phép cắn (b) của plan phiên 33 chưa chạy được: "bỏ danh sách địa chỉ được
-//       phép trong preload thì ca địa chỉ lạ (N2) hỏng". Không phải lỗi mã: chưa
-//       có số liệu cho phép cắn này.
-//     attempts:
-//       - attempt: 1
-//         agent: coding-agent@2026-10-07#2
-//         tried: >
-//           Sửa tạm src/preload.ts để điều kiện kiểm danh sách địa chỉ luôn sai, rồi
-//           chạy npm run build và npx playwright test tests/native_dialogs.spec.ts.
-//         result: >
-//           Lệnh chạy bị bộ phân loại quyền của Claude Code từ chối (lý do ghi
-//           "Security Weaken": làm yếu danh sách địa chỉ của preload). Lệnh không chạy;
-//           preload được khôi phục ngay về mã đúng (kiểm bằng Grep thấy lại điều kiện
-//           !allowedAddresses.has(address)), và npm test cùng test:packaged sau đó
-//           chạy trên mã đúng. Phép cắn (a) (bỏ kiểm origin, bỏ kiểm cửa sổ) đã chạy
-//           được, xem EVIDENCE.
-//     next_suggested: >
-//       Project Owner quyết: cho phép chạy phép cắn (b) (sửa tạm preload, chạy ca N2
-//       và P9, khôi phục) hoặc chạy tay. Số liệu mong đợi: ca N2 hỏng ở phần "spy
-//       trong Main không nhận lời gọi nào" (spy nhận ["{}"]) và message không còn là
-//       "ipc address not implemented". Sau đó xóa mục này, chuyển thành EXPERIENCE.
+// UNSOLVED_PROBLEMS: []
 //
 // EVIDENCE:
 //   - claim: >
@@ -130,8 +149,9 @@
 //       200, không FATAL. N7: trang data: nhận "call refused (the sending frame's
 //       origin is data://, not app://commission-tracker)", hộp thoại không mở. N8:
 //       cửa sổ thứ hai (origin đúng) nhận "call refused (the sender is not the main
-//       window)", hộp thoại không mở, cửa sổ chính vẫn gọi được. N2: sáu địa chỉ/giá trị
-//       lạ (dialog:open-file, dialog:save-file, no:such:channel, '', 123, undefined) đều
+//       window)", hộp thoại không mở, cửa sổ chính vẫn gọi được. N2 (phiên 35: bỏ
+//       dialog:open-file khỏi danh sách, spy chuyển sang dialog:save-file): năm
+//       địa chỉ/giá trị lạ (dialog:save-file, no:such:channel, '', 123, undefined) đều
 //       bị từ chối "ipc address not implemented", spy gắn trong Main không nhận lời
 //       gọi nào. N9: bridge có đúng ['backendBaseUrl','invoke'], frozen, invoke là
 //       function, ipcRenderer, electron, require, process đều undefined.
@@ -180,11 +200,41 @@
 //       main-EXP-027). test:packaged: 9 passed (1,1 phút): P1-P8 như cũ và P9 (keys
 //       ['backendBaseUrl','invoke'], frozen, invoke function; chọn trả
 //       { status: 200, body: { canceled: false, path } }; hủy trả { canceled: true,
-//       path: null }; dialog:open-file bị từ chối "ipc address not implemented"; không
-//       FATAL; đóng cửa sổ thoát mã 0).
+//       path: null }; dialog:save-file (phiên 35; trước đó dialog:open-file) bị từ chối
+//       "ipc address not implemented"; không FATAL; đóng cửa sổ thoát mã 0).
 //     recorded_at: 2026-10-07T15:33:24.1521449+07:00
+//   - claim: >
+//       Phiên 35: open_file (N1b, N10-N13) và thứ tự đăng ký (N14, DSK-22) đạt; N2 chỉ
+//       đổi danh sách địa chỉ lạ; phép cắn DSK-22 làm N14 hỏng.
+//     how: >
+//       cd Desktop; npm test (chạy ba lần liên tiếp), hoặc riêng npx playwright test
+//       tests/native_dialogs.spec.ts. Phép cắn: tạm bọc registerNativeDialogs trong một
+//       hàm và gọi nó SAU lần nạp đầu (sau khối try/catch của win.loadURL) trong main.ts,
+//       npm run build, npx playwright test tests/native_dialogs.spec.ts -g N14, khôi phục
+//       (grep BITE không còn kết quả).
+//     result: >
+//       native_dialogs.spec.ts lúc viết: 15 passed (16 s). npm test: 62 passed ở cả ba
+//       lượt (4,6; 4,5; 4,6 phút). N10: chọn trả 200 { canceled: false, path }, hộp thoại
+//       nhận cửa sổ chính (id khớp) và options { properties: ['openFile'], title: 'Chọn
+//       tệp' }; hủy và không đối số trả { canceled: true, path: null }. N11: filters hợp lệ
+//       tới hộp thoại nguyên vẹn; { filters: null } cho options không có khóa filters.
+//       N12: bảy hình dạng sai bị từ chối "call refused", số lời gọi hộp thoại không tăng,
+//       bảy dòng log refused. N13: "boom from the file dialog" làm Promise bị từ chối, có
+//       dòng log failed, lời gọi kế tiếp vẫn 200. N14: cả hai lời gọi lúc nạp có câu trả lời
+//       ({ status: 200, body: { canceled: false, path } } và { status: 200, body: { pending:
+//       null } }), hộp thoại giả nhận đúng một lời gọi. Phép cắn: N14 hỏng với
+//       "Error invoking remote method 'dialog:pick-folder': Error: No handler registered
+//       for 'dialog:pick-folder'" (Expected ok true, Received ok false), 1 failed; bộ phân
+//       loại quyền không chặn. Khôi phục thì 15 passed.
+//     recorded_at: 2026-10-08T14:59:36.1924815+07:00
 //
 // NOTES:
+//   - content: >
+//       Cho phiên giao diện của chặng F: window.commissionTracker.invoke('dialog:open-file',
+//       { filters: [ { name, extensions } ] | null }) trả { status: 200, body: { canceled,
+//       path } } (đối số { } cũng được); Promise bị từ chối khi đối số sai hình dạng, khung
+//       gửi sai hay hộp thoại lỗi. extensions viết không có dấu chấm ('ctbackup').
+//     written_at: 2026-10-08
 //   - content: >
 //       Cho phiên giao diện của chặng E (trang sao lưu): gọi
 //       window.commissionTracker.invoke('dialog:pick-folder', {}) và nhận
@@ -200,63 +250,83 @@
  * only: it calls no workflow and keeps nothing. A path it hands back reaches a
  * workflow later as end_user input, through that workflow's own endpoint.
  *
- * Only the entry pick_folder (dialog:pick-folder) is implemented; open_file
- * and save_file stay in the contract until a page needs them.
+ * Two entries are implemented: pick_folder (dialog:pick-folder) and open_file
+ * (dialog:open-file); save_file stays in the contract until a page needs it.
  *
  * The Main registers it before the window opens and passes in the window
- * (so the dialog is modal to it), the interface origin, the address and the
- * dialog title, and the log function.
+ * (so the dialog is modal to it), the interface origin, the addresses and the
+ * dialog titles, and the log function.
  */
 
 import { dialog, ipcMain, type BrowserWindow, type IpcMainInvokeEvent } from 'electron'
-import { argumentRefusal, senderRefusal } from './request_checks'
+import { argumentRefusal, openFileArgument, senderRefusal, type FileFilter } from './request_checks'
 
 export interface NativeDialogsOptions {
   /** shared_values.ui_origin: the only origin whose frame may call. */
   uiOrigin: string
   pickFolder: { address: string; title: string }
+  openFile: { address: string; title: string }
   /** The Main's window; null once it is closed. */
   getMainWindow: () => BrowserWindow | null
   log: (message: string) => void
 }
 
-/** api_contract.yaml pick_folder, label 200. */
-export interface PickFolderReply {
+/** api_contract.yaml pick_folder and open_file, label 200. */
+export interface DialogReply {
   status: 200
   body: { canceled: boolean; path: string | null }
 }
 
 export function registerNativeDialogs(options: NativeDialogsOptions): void {
-  const { address, title } = options.pickFolder
-  const refuse = (reason: string): never => {
-    options.log(`native_dialogs: ${address} refused: ${reason}`)
-    throw new Error(`${address}: call refused (${reason})`)
+  /** One ipc entry: the sender check, the argument check (which gives the
+   * dialog's extra options), the dialog, then the reply. */
+  const register = (
+    entry: { address: string; title: string },
+    check: (argument: unknown) => { ok: true; dialogOptions: Electron.OpenDialogOptions } | { ok: false; reason: string },
+  ): void => {
+    const { address } = entry
+    const refuse = (reason: string): never => {
+      options.log(`native_dialogs: ${address} refused: ${reason}`)
+      throw new Error(`${address}: call refused (${reason})`)
+    }
+
+    ipcMain.handle(address, async (event: IpcMainInvokeEvent, argument: unknown): Promise<DialogReply> => {
+      const win = options.getMainWindow()
+      const senderProblem = senderRefusal(
+        { senderIsMainWindow: win !== null && event.sender === win.webContents, frameUrl: event.senderFrame?.url ?? null },
+        options.uiOrigin,
+      )
+      if (senderProblem !== null || win === null) return refuse(senderProblem ?? 'there is no main window')
+      const checked = check(argument)
+      if (!checked.ok) return refuse(checked.reason)
+
+      let result: Electron.OpenDialogReturnValue
+      try {
+        result = await dialog.showOpenDialog(win, { ...checked.dialogOptions, title: entry.title })
+      } catch (err) {
+        // The contract has only label 200 for these entries: no label is invented.
+        // The promise on the renderer side is rejected.
+        options.log(`native_dialogs: ${address} failed: ${err instanceof Error ? err.message : String(err)}`)
+        throw err
+      }
+      if (result.canceled || result.filePaths.length === 0) {
+        options.log(`native_dialogs: ${address} -> canceled`)
+        return { status: 200, body: { canceled: true, path: null } }
+      }
+      options.log(`native_dialogs: ${address} -> chosen ${result.filePaths[0]}`)
+      return { status: 200, body: { canceled: false, path: result.filePaths[0] } }
+    })
   }
 
-  ipcMain.handle(address, async (event: IpcMainInvokeEvent, argument: unknown): Promise<PickFolderReply> => {
-    const win = options.getMainWindow()
-    const senderProblem = senderRefusal(
-      { senderIsMainWindow: win !== null && event.sender === win.webContents, frameUrl: event.senderFrame?.url ?? null },
-      options.uiOrigin,
-    )
-    if (senderProblem !== null || win === null) return refuse(senderProblem ?? 'there is no main window')
-    const argumentProblem = argumentRefusal(argument)
-    if (argumentProblem !== null) return refuse(argumentProblem)
+  register(options.pickFolder, (argument) => {
+    const problem = argumentRefusal(argument)
+    return problem === null ? { ok: true, dialogOptions: { properties: ['openDirectory'] } } : { ok: false, reason: problem }
+  })
 
-    let result: Electron.OpenDialogReturnValue
-    try {
-      result = await dialog.showOpenDialog(win, { properties: ['openDirectory'], title })
-    } catch (err) {
-      // The contract has only label 200 for this entry: no label is invented.
-      // The promise on the renderer side is rejected.
-      options.log(`native_dialogs: ${address} failed: ${err instanceof Error ? err.message : String(err)}`)
-      throw err
-    }
-    if (result.canceled || result.filePaths.length === 0) {
-      options.log(`native_dialogs: ${address} -> canceled`)
-      return { status: 200, body: { canceled: true, path: null } }
-    }
-    options.log(`native_dialogs: ${address} -> chosen ${result.filePaths[0]}`)
-    return { status: 200, body: { canceled: false, path: result.filePaths[0] } }
+  register(options.openFile, (argument) => {
+    const parsed = openFileArgument(argument)
+    if (!parsed.ok) return parsed
+    const filters: FileFilter[] | null = parsed.filters
+    return { ok: true, dialogOptions: filters === null ? { properties: ['openFile'] } : { properties: ['openFile'], filters } }
   })
 }

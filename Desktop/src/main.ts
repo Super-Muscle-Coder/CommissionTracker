@@ -2,8 +2,8 @@
 // workflow: main
 // clause: clause_d_desktop
 // component: main
-// last_updated_by: coding-agent@2026-10-07#2
-// last_updated_at: 2026-10-07T15:33:24.1521449+07:00
+// last_updated_by: coding-agent@2026-10-08#1
+// last_updated_at: 2026-10-08T14:59:36.1924815+07:00
 //
 // EXPERIENCES:
 //   - id: main-EXP-001
@@ -552,7 +552,35 @@
 //       data.db.lock) giống hệt (kích thước, thời điểm ghi, SHA-256). Cách đọc tiêu
 //       chí "mốc %APPDATA% giống nhau": so cả hai thư mục; hồ sơ Chromium chỉ đổi khi
 //       người vận hành mở ứng dụng không có --ct-test-data-dir (bản cài hoặc exe) giữa
-//       hai mốc. Phiên 33: hai mốc giống hệt ở cả hai thư mục (69 dòng, 0 khác biệt).
+//       hai mốc. Phiên 33: hai mốc giống hệt ở cả hai thư mục (69 dòng, 0 khác biệt). Phiên 35: cũng
+//       69 dòng, 0 khác biệt giữa mốc đầu (09:21:07) và cuối (14:59:23).
+//   - id: main-EXP-031
+//     content: >
+//       Ráp workflow restore_data (phiên 35, pha 1; mã và checkpoint riêng ở
+//       src/workflows/restore_data/, khối restore_data). Main đọc
+//       configs/restore_data.json (loadRestoreDataConfig; chỉ Main đọc, rồi trao giá trị:
+//       đây là Configs của workflow, bố cục CLAUDE.md mục 4), tạo RestoreDataAdapters
+//       (config, dbFilePath đã tính có tôn trọng --ct-test-data-dir, backendBaseUrl),
+//       RestoreDataService và gọi registerRestoreDataRouters({ ipc: ipcMain, ... }) trong
+//       startLayer: SAU backend READY, kiểm thư mục giao diện, protocol.handle và
+//       registerNativeDialogs, TRƯỚC khi tạo BrowserWindow. Danh sách địa chỉ ipc cho preload
+//       (--ct-ipc-addresses=) nay có năm địa chỉ: dialog:pick-folder, dialog:open-file
+//       (desktop.json native_dialogs.open_file, tiêu đề "Chọn tệp"), restore:prepare,
+//       restore:status, restore:cancel (restore_data.json addresses). Bridge vẫn đúng hai
+//       khóa. Ca N14 (DSK-22) khẳng định cả pick-folder lẫn restore:status có câu trả lời
+//       khi trang gọi ngay lúc nạp. Đóng gói: electron-builder.yml files thêm
+//       dist/workflows/**/*.js và configs/restore_data.json (bài học main-EXP-027: thêm
+//       thư mục dist mới cho Main thì phải thêm vào files); app.asar liệt kê được cả bốn
+//       tệp của workflow; P10 chạy đường chuẩn bị thật trong gói. Main chưa có
+//       backend_controller, restore_trigger: để phiên 36.
+//   - id: main-EXP-032
+//     content: >
+//       Trang thử cho Project Owner (npm run probe, tests/fixtures/probe) có thêm bốn nút:
+//       "Chọn tệp sao lưu" (open_file, bộ lọc ctbackup), "Chuẩn bị khôi phục",
+//       "Xem trạng thái", "Hủy khôi phục"; mỗi nút ghi đè ô trả lời của chính nó nên bấm
+//       xen kẽ nhiều lần dễ nhầm với "không có gì đổi" (đã xảy ra); log Main ghi từng lời gọi
+//       "restore_data: <địa chỉ> -> <nhãn>". Trang thử riêng cho DSK-22 ở
+//       tests/fixtures/invoke_on_load.
 //
 // UNSOLVED_PROBLEMS: []
 //
@@ -1170,45 +1198,41 @@
 //       nguồn trước lần sửa cuối của khối checkpoint này.
 //     recorded_at: 2026-10-05T11:16:31.4746772+07:00
 //   - claim: >
-//       Phiên 33, chạy toàn bộ với AVG và ReasonLabs bật: lint, npm test 3 lượt
-//       liên tiếp, dist từ trạng thái sạch, test:packaged, UI npm run e2e,
-//       UI/evidence không đổi.
+//       Phiên 35, chạy toàn bộ với AVG và ReasonLabs bật: lint, npm test ba lượt liên tiếp,
+//       dist từ trạng thái sạch, test:packaged, UI npm run e2e, UI/evidence không đổi.
 //     how: >
-//       cd Desktop; npm run lint; npm test (3 lần liên tiếp); xóa packaging\stage và
-//       release; ELECTRON_BUILDER_CACHE trỏ vào thư mục tạm; npm run dist; npm run
-//       test:packaged. cd UI; npm run build; npm run e2e (CT_WALKTHROUGH_RUNNER không
-//       đặt; một lượt); git status --short UI/evidence.
+//       cd Desktop; npm run lint; npm test (ba lần liên tiếp); xóa packaging\stage và release;
+//       ELECTRON_BUILDER_CACHE trỏ vào %TEMP%\ct-eb-cache; npm run dist; npm run test:packaged.
+//       cd UI; npm run build; npm run e2e (CT_WALKTHROUGH_RUNNER không đặt; một lượt);
+//       git status --short evidence. Môi trường: Node v24.14.1, npm 11.11.0, Electron v44.4.5,
+//       Python 3.13.12; Reason Cybersecurity 266240 và AVG Antivirus 266240 (bật), Windows
+//       Defender 393472 (tắt); AVGSvc, rsEngineSvc, bốn rsAppUI đang chạy.
 //     result: >
-//       lint sạch, không ngoại lệ eslint mới. npm test: 40 passed ở cả ba lượt (4,1;
-//       4,1; 4,2 phút), sau bộ không còn python.exe của dự án (31 ca cũ cộng 9 ca
-//       native_dialogs: N1-N9; ca 1 sửa một khẳng định, main-EXP-029). Mốc đầu phiên
-//       trên mã cũ: 31 passed (4,1 phút). npm run dist: lần đầu hỏng ở NSIS với EXDEV
-//       (sandbox của agent, như phiên 14, 26, 30; electron-builder đã dọn "stale
-//       extracting state" của nsis-3.0.4.1 và 7zip@1.0.0 trong
-//       %LOCALAPPDATA%\electron-builder\Cache trước khi hỏng, nên lần dist sau ngoài
-//       sandbox sẽ tải lại hai gói đó); với cache tạm thoát mã 0 sau khoảng 1,2 phút,
-//       sinh Commission Tracker Setup 0.1.0.exe và win-unpacked. app.asar có
-//       dist\main.js, preload.js, cross_cutting\native_dialogs\{native_dialogs,
-//       request_checks}.js, cross_cutting\reminder_ticker\{reminder_ticker,
-//       toast_text}.js. test:packaged: 9 passed (1,1 phút; P1-P8 và P9). UI npm run
-//       e2e: 70 passed (5,1 phút); git status --short UI/evidence trống. Các số là
-//       của mã nguồn trước lần sửa cuối của các khối checkpoint (chỉ đổi chú thích).
-//     recorded_at: 2026-10-07T15:33:24.1521449+07:00
+//       Mốc đầu phiên (09:21-09:26, trên mã cũ): npm ci, lint sạch, npm test 40 passed (4,3
+//       phút), UI build đạt, git status trống. Cuối phiên: lint sạch, không ngoại lệ eslint
+//       mới. npm test: 62 passed ở cả ba lượt (09:37:41-09:42:21; 09:42:21-09:46:58;
+//       09:46:58-09:51:37), sau bộ không còn python.exe của dự án (40 ca cũ, N1b, N10-N14 mới
+//       ở native_dialogs, 16 ca của restore_data). npm run dist: thoát mã 0 (09:51:50-09:53:54,
+//       không gặp EXDEV khi đặt cache vào thư mục tạm), app.asar liệt kê ở EVIDENCE của
+//       restore_data. test:packaged: 10 passed (1,2 phút; P1-P10). UI npm run e2e: 75 passed
+//       (5,9 phút); git status --short evidence trống. Các số là của mã nguồn trước lần sửa
+//       cuối của các khối checkpoint (chỉ đổi chú thích).
+//     recorded_at: 2026-10-08T14:59:36.1924815+07:00
 //   - claim: >
 //       Không test hay lần chạy nào của phiên đụng thư mục dữ liệu thật
 //       %APPDATA%\CommissionTracker.
 //     how: >
-//       PowerShell (script tạm ngoài dự án): liệt kê mọi tệp của
-//       %APPDATA%\CommissionTracker và %APPDATA%\Commission Tracker với kích thước,
-//       LastWriteTimeUtc và (cho CommissionTracker) SHA-256, chụp lúc
-//       2026-10-07T14:51:57.9364677+07:00 (đầu phiên) và 2026-10-07T15:32:41.4902860+07:00
-//       (cuối phiên, sau npm test, dist, test:packaged và UI e2e), so từng dòng. Lần
-//       npm run probe của Project Owner chạy giữa hai mốc, với --ct-test-data-dir tạm.
+//       PowerShell (script tạm ngoài dự án): liệt kê mọi tệp của %APPDATA%\CommissionTracker
+//       và %APPDATA%\Commission Tracker với kích thước, LastWriteTimeUtc và (cho
+//       CommissionTracker) SHA-256, chụp lúc 2026-10-08T09:21:07 (đầu phiên) và
+//       2026-10-08T14:59:23.1025430+07:00 (cuối phiên, sau npm test ba lượt, dist,
+//       test:packaged, UI e2e và ba lần Project Owner chạy npm run probe với
+//       --ct-test-data-dir tạm), so từng dòng bằng Compare-Object.
 //     result: >
 //       Cả hai thư mục: 69 dòng ở mỗi mốc, 0 dòng khác nhau. CommissionTracker: data.db
 //       114688 byte, ghi 2026-09-28T14:09:42.7922654Z, SHA-256 B1996554...390B, và
 //       data.db.lock; không đổi.
-//     recorded_at: 2026-10-07T15:33:24.1521449+07:00
+//     recorded_at: 2026-10-08T14:59:36.1924815+07:00
 //
 // NOTES:
 //   - content: >
@@ -1301,21 +1325,26 @@
  * before the app exits (data_schema.yaml, clause_a_common.mandatory_rules).
  * It also starts the cross-cutting reminder_ticker once the backend is READY
  * and the window has loaded, and stops it before the backend. It registers the
- * cross-cutting entry native_dialogs (ipc) before the window opens, and hands
- * the preload script the ipc addresses that are implemented. No workflow of
- * this layer is wired yet.
+ * cross-cutting entry native_dialogs (ipc) and wires the workflow restore_data
+ * (phase 1) before the window opens, and hands the preload script the ipc
+ * addresses that are implemented.
  */
 
-import { app, BrowserWindow, dialog, Menu, Notification, protocol } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, Menu, Notification, protocol } from 'electron'
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process'
 import * as fs from 'node:fs'
 import * as net from 'node:net'
 import * as path from 'node:path'
 import { registerNativeDialogs } from './cross_cutting/native_dialogs/native_dialogs'
 import { ReminderTicker, type ReminderTickerConfig, type Toast } from './cross_cutting/reminder_ticker/reminder_ticker'
+import { RestoreDataAdapters } from './workflows/restore_data/adapters'
+import type { RestoreDataConfig } from './workflows/restore_data/entities'
+import { registerRestoreDataRouters } from './workflows/restore_data/routers'
+import { RestoreDataService } from './workflows/restore_data/services'
 
 const LAYER_ROOT = path.resolve(__dirname, '..')
 const CONFIG_FILE = path.join(LAYER_ROOT, 'configs', 'desktop.json')
+const RESTORE_DATA_CONFIG_FILE = path.join(LAYER_ROOT, 'configs', 'restore_data.json')
 
 // --- 1. configuration --------------------------------------------------------
 
@@ -1343,7 +1372,7 @@ interface DesktopConfig {
     non_fatal_first_load_errors: string[]
   }
   preload: { arguments: { bridge_name: string; backend_base_url: string; ipc_addresses: string } }
-  native_dialogs: { pick_folder: { address: string; title: string } }
+  native_dialogs: { pick_folder: { address: string; title: string }; open_file: { address: string; title: string } }
   app: { locale: string; app_user_model_id: string }
   reminder_ticker: ReminderTickerConfig
   main: {
@@ -1393,6 +1422,12 @@ interface BackendCommand {
 
 function loadConfig(): DesktopConfig {
   return JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8')) as DesktopConfig
+}
+
+/** Configs of the restore_data workflow (configs/restore_data.json): only the
+ * Main reads the file, then hands the values to the workflow. */
+function loadRestoreDataConfig(): RestoreDataConfig {
+  return JSON.parse(fs.readFileSync(RESTORE_DATA_CONFIG_FILE, 'utf8')) as RestoreDataConfig
 }
 
 function flagValue(argv: readonly string[], prefix: string): string | null {
@@ -1941,15 +1976,37 @@ function main(): void {
     registerNativeDialogs({
       uiOrigin,
       pickFolder: config.native_dialogs.pick_folder,
+      openFile: config.native_dialogs.open_file,
       getMainWindow: () => mainWindow,
       log: (message) => log(message),
     })
+
+    // Workflow restore_data (phase 1: prepare, status, cancel): the Main reads
+    // its Configs, builds Adapters, Services and Routers, and registers the
+    // three ipc handlers, also before the window opens. Wiring only: every
+    // decision is the workflow's.
+    const backendBaseUrl = `http://${host}:${backend.port}`
+    const restoreConfig = loadRestoreDataConfig()
+    registerRestoreDataRouters({
+      ipc: ipcMain,
+      service: new RestoreDataService(new RestoreDataAdapters({ config: restoreConfig, dbFilePath, backendBaseUrl }), restoreConfig),
+      config: restoreConfig,
+      uiOrigin,
+      getMainWindow: () => mainWindow,
+      log: (message) => log(message),
+    })
+
     // The ipc addresses implemented here; the preload relays only these.
-    const ipcAddresses = [config.native_dialogs.pick_folder.address]
+    const ipcAddresses = [
+      config.native_dialogs.pick_folder.address,
+      config.native_dialogs.open_file.address,
+      restoreConfig.addresses.request_restore,
+      restoreConfig.addresses.get_restore_status,
+      restoreConfig.addresses.cancel_restore,
+    ]
 
     // f-g. Window; the preload script receives the launch value and the
     //      implemented ipc addresses.
-    const backendBaseUrl = `http://${host}:${backend.port}`
     const args = config.preload.arguments
     const win = new BrowserWindow({
       width: config.renderer.window.width,

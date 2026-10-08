@@ -1,0 +1,37 @@
+<!doctype html>
+<!-- DSK-22: a page that calls invoke while it is still loading, to prove that
+     the Main's ipc handlers are registered before the window loads anything.
+     The script runs as the page is parsed; each answer (or rejection) is
+     written to the page for the test to read. -->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Commission Tracker — invoke on load</title>
+  </head>
+  <body>
+    <h1>invoke on load (test page, not the product UI)</h1>
+    <pre id="answers">(waiting)</pre>
+    <p id="done" hidden>done</p>
+    <script>
+      'use strict'
+      const bridge = window.commissionTracker
+      const calls = [
+        ['dialog:pick-folder', {}],
+        ['restore:status', {}],
+      ]
+      const record = {}
+      // Started at once, as the page loads: not after a click, not after a timer.
+      Promise.all(
+        calls.map(([address, argument]) =>
+          bridge.invoke(address, argument).then(
+            (value) => { record[address] = { ok: true, value } },
+            (err) => { record[address] = { ok: false, message: err && err.message ? err.message : String(err) } },
+          ),
+        ),
+      ).then(() => {
+        document.getElementById('answers').textContent = JSON.stringify(record)
+        document.getElementById('done').hidden = false
+      })
+    </script>
+  </body>
+</html>

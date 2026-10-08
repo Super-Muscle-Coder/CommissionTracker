@@ -538,7 +538,67 @@ test('P9. desktop session 33: the packaged bridge has invoke; dialog:pick-folder
     expect(await invoke(address, {})).toEqual({ ok: true, value: { status: 200, body: { canceled: false, path: chosen } } })
     await stub({ canceled: true, filePaths: [] })
     expect(await invoke(address, {})).toEqual({ ok: true, value: { status: 200, body: { canceled: true, path: null } } })
-    expect(await invoke('dialog:open-file', {})).toEqual({ ok: false, message: expect.stringMatching(/ipc address not implemented/) })
+    // dialog:open-file is implemented since session 35; dialog:save-file is the one dialog entry that is not.
+    expect(await invoke('dialog:save-file', {})).toEqual({ ok: false, message: expect.stringMatching(/ipc address not implemented/) })
+    expect(l.log.text).not.toMatch(/FATAL/)
+    await closeWindow(l, tree)
+  })
+})
+
+test('P10. desktop session 35: the package holds the restore_data workflow and its Configs: restore:status answers, dialog:open-file answers (dialog replaced), a real backup is prepared and canceled', async () => {
+  const bridge: string = config.boundary.renderer_bridge
+  const openFile: string = config.native_dialogs.open_file.address
+  await withPackaged(async (l) => {
+    const tree = await expectPackagedRun(l)
+    const invoke = (addr: string, arg: unknown) =>
+      l.page.evaluate(
+        async ({ name, addr, arg }) => {
+          const b = (window as unknown as Record<string, { invoke: (a: string, b?: unknown) => Promise<unknown> }>)[name]
+          try {
+            return { ok: true, value: await b.invoke(addr, arg) }
+          } catch (err) {
+            return { ok: false, message: err instanceof Error ? err.message : String(err) }
+          }
+        },
+        { name: bridge, addr, arg },
+      )
+
+    // The Main found dist/workflows/restore_data and configs/restore_data.json inside app.asar.
+    expect(await invoke('restore:status', {})).toEqual({ ok: true, value: { status: 200, body: { pending: null } } })
+
+    // dialog:open-file, the real dialog replaced inside the Main: nothing opens on screen.
+    const chosen = path.join(l.dataDir, 'chosen file.ctbackup')
+    await l.app.evaluate(({ dialog }, answer) => {
+      ;(dialog as unknown as { showOpenDialog: () => Promise<unknown> }).showOpenDialog = async () => answer
+    }, { canceled: false, filePaths: [chosen] })
+    const filters = [{ name: 'Tệp sao lưu Commission Tracker', extensions: ['ctbackup'] }]
+    expect(await invoke(openFile, { filters })).toEqual({ ok: true, value: { status: 200, body: { canceled: false, path: chosen } } })
+    await l.app.evaluate(({ dialog }) => {
+      ;(dialog as unknown as { showOpenDialog: () => Promise<unknown> }).showOpenDialog = async () => ({ canceled: true, filePaths: [] })
+    })
+    expect(await invoke(openFile, { filters: null })).toEqual({ ok: true, value: { status: 200, body: { canceled: true, path: null } } })
+
+    // A real backup made by the packaged backend, prepared by the packaged workflow, then canceled.
+    const baseUrl = `http://${HOST}:${l.port}`
+    const archiveDir = path.join(l.dataDir, 'archives')
+    fs.mkdirSync(archiveDir)
+    const created = await fetch(`${baseUrl}/backups`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ backup_request: { destination_dir: archiveDir, purpose: 'manual' } }),
+    })
+    expect(created.status).toBe(201)
+    const archive = (await created.json()) as { archive_path: string }
+    const prepared = (await invoke('restore:prepare', { archive_path: archive.archive_path })) as { ok: boolean; value: { status: number; body: Record<string, string> } }
+    expect(prepared.ok).toBe(true)
+    expect(prepared.value.status).toBe(200)
+    expect(Object.keys(prepared.value.body).sort()).toEqual(['archive_app_version', 'archive_created_at', 'archive_path', 'prepared_at', 'safety_backup_path'])
+    expect(prepared.value.body.archive_path).toBe(archive.archive_path)
+    expect(fs.existsSync(prepared.value.body.safety_backup_path)).toBe(true)
+    expect(await invoke('restore:status', {})).toEqual({ ok: true, value: { status: 200, body: { pending: prepared.value.body } } })
+    expect(await invoke('restore:cancel', {})).toEqual({ ok: true, value: { status: 200, body: { canceled: true } } })
+    expect(await invoke('restore:status', {})).toEqual({ ok: true, value: { status: 200, body: { pending: null } } })
+
     expect(l.log.text).not.toMatch(/FATAL/)
     await closeWindow(l, tree)
   })

@@ -61,6 +61,42 @@ document.getElementById('pick-folder').addEventListener('click', async () => {
   }
 })
 
+// Calls an ipc address and shows the answer (or the rejection) in the given element.
+async function callAndShow(id, address, argument) {
+  show(id, '(waiting)')
+  try {
+    const answer = await window[BRIDGE_NAME].invoke(address, argument)
+    show(id, JSON.stringify(answer))
+    return answer
+  } catch (err) {
+    show(id, 'rejected: ' + (err && err.message ? err.message : String(err)))
+    return null
+  }
+}
+
+// "Chọn tệp sao lưu": the file dialog with a .ctbackup filter; the chosen path
+// is kept for "Chuẩn bị khôi phục".
+let chosenArchivePath = null
+document.getElementById('open-file').addEventListener('click', async () => {
+  const answer = await callAndShow('open-file-answer', 'dialog:open-file', {
+    filters: [{ name: 'Tệp sao lưu Commission Tracker', extensions: ['ctbackup'] }],
+  })
+  chosenArchivePath = answer && answer.body && answer.body.path ? answer.body.path : null
+})
+document.getElementById('restore-prepare').addEventListener('click', () => {
+  if (chosenArchivePath === null) {
+    show('restore-prepare-answer', '(choose a backup file first)')
+    return
+  }
+  callAndShow('restore-prepare-answer', 'restore:prepare', { archive_path: chosenArchivePath })
+})
+document.getElementById('restore-status').addEventListener('click', () => {
+  callAndShow('restore-status-answer', 'restore:status', {})
+})
+document.getElementById('restore-cancel').addEventListener('click', () => {
+  callAndShow('restore-cancel-answer', 'restore:cancel', {})
+})
+
 window.addEventListener('error', (event) => addError('error: ' + event.message))
 window.addEventListener('unhandledrejection', (event) => addError('unhandled rejection: ' + String(event.reason)))
 document.getElementById('rerun').addEventListener('click', () => {

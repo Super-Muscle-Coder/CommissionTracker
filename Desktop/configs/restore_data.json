@@ -1,0 +1,34 @@
+{
+  "addresses": {
+    "request_restore": "restore:prepare",
+    "get_restore_status": "restore:status",
+    "cancel_restore": "restore:cancel"
+  },
+  "labels": {
+    "ok": 200,
+    "validation": 400,
+    "not_found": 404,
+    "incompatible_backup": 409,
+    "safety_backup_failed": 424,
+    "storage_io": 500,
+    "service_unavailable": 503
+  },
+  "error_codes": {
+    "validation": "ERR_VALIDATION",
+    "not_found": "ERR_NOT_FOUND",
+    "incompatible_backup": "ERR_INCOMPATIBLE_BACKUP",
+    "storage_io": "ERR_STORAGE_IO",
+    "service_unavailable": "ERR_SERVICE_UNAVAILABLE"
+  },
+  "backend_requests": {
+    "prepare_restore": { "method": "POST", "path": "/backups/restore-preparations" },
+    "create_backup": { "method": "POST", "path": "/backups" },
+    "safety_backup_purpose": "pre_restore",
+    "timeout_ms": 30000
+  },
+  "files": {
+    "safety_folder_name": "safety-backups",
+    "pending_file_name": "restore-pending.json",
+    "temp_suffix": ".tmp"
+  }
+}

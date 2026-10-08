@@ -10,13 +10,16 @@ directories:
   output: release
 
 # app.asar: only the Main, its preload script, the cross-cutting components the
-# Main requires (dist/cross_cutting/, since desktop session 30), its
-# configuration and package.json. No tests and no fixtures.
+# Main requires (dist/cross_cutting/, since desktop session 30), the workflows
+# it wires (dist/workflows/ and the Configs of each, since desktop session 35),
+# its configuration and package.json. No tests and no fixtures.
 files:
   - dist/main.js
   - dist/preload.js
   - dist/cross_cutting/**/*.js
+  - dist/workflows/**/*.js
   - configs/desktop.json
+  - configs/restore_data.json
   - package.json
 
 # resources/{python,backend,ui}, next to app.asar (D2). The Main finds them
