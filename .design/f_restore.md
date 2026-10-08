@@ -82,7 +82,7 @@ restore_outcome:       object { outcome: 'none'|'restored'|'rolled_back'|'discar
 
 | Lối vào | Hình thức, địa chỉ | Bên gọi | Kết quả |
 |---|---|---|---|
-| `request_restore` | ipc `restore:prepare`, input `[archive_path]` | `external` | 200 `restore_scheduled`; 400 `ERR_VALIDATION`; 404 `ERR_NOT_FOUND`; 409 `ERR_INCOMPATIBLE_BACKUP`; 424 `ERR_STORAGE_IO` (bản an toàn hỏng); 500 `ERR_STORAGE_IO` (bản ghi không ghi được); 503 `ERR_SERVICE_UNAVAILABLE`. Mọi nhãn không phải 200: không có gì đang chờ |
+| `request_restore` | ipc `restore:prepare`, input `[archive_path]` | `external` | 200 `restore_scheduled`; 400 `ERR_VALIDATION`; 404 `ERR_NOT_FOUND`; 409 `ERR_INCOMPATIBLE_BACKUP`; 424 `ERR_STORAGE_IO` (bản an toàn hỏng); 500 `ERR_STORAGE_IO` (bản ghi không ghi được); 503 `ERR_SERVICE_UNAVAILABLE`. Mọi nhãn từ 404 trở đi: không có gì đang chờ. Riêng 400 giữ nguyên bản ghi cũ: lời gọi sai định dạng không qua bước 1 (sửa 2026-10-08, audit phiên 35 §5.1). Ngoại lệ hiếm: bước 1 không xóa được bản ghi cũ thì trả 500 và bản ghi cũ còn đó (audit phiên 35 §5.3) |
 | `get_restore_status` | ipc `restore:status`, input none | `external` | 200 `restore_status`; 500 `ERR_STORAGE_IO` |
 | `cancel_restore` | ipc `restore:cancel`, input none | `external` | 200 `restore_cancellation`; 500 `ERR_STORAGE_IO` |
 | `apply_pending_restore` | in_process `apply_pending_restore`, input none | `restore_trigger` | 200 `restore_outcome`; 500 `ERR_RESTORE_FAILED` |

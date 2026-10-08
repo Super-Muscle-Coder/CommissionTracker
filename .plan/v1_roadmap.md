@@ -207,7 +207,7 @@ Chặng E xong khi họa sĩ tạo được tệp sao lưu từ giao diện, và
 **Đã quyết 2026-10-08: hướng B, "chuẩn bị, rồi mở lại để hoàn tất"** (Project Owner chọn; làm F trước, G sau). Đặc tả: `.design/f_restore.md`. Hợp đồng sửa theo CT-7: Data Schema 10.0.0, API Contract 5.0.0, Project Owner duyệt và ghi ngày 2026-10-08. Điều kiện cũ "quyết sau khi chặng C xong" coi như đạt: đóng gói, vòng đời backend và kênh `ipc` đã được chứng minh trên máy Project Owner; phần chạy trên máy sạch (ENV-4) gộp vào chặng G.
 
 **Chia phiên:**
-1. **Phiên 35 (desktop): pha 1.** Workflow `restore_data` (workflow đầu tiên của desktop) với `restore:prepare`, `restore:status`, `restore:cancel`; `native_dialogs.open_file`; DSK-22. Plan: `.plan/desktop_plan.md`.
+1. **Phiên 35 (desktop): pha 1.** Workflow `restore_data` (workflow đầu tiên của desktop) với `restore:prepare`, `restore:status`, `restore:cancel`; `native_dialogs.open_file`; DSK-22. Plan: `.plan/desktop_plan.md`. **Xong 2026-10-08, audit đạt** (`.reviews/audits/desktop/audit_desktop_session35.md`); Desktop 62 kiểm thử, `test:packaged` 10; DSK-22 đóng; mở DSK-23 (theo dõi), DSK-24 (V2).
 2. **Phiên 36 (desktop): pha 2.** `backend_controller`, `apply_pending_restore`, `restore_trigger`, khứ hồi thật, hoàn tác, bản đóng gói.
 3. **Phiên 37 (giao diện):** làm lại I1 cho khôi phục, rồi trang hoặc phần Khôi phục.
 

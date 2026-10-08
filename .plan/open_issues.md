@@ -275,8 +275,20 @@ Người dùng thật cập nhật bằng cách chạy bộ cài mới; họ kh�
 
 ### DSK-22 — Hai việc nhỏ của `native_dialogs` (thấp; audit phiên 33 §5.1, §5.2) — làm ở phiên desktop kế tiếp, không mở phiên riêng
 
+> **ĐÃ ĐÓNG 2026-10-08, phiên 35** (audit `.reviews/audits/desktop/audit_desktop_session35.md`): `native_dialogs-EXP-004` thay PROB-001; ca N14 gọi `invoke` lúc nạp, phép cắn làm N14 hỏng ("No handler registered").
+
 1. **`native_dialogs-PROB-001`** (phép cắn (b) bị bộ phân loại quyền chặn): Orchestrator đã chạy phép cắn này trong audit phiên 33, trên bản sao Linux. Bỏ danh sách địa chỉ trong preload thì N2 hỏng ở `dialog:open-file`: spy trong Main nhận lời gọi và trả `{ok: true, value: {status: 200, …}}` thay vì bị từ chối "ipc address not implemented". **Việc:** chuyển mục PROB thành EXPERIENCE (`derived_from: native_dialogs-PROB-001`), ghi số trên làm kết quả, nói rõ Orchestrator chạy trên Linux; `UNSOLVED_PROBLEMS: []`.
 2. **Thứ tự đăng ký:** dời `registerNativeDialogs` xuống sau lần nạp đầu mà 9/9 vẫn đạt (phép cắn (g) của Orchestrator). **Việc:** thêm một ca trong đó trang gọi `invoke('dialog:pick-folder', {})` ngay lúc nạp (ví dụ một trang thử riêng, hoặc một tham số của trang thử), rồi khẳng định lời gọi đó có trả lời. Không đổi mã Main.
+
+## Layer desktop — sau audit phiên 35
+
+### DSK-23 — Ứng dụng thoát một lần với mã 0xC0000005 trên trang thử (theo dõi; audit phiên 35 §5.2)
+
+Phiên 35: một lần chạy `npm run probe` thoát với mã 3221225477 (vi phạm truy cập bộ nhớ của tiến trình Electron), ngay sau ba lần hộp thoại chọn tệp **thật** trả "canceled". Log Main không có `FATAL`; các lượt khác của cùng phiên không sập; chưa tái hiện. Đường gọi chỉ có `dialog.showOpenDialog` của Electron. **Việc:** phiên 36 (cũng dùng hộp thoại thật) ghi lại nếu lặp lại; lặp lại thì đo (Windows Event Viewer, mục Application Error; số lần mở và hủy hộp thoại). Không lặp lại tới hết chặng F thì đóng.
+
+### DSK-24 — Bản sao lưu an toàn tích lũy (thấp; V2; audit phiên 35 §5.4)
+
+Mỗi lần `restore:prepare` thành công tạo thêm một bản sao lưu an toàn trong `safety-backups`; không có gì dọn. Đúng đặc tả V1. **V2:** dọn bản cũ (ví dụ chỉ giữ N bản gần nhất), kèm đặc tả và có thể cả sửa hợp đồng. Trang Khôi phục ở V1 nói rõ mỗi lần chuẩn bị tạo một bản an toàn.
 
 ## Layer backend — sau audit phiên 32
 
