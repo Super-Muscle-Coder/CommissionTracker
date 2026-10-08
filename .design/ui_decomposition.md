@@ -39,7 +39,7 @@ Bảng này sinh ra từ `api_contract.yaml` 4.0.0. Mỗi khi hợp đồng đ�
 | | `list_pending` | http `GET /reminders/pending` | 200, 500 |
 | | `acknowledge` | http `PUT /reminders/{notification_id}/ack` | 200, 404, 500 |
 | `backup_data` | `create_backup` | http `POST /backups` | 201, 400, 500 |
-| `restore_data` (desktop) | `start_restore` | ipc `restore:start` | 200, 400, 404, 409, 424, 500, 503 |
+| `restore_data` (desktop) | `request_restore`, `get_restore_status`, `cancel_restore` | ipc `restore:prepare`, `restore:status`, `restore:cancel` | 200, 400, 404, 409, 424, 500, 503 (prepare); 200, 500 (status, cancel). Theo API Contract 5.0.0 (CT-7); chi tiết ở lần làm lại I1 trước phiên 37 |
 | `native_dialogs` (cắt ngang, desktop) | `open_file`, `save_file`, `pick_folder` | ipc `dialog:open-file`, `dialog:save-file`, `dialog:pick-folder` | 200 |
 | `manage_watermark_profile` | `create_profile`, `list_profiles`, `get_profile`, `edit_profile`, `list_strengths` | http `/watermark-profiles…`, `GET /watermark-strengths` | — (loại trừ, §4) |
 | `apply_watermark` | `apply`, `list_artworks`, `get_artwork` | http `/artworks…` | — (loại trừ, §4) |
@@ -809,7 +809,7 @@ Kịch bản bấm thử và audit kiểm các điều sau.
 
 ## Lịch sử cập nhật
 
-- 2026-10-08: `backup` → `hoàn_tất`. Project Owner chạy tay kịch bản với hộp thoại thật của Windows (S1, S2, S3, S5; S4 chỉ có ở lần chạy tự động): ba tệp `.ctbackup` được tạo, không trùng tên, không ghi đè; hủy không tạo tệp; backend tắt thì báo không kết nối được, bật lại thì tạo được. Log của Desktop khớp: bốn lần `chosen`, một lần `canceled`. Bước tùy chọn `C:\Windows` không chạy. Tiêu đề hộp thoại ("Chọn thư mục") Project Owner chưa nêu lại; ca N3 của Desktop kiểm Main truyền đúng tiêu đề. Chặng E xong.
+- 2026-10-08: `backup` → `hoàn_tất`. Project Owner chạy tay kịch bản với hộp thoại thật của Windows (S1, S2, S3, S5; S4 chỉ có ở lần chạy tự động): ba tệp `.ctbackup` được tạo, không trùng tên, không ghi đè; hủy không tạo tệp; backend tắt thì báo không kết nối được, bật lại thì tạo được. Log của Desktop khớp: bốn lần `chosen`, một lần `canceled`. Bước tùy chọn `C:\Windows` không chạy. Tiêu đề hộp thoại: Project Owner xác nhận ngày 2026-10-08 là "Chọn thư mục", kèm biểu tượng của ứng dụng (đóng điểm treo của audit phiên 33 §5.3). Chặng E xong.
 - 2026-10-07: audit phiên 34 đạt về chức năng (`.reviews/audits/ui/audit_ui_session34.md`). Chấp nhận các chỗ agent tự quyết: hộp thoại hỏng hiện khung "Chưa tạo được bản sao lưu" với câu riêng (mã riêng của giao diện `DIALOG_FAILED`, không phải mã của hợp đồng); tiêu đề khung lỗi "Chưa tạo được bản sao lưu"; "Đang tạo bản sao lưu…" chỉ hiện ở bước 2, qua một hàm báo mà Routers nhận. `backup` giữ `đang_làm`, chờ Project Owner chạy tay.
 - 2026-10-07: làm lại I1 cho chặng E, căn cứ Data Schema 9.0.3: trang `backup` → `đang_làm` (plan phiên 34); mục điều hướng thứ sáu "Sao lưu"; `scaffold_ui` thêm tài nguyên `ipc_bridge`; `invoke` thành giá trị khởi động bắt buộc (§3); luồng một nút (chọn thư mục rồi tạo bản sao lưu), không hỏi xác nhận; kiểm hình dạng câu trả lời `pick_folder`; luật phủ dùng hộp thoại thay thế cho lần chạy tự động, hộp thoại thật cho lần chạy tay; công cụ kiểm thử gọi `prepare_restore` để chứng minh tiêu chí chặng E. Hợp đồng không đổi.
 - 2026-09-26: bản đầu. Đủ ba bảng cho toàn V1; chi tiết trang `client_list`.

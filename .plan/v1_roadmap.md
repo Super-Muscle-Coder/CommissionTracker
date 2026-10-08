@@ -204,7 +204,14 @@ Chặng E xong khi họa sĩ tạo được tệp sao lưu từ giao diện, và
 
 ## Chặng F — `restore_data`, hoặc hoãn sang V2
 
-**Chưa quyết.** Xem `.design/v1_scope.md`, mục 4. Chỉ quyết sau khi chặng C xong, vì `restore_data` là điều phối vòng đời tiến trình — đúng loại việc mà một nền tảng chưa được chứng minh sẽ làm hỏng.
+**Đã quyết 2026-10-08: hướng B, "chuẩn bị, rồi mở lại để hoàn tất"** (Project Owner chọn; làm F trước, G sau). Đặc tả: `.design/f_restore.md`. Hợp đồng sửa theo CT-7: Data Schema 10.0.0, API Contract 5.0.0, Project Owner duyệt và ghi ngày 2026-10-08. Điều kiện cũ "quyết sau khi chặng C xong" coi như đạt: đóng gói, vòng đời backend và kênh `ipc` đã được chứng minh trên máy Project Owner; phần chạy trên máy sạch (ENV-4) gộp vào chặng G.
+
+**Chia phiên:**
+1. **Phiên 35 (desktop): pha 1.** Workflow `restore_data` (workflow đầu tiên của desktop) với `restore:prepare`, `restore:status`, `restore:cancel`; `native_dialogs.open_file`; DSK-22. Plan: `.plan/desktop_plan.md`.
+2. **Phiên 36 (desktop): pha 2.** `backend_controller`, `apply_pending_restore`, `restore_trigger`, khứ hồi thật, hoàn tác, bản đóng gói.
+3. **Phiên 37 (giao diện):** làm lại I1 cho khôi phục, rồi trang hoặc phần Khôi phục.
+
+**Chặng F xong khi:** họa sĩ chọn một tệp sao lưu từ giao diện, chuẩn bị, đóng rồi mở lại ứng dụng, và thấy đúng dữ liệu trong tệp; tệp hỏng hay mới hơn bị từ chối mà không có gì thay đổi; một lần áp dụng hỏng được hoàn tác về dữ liệu cũ; trang Khôi phục `hoàn_tất`.
 
 ---
 

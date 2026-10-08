@@ -1,146 +1,216 @@
 # ===WCA-PLAN===
 # session_for: desktop
 # drafted_by: Orchestrator + Project Owner
-# drafted_at: 2026-10-07T15:00:00+07:00
-# contract: data_schema 9.0.3, api_contract 4.0.0 (approved)
+# drafted_at: 2026-10-08T09:30:00+07:00
+# contract: data_schema 10.0.0, api_contract 5.0.0 (approved) — CT-7
 
 ## MỤC TIÊU PHIÊN NÀY
 
-Phiên 33 của dự án, phiên desktop thứ sáu, và là phiên 2/3 của **chặng E** (`.plan/v1_roadmap.md`). Hai việc gắn liền nhau:
+Phiên 35 của dự án, phiên desktop thứ bảy. Đây là phiên 1/3 của **chặng F, khôi phục theo hướng B**: "chuẩn bị, rồi mở lại để hoàn tất". Đặc tả ở `.design/f_restore.md`; hợp đồng là Data Schema 10.0.0 và API Contract 5.0.0 (CT-7).
+
+Phiên này làm **pha 1**, tức chuẩn bị, cùng các việc đi kèm:
 
 | Việc | Căn cứ |
 |---|---|
-| **Lối vào `ipc` đầu tiên:** thêm hàm `invoke` vào đối tượng bridge mà preload phơi cho renderer | Data Schema `clause_a_common.mandatory_rules` (bridge, `invoke` "once at least one ipc entry is implemented"); API Contract 4.0.0 `endpoint_forms.ipc` |
-| **Thành phần cắt ngang `native_dialogs`, chỉ lối vào `pick_folder`** (`dialog:pick-folder`) | API Contract `clause_a_common.cross_cutting.native_dialogs` |
+| **Workflow `restore_data`**, workflow đầu tiên của layer desktop, đủ năm lớp ở `Desktop/src/workflows/restore_data/`, với ba lối vào `ipc`: `restore:prepare`, `restore:status`, `restore:cancel` | Data Schema `clause_d_desktop.restore_data`; API Contract `restore_data`; `f_restore.md` §2, §4, §5 |
+| **`native_dialogs.open_file`** (`dialog:open-file`) | API Contract `cross_cutting.native_dialogs.open_file` |
+| **DSK-22:** chuyển `native_dialogs-PROB-001` thành EXPERIENCE; thêm một ca giữ thứ tự đăng ký | `.plan/open_issues.md`, DSK-22 |
 
-**Chỉ làm `pick_folder`.** Trang sao lưu của chặng E chỉ cần chọn thư mục đích. `open_file` (cho khôi phục, chặng F, chưa quyết) và `save_file` (chưa ai cần) để dành tới khi có trang dùng chúng: dạng đơn giản nhất mà chạy đúng (ưu tiên 2 của V1). Hai lối vào đó vẫn nằm trong hợp đồng, chưa hiện thực.
+**Không làm pha 2** (`apply_pending_restore`, `backend_controller`, `restore_trigger`): đó là phiên 36. Sau phiên này, một bản ghi khôi phục đang chờ chỉ nằm đó, và lần mở sau **không** áp dụng nó. Không có trang giao diện ở phiên này.
 
 **Điểm dừng:**
-- giao diện gọi được `window.commissionTracker.invoke('dialog:pick-folder', {})` và nhận `{ status: 200, body: { canceled, path } }` đúng hợp đồng;
-- có kiểm thử tự động, không cần người bấm hộp thoại;
-- Project Owner thấy hộp thoại thật, chọn và hủy được;
+- từ trang thử, `invoke` gọi được ba lối vào `restore:*` và `dialog:open-file`, với câu trả lời đúng hợp đồng;
+- một tệp sao lưu thật, do `create_backup` của backend tạo, chuẩn bị được. Sau khi chuẩn bị có bản sao lưu an toàn và bản ghi đang chờ, còn dữ liệu đang dùng thì **không đổi**;
 - Desktop, bản đóng gói và e2e của giao diện vẫn đạt.
-
-Không có trang giao diện ở phiên này; trang sao lưu là phiên 3/3 của chặng E.
 
 ## ĐẶC TẢ ĐÃ CHỐT
 
-Căn cứ: API Contract 4.0.0, `endpoint_forms.ipc` (nguyên văn ở mục "Ràng buộc"); `cross_cutting.native_dialogs`; Data Schema 9.0.3 `clause_a_common.mandatory_rules` và `shared_values.renderer_bridge`; lý thuyết WCA §5 (lối vào của hạ tầng cắt ngang chỉ để trình bày).
+`.design/f_restore.md` §2 (pha 1, từng bước, kèm quy tắc xóa bản ghi cũ ở bước 1), §4 (hình dạng) và §5 (lối vào) là đặc tả đã chốt. Plan này chỉ ghi những điểm triển khai mà đặc tả để mở.
 
-### Bridge và `invoke` (preload)
+### Bố cục và ráp nối
 
-- Đối tượng `window.commissionTracker` vẫn **đóng băng**, và có **đúng hai** thuộc tính: `backendBaseUrl` (như cũ) và `invoke`. Không thêm gì khác.
-- `invoke(address, argument)` trả về một Promise. Preload chuyển lời gọi sang `ipcRenderer.invoke(address, argument)`. Renderer không bao giờ chạm `ipcRenderer`.
-- **Chỉ các địa chỉ đã hiện thực** mới được chuyển. Danh sách địa chỉ do Main trao cho preload qua `webPreferences.additionalArguments`, như hai giá trị đang có, vì preload chạy sandbox không đọc được `desktop.json`. Phiên này danh sách chỉ có `dialog:pick-folder`.
-- Địa chỉ lạ: Promise bị từ chối (lỗi lập trình của bên gọi), không gửi gì sang Main. Đây không phải một nhãn kết quả của hợp đồng.
-- Tên đối số dòng lệnh mới nằm trong `desktop.json` (`preload.arguments`), như `bridge_name` và `backend_base_url`.
+- **Workflow:** `Desktop/src/workflows/restore_data/`, gồm `entities.ts`, `adapters.ts`, `services.ts` (khối checkpoint ở đầu), `routers.ts`, và kiểm thử trong `tests/` của layer (Playwright). Không có tệp Configs trong `src/`.
+- **Configs của workflow:** `Desktop/configs/restore_data.json` (`CLAUDE.md` mục 4). Chỉ Main đọc, rồi trao giá trị cho workflow. Gồm giá trị nội bộ: tên thư mục bản sao lưu an toàn (`safety-backups`), tên tệp bản ghi đang chờ (`restore-pending.json`), hạn chờ của mỗi lời gọi `http` tới backend.
+  - Ba địa chỉ `ipc` là giá trị ranh giới. Nhãn kết quả của từng lối vào cũng vậy: ghi trong Configs, kèm chú thích trỏ về API Contract 5.0.0.
+  - Tên thư mục `restore-previous` là của pha 2; không thêm ở phiên này.
+- **Main** đọc `restore_data.json`, tạo Adapters, Services, Routers, rồi đăng ký ba trình xử lý `ipc`.
+  - Đăng ký sau khi backend `READY` (workflow cần địa chỉ backend) và **trước khi tạo cửa sổ**, như `native_dialogs`.
+  - Main trao `db_file_path` (đường dẫn Main đã tính, có tôn trọng `--ct-test-data-dir`) và `backend_base_url` (`environment_config`).
+  - Danh sách địa chỉ mà preload chuyển thêm `restore:prepare`, `restore:status`, `restore:cancel` và `dialog:open-file`.
+  - Main không quyết định gì của workflow; đó là Bước 4.9 của Main.
+- **Phân lớp:**
+  - Adapters chỉ làm một việc kỹ thuật mỗi hàm: gọi `prepare_restore`, gọi `create_backup` qua `http`, tạo thư mục, đọc, ghi nguyên tử và xóa tệp bản ghi.
+  - Services quyết định trình tự và chọn nhãn (đúng §2).
+  - Routers là ba trình xử lý `ipc`, mỗi trình xử lý:
+    1. kiểm khung gửi theo cùng luật với `native_dialogs` (cửa sổ chính, origin bằng `ui_origin`);
+    2. kiểm định dạng đối số;
+    3. chuyển cho Services;
+    4. trả `{ status, body }`.
 
-### `native_dialogs`, lối vào `pick_folder`
+  Muốn dùng chung hàm kiểm khung gửi với `native_dialogs` thì theo `05-edge-cases.md` Bước 5.3 và ghi lý do. Không thì để mỗi bên một bản: WCA chấp nhận trùng lặp.
 
-- **Vị trí:** `Desktop/src/cross_cutting/native_dialogs/` (`CLAUDE.md` mục 4). Không có năm lớp. Không gọi workflow nào, không giữ gì (hợp đồng: "Presentation only: calls no workflow and keeps nothing").
-- **Ráp nối:** Main đăng ký trình xử lý `ipc` **trước khi mở cửa sổ** (`.design/03_classification.md`, bảng hạ tầng cắt ngang). Main trao cho `native_dialogs` cửa sổ chính (để hộp thoại là modal của nó) và chữ hiển thị đọc từ config.
-- **Chỉ nhận lời gọi từ đúng renderer:** khung gửi phải thuộc cửa sổ chính, và URL của khung có origin bằng `shared_values.ui_origin` (`app://commission-tracker`). Khác thì từ chối (ném lỗi, Promise phía renderer bị từ chối) và ghi log; không mở hộp thoại.
-- **Đầu vào:** hợp đồng ghi `input: none`, và `endpoint_forms.ipc` nói đối số là một object có khóa là tên các đầu vào. Vậy đối số hợp lệ là `{}`. Nhận thêm `undefined`, vì lời gọi không đối số là cùng một ý. Mọi giá trị khác thì từ chối như trên: hợp đồng không có nhãn 400 cho lối vào này.
-- **Hộp thoại:** `dialog.showOpenDialog(<cửa sổ chính>, { properties: ['openDirectory'], title: <chữ trong config> })`. Tiêu đề tiếng Việt, ví dụ "Chọn thư mục", đặt trong `desktop.json`.
-  - Không có thư mục mặc định: hợp đồng không có đầu vào cho việc đó.
-  - Không nhớ thư mục lần trước: "keeps nothing".
-- **Trả lời:** luôn `{ status: 200, body: { canceled, path } }`.
-  - Hủy: `{ canceled: true, path: null }`.
-  - Chọn: `{ canceled: false, path: <đường dẫn tuyệt đối> }` (`formats.file_path`).
-- **Lỗi bất ngờ của hộp thoại** (Electron ném lỗi): hợp đồng chỉ có nhãn 200, nên không bịa nhãn. Ghi log, rồi để Promise phía renderer bị từ chối. Giao diện xử lý như một lỗi hệ thống.
-- **Log**, kiểm được không cần mắt người: mỗi lời gọi một dòng có địa chỉ và kết quả. Kết quả là đã hủy, hoặc đã chọn kèm đường dẫn: đường dẫn là của chính họa sĩ, ghi được vào log cục bộ.
+### Ba lối vào
+
+- **`restore:prepare`**, đối số `{ archive_path }`, đúng tên đầu vào:
+  - đối số sai hình dạng, `archive_path` không phải chuỗi tuyệt đối, hay có khóa thừa: trả **400** `ERR_VALIDATION` dưới dạng một câu trả lời (`{ status: 400, body: error_body }`), không ném lỗi;
+  - khung gửi bị từ chối: Promise bị từ chối, như `native_dialogs`;
+  - các nhãn còn lại đúng `f_restore.md` §2 và §5;
+  - `409` mang `details.reason` là `reason` của `restore_staging`.
+- **`restore:status`**, đối số `{}` hoặc `undefined`:
+  - trả `{ pending: <bản ghi> | null }`, trong đó bản ghi chỉ có năm trường của `pending_restore_record`, **không** có `staged_db_path`;
+  - tệp bản ghi đọc không được (hỏng JSON, sai hình dạng): trả `500` `ERR_STORAGE_IO`. Việc dọn bản ghi hỏng là của pha 2.
+- **`restore:cancel`**, đối số `{}` hoặc `undefined`:
+  - xóa tệp bản ghi; trả `{ canceled: true }` nếu có tệp để xóa, `{ canceled: false }` nếu không;
+  - không đụng tệp chờ (của `backup_data`) và bản sao lưu an toàn (giữ lại).
+  - xóa hỏng: `500` `ERR_STORAGE_IO`.
+- **Mọi lỗi lập trình** (ngoại lệ không lường trước) vẫn nổi lên thành lỗi thật, không bị giả làm 500.
+
+### `native_dialogs.open_file`
+
+- Đối số `{ filters }`. `filters` là `null` hoặc một danh sách `{ name: string, extensions: list[string] }` (hợp đồng). Chấp nhận thêm `{}` và `undefined`, nghĩa là không lọc, giống `pick_folder`. Sai hình dạng thì từ chối (Promise bị từ chối): hợp đồng không có nhãn 400 cho lối vào này.
+- Gọi `dialog.showOpenDialog(<cửa sổ chính>, { properties: ['openFile'], title: <chữ trong config>, filters })`. Tiêu đề tiếng Việt, ví dụ "Chọn tệp", đặt trong `desktop.json` cạnh `pick_folder`.
+- Trả `{ status: 200, body: { canceled, path } }`, cùng luật hủy, chọn và lỗi bất ngờ như `pick_folder`.
+- Ca N2 hiện đang khẳng định `dialog:open-file` bị từ chối vì chưa hiện thực. Khẳng định đó không còn đúng: bỏ địa chỉ đó khỏi danh sách "địa chỉ lạ" của N2, giữ nguyên các địa chỉ khác. Sửa `native_dialogs-EXP-001` cho khớp. Đây là khẳng định cũ duy nhất được sửa ở `native_dialogs.spec.ts`, ngoài phần DSK-22.
 
 ## VIỆC CẦN LÀM, THEO THỨ TỰ
 
 0. **Đọc tài liệu** theo `08-operating-protocol.md`, Phần 1:
-   - `CLAUDE.md`: mục 4 (bố cục `Desktop/`), mục 5 (Desktop, cờ kiểm thử, đóng gói), mục 6;
-   - lý thuyết WCA §5 (lối vào của hạ tầng cắt ngang); `05-edge-cases.md`, checklist (dòng về `entries`); `07-checkpoint-protocol.md`;
-   - `.design/03_classification.md`: bảng hạ tầng cắt ngang;
+   - `CLAUDE.md`: mục 4 (bố cục `Desktop/`, có `configs/restore_data.json`), mục 5, mục 6;
+   - `04-implement.md` (năm lớp, Bước 4.9 về Main); `05-edge-cases.md` (Bước 5.3, Bước 5.6: thao tác nguyên tệp); `07-checkpoint-protocol.md`;
+   - **`.design/f_restore.md`, toàn bộ**; `.design/03_classification.md`;
    - hợp đồng:
-     - `api_contract.yaml`: `endpoint_forms.ipc`, `cross_cutting.native_dialogs` (ba lối vào; phiên này làm một);
-     - `data_schema.yaml`: `clause_a_common.mandatory_rules` (câu về renderer và bridge), `shared_values.ui_origin`, `shared_values.renderer_bridge`, `formats.file_path`;
+     - `data_schema.yaml`: changelog v10.0.0; `clause_a_common` (`types.pending_restore_record`, `types.backup_request_record`, `types.backup_archive_record`, `types.file_path`, `formats.timestamp`); `clause_b_backend.backup_data`; `clause_d_desktop.restore_data`;
+     - `api_contract.yaml`: changelog v5.0.0; `endpoint_forms`; `error_body`; `backup_data`; `restore_data`; `cross_cutting.native_dialogs`;
    - code:
+     - `Desktop/src/main.ts`, khối checkpoint và phần khởi động;
      - `Desktop/src/preload.ts`;
-     - `Desktop/src/main.ts`: khối checkpoint, phần tạo `BrowserWindow` (`additionalArguments`), `reminder_ticker` làm mẫu ráp một thành phần cắt ngang;
+     - `Desktop/src/cross_cutting/native_dialogs/` và khối checkpoint của nó (EXP-002, EXP-003, PROB-001);
      - `Desktop/configs/desktop.json`;
-     - `Desktop/tests/desktop_main.spec.ts` (ca 1 khẳng định bridge), `tests/fixtures/probe/`, `tests/probe.cjs`, `tests/helpers.ts`, `tests/packaged/packaged_app.spec.ts`;
-     - khối checkpoint của `src/cross_cutting/reminder_ticker/reminder_ticker.ts`, làm mẫu checkpoint cho thành phần cắt ngang;
-   - `.plan/open_issues.md`: DSK-16 (`test:packaged`), BE-8 (giờ trong checkpoint);
+     - `Desktop/electron-builder.yml`;
+     - `Desktop/tests/native_dialogs.spec.ts`, `tests/helpers.ts`, `tests/fixtures/probe/`, `tests/packaged/packaged_app.spec.ts`;
+     - `Backend/workflows/backup_data/` (chỉ đọc): routers, configs, và EXP-003, EXP-004 của checkpoint, nói về tệp chờ và cách chia mã lỗi;
+   - `.plan/open_issues.md`: **DSK-22**, DSK-16, BE-8; mục 5.1 về bộ phân loại quyền ở audit phiên 33, đã chép vào DSK-22;
    - plan này sau cùng.
 
-   Xác nhận Data Schema **`9.0.3`** và API Contract **`4.0.0`**, cả hai `approved`. Sai thì dừng lại và báo.
+   Xác nhận Data Schema **`10.0.0`** và API Contract **`5.0.0`**, cả hai `approved`. Xác nhận `restore_data` có ba lối vào `ipc` `restore:prepare`, `restore:status`, `restore:cancel`. Sai thì **dừng lại và báo**: plan này chỉ có hiệu lực sau CT-7.
 
 1. **Môi trường và mốc.**
-   - Ghi phiên bản Node, npm, Electron; trạng thái AVG và ReasonLabs theo lời Project Owner.
-   - Trong `Desktop/`: `npm ci`; `npm run lint`; `npm test`: mốc **31 đạt**.
+   - Ghi phiên bản Node, npm, Electron, Python; trạng thái AVG và ReasonLabs theo lời Project Owner.
+   - Trong `Desktop/`: `npm ci`; `npm run lint`; `npm test`: mốc **40 đạt**.
    - Trong `UI/`: `npm run build`.
-   - Chụp mốc `%APPDATA%\CommissionTracker`. Ghi `git status --short` (chỉ đọc).
+   - Chụp mốc `%APPDATA%\CommissionTracker` và `%APPDATA%\Commission Tracker`. Ghi `git status --short` (chỉ đọc).
 
-2. **Đo trước khi viết kiểm thử:** kiểm thử tự động có thay được hộp thoại thật mà không cần cờ mới không.
-   - **Orchestrator không nắm chắc** điều này, nên đo. Trong kiểm thử Playwright chế độ Electron, có thể gọi `app.evaluate(({ dialog }) => { dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [...] }) })` để thay hàm hộp thoại trong Main, nếu Main gọi `dialog.showOpenDialog` qua đối tượng module lúc chạy.
-   - Nếu được: dùng cách này, không thêm cờ kiểm thử.
-   - Nếu không: thêm một cờ chỉ cho bản chạy từ mã nguồn, ví dụ `--ct-test-pick-folder-answer=<đường dẫn|cancel>`, vào `test_flags` **và** `packaged.ignored_test_flags`. Ghi lý do vào checkpoint.
+2. **Đo trước khi viết** (không sửa mã dự án; script tạm ngoài dự án):
+   - Chạy backend thật trên một thư mục dữ liệu tạm. Gọi `POST /backups` vào một thư mục tạm, rồi `POST /backups/restore-preparations` với tệp vừa tạo.
+   - Ghi lại hai điều: đường dẫn tệp chờ; và việc gọi lần thứ hai với một tệp hỏng có xóa tệp chờ cũ không (`backup_data-EXP-003` nói có).
+   - Ghi thêm thời gian của hai lời gọi, để chọn hạn chờ `http` trong `restore_data.json`.
 
-3. **Preload và bridge** theo đặc tả.
-   - Ca 1 của `desktop_main.spec.ts` đang khẳng định `invoke` là `undefined` và bridge chỉ có khóa `backendBaseUrl`. Hợp đồng nói `invoke` có mặt từ lối vào `ipc` đầu tiên, nên **sửa đúng khẳng định đó**: hai khóa, `invoke` là `function`, vẫn đóng băng, vẫn không có `require` hay `process`. Ghi trong báo cáo: tên ca, dòng cũ, dòng mới, lý do. Đây là khẳng định cũ **duy nhất** được sửa.
-   - Kiểm thử mới: địa chỉ lạ thì Promise bị từ chối và Main không nhận lời gọi nào.
+3. **DSK-22**, làm trước để mọi lượt kiểm thử sau đã có ca mới.
+   - Mục 1: `native_dialogs-PROB-001` thành EXPERIENCE (`derived_from: native_dialogs-PROB-001`). Ghi kết quả phép cắn (b) do Orchestrator chạy trên Linux, có ở DSK-22. `UNSOLVED_PROBLEMS: []`.
+   - Mục 2: một ca trong đó trang gọi `invoke('dialog:pick-folder', {})` **ngay lúc nạp**, và khẳng định lời gọi đó có trả lời. Có thể là một trang thử riêng trong `tests/fixtures/`, hoặc một tham số của trang thử. Không đổi mã Main.
+   - Phép cắn: dời `registerNativeDialogs` xuống sau lần nạp đầu thì ca này hỏng. Nếu bộ phân loại quyền chặn phép cắn, ghi lại rồi đi tiếp; không coi là hỏng tiêu chí, Orchestrator sẽ chạy trong audit (audit phiên 33 §5.1).
 
-4. **`native_dialogs.pick_folder`** theo đặc tả.
-   - **Kiểm thử tự động**, chạy ứng dụng thật với `--ct-test-data-dir` và `--ct-test-no-dialog`, gọi từ trang thử qua `invoke`:
-     - chọn: `{ status: 200, body: { canceled: false, path } }`, với đường dẫn tuyệt đối do hộp thoại giả trả;
-     - hủy: `{ status: 200, body: { canceled: true, path: null } }`;
-     - đối số `{}` và không đối số: đều mở hộp thoại; đối số `{ x: 1 }`, `'abc'`, `null`: từ chối, hộp thoại không mở;
-     - hộp thoại ném lỗi: Promise bị từ chối, có dòng log, ứng dụng vẫn chạy;
-     - hộp thoại được mở với cửa sổ chính làm cha (đọc từ hàm giả: đối số đầu là cửa sổ chính);
-     - lời gọi từ một khung không phải `ui_origin` bị từ chối. Agent tìm cách dựng ca này trong Electron và ghi rõ cách dựng. Nếu không dựng được một cách đáng tin, dừng ca đó, ghi lý do trong checkpoint, và chứng minh bằng phép cắn trên hàm kiểm origin (hàm thuần, kiểm riêng).
-   - **Phép cắn:** ít nhất hai, ghi số liệu, rồi khôi phục:
-     - (a) bỏ kiểm origin hay kiểm cửa sổ gửi: ca tương ứng hỏng;
-     - (b) bỏ danh sách địa chỉ được phép trong preload: ca địa chỉ lạ hỏng.
-   - **Trang thử cho Project Owner:** thêm vào `tests/fixtures/probe/` một nút "Chọn thư mục" gọi `invoke('dialog:pick-folder', {})` và hiện câu trả lời. Ca 1 phải vẫn đọc được trang này.
+4. **`native_dialogs.open_file`** theo đặc tả, với kiểm thử theo mẫu N3 đến N6:
+   - chọn và hủy;
+   - `filters` hợp lệ được chuyển nguyên cho hàm hộp thoại giả;
+   - `filters` sai hình dạng (không phải danh sách, phần tử thiếu `name`, `extensions` không phải danh sách chuỗi) bị từ chối và hộp thoại không mở;
+   - cửa sổ cha là cửa sổ chính;
+   - hộp thoại ném lỗi.
 
-5. **Hộp thoại thật**, Project Owner xem bằng mắt: `npm run probe`, bấm "Chọn thư mục".
-   - Hộp thoại chọn thư mục của Windows hiện ra, tiêu đề tiếng Việt, gắn với cửa sổ ứng dụng (không bấm được cửa sổ phía sau khi hộp thoại đang mở).
-   - Chọn một thư mục: trang hiện đúng đường dẫn. Bấm Hủy: trang hiện `canceled: true`.
-   - Ghi câu trả lời của Project Owner vào EVIDENCE. Chụp ảnh hộp thoại nếu được, đặt ở `Desktop/evidence/native_dialogs/`.
+   Sửa N2 theo đặc tả. Thêm nút "Chọn tệp sao lưu" vào trang thử, gọi `open_file` với bộ lọc `.ctbackup`.
 
-6. **Checkpoint** (Giao thức 07):
-   - `native_dialogs`: khối riêng ở đầu tệp chính của `src/cross_cutting/native_dialogs/`, giống `reminder_ticker`. Gồm EXPERIENCES (kết quả đo ở việc 2, cách kiểm origin, vì sao chỉ làm `pick_folder`), EVIDENCE, `UNSOLVED_PROBLEMS`.
-   - Main (`src/main.ts`): EXPERIENCE về `invoke` trong bridge và về việc ráp `native_dialogs`.
-   - **Giờ ghi:** chép **nguyên** giá trị `Get-Date -Format o` lấy ngay trước khi ghi; không làm tròn (BE-8).
+5. **Workflow `restore_data`, pha 1**, theo đặc tả, rồi ráp ở Main.
 
-7. **Chạy toàn bộ**, với AVG và ReasonLabs bật:
-   - `Desktop`:
-     - `npm run lint`;
-     - `npm test` đạt đủ, **3 lần liên tiếp**;
-     - xóa `packaging\stage` và `release`, rồi `npm run dist` (đặt `ELECTRON_BUILDER_CACHE` vào thư mục tạm như các phiên trước nếu gặp `EXDEV`);
-     - `npm run test:packaged` đạt (8), cộng một ca mới trên bản đóng gói: bridge có `invoke`, và `dialog:pick-folder` trả lời đúng với hộp thoại giả. Preload đổi, nên đây là bắt buộc theo DSK-16.
-   - `UI`: `npm run e2e`, không đặt `CT_WALKTHROUGH_RUNNER`, **1 lượt**, 70/70. Giao diện chưa dùng `invoke`, nhưng bridge đã đổi hình dạng. Sau đó `git status --short UI/evidence` trống.
-   - Chụp lại mốc `%APPDATA%`: phải giống mốc ở việc 1.
+6. **Kiểm thử của `restore_data`**, ứng dụng thật với backend thật, `--ct-test-data-dir`, gọi qua `invoke` từ trang thử:
+   - **chuẩn bị đạt:**
+     - tạo vài khách hàng qua `http`, tạo tệp sao lưu bằng `POST /backups`, đổi dữ liệu (thêm một khách), rồi `restore:prepare`;
+     - kết quả: 200 đúng hình dạng; tệp bản ghi tồn tại; bản sao lưu an toàn nằm trong `safety-backups` cạnh `data.db` và qua được `prepare_restore`;
+     - `data.db` đang dùng **không đổi**: `GET /clients` vẫn có khách vừa thêm;
+   - **status và cancel:**
+     - `restore:status` trả đúng năm trường, không có `staged_db_path`;
+     - `restore:cancel` trả `canceled: true`, rồi `restore:status` trả `pending: null`, rồi `restore:cancel` lần hai trả `canceled: false`;
+   - **409:**
+     - một tệp không phải bản sao lưu (ví dụ một tệp văn bản đổi đuôi `.ctbackup`): 409, không có bản ghi, không tạo bản sao lưu an toàn mới;
+     - nếu dựng được trong kiểm thử, một tệp sao lưu có `app_version` mới hơn: 409;
+   - **yêu cầu mới thay yêu cầu cũ:** chuẩn bị đạt, rồi chuẩn bị một tệp hỏng: 409 **và** không còn bản ghi đang chờ (`f_restore.md` §2, bước 1);
+   - **404, 400:** tệp không tồn tại cho 404; `archive_path` tương đối, khóa thừa hay đối số không phải object cho 400;
+   - **424:** bản sao lưu an toàn hỏng. Agent tìm cách dựng, ví dụ đặt sẵn một **tệp** tên `safety-backups` để thư mục không tạo được, hoặc để backend trả 500. Không có bản ghi;
+   - **500 khi ghi bản ghi hỏng:** agent tìm cách dựng (ví dụ đặt sẵn một thư mục trùng tên tệp bản ghi). Không có bản ghi;
+   - **503:** backend không tới được. Dùng backend giả có sẵn trong `tests/fixtures/` nếu hợp, hoặc dừng backend bằng cách sẵn có của kiểm thử. Agent ghi cách dựng;
+   - **khung gửi:** lời gọi từ khung có origin khác, hoặc từ cửa sổ thứ hai, bị từ chối (mẫu N7, N8);
+   - **địa chỉ:** `restore:start` (đã bỏ khỏi hợp đồng) bị preload từ chối "ipc address not implemented".
+   - **Phép cắn**, ghi số liệu rồi khôi phục:
+     - (a) bỏ bước xóa bản ghi cũ ở đầu `prepare`: ca "yêu cầu mới thay yêu cầu cũ" hỏng;
+     - (b) Services không dừng khi `is_compatible` là `false`: ca 409 hỏng;
+     - (c) `status` trả cả `staged_db_path`: ca status hỏng.
+
+     Phép nào bị bộ phân loại quyền chặn thì ghi lại rồi đi tiếp, như việc 3.
+
+7. **Bản đóng gói.** Đây là bài học của `main-EXP-027`: bản cài từng thiếu `dist/cross_cutting`.
+   - `electron-builder.yml` phải đưa `dist/workflows/**/*.js` và `configs/restore_data.json` vào `app.asar`.
+   - Thêm ca **P10** vào `tests/packaged/packaged_app.spec.ts`:
+     - bản đóng gói mở được;
+     - `restore:status` trả `{ status: 200, body: { pending: null } }`;
+     - `dialog:open-file` trả lời đúng với hộp thoại thay thế;
+     - đóng sạch.
+   - Liệt kê nội dung `app.asar` bằng `@electron/asar` trong báo cáo, như phiên 33.
+
+8. **Trang thử cho Project Owner** (`npm run probe`): nút "Chọn tệp sao lưu", rồi "Chuẩn bị khôi phục" (gọi `restore:prepare` với tệp vừa chọn), "Xem trạng thái", "Hủy khôi phục". Mỗi nút hiện câu trả lời. Project Owner chạy ở việc 10.
+
+9. **Checkpoint** (Giao thức 07):
+   - **khối mới `restore_data`** ở đầu `services.ts`. Gồm:
+     - EXPERIENCES: kết quả đo ở việc 2, cách dựng các ca hỏng, vị trí các tệp, những gì để dành cho pha 2;
+     - EVIDENCE;
+     - `UNSOLVED_PROBLEMS`.
+   - **`native_dialogs`:** DSK-22, `open_file`, sửa EXP-001.
+   - **Main:** ráp `restore_data`, `restore_data.json`, danh sách địa chỉ `ipc` mới.
+   - **Giờ ghi:** chép **nguyên** `Get-Date -Format o` lấy ngay trước khi ghi (BE-8).
+
+10. **Chạy toàn bộ**, với AVG và ReasonLabs bật:
+    - `Desktop`:
+      - `npm run lint`;
+      - `npm test` đạt đủ **3 lần liên tiếp**;
+      - xóa `packaging\stage` và `release`, rồi `npm run dist`. Gặp `EXDEV` thì đặt `ELECTRON_BUILDER_CACHE` vào thư mục tạm;
+      - `npm run test:packaged`: 9 ca cũ cộng P10.
+    - `UI`: `npm run e2e`, không đặt `CT_WALKTHROUGH_RUNNER`, **1 lượt**, 75/75; `git status --short UI/evidence` trống.
+    - **Project Owner**, trên trang thử với hộp thoại thật:
+      1. tạo một tệp sao lưu (trang sao lưu của ứng dụng thật, hoặc gọi thẳng);
+      2. chọn tệp đó ở "Chọn tệp sao lưu": kiểm tiêu đề hộp thoại và bộ lọc `.ctbackup`;
+      3. "Chuẩn bị khôi phục": 200;
+      4. "Xem trạng thái": có bản ghi;
+      5. "Hủy khôi phục": `canceled: true`.
+
+      Ghi câu trả lời vào EVIDENCE.
+    - Chụp lại mốc `%APPDATA%`: phải giống mốc ở việc 1.
 
 ## KẾ THỪA TỪ CHECKPOINT — vấn đề tồn đọng
 
-- **DSK-19** (dọn checkpoint phiên 30: `main-PROB-001` thành EXPERIENCE và đổi định danh, câu `lead` của `reminder_ticker-EXP-003`, ca D2 chờ `reminder check #1:`): **làm luôn trong phiên này**, vì phiên chạm khối checkpoint Main. Project Owner đã xác nhận nguồn của `main-PROB-001` là bản cài lỗi. Chi tiết ở `.plan/open_issues.md`, DSK-19.
-- **DSK-9, DSK-11, DSK-20, DSK-21:** không làm.
+- **DSK-22:** việc 3.
+- **DSK-16:** preload và gói đổi, nên chạy `test:packaged` (việc 10).
+- **DSK-9, DSK-11, DSK-20, DSK-21:** không làm. DSK-21 thuộc chặng G.
 - **ENV-7** (`npm audit`): không chạy `npm audit fix`, không đổi phụ thuộc.
 
 ## RÀNG BUỘC CẦN NHỚ TỪ HỢP ĐỒNG
 
-- `endpoint_forms.ipc`, nguyên văn: *"An Electron IPC channel handled in the desktop main process. The renderer invokes it as invoke(address, argument) on the renderer bridge (data_schema.yaml shared_values.renderer_bridge); the desktop preload script relays the call to ipcRenderer.invoke, and the renderer has no direct access to ipcRenderer. address is the channel name. The single argument is an object whose keys are the input names. The reply is object { status: integer (the result label), body: the referenced output or error_body }."*
-- `pick_folder`: `form: ipc`, `address: "dialog:pick-folder"`, `called_by: [external]`, `input: none`, output `200: { type: "object { canceled: boolean, path: file_path|null }" }`.
-- Bridge: một đối tượng đóng băng, `backendBaseUrl` và, khi có lối vào `ipc` đầu tiên, `invoke`, **và không gì khác**. Không đưa cho renderer giá trị nào khác.
-- `native_dialogs` chỉ để trình bày: không gọi workflow nào, không giữ gì. Đường dẫn chọn được sau đó đi vào workflow như đầu vào `end_user`, qua điểm giao tiếp của chính workflow đó (phiên giao diện sau). Phiên này không gọi `POST /backups`.
+- `restore_data` là workflow nghiệp vụ của `clause_d_desktop`, đủ năm lớp. Nó gọi `backup_data` qua `http` (`prepare_restore`, `create_backup` với `purpose: 'pre_restore'`) qua Adapters, mô tả dữ liệu nhận về bằng Entities của chính nó, và không import gì của Backend.
+- Bước 5.6: chỉ thao tác nguyên tệp. Pha 1 **không** chạm tệp dữ liệu đang dùng và không chạm tệp chờ của `backup_data`.
+- `restore_status.pending` chỉ có năm trường của `pending_restore_record`.
+- Mọi nhãn không phải 200 của `restore:prepare`: không có gì đang chờ.
+- `endpoint_forms.ipc`: đối số là một object có khóa là tên đầu vào; câu trả lời là `{ status, body }`, với `body` là output tham chiếu hoặc `error_body`.
+- Bridge vẫn chỉ có hai khóa `backendBaseUrl` và `invoke`.
 
 ## CẢNH BÁO — điều KHÔNG được làm trong phiên này
 
+- **Không làm pha 2:** không dừng, không khởi động lại backend từ workflow; không đổi tên hay chuyển `data.db`; không có `backend_controller`, `apply_pending_restore` hay `restore_trigger`.
+- Không làm `save_file`. Không thêm địa chỉ `ipc` nào ngoài bốn địa chỉ của phiên.
 - Không sửa tệp nào ngoài `Desktop/`. Được **chạy** các lệnh của `Backend/` và `UI/`. Không chạy UI e2e với `CT_WALKTHROUGH_RUNNER`.
-- Không làm `open_file`, `save_file`. Không thêm địa chỉ `ipc` nào ngoài `dialog:pick-folder`.
 - Không bật `nodeIntegration`, không tắt `contextIsolation` hay `sandbox`, không đưa `ipcRenderer` cho renderer.
 - Không sửa `.contracts/`, `CLAUDE.md`, `.plan/`, `.design/`. Không đọc, không ghi `.reviews/`.
 - Không tắt, gỡ hay đổi cấu hình phần mềm diệt virus. Không thêm ngoại lệ cho `powershell.exe`. Không sửa registry, không cài bộ cài.
 - Không đổi chữ dòng log `FATAL:`, cách dừng hay thứ tự khởi động backend, hay hành vi của `reminder_ticker`.
 - Không tăng thời gian chờ sẵn có. Không `retries`, không `skip`. Không tắt luật lint, không thêm `eslint-disable`, không viết kiểm thử luôn đạt.
 - Không chạy `git commit`, `push`, `reset`, `checkout`, `restore`, `stash` hay lệnh nào đổi trạng thái kho. Chỉ được đọc.
-- Không kiểm thử hay lần chạy nào đụng `%APPDATA%\CommissionTracker` thật.
+- Không kiểm thử hay lần chạy nào đụng `%APPDATA%\CommissionTracker` thật. Mọi lần chạy ứng dụng đều kèm `--ct-test-data-dir`; bản sao lưu an toàn và bản ghi đang chờ của kiểm thử nằm trong thư mục tạm đó.
 - Không dùng sub-agent. Không chạy song song hai lệnh kiểm thử hay hai bản ứng dụng.
 - ⚠ Ràng buộc V1: không màn hình hồ sơ quyền sở hữu. Phiên này không làm giao diện.
 
@@ -148,19 +218,28 @@ Căn cứ: API Contract 4.0.0, `endpoint_forms.ipc` (nguyên văn ở mục "Rà
 
 Phiên xong khi **tất cả** những điều dưới đây đúng, trên máy Project Owner, với antivirus đang bật:
 
-1. Kết quả đo ở việc 2 và cách thay hộp thoại đã chọn, có ghi trong checkpoint.
-2. Bridge đóng băng có đúng `backendBaseUrl` và `invoke`; địa chỉ lạ bị từ chối; ca 1 sửa đúng một khẳng định.
-3. `pick_folder` đúng đặc tả: các ca ở việc 4, hai phép cắn, nút trên trang thử.
-4. Project Owner xác nhận hộp thoại thật: modal, tiêu đề tiếng Việt, chọn và hủy đúng.
-5. `npm run lint`; `npm test` 3 lần liên tiếp đạt; `npm run dist` từ trạng thái sạch; `npm run test:packaged` đạt, có ca mới; UI e2e 70/70, `UI/evidence` không đổi.
-6. DSK-19 xong.
-7. Mọi lần chụp mốc `%APPDATA%` giống nhau.
-8. Checkpoint `native_dialogs`, Main và `reminder_ticker` (nếu chạm vì DSK-19): YAML hợp lệ; giờ đúng BE-8.
-9. `git status --short` cuối phiên chỉ có tệp trong `Desktop/`. Liệt kê trong báo cáo.
-10. Báo cáo cuối phiên theo `CLAUDE.md` mục 5, kèm:
-    - kết quả đo ở việc 2;
-    - bảng ca kiểm thử;
-    - hai phép cắn;
-    - câu trả lời của Project Owner về hộp thoại thật;
-    - các lệnh để chạy lại;
-    - danh sách ngoại lệ lint mới, nếu có.
+1. **Đo trước khi viết:** báo cáo có kết quả đo ở việc 2.
+2. **DSK-22:** `native_dialogs-PROB-001` thành EXPERIENCE; có ca gọi lúc nạp, kèm phép cắn (hoặc ghi rõ bị chặn).
+3. **`open_file`:** chạy đúng đặc tả, có kiểm thử; N2 sửa đúng một chỗ.
+4. **`restore_data`, pha 1:**
+   - đủ năm lớp, ba lối vào đúng nhãn của hợp đồng;
+   - đủ các ca của việc 6, kèm ba phép cắn;
+   - dữ liệu đang dùng không đổi sau khi chuẩn bị.
+5. Project Owner chạy trang thử với hộp thoại thật (việc 10).
+6. **Chạy toàn bộ:**
+   - `npm run lint`;
+   - `npm test` 3 lần liên tiếp đạt;
+   - `npm run dist` từ trạng thái sạch;
+   - `npm run test:packaged` có P10;
+   - UI e2e 75/75, `UI/evidence` không đổi;
+   - mốc `%APPDATA%` giống nhau.
+7. **Checkpoint** `restore_data` (mới), `native_dialogs`, Main: YAML hợp lệ; giờ đúng BE-8.
+8. `git status --short` cuối phiên chỉ có tệp trong `Desktop/`. Liệt kê trong báo cáo, **kèm `git check-ignore -v`** cho mọi tệp và thư mục mới (ENV-9).
+9. Báo cáo cuối phiên theo `CLAUDE.md` mục 5, kèm:
+   - kết quả đo;
+   - bảng ca kiểm thử;
+   - các phép cắn;
+   - câu trả lời của Project Owner;
+   - nội dung `app.asar`;
+   - các lệnh để chạy lại;
+   - danh sách ngoại lệ lint mới, nếu có.

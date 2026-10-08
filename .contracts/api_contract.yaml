@@ -55,9 +55,24 @@
 #            an ipc entry changed. Affected code: none (no ipc entry is
 #            implemented yet). Found while drafting the plan of desktop
 #            session B1; approved by the Project Owner on 2026-09-26.
+#   v5.0.0 — [Clause D, SỬA] restore_data follows option B, "prepare, then
+#            reopen the app to finish" (data_schema.yaml 10.0.0;
+#            .design/f_restore.md). start_restore (restore:start) removed;
+#            request_restore (ipc restore:prepare), get_restore_status (ipc
+#            restore:status), cancel_restore (ipc restore:cancel) and
+#            apply_pending_restore (in_process, called by restore_trigger)
+#            added. Breaking change: a declared endpoint was removed.
+#            Affected code: none (restore_data not built; the interface calls
+#            nothing of it). Approved by the Project Owner on 2026-10-08
+#            (open_issues CT-7).
+#   v5.0.0 — [Clause A, THÊM] cross_cutting.restore_trigger: once per start
+#            of the desktop Main, before the window opens, calls
+#            restore_data.apply_pending_restore and shows the outcome (CT-7).
+#   v5.0.0 — [Clause A, SỬA] error_codes.ERR_RESTORE_FAILED.meaning fitted
+#            to the apply phase. Wording only (CT-7).
 # =============================================================================
 
-api_version: 4.0.0
+api_version: 5.0.0
 contract_state: approved
 
 # -----------------------------------------------------------------------------
@@ -97,7 +112,7 @@ clause_a_common:
     - code: ERR_INCOMPATIBLE_BACKUP
       meaning: "The archive is corrupt, not a Commission Tracker backup, or was made by a newer app_version"
     - code: ERR_RESTORE_FAILED
-      meaning: "Restore could not be completed; the previous database was put back and the backend restarted"
+      meaning: "Applying a pending restore failed and the previous database was put back; or putting it back failed too (the app stops)"
 
   error_body: "object { code: string (one of error_codes), message: string (human readable, English), details: object|null }"
 
@@ -132,6 +147,10 @@ clause_a_common:
           input: none
           output:
             200: { type: "object { canceled: boolean, path: file_path|null }" }
+    restore_trigger:
+      layer: clause_d_desktop
+      trigger: "Once per start of the desktop Main, after the backend is ready and restore_data is wired, before the window opens; the Main waits for it."
+      description: "Calls restore_data.apply_pending_restore. When the outcome is not 'none', shows one operating-system message box whose text is built from the outcome fields. Decides nothing."
 
 # -----------------------------------------------------------------------------
 # CLAUSE B — BACKEND
@@ -625,16 +644,40 @@ clause_d_desktop:
   restore_data:
     tag: "[Clause D]"
     endpoints:
-      start_restore:
+      request_restore:
         form: ipc
-        address: "restore:start"
+        address: "restore:prepare"
         called_by: [external]
         input: [archive_path]
         output:
-          200: { ref: restore_result }
+          200: { ref: restore_scheduled }
           400: { code: ERR_VALIDATION }
           404: { code: ERR_NOT_FOUND }
-          409: { code: ERR_INCOMPATIBLE_BACKUP }   # nothing touched
-          424: { code: ERR_STORAGE_IO }            # safety archive failed; nothing touched
-          500: { code: ERR_RESTORE_FAILED }        # previous database put back
-          503: { code: ERR_SERVICE_UNAVAILABLE }   # backend not ready; nothing touched
+          409: { code: ERR_INCOMPATIBLE_BACKUP }   # nothing pending
+          424: { code: ERR_STORAGE_IO }            # safety archive failed; nothing pending
+          500: { code: ERR_STORAGE_IO }            # pending record not written; nothing pending
+          503: { code: ERR_SERVICE_UNAVAILABLE }   # backend not reachable; nothing pending
+      get_restore_status:
+        form: ipc
+        address: "restore:status"
+        called_by: [external]
+        input: none
+        output:
+          200: { ref: restore_status }
+          500: { code: ERR_STORAGE_IO }
+      cancel_restore:
+        form: ipc
+        address: "restore:cancel"
+        called_by: [external]
+        input: none
+        output:
+          200: { ref: restore_cancellation }
+          500: { code: ERR_STORAGE_IO }
+      apply_pending_restore:
+        form: in_process
+        address: "apply_pending_restore"
+        called_by: [restore_trigger]
+        input: none
+        output:
+          200: { ref: restore_outcome }
+          500: { code: ERR_RESTORE_FAILED }        # the put-back database could not be started; the desktop Main stops with its start-up failure dialog

@@ -50,7 +50,7 @@ Các lời gọi `http` sang `clause_c_ai_service` không tạo ràng buộc th�
 
 1. Main của `desktop` khởi động `ai_service` và `backend`. Hai layer này không phụ thuộc nhau lúc khởi động, nên có thể khởi động song song.
 2. Chờ `READY` của `backend`: bắt buộc. Chờ `READY` của `ai_service`: không bắt buộc. Quá thời gian chờ thì app vẫn chạy, chỉ các chức năng watermark trả `ERR_SERVICE_UNAVAILABLE`.
-3. Ráp nối `restore_data` (trao công cụ `from: main`), mở cửa sổ, khởi động `reminder_ticker` và `native_dialogs`.
+3. Ráp nối `restore_data` (trao công cụ `from: main`), đăng ký `native_dialogs` và các lối vào `ipc` của `restore_data`, chạy `restore_trigger` và chờ nó xong, rồi mới mở cửa sổ và khởi động `reminder_ticker`. *(Sửa 2026-10-08 theo CT-7: Data Schema 10.0.0, API Contract 5.0.0; `.design/f_restore.md`.)*
 
 ## Bước 3.3 — Các lớp của workflow nền tảng
 
@@ -75,7 +75,7 @@ Các lời gọi `http` sang `clause_c_ai_service` không tạo ràng buộc th�
 | `send_reminder` | backend | `http` (5; `check_due` do `reminder_ticker` gọi) | Có |
 | `embed_watermark` | ai_service | `http` (1) | Không (stateless) |
 | `extract_watermark` | ai_service | `http` (1) | Không (stateless) |
-| `restore_data` | desktop | `ipc` (1) | Không; chỉ thao tác nguyên tệp |
+| `restore_data` | desktop | `ipc` (3, cho UI: `restore:prepare`, `restore:status`, `restore:cancel`) + `in_process` (`apply_pending_restore`, cho `restore_trigger`) | Có, một tệp riêng (bản ghi khôi phục đang chờ) cạnh `db_file_path`; còn lại chỉ thao tác nguyên tệp |
 
 Mọi workflow nghiệp vụ đều có đủ năm lớp, kể cả những workflow không lưu trữ: Adapters của chúng vẫn làm việc kỹ thuật (gọi workflow khác, đọc tệp, gọi dịch vụ AI).
 
@@ -85,6 +85,7 @@ Mọi workflow nghiệp vụ đều có đủ năm lớp, kể cả những work
 |---|---|---|---|
 | `reminder_ticker` | desktop | Bên gọi: gọi `send_reminder.check_due` theo nhịp, hiện toast | `backend` đã `READY` |
 | `native_dialogs` | desktop | Bên được gọi (`entries`): mở hộp thoại tệp cho UI | Trước khi mở cửa sổ |
+| `restore_trigger` | desktop | Bên gọi: một lần mỗi lần Main khởi động, gọi `restore_data.apply_pending_restore`, hiện kết quả bằng hộp thoại thông báo | Sau khi backend `READY` và `restore_data` đã ráp nối, trước khi mở cửa sổ; Main chờ nó xong |
 
 ## Kết quả
 
@@ -93,4 +94,4 @@ Mọi workflow nghiệp vụ đều có đủ năm lớp, kể cả những work
 | `scaffold_backend` | backend | Nền tảng | Đầu tiên trong backend | Không |
 | `init_watermark_engine` | ai_service | Nền tảng | Đầu tiên trong ai_service | Không |
 | 12 workflow nghiệp vụ của backend và ai_service (bảng Bước 3.4) | như bảng | Nghiệp vụ | Thứ tự ráp nối ở Bước 3.2 | Có, như bảng |
-| `restore_data` | desktop | Nghiệp vụ | Sau khi Main có công cụ quản lý vòng đời | `ipc` |
+| `restore_data` | desktop | Nghiệp vụ | Sau khi backend `READY` và Main có công cụ quản lý vòng đời | `ipc` + `in_process` |

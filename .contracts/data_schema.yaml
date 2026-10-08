@@ -317,9 +317,26 @@
 #            restore preparation measured on the packaged build; no unsolved
 #            problem. Shapes, labels and rules unchanged. Approved by the
 #            Project Owner on 2026-10-07 (open_issues CT-6).
+#   v10.0.0 — [Clause D, SỬA] restore_data follows option B, "prepare,
+#            then reopen the app to finish" (.design/f_restore.md; Project
+#            Owner chose option B on 2026-10-08, .design/v1_scope.md part 4).
+#            The request phase (while the app runs) prepares the archive,
+#            makes the pre-restore safety archive and records a pending
+#            restore, touching neither the live database nor the running
+#            backend; the apply phase runs once at the next start of the
+#            desktop Main, before the window opens, called by the new
+#            cross-cutting restore_trigger, so nothing else calls the backend
+#            while it is stopped. description rewritten; output restore_result
+#            removed; outputs restore_scheduled, restore_status,
+#            restore_cancellation and restore_outcome added. inputs and status
+#            (đang_chờ_triển_khai) unchanged. Breaking change: a declared
+#            output was removed. Affected code: none (restore_data not built).
+#            Approved by the Project Owner on 2026-10-08 (open_issues CT-7).
+#   v10.0.0 — [Clause A, THÊM] types.pending_restore_record, the shape of a
+#            pending restore as handed to the interface (CT-7).
 # =============================================================================
 
-schema_version: 9.0.3
+schema_version: 10.0.0
 contract_state: approved
 
 # -----------------------------------------------------------------------------
@@ -371,6 +388,7 @@ clause_a_common:
     extraction_record: "object { detected: boolean, watermark_code: watermark_code|null, confidence: number (0..1) }"
     backup_request_record: "object { destination_dir: file_path, purpose: 'manual' | 'pre_restore' }"
     backup_archive_record: "object { archive_path: file_path, app_version: string, size_bytes: integer, sha256: string, created_at: timestamp }"
+    pending_restore_record: "object { archive_path: file_path, archive_app_version: string, archive_created_at: timestamp, safety_backup_path: file_path, prepared_at: timestamp }"
     reminder_settings_record: "object { periodic: object { enabled: boolean, every: integer (>= 1), unit: 'days' | 'weeks', at_time: string (HH:MM, local time), weekday: integer|null (1..7, ISO weekday; required when unit = 'weeks', null when unit = 'days') }, deadline: object { enabled: boolean, lead_times: list[object { amount: integer (>= 1), unit: 'hours' | 'days' }] (1..5 entries; 1 day = 24 hours; each at most 365 days / 8760 hours; no two entries of the same duration) } }"
     reminder_notification_record: "object { notification_id: id, kind: 'periodic_digest' | 'deadline', due_at: timestamp, deadline_item: object { commission_id: id, title: string, deadline: date, lead: object { amount: integer, unit: 'hours' | 'days' } }|null (set when kind = 'deadline'), digest: object { open_count: integer, upcoming: list[object { commission_id: id, title: string, deadline: date }] }|null (set when kind = 'periodic_digest') }"
 
@@ -755,7 +773,7 @@ clause_d_desktop:
     tag: "[Clause D]"
     workflow_type: nghiệp_vụ
     status: đang_chờ_triển_khai
-    description: "Replaces the live database with a backup archive. Order: ask backup_data to prepare the archive (stop here if it is invalid or incompatible); ask backup_data for a pre-restore safety archive (stop here if it fails); stop the backend through backend_controller; move the live database file aside; move the staged file into db_file_path; start the backend and wait for it to be ready. If any step after the stop fails, put the moved-aside file back and start the backend again, so the artist never ends up without a working database. Operates on whole files only (05-edge-cases.md, Step 5.6)."
+    description: "Replaces the live database with a backup archive in two phases. Request (while the app runs): clear any pending restore; ask backup_data to prepare the archive (stop here if it is invalid or incompatible); ask backup_data for a pre-restore safety archive in restore_data's own folder next to db_file_path (stop here if it fails); record the pending restore in restore_data's own file next to db_file_path. The live database and the running backend are not touched. Apply (once per start of the desktop Main, after the backend is ready and before the window opens, when restore_trigger calls): if nothing is pending, do nothing; if the pending record is unreadable or its staged file is gone, discard it; otherwise stop the backend through backend_controller, move the live database file aside (kept), move the staged file into db_file_path, start the backend on the same port and wait for it to be ready. If any step after the stop fails, put the moved-aside file back and start the backend again, so the artist never ends up without a working database. The pending record is removed after every apply attempt. The pending restore can be read and cancelled while the app runs. Operates on whole files only (05-edge-cases.md, Step 5.6)."
     input_expected:
       archive_path: { type: file_path, from: end_user }
       restore_staging:
@@ -776,6 +794,15 @@ clause_d_desktop:
       safety_backup_request:
         type: "backup_request_record — purpose = 'pre_restore'"
         consumed_by: [backup_data]
-      restore_result:
-        type: "object { restored_from: file_path, archive_app_version: string, safety_backup_path: file_path, completed_at: timestamp }"
+      restore_scheduled:
+        type: pending_restore_record
         consumed_by: none
+      restore_status:
+        type: "object { pending: pending_restore_record|null }"
+        consumed_by: none
+      restore_cancellation:
+        type: "object { canceled: boolean (true when a pending restore existed and was removed) }"
+        consumed_by: none
+      restore_outcome:
+        type: "object { outcome: 'none'|'restored'|'rolled_back'|'discarded', archive_path: file_path|null, safety_backup_path: file_path|null, reason: string|null }"
+        consumed_by: [restore_trigger]

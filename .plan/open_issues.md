@@ -286,6 +286,44 @@ Phiên 32 cho `app_version` là tham số từ khóa tùy chọn, vì 20 chỗ g
 
 ## Hợp đồng — chờ Project Owner duyệt
 
+### CT-7 — Khôi phục theo hướng B: "chuẩn bị, rồi mở lại để hoàn tất" (đề xuất 2026-10-08; Project Owner chọn hướng B ngày 2026-10-08) — **chờ Project Owner duyệt nội dung**
+
+> **ĐÃ DUYỆT VÀ GHI 2026-10-08:** Project Owner duyệt nội dung; Orchestrator ghi Data Schema 10.0.0 và API Contract 5.0.0, kèm changelog, và sửa `.design/03_classification.md`, bảng §1 của `.design/ui_decomposition.md`.
+
+Đặc tả: `.design/f_restore.md`. Hai tệp đều có thay đổi phá vỡ: bỏ một lối vào và một output đã khai báo.
+
+**Data Schema `9.0.3` → `10.0.0`:**
+1. `clause_a_common.types`, thêm:
+   `pending_restore_record: "object { archive_path: file_path, archive_app_version: string, archive_created_at: timestamp, safety_backup_path: file_path, prepared_at: timestamp }"`
+2. `clause_d_desktop.restore_data.description`, thay bằng:
+   "Replaces the live database with a backup archive in two phases. Request (while the app runs): clear any pending restore; ask backup_data to prepare the archive (stop here if it is invalid or incompatible); ask backup_data for a pre-restore safety archive in restore_data's own folder next to db_file_path (stop here if it fails); record the pending restore in restore_data's own file next to db_file_path. The live database and the running backend are not touched. Apply (once per start of the desktop Main, after the backend is ready and before the window opens, when restore_trigger calls): if nothing is pending, do nothing; if the pending record is unreadable or its staged file is gone, discard it; otherwise stop the backend through backend_controller, move the live database file aside (kept), move the staged file into db_file_path, start the backend on the same port and wait for it to be ready. If any step after the stop fails, put the moved-aside file back and start the backend again, so the artist never ends up without a working database. The pending record is removed after every apply attempt. The pending restore can be read and cancelled while the app runs. Operates on whole files only (05-edge-cases.md, Step 5.6)."
+3. `restore_data.input_expected`: giữ nguyên (`archive_path`, `restore_staging`, `safety_backup`, `backend_controller`, `db_file_path`, `backend_base_url`).
+4. `restore_data.output_guaranteed`: giữ `restore_preparation_request`, `safety_backup_request`; **bỏ** `restore_result`; thêm:
+   - `restore_scheduled: { type: pending_restore_record, consumed_by: none }`
+   - `restore_status: { type: "object { pending: pending_restore_record|null }", consumed_by: none }`
+   - `restore_cancellation: { type: "object { canceled: boolean (true when a pending restore existed and was removed) }", consumed_by: none }`
+   - `restore_outcome: { type: "object { outcome: 'none'|'restored'|'rolled_back'|'discarded', archive_path: file_path|null, safety_backup_path: file_path|null, reason: string|null }", consumed_by: [restore_trigger] }`
+5. `status` giữ `đang_chờ_triển_khai`.
+
+**API Contract `4.0.0` → `5.0.0`:**
+1. `restore_data.endpoints`: **bỏ** `start_restore` (`restore:start`); thêm:
+   - `request_restore`: `form: ipc`, `address: "restore:prepare"`, `called_by: [external]`, `input: [archive_path]`, output `200 { ref: restore_scheduled }`, `400 ERR_VALIDATION`, `404 ERR_NOT_FOUND`, `409 ERR_INCOMPATIBLE_BACKUP` (# nothing pending), `424 ERR_STORAGE_IO` (# safety archive failed; nothing pending), `500 ERR_STORAGE_IO` (# pending record not written; nothing pending), `503 ERR_SERVICE_UNAVAILABLE` (# backend not reachable; nothing pending);
+   - `get_restore_status`: `ipc`, `"restore:status"`, `[external]`, `input: none`, `200 { ref: restore_status }`, `500 ERR_STORAGE_IO`;
+   - `cancel_restore`: `ipc`, `"restore:cancel"`, `[external]`, `input: none`, `200 { ref: restore_cancellation }`, `500 ERR_STORAGE_IO`;
+   - `apply_pending_restore`: `form: in_process`, `address: "apply_pending_restore"`, `called_by: [restore_trigger]`, `input: none`, `200 { ref: restore_outcome }`, `500 ERR_RESTORE_FAILED` (# the put-back database could not be started; the desktop Main stops with its start-up failure dialog).
+2. `clause_a_common.cross_cutting`, thêm:
+   ```
+   restore_trigger:
+     layer: clause_d_desktop
+     trigger: "Once per start of the desktop Main, after the backend is ready and restore_data is wired, before the window opens; the Main waits for it."
+     description: "Calls restore_data.apply_pending_restore. When the outcome is not 'none', shows one operating-system message box whose text is built from the outcome fields. Decides nothing."
+   ```
+3. `error_codes.ERR_RESTORE_FAILED.meaning`, đổi thành: "Applying a pending restore failed and the previous database was put back; or putting it back failed too (the app stops)". Chỉ sửa chữ.
+
+**Bên bị ảnh hưởng:** chưa có code nào dùng `restore:start` hay `restore_result` (`restore_data` chưa triển khai). Giao diện chưa gọi gì của `restore_data`.
+
+**`.design/03_classification.md`** sửa theo, sau khi duyệt: thêm `restore_trigger`, và thứ tự ráp nối của desktop (backend `READY` → ráp `restore_data` → `restore_trigger` → mở cửa sổ).
+
 ### CT-6 — `backup_data` lên `đã_hoàn_thiện` (đề xuất 2026-10-07, audit phiên 32 §6) — chờ Project Owner duyệt
 
 > **ĐÃ ĐÓNG 2026-10-07:** Project Owner duyệt; Orchestrator ghi Data Schema 9.0.3 kèm changelog.
