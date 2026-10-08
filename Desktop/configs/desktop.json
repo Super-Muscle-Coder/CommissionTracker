@@ -78,7 +78,8 @@
     "error_dialog": {
       "startup_summary": "Commission Tracker không khởi động được. Hãy mở lại ứng dụng; nếu lỗi vẫn còn, hãy gửi nội dung chi tiết bên dưới cho người hỗ trợ.",
       "running_summary": "Commission Tracker gặp lỗi khi đang chạy và phải đóng. Hãy mở lại ứng dụng; nếu lỗi vẫn còn, hãy gửi nội dung chi tiết bên dưới cho người hỗ trợ.",
-      "detail_label": "Chi tiết kỹ thuật:"
+      "detail_label": "Chi tiết kỹ thuật:",
+      "restore_failed_summary": "Không khôi phục được dữ liệu và ứng dụng không mở lại được. Dữ liệu trước đó đã được đưa về chỗ cũ; hãy mở lại ứng dụng. Nếu lỗi vẫn còn, hãy gửi nội dung chi tiết bên dưới cho người hỗ trợ."
     }
   },
   "packaged": {
@@ -100,5 +101,23 @@
     "no_dialog": "--ct-test-no-dialog",
     "show_inactive": "--ct-test-show-inactive",
     "reminder_interval_ms": "--ct-test-reminder-interval-ms="
+  },
+  "restore_trigger": {
+    "title": "Khôi phục dữ liệu",
+    "close_button": "Đóng",
+    "paragraph_separator": "\n\n",
+    "restored": [
+      { "text": "Đã khôi phục dữ liệu từ bản sao lưu:", "field": "archive_path", "layout": "newline" },
+      { "text": "Bản sao lưu an toàn của dữ liệu trước đó:", "field": "safety_backup_path", "layout": "newline" }
+    ],
+    "rolled_back": [
+      { "text": "Không khôi phục được dữ liệu. Dữ liệu trước đó được giữ nguyên.", "field": null, "layout": "newline" },
+      { "text": "Bản sao lưu đã chọn:", "field": "archive_path", "layout": "newline" },
+      { "text": "Chi tiết:", "field": "reason", "layout": "space" }
+    ],
+    "discarded": [
+      { "text": "Lần khôi phục đang chờ không còn dùng được nên đã bị bỏ. Dữ liệu không thay đổi.", "field": null, "layout": "newline" },
+      { "text": "Chi tiết:", "field": "reason", "layout": "space" }
+    ]
   }
 }

@@ -13,13 +13,29 @@ const layerRoot = path.resolve(__dirname, '..')
 const config = JSON.parse(fs.readFileSync(path.join(layerRoot, 'configs', 'desktop.json'), 'utf8'))
 const electronBinary = require('electron')
 
-const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ct-desktop-probe-'))
+// npm run probe -- --data-dir <folder>: keep that folder between runs, so a restore
+// prepared in one run is applied by the next (desktop session 36). Without the
+// option every run gets a fresh temporary folder. Either way the folder is passed
+// as --ct-test-data-dir, so the real %APPDATA%/CommissionTracker is never used.
+const optionIndex = process.argv.indexOf('--data-dir')
+let dataDir
+if (optionIndex >= 0) {
+  const given = process.argv[optionIndex + 1]
+  if (given === undefined || given === '' || given.startsWith('--')) {
+    console.error('probe: --data-dir needs a folder path')
+    process.exit(2)
+  }
+  dataDir = path.resolve(given)
+  fs.mkdirSync(dataDir, { recursive: true })
+} else {
+  dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ct-desktop-probe-'))
+}
 const args = [
   layerRoot,
   `${config.test_flags.renderer_root}${path.join(__dirname, 'fixtures', 'probe')}`,
   `${config.test_flags.data_dir}${dataDir}`,
 ]
-console.log(`probe: temporary data folder ${dataDir}`)
+console.log(`probe: ${optionIndex >= 0 ? 'kept' : 'temporary'} data folder ${dataDir}`)
 const child = spawn(electronBinary, args, { cwd: layerRoot, stdio: 'inherit' })
 child.on('exit', (code) => {
   console.log(`probe: app exited with code ${code}`)

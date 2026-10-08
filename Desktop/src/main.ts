@@ -2,8 +2,8 @@
 // workflow: main
 // clause: clause_d_desktop
 // component: main
-// last_updated_by: coding-agent@2026-10-08#1
-// last_updated_at: 2026-10-08T14:59:36.1924815+07:00
+// last_updated_by: coding-agent@2026-10-08#2
+// last_updated_at: 2026-10-08T19:09:25.3415976+07:00
 //
 // EXPERIENCES:
 //   - id: main-EXP-001
@@ -581,6 +581,29 @@
 //       xen kẽ nhiều lần dễ nhầm với "không có gì đổi" (đã xảy ra); log Main ghi từng lời gọi
 //       "restore_data: <địa chỉ> -> <nhãn>". Trang thử riêng cho DSK-22 ở
 //       tests/fixtures/invoke_on_load.
+//   - id: main-EXP-033
+//     content: >
+//       Pha 2 của restore_data trong Main (phiên 36; thay câu "Main chưa có backend_controller,
+//       restore_trigger" của main-EXP-031). (1) backendController: đối tượng {stop, start} tạo trong main()
+//       từ BackendProcess và trao cho RestoreDataAdapters; stop() là backend.stop() (đóng stdin, chờ, quá
+//       hạn thì kết thúc), start() là backend.start(backend.port) MỘT lần rồi đổi kết quả thành ready hoặc
+//       failed kèm lý do (thoát trước READY với mã, lỗi spawn, quá hạn thì terminate). Không có vòng thử
+//       lại. Không FATAL khi dừng qua nó vì BackendProcess.stop() đặt stopping trước khi tiến trình thoát;
+//       start() đặt lại ready và stopping, và tiến trình cũ đã thoát xong (stop chờ exited) nên cờ không
+//       lẫn sang tiến trình mới. (2) Thứ tự mới trong startLayer: backend READY, kiểm thư mục giao diện và
+//       protocol.handle, native_dialogs, ráp restore_data và đăng ký ba địa chỉ ipc, RESTORE_TRIGGER (await,
+//       hộp thoại thông báo không cửa sổ cha hoặc dòng "restore dialog text" khi có --ct-test-no-dialog),
+//       danh sách địa chỉ ipc, cửa sổ, lần nạp đầu, reminder_ticker. (3) InProcessCallError (500
+//       ERR_RESTORE_FAILED) do Main bắt và gọi fatal(..., 'restore_failed'): dòng "FATAL: Applying the
+//       pending restore failed: ERR_RESTORE_FAILED (500): ..." giữ dạng cũ; hộp thoại dùng
+//       main.error_dialog.restore_failed_summary, câu nói dữ liệu cũ đã được đưa về chỗ cũ. Lỗi khác của
+//       restore_trigger là lỗi lập trình, đi vào đường "The app could not start" cũ. (4) Chữ hộp thoại kết
+//       quả nằm ở desktop.json restore_trigger (danh sách đoạn {text, field, layout}); đường dẫn cấu hình
+//       thư mục restore-previous nằm ở restore_data.json files. (5) Bản đóng gói không cần sửa
+//       electron-builder.yml: dist\cross_cutting\**\*.js phủ restore_trigger, @electron/asar liệt kê được.
+//       (6) Phép cắn d của phiên (dừng backend mà không đánh dấu) làm Main tự đóng bằng đường fatal.
+//       tests/probe.cjs nhận npm run probe -- --data-dir <thư mục> để giữ thư mục dữ liệu giữa các lần
+//       chạy (vẫn là cờ --ct-test-data-dir của Main; không có tùy chọn thì thư mục tạm mới như cũ).
 //
 // UNSOLVED_PROBLEMS: []
 //
@@ -1233,6 +1256,21 @@
 //       114688 byte, ghi 2026-09-28T14:09:42.7922654Z, SHA-256 B1996554...390B, và
 //       data.db.lock; không đổi.
 //     recorded_at: 2026-10-08T14:59:36.1924815+07:00
+//   - claim: >
+//       Phiên 36: backend_controller dừng rồi khởi động lại trên cùng cổng không gây FATAL; thứ tự mới
+//       của startLayer; lối vào ipc vẫn đúng năm địa chỉ.
+//     how: >
+//       Số liệu đầy đủ ở EVIDENCE của restore_data (đo việc 2, A1-A6, bốn phép cắn, chạy toàn bộ, khứ
+//       hồi thật của Project Owner) và của restore_trigger. Riêng Main: tests/restore_apply.spec.ts A2
+//       (hai dòng "backend READY on port P" cùng P, dòng "backend_controller: starting the backend again
+//       on port P", không FATAL, không "stopped unexpectedly"), A4 và A5 (khởi động thoát trước READY là
+//       kết quả "failed", không FATAL ở A4), A1 (restore_trigger trước "opening the window"); ca 1 của
+//       desktop_main.spec.ts và N14 của native_dialogs.spec.ts vẫn đạt (bridge hai khóa, năm địa chỉ).
+//     result: >
+//       npm test 69 passed ba lượt liên tiếp, test:packaged 11 passed (P11 đạt), dist từ trạng thái sạch
+//       thoát mã 0, UI e2e 75 passed, UI/evidence không đổi, lint sạch không ngoại lệ mới. Mốc
+//       %APPDATA% 69 dòng, 0 khác biệt.
+//     recorded_at: 2026-10-08T19:09:25.3415976+07:00
 //
 // NOTES:
 //   - content: >
@@ -1326,8 +1364,10 @@
  * It also starts the cross-cutting reminder_ticker once the backend is READY
  * and the window has loaded, and stops it before the backend. It registers the
  * cross-cutting entry native_dialogs (ipc) and wires the workflow restore_data
- * (phase 1) before the window opens, and hands the preload script the ipc
- * addresses that are implemented.
+ * before the window opens (handing it the backend_controller, the lifecycle tool
+ * that stops and starts the backend on the same port), runs the cross-cutting
+ * restore_trigger once and waits for it (phase 2 of a restore), and hands the
+ * preload script the ipc addresses that are implemented.
  */
 
 import { app, BrowserWindow, dialog, ipcMain, Menu, Notification, protocol } from 'electron'
@@ -1337,9 +1377,10 @@ import * as net from 'node:net'
 import * as path from 'node:path'
 import { registerNativeDialogs } from './cross_cutting/native_dialogs/native_dialogs'
 import { ReminderTicker, type ReminderTickerConfig, type Toast } from './cross_cutting/reminder_ticker/reminder_ticker'
+import { runRestoreTrigger, type RestoreTriggerText } from './cross_cutting/restore_trigger/restore_trigger'
 import { RestoreDataAdapters } from './workflows/restore_data/adapters'
-import type { RestoreDataConfig } from './workflows/restore_data/entities'
-import { registerRestoreDataRouters } from './workflows/restore_data/routers'
+import type { BackendController, RestoreDataConfig } from './workflows/restore_data/entities'
+import { InProcessCallError, registerRestoreDataRouters } from './workflows/restore_data/routers'
 import { RestoreDataService } from './workflows/restore_data/services'
 
 const LAYER_ROOT = path.resolve(__dirname, '..')
@@ -1375,10 +1416,11 @@ interface DesktopConfig {
   native_dialogs: { pick_folder: { address: string; title: string }; open_file: { address: string; title: string } }
   app: { locale: string; app_user_model_id: string }
   reminder_ticker: ReminderTickerConfig
+  restore_trigger: RestoreTriggerText
   main: {
     failure_exit_code: number
     error_dialog_title: string
-    error_dialog: { startup_summary: string; running_summary: string; detail_label: string }
+    error_dialog: { startup_summary: string; running_summary: string; restore_failed_summary: string; detail_label: string }
   }
   packaged: {
     backend: { interpreter: string; script: string; working_dir: string }
@@ -1560,8 +1602,8 @@ interface BackendProcessOptions {
 
 /**
  * One backend child process at a time. The port stays on the object, so the
- * backend can later be stopped and started again on the same port
- * (restore_data.backend_controller, not wired yet).
+ * backend can be stopped and started again on the same port
+ * (restore_data.backend_controller, wired in main()).
  */
 class BackendProcess {
   port: number | null = null
@@ -1751,15 +1793,17 @@ function argvForLog(config: DesktopConfig, argv: readonly string[], packaged: bo
 }
 
 /** When the failure happened: before the window finished loading
- * ('startup') or after the app was up ('running'). Picks the sentence. */
-type FailurePhase = 'startup' | 'running'
+ * ('startup'), after the app was up ('running'), or when applying a pending
+ * restore failed and the previous database could not be started either
+ * ('restore_failed'). Picks the sentence. */
+type FailurePhase = 'startup' | 'running' | 'restore_failed'
 
 /** Text of the error dialog: a Vietnamese sentence first, the technical
  * message (the one logged after "FATAL:") after it. Wording is in
  * configs/desktop.json (main.error_dialog). */
 function buildErrorDialog(config: DesktopConfig, phase: FailurePhase, detail: string): { title: string; content: string } {
   const text = config.main.error_dialog
-  const summary = phase === 'startup' ? text.startup_summary : text.running_summary
+  const summary = phase === 'startup' ? text.startup_summary : phase === 'running' ? text.running_summary : text.restore_failed_summary
   return { title: config.main.error_dialog_title, content: `${summary}\n\n${text.detail_label}\n${detail}` }
 }
 
@@ -1880,6 +1924,35 @@ function main(): void {
       fatal(`The backend stopped unexpectedly (exit code ${code}${signal ? `, signal ${signal}` : ''}). The app will close.`, 'running'),
   })
 
+  // The lifecycle tool handed to restore_data (data_schema.yaml
+  // restore_data.backend_controller, from: main). Logistics only: it stops and
+  // starts the one backend; when to do either is the workflow's decision. A stop
+  // through it is not an "unexpected exit": BackendProcess.stop() marks the stop
+  // before the process ends, so onUnexpectedExit (and its FATAL) does not fire.
+  const backendController: BackendController = {
+    stop: async () => {
+      await backend.stop()
+    },
+    start: async () => {
+      const port = backend.port
+      if (port === null) return { kind: 'failed', reason: 'the backend has never been started, so there is no port to start it on' }
+      log(`backend_controller: starting the backend again on port ${port}`)
+      const outcome = await backend.start(port)
+      switch (outcome.kind) {
+        case 'ready':
+          return { kind: 'ready' }
+        case 'timeout':
+          log(`backend did not write ${config.backend.ready_line} within ${config.backend.ready_timeout_ms} ms; terminating it`)
+          await backend.terminate()
+          return { kind: 'failed', reason: `no ${config.backend.ready_line} within ${config.backend.ready_timeout_ms} ms` }
+        case 'exited':
+          return { kind: 'failed', reason: `it exited before ${config.backend.ready_line} (exit code ${outcome.code}${outcome.signal ? `, signal ${outcome.signal}` : ''})` }
+        case 'spawn_error':
+          return { kind: 'failed', reason: `it could not be launched: ${outcome.message}` }
+      }
+    },
+  }
+
   // h. Stop: the app exits only after the backend has exited.
   async function shutdown(exitCode: number): Promise<void> {
     if (shutdownStarted) return
@@ -1981,20 +2054,47 @@ function main(): void {
       log: (message) => log(message),
     })
 
-    // Workflow restore_data (phase 1: prepare, status, cancel): the Main reads
-    // its Configs, builds Adapters, Services and Routers, and registers the
-    // three ipc handlers, also before the window opens. Wiring only: every
-    // decision is the workflow's.
+    // Workflow restore_data: the Main reads its Configs, builds Adapters
+    // (handing over the backend_controller), Services and Routers, and registers
+    // the three ipc handlers (phase 1: prepare, status, cancel), also before the
+    // window opens. Wiring only: every decision is the workflow's.
     const backendBaseUrl = `http://${host}:${backend.port}`
     const restoreConfig = loadRestoreDataConfig()
-    registerRestoreDataRouters({
+    const restoreData = registerRestoreDataRouters({
       ipc: ipcMain,
-      service: new RestoreDataService(new RestoreDataAdapters({ config: restoreConfig, dbFilePath, backendBaseUrl }), restoreConfig),
+      service: new RestoreDataService(
+        new RestoreDataAdapters({ config: restoreConfig, dbFilePath, backendBaseUrl, backendController }),
+        restoreConfig,
+        (message) => log(message),
+      ),
       config: restoreConfig,
       uiOrigin,
       getMainWindow: () => mainWindow,
       log: (message) => log(message),
     })
+
+    // Cross-cutting restore_trigger (phase 2: apply a pending restore): once,
+    // now that the backend is READY and restore_data is wired, and before the
+    // window opens (nothing else calls the backend yet, so the backend can be
+    // stopped and started again). The Main waits for it, message box included.
+    try {
+      await runRestoreTrigger({
+        applyPendingRestore: () => restoreData.applyPendingRestore(),
+        text: config.restore_trigger,
+        showDialog: settings.showDialogs,
+        showMessageBox: async (box) => {
+          // No parent window: it is not open yet.
+          await dialog.showMessageBox({ type: 'info', title: box.title, message: box.content, buttons: [box.closeButton], defaultId: 0, noLink: true })
+        },
+        log: (message) => log(message),
+      })
+    } catch (err) {
+      // 500 ERR_RESTORE_FAILED: the restored database and the previous one both
+      // failed to start. The previous database is back at db_file_path.
+      if (err instanceof InProcessCallError) return fatal(`Applying the pending restore failed: ${err.message}`, 'restore_failed')
+      throw err
+    }
+    if (shutdownStarted) return
 
     // The ipc addresses implemented here; the preload relays only these.
     const ipcAddresses = [

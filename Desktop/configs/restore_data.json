@@ -11,14 +11,16 @@
     "incompatible_backup": 409,
     "safety_backup_failed": 424,
     "storage_io": 500,
-    "service_unavailable": 503
+    "service_unavailable": 503,
+    "restore_failed": 500
   },
   "error_codes": {
     "validation": "ERR_VALIDATION",
     "not_found": "ERR_NOT_FOUND",
     "incompatible_backup": "ERR_INCOMPATIBLE_BACKUP",
     "storage_io": "ERR_STORAGE_IO",
-    "service_unavailable": "ERR_SERVICE_UNAVAILABLE"
+    "service_unavailable": "ERR_SERVICE_UNAVAILABLE",
+    "restore_failed": "ERR_RESTORE_FAILED"
   },
   "backend_requests": {
     "prepare_restore": { "method": "POST", "path": "/backups/restore-preparations" },
@@ -29,6 +31,10 @@
   "files": {
     "safety_folder_name": "safety-backups",
     "pending_file_name": "restore-pending.json",
-    "temp_suffix": ".tmp"
+    "temp_suffix": ".tmp",
+    "previous_folder_name": "restore-previous",
+    "previous_file_prefix": "data-",
+    "previous_file_extension": ".db",
+    "failed_suffix": "-failed"
   }
 }

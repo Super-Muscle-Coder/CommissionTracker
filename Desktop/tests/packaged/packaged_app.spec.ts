@@ -70,8 +70,9 @@ function packagedPythons(): ProcessRow[] {
  * dialogs), and wait until the product UI shows the client_list page, using
  * the signals of UI/tests/e2e (heading "Khách hàng", then the page's own
  * "Tải lại" button enabled once its first list load has ended). */
-async function launchPackaged(extraArgs: string[] = [], env?: Record<string, string>): Promise<Launched> {
-  const dataDir = tempDataDir()
+async function launchPackaged(extraArgs: string[] = [], env?: Record<string, string>, keepDataDir?: string): Promise<Launched> {
+  // keepDataDir: a second run on the data folder of an earlier run (P11).
+  const dataDir = keepDataDir ?? tempDataDir()
   const app = await _electron.launch({
     executablePath: EXE,
     args: [`${flags.data_dir}${dataDir}`, flags.no_dialog, ...extraArgs],
@@ -602,4 +603,65 @@ test('P10. desktop session 35: the package holds the restore_data workflow and i
     expect(l.log.text).not.toMatch(/FATAL/)
     await closeWindow(l, tree)
   })
+})
+
+test('P11. desktop session 36: the real round trip in the package: prepare in run 1, run 2 on the same data folder holds the archive data, the replaced database is kept', async () => {
+  const bridge: string = config.boundary.renderer_bridge
+  const dbFile = (dir: string): string => path.join(dir, ...config.boundary.db_file_relative_to_app_data.split('/'))
+  const post = async (port: number, route: string, body: unknown): Promise<{ status: number; json: Record<string, string> }> => {
+    const response = await fetch(`http://${HOST}:${port}${route}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
+    return { status: response.status, json: (await response.json()) as Record<string, string> }
+  }
+  const clientNames = async (port: number): Promise<string[]> =>
+    ((await (await fetch(`http://${HOST}:${port}/clients`)).json()) as Array<{ display_name: string }>).map((c) => c.display_name).sort()
+  const addClient = async (port: number, name: string): Promise<void> => {
+    expect((await post(port, '/clients', { client_input: { display_name: name, contacts: [], note: null } })).status).toBe(201)
+  }
+
+  // Run 1: client A, a backup, client B, restore:prepare, close.
+  const first = await launchPackaged()
+  const dataDir = first.dataDir
+  try {
+    const tree = await expectPackagedRun(first)
+    const archiveDir = path.join(dataDir, 'archives')
+    fs.mkdirSync(archiveDir)
+    await addClient(first.port, 'Khach A')
+    const backup = await post(first.port, '/backups', { backup_request: { destination_dir: archiveDir, purpose: 'manual' } })
+    expect(backup.status).toBe(201)
+    await addClient(first.port, 'Khach B')
+    const prepared = await first.page.evaluate(
+      async ({ name, archivePath }) => {
+        const b = (window as unknown as Record<string, { invoke: (a: string, b?: unknown) => Promise<{ status: number }> }>)[name]
+        return b.invoke('restore:prepare', { archive_path: archivePath })
+      },
+      { name: bridge, archivePath: backup.json.archive_path },
+    )
+    expect(prepared.status).toBe(200)
+    await closeWindow(first, tree)
+  } finally {
+    console.log(first.log.text)
+    if (first.proc.exitCode === null && first.proc.signalCode === null) await first.app.close().catch(() => undefined)
+  }
+
+  // Run 2, same data folder: the Main applies the pending restore before the window opens.
+  const second = await launchPackaged([], undefined, dataDir)
+  try {
+    const tree = backendTree(second.mainPid)
+    expectPackagedBackend(tree)
+    expect(await clientNames(second.port)).toEqual(['Khach A'])
+    expect(fs.existsSync(path.join(path.dirname(dbFile(dataDir)), 'restore-pending.json'))).toBe(false)
+    const previous = fs.readdirSync(path.join(path.dirname(dbFile(dataDir)), 'restore-previous'))
+    expect(previous).toHaveLength(1)
+    expect(previous[0]).toMatch(/^data-\d{8}-\d{6}\.db$/)
+    const status = await second.page.evaluate(async (name) => {
+      const b = (window as unknown as Record<string, { invoke: (a: string, b?: unknown) => Promise<unknown> }>)[name]
+      return b.invoke('restore:status', {})
+    }, bridge)
+    expect(status).toEqual({ status: 200, body: { pending: null } })
+    expect(second.log.text).not.toMatch(/FATAL/)
+    await closeWindow(second, tree)
+  } finally {
+    console.log(second.log.text)
+    if (second.proc.exitCode === null && second.proc.signalCode === null) await second.app.close().catch(() => undefined)
+  }
 })

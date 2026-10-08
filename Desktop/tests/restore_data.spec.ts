@@ -19,7 +19,7 @@ import * as net from 'node:net'
 import * as os from 'node:os'
 import * as path from 'node:path'
 import { RestoreDataAdapters } from '../src/workflows/restore_data/adapters'
-import type { PendingRestoreRecord, RestoreDataConfig } from '../src/workflows/restore_data/entities'
+import type { BackendController, PendingRestoreRecord, RestoreDataConfig } from '../src/workflows/restore_data/entities'
 import { archivePathArgument, emptyArgumentProblem, senderProblem } from '../src/workflows/restore_data/routers'
 import { RestoreDataService } from '../src/workflows/restore_data/services'
 import { BACKEND_PYTHON, config, launchMain, type LogCollector, mainArgs, PROBE_ROOT, processTree, stillAlive, tempDataDir, waitForExit } from './helpers'
@@ -33,6 +33,12 @@ const CANCEL = restoreConfig.addresses.cancel_restore
 const OPEN_FILE: string = config.native_dialogs.open_file.address
 const FIVE_FIELDS = ['archive_app_version', 'archive_created_at', 'archive_path', 'prepared_at', 'safety_backup_path']
 const TIMESTAMP = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[+-]\d{2}:\d{2}$/
+
+/** R1b never applies a restore, so the lifecycle tool must not be called. */
+const unusedController: BackendController = {
+  stop: () => Promise.reject(new Error('the backend must not be stopped in this test')),
+  start: () => Promise.reject(new Error('the backend must not be started in this test')),
+}
 
 function tempFolder(prefix: string): string {
   return fs.mkdtempSync(path.join(os.tmpdir(), prefix))
@@ -77,7 +83,7 @@ test('R1b. Adapters: a closed port and a backend that never answers are failures
   fs.writeFileSync(archive, 'x')
 
   // Closed port: the connection is refused.
-  const closed = new RestoreDataAdapters({ config: restoreConfig, dbFilePath, backendBaseUrl: `http://127.0.0.1:${await closedPort()}` })
+  const closed = new RestoreDataAdapters({ config: restoreConfig, dbFilePath, backendBaseUrl: `http://127.0.0.1:${await closedPort()}`, backendController: unusedController })
   expect(await closed.prepareRestore(archive)).toMatchObject({ kind: 'failed', reason: expect.stringMatching(/not reachable/) })
   expect(await closed.createSafetyBackup(dbFolder)).toMatchObject({ kind: 'failed', reason: expect.stringMatching(/not reachable/) })
   const service = new RestoreDataService(closed, restoreConfig)
@@ -88,7 +94,7 @@ test('R1b. Adapters: a closed port and a backend that never answers are failures
   await new Promise<void>((resolve) => silent.listen(0, '127.0.0.1', resolve))
   try {
     const shortWait: RestoreDataConfig = { ...restoreConfig, backend_requests: { ...restoreConfig.backend_requests, timeout_ms: 300 } }
-    const slow = new RestoreDataAdapters({ config: shortWait, dbFilePath, backendBaseUrl: `http://127.0.0.1:${(silent.address() as net.AddressInfo).port}` })
+    const slow = new RestoreDataAdapters({ config: shortWait, dbFilePath, backendBaseUrl: `http://127.0.0.1:${(silent.address() as net.AddressInfo).port}`, backendController: unusedController })
     const started = Date.now()
     expect(await slow.prepareRestore(archive)).toMatchObject({ kind: 'failed', reason: expect.stringMatching(/not reachable/) })
     expect(Date.now() - started).toBeLessThan(5000)

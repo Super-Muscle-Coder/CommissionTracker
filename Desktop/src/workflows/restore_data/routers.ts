@@ -24,8 +24,27 @@
 
 import * as path from 'node:path'
 import type { BrowserWindow, IpcMain, IpcMainInvokeEvent } from 'electron'
-import type { RestoreDataConfig, RestoreReply } from './entities'
+import type { ErrorBody, RestoreDataConfig, RestoreOutcome, RestoreReply } from './entities'
 import type { RestoreDataService } from './services'
+
+/** What an in_process call raises for a non-2xx label: the label and the
+ * error_body (api_contract.yaml endpoint_forms.in_process). */
+export class InProcessCallError extends Error {
+  constructor(
+    readonly label: number,
+    readonly errorBody: ErrorBody,
+  ) {
+    super(`${errorBody.code} (${label}): ${errorBody.message}${errorBody.details === null ? '' : ` ${JSON.stringify(errorBody.details)}`}`)
+    this.name = 'InProcessCallError'
+  }
+}
+
+/** The in_process entry of this workflow, as a function the Main hands to the
+ * one allowed caller (restore_trigger). */
+export interface RestoreDataInProcess {
+  /** apply_pending_restore: the outcome, or an InProcessCallError (500 ERR_RESTORE_FAILED). */
+  applyPendingRestore(): Promise<RestoreOutcome>
+}
 
 export interface RestoreDataRoutersOptions {
   ipc: Pick<IpcMain, 'handle'>
@@ -78,7 +97,7 @@ export function archivePathArgument(argument: unknown): { ok: true; archivePath:
   return { ok: true, archivePath: value }
 }
 
-export function registerRestoreDataRouters(options: RestoreDataRoutersOptions): void {
+export function registerRestoreDataRouters(options: RestoreDataRoutersOptions): RestoreDataInProcess {
   const { ipc, service, config } = options
 
   /** One ipc entry: sender check first, then what the entry does. */
@@ -131,4 +150,13 @@ export function registerRestoreDataRouters(options: RestoreDataRoutersOptions): 
     if (problem !== null) return refuseArgument(config.addresses.cancel_restore, problem)
     return service.cancel()
   })
+
+  // apply_pending_restore (in_process): no input, so nothing to check here.
+  return {
+    async applyPendingRestore(): Promise<RestoreOutcome> {
+      const reply = await service.applyPending()
+      if (reply.status !== config.labels.ok) throw new InProcessCallError(reply.status, reply.body as ErrorBody)
+      return reply.body as RestoreOutcome
+    },
+  }
 }

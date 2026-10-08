@@ -18,6 +18,7 @@ export interface RestoreDataConfig {
     safety_backup_failed: number
     storage_io: number
     service_unavailable: number
+    restore_failed: number
   }
   error_codes: {
     validation: string
@@ -25,6 +26,7 @@ export interface RestoreDataConfig {
     incompatible_backup: string
     storage_io: string
     service_unavailable: string
+    restore_failed: string
   }
   backend_requests: {
     prepare_restore: { method: string; path: string }
@@ -32,7 +34,35 @@ export interface RestoreDataConfig {
     safety_backup_purpose: string
     timeout_ms: number
   }
-  files: { safety_folder_name: string; pending_file_name: string; temp_suffix: string }
+  files: {
+    safety_folder_name: string
+    pending_file_name: string
+    temp_suffix: string
+    /** Folder (next to the live database file) that keeps the replaced database. */
+    previous_folder_name: string
+    /** Name stem of a replaced database: data-<local time>. */
+    previous_file_prefix: string
+    previous_file_extension: string
+    /** Added to the stem of the database that was moved in and then put away again. */
+    failed_suffix: string
+  }
+}
+
+/** data_schema.yaml clause_d_desktop.restore_data.output_guaranteed.restore_outcome. */
+export interface RestoreOutcome {
+  outcome: 'none' | 'restored' | 'rolled_back' | 'discarded'
+  archive_path: string | null
+  safety_backup_path: string | null
+  reason: string | null
+}
+
+/** The resource restore_data.backend_controller (data_schema.yaml, from: main):
+ * the lifecycle tool the desktop Main hands over. It decides nothing. start()
+ * starts the backend once, on the port it used before, and waits for READY. */
+export type BackendStartResult = { kind: 'ready' } | { kind: 'failed'; reason: string }
+export interface BackendController {
+  stop(): Promise<void>
+  start(): Promise<BackendStartResult>
 }
 
 /** data_schema.yaml clause_a_common.types.pending_restore_record. */
@@ -111,3 +141,9 @@ export type ReadPendingOutcome =
 export type WritePendingOutcome = { kind: 'written' } | { kind: 'failed'; reason: string }
 
 export type DeletePendingOutcome = { kind: 'deleted' } | { kind: 'absent' } | { kind: 'failed'; reason: string }
+
+export type MoveFileOutcome = { kind: 'moved' } | { kind: 'failed'; reason: string }
+
+/** The reply of the in_process entry apply_pending_restore: 200 with the outcome,
+ * or 500 with the error body (api_contract.yaml endpoint_forms.in_process). */
+export type ApplyReply = { status: number; body: RestoreOutcome | ErrorBody }

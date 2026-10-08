@@ -17,11 +17,14 @@
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import type {
+  BackendController,
+  BackendStartResult,
   BackupArchive,
   CreateBackupOutcome,
   DeletePendingOutcome,
   EnsureFolderOutcome,
   PrepareRestoreOutcome,
+  MoveFileOutcome,
   ReadPendingOutcome,
   RestoreDataConfig,
   RestoreStaging,
@@ -35,6 +38,8 @@ export interface RestoreDataAdaptersOptions {
   dbFilePath: string
   /** environment_config: http://<loopback_host>:<port> of the backend. */
   backendBaseUrl: string
+  /** The resource restore_data.backend_controller, handed over by the Main. */
+  backendController: BackendController
 }
 
 /** A file or folder operation that failed (permission, a name taken by
@@ -100,13 +105,21 @@ export class RestoreDataAdapters {
   readonly safetyFolder: string
   /** <folder of the live database file>/<pending file name> */
   readonly pendingFile: string
+  /** <folder of the live database file>/<previous folder name>: keeps the replaced databases */
+  readonly previousFolder: string
+  /** The live database file (environment_config). */
+  readonly dbFilePath: string
+  private readonly backendController: BackendController
 
   constructor(options: RestoreDataAdaptersOptions) {
     this.config = options.config
     this.backendBaseUrl = options.backendBaseUrl
+    this.backendController = options.backendController
+    this.dbFilePath = options.dbFilePath
     const dataFolder = path.dirname(options.dbFilePath)
     this.safetyFolder = path.join(dataFolder, options.config.files.safety_folder_name)
     this.pendingFile = path.join(dataFolder, options.config.files.pending_file_name)
+    this.previousFolder = path.join(dataFolder, options.config.files.previous_folder_name)
   }
 
   // --- backup_data over http ------------------------------------------------------
@@ -220,7 +233,63 @@ export class RestoreDataAdapters {
     }
   }
 
+  // --- whole-file operations (never opens or reads a database file) ---------------
+
+  /** True when the path is an existing regular file. */
+  async isFile(file: string): Promise<boolean> {
+    try {
+      return (await fs.promises.stat(file)).isFile()
+    } catch (err) {
+      if (isSystemError(err)) return false
+      throw err
+    }
+  }
+
+  /** A path in `folder` that does not exist yet: <stem><extension>, else
+   * <stem>-2<extension>, <stem>-3<extension>…, so nothing is ever overwritten. */
+  async freePath(folder: string, stem: string, extension: string): Promise<string> {
+    for (let n = 1; ; n++) {
+      const candidate = path.join(folder, `${stem}${n === 1 ? '' : `-${n}`}${extension}`)
+      try {
+        await fs.promises.lstat(candidate)
+      } catch (err) {
+        if (isSystemError(err) && err.code === 'ENOENT') return candidate
+        throw err
+      }
+    }
+  }
+
+  /** Renames a file (same drive: no copy). */
+  async moveFile(from: string, to: string): Promise<MoveFileOutcome> {
+    try {
+      await fs.promises.rename(from, to)
+      return { kind: 'moved' }
+    } catch (err) {
+      if (isSystemError(err)) return { kind: 'failed', reason: describe(err) }
+      throw err
+    }
+  }
+
+  // --- the backend's lifecycle (backend_controller, handed over by the Main) -------
+
+  /** Stops the backend; returns once it has exited (also when it was not running). */
+  async stopBackend(): Promise<void> {
+    await this.backendController.stop()
+  }
+
+  /** Starts the backend on the same port, once, and waits for READY. */
+  async startBackend(): Promise<BackendStartResult> {
+    return this.backendController.start()
+  }
+
   // --- clock -----------------------------------------------------------------------
+
+  /** Now as part of a file name: YYYYMMDD-HHmmss, machine time. */
+  nowFileStamp(): string {
+    const d = new Date()
+    const pad = (n: number): string => String(n).padStart(2, '0')
+    return `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`
+  }
 
   /** Now as formats.timestamp: ISO 8601 with the machine's UTC offset. */
   nowTimestamp(): string {
