@@ -20,12 +20,23 @@ import type {
 } from '../../logic/workflows/manage_client/routers'
 import type { CommissionDetailView, CommissionListView } from '../../logic/workflows/manage_commission/routers'
 import type { BalanceView, PaymentFormView, PaymentListView, SavedPaymentView } from '../../logic/workflows/record_payment/routers'
+import type { RunOutcome } from '../../logic/workflows/restore_data/routers'
 import type { PendingListView, SettingsFormView } from '../../logic/workflows/send_reminder/routers'
 import type { ProgressBoardView } from '../../logic/workflows/update_progress/routers'
 import type { IncomePeriodDraft, IncomeReportView } from '../../logic/workflows/view_income_report/routers'
 import { AppRoot } from '../app_root'
 import { NAVIGATION, START_PAGE, type Route } from '../navigation'
-import { answers, fakeManageClient, fakeManageCommission, fakeRecordPayment, fakeSendReminder, fakeUpdateProgress, fakeViewIncomeReport, renderWithLogic } from './fake_logic'
+import {
+  answers,
+  fakeManageClient,
+  fakeManageCommission,
+  fakeRecordPayment,
+  fakeRestoreData,
+  fakeSendReminder,
+  fakeUpdateProgress,
+  fakeViewIncomeReport,
+  renderWithLogic,
+} from './fake_logic'
 
 const ID = '3f2b8c1e-9a4d-4e6f-8b2a-1c3d5e7f9a0b'
 const CID = '7a1d2e3f-4b5c-4d6e-9f80-1a2b3c4d5e6f'
@@ -73,10 +84,12 @@ export const WRONG_ROUTES: Route[] = [
   { page: 'reminder_settings', params: { commission_id: ID } },
   // @ts-expect-error backup takes no parameter
   { page: 'backup', params: { commission_id: ID } },
+  // @ts-expect-error restore takes no parameter
+  { page: 'restore', params: { commission_id: ID } },
 ]
 
 describe('navigation table', () => {
-  it('has exactly the fourteen pages of ui_decomposition.md §5 (D1 to D6, and E), and opens on client_list', () => {
+  it('has exactly the fifteen pages of ui_decomposition.md §5 (D1 to D6, E and F), and opens on client_list', () => {
     expect(Object.keys(NAVIGATION).sort()).toEqual([
       'backup',
       'client_detail',
@@ -91,17 +104,18 @@ describe('navigation table', () => {
       'progress_board',
       'reminder_list',
       'reminder_settings',
+      'restore',
       'stage_change',
     ])
     expect(START_PAGE).toBe('client_list')
   })
 
-  it('the navigation region lists "Khách hàng", "Đơn hàng", "Tiến độ", "Thu nhập", "Nhắc việc", then "Sao lưu"; D2 pages, stage_change and the payment pages belong to "Đơn hàng"', () => {
+  it('the navigation region lists "Khách hàng", "Đơn hàng", "Tiến độ", "Thu nhập", "Nhắc việc", "Sao lưu", then "Khôi phục"; D2 pages, stage_change and the payment pages belong to "Đơn hàng"', () => {
     const menu = (Object.keys(NAVIGATION) as (keyof typeof NAVIGATION)[]).flatMap((k) => {
       const m = NAVIGATION[k].menu
       return m === null ? [] : [m.label]
     })
-    expect(menu).toEqual(['Khách hàng', 'Đơn hàng', 'Tiến độ', 'Thu nhập', 'Nhắc việc', 'Sao lưu'])
+    expect(menu).toEqual(['Khách hàng', 'Đơn hàng', 'Tiến độ', 'Thu nhập', 'Nhắc việc', 'Sao lưu', 'Khôi phục'])
     expect([
       NAVIGATION.commission_list.section,
       NAVIGATION.commission_detail.section,
@@ -125,13 +139,44 @@ describe('AppRoot', () => {
     expect(await screen.findByRole('heading', { level: 2, name: 'Khách hàng' })).toBeTruthy()
     const nav = screen.getByRole('navigation', { name: 'Điều hướng chính' })
     const items = within(nav).getAllByRole('button')
-    expect(items.map((b) => b.textContent)).toEqual(['Khách hàng', 'Đơn hàng', 'Tiến độ', 'Thu nhập', 'Nhắc việc', 'Sao lưu'])
+    expect(items.map((b) => b.textContent)).toEqual(['Khách hàng', 'Đơn hàng', 'Tiến độ', 'Thu nhập', 'Nhắc việc', 'Sao lưu', 'Khôi phục'])
     expect(items[0].getAttribute('aria-current')).toBe('page')
     expect(items[1].getAttribute('aria-current')).toBeNull()
     expect(items[2].getAttribute('aria-current')).toBeNull()
     expect(items[3].getAttribute('aria-current')).toBeNull()
     expect(items[4].getAttribute('aria-current')).toBeNull()
     expect(items[5].getAttribute('aria-current')).toBeNull()
+    expect(items[6].getAttribute('aria-current')).toBeNull()
+  })
+
+  it('"Khôi phục" opens restore, the seventh item, marked current; the six older items keep their places', async () => {
+    const loadStatus = answers<[], RunOutcome>({ result: { kind: 'ok', view: { message: null } }, pending: { state: 'none' } })
+    renderWithLogic(
+      <AppRoot />,
+      fakeManageClient({ loadClientList: answers<[], ViewResult<ClientListView>>(LIST) }),
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      fakeRestoreData({ loadStatus }),
+    )
+    await screen.findByRole('heading', { level: 2, name: 'Khách hàng' })
+    const nav = () => within(screen.getByRole('navigation', { name: 'Điều hướng chính' }))
+    fireEvent.click(nav().getByRole('button', { name: 'Khôi phục' }))
+    expect(await screen.findByRole('heading', { level: 2, name: 'Khôi phục dữ liệu' })).toBeTruthy()
+    expect(await screen.findByText('Không có lần khôi phục nào đang chờ.')).toBeTruthy()
+    expect(nav().getAllByRole('button').map((b) => [b.textContent, b.getAttribute('aria-current')])).toEqual([
+      ['Khách hàng', null],
+      ['Đơn hàng', null],
+      ['Tiến độ', null],
+      ['Thu nhập', null],
+      ['Nhắc việc', null],
+      ['Sao lưu', null],
+      ['Khôi phục', 'page'],
+    ])
+    expect(loadStatus).toHaveBeenCalledTimes(1)
   })
 
   it('"Tiến độ" opens progress_board, marked current; a commission of the board → its detail, "Đơn hàng" current', async () => {
@@ -159,6 +204,7 @@ describe('AppRoot', () => {
       ['Thu nhập', null],
       ['Nhắc việc', null],
       ['Sao lưu', null],
+      ['Khôi phục', null],
     ])
     fireEvent.click(await screen.findByRole('button', { name: /^Chân dung/ }))
     expect(await screen.findByRole('heading', { level: 2, name: 'Chi tiết đơn hàng' })).toBeTruthy()
@@ -170,6 +216,7 @@ describe('AppRoot', () => {
       ['Thu nhập', null],
       ['Nhắc việc', null],
       ['Sao lưu', null],
+      ['Khôi phục', null],
     ])
   })
 
@@ -198,6 +245,7 @@ describe('AppRoot', () => {
       ['Thu nhập', null],
       ['Nhắc việc', null],
       ['Sao lưu', null],
+      ['Khôi phục', null],
     ])
     fireEvent.click(await screen.findByRole('button', { name: /^Chân dung/ }))
     expect(await screen.findByRole('heading', { level: 2, name: 'Chi tiết đơn hàng' })).toBeTruthy()
@@ -209,6 +257,7 @@ describe('AppRoot', () => {
       ['Thu nhập', null],
       ['Nhắc việc', null],
       ['Sao lưu', null],
+      ['Khôi phục', null],
     ])
   })
 
@@ -236,6 +285,7 @@ describe('AppRoot', () => {
       ['Thu nhập', 'page'],
       ['Nhắc việc', null],
       ['Sao lưu', null],
+      ['Khôi phục', null],
     ])
     await screen.findByText('Không có gì')
     expect(viewIncomeReport).toHaveBeenCalledExactlyOnceWith({ periodFrom: '2026-01-01', periodTo: '2026-09-30' })
@@ -284,6 +334,7 @@ describe('AppRoot', () => {
       ['Thu nhập', null],
       ['Nhắc việc', 'page'],
       ['Sao lưu', null],
+      ['Khôi phục', null],
     ])
     // The way to the settings: the item "Nhắc việc" stays the current one.
     fireEvent.click(screen.getAllByRole('button', { name: 'Cài đặt nhắc việc' })[0])

@@ -100,3 +100,9 @@ export type RestoreStaging = {
   staged_db_path: string | null
 }
 export declare function prepareRestore(baseUrl: string, archivePath: string): Promise<RestoreStaging>
+export declare function dbFolder(dataDir: string): string
+export declare function createClient(baseUrl: string, displayName: string): Promise<{ client_id: string }>
+export declare function createBackupFile(baseUrl: string, destinationDir: string): Promise<string>
+export declare function clientNames(baseUrl: string): Promise<string[]>
+export declare const KEPT_FILE: string
+export declare function resetFixtureControl(dataDir: string): void

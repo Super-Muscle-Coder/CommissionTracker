@@ -27,6 +27,7 @@ import {
   makeDataDir,
   portFromLog,
   seedSampleData,
+  setBackend as setBackendFile,
   SHOW_INACTIVE_LOG_LINE,
   showInactiveForRun,
   walkthroughRunner,
@@ -57,7 +58,9 @@ let launchedApp: ElectronApplication | null = null
 // just before it).
 let currentSpec = 'unknown'
 
-export type Launched = { app: ElectronApplication; page: Page; dataDir: string; baseUrl: string; log: () => string; exited: Promise<number | null> }
+// closed: the app was closed by closeKeepingData and its data folder is still there (chặng F);
+// close() of such a run only removes the folder.
+export type Launched = { app: ElectronApplication; page: Page; dataDir: string; baseUrl: string; log: () => string; exited: Promise<number | null>; closed: boolean }
 
 export async function launch(options: { seed: boolean }): Promise<Launched> {
   expect(fs.existsSync(path.join(DESKTOP_ROOT, 'dist', 'main.js')), 'Desktop is not built: run npm run build in Desktop/').toBe(true)
@@ -87,7 +90,7 @@ export async function launch(options: { seed: boolean }): Promise<Launched> {
     await expect(page.getByText(EMPTY_LIST_TEXT)).toBeVisible({ timeout: 30_000 })
     await expect(page.getByRole('status')).toHaveCount(0)
     if (options.seed) await seedSampleData(baseUrl)
-    return { app, page, dataDir, baseUrl, log: () => log, exited }
+    return { app, page, dataDir, baseUrl, log: () => log, exited, closed: false }
   } catch (e) {
     // Leave nothing behind when the launch itself fails.
     console.log(`desktop main log:\n${log}`)
@@ -102,6 +105,12 @@ export async function launch(options: { seed: boolean }): Promise<Launched> {
 export async function close(l: Launched): Promise<void> {
   let code: number | null
   launchedApp = null
+  if (l.closed) {
+    // Closed already by closeKeepingData (and perhaps never reopened): only the folder is left.
+    clearSession()
+    fs.rmSync(l.dataDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 })
+    return
+  }
   await logRestores(l.app, 'closing')
   try {
     await l.app.close()
@@ -115,6 +124,75 @@ export async function close(l: Launched): Promise<void> {
   // The fixture stopped its child, then exited 0 when the desktop Main closed its stdin.
   expect(l.log()).toContain('[switchable_backend] stdin closed: stopping')
   expect(l.log()).toMatch(/backend \(pid \d+\) exited with code 0/)
+}
+
+// Chặng F (restore): close the app cleanly but KEEP its temporary data folder, so that reopen()
+// can start it again on the same folder (the desktop applies a prepared restore at the next
+// start). The folder is still removed afterwards: close() of the Launched this returns (or of
+// the reopened one) removes it, even when a step in between failed.
+//
+// The control file of the fixture must say `up` before the app is opened again: a `down`
+// left in it makes the fixture switch the backend off right after it is READY (measured in
+// session 37, item 2), so it is set here, before closing, while the session still names this folder.
+export async function closeKeepingData(l: Launched): Promise<void> {
+  launchedApp = null
+  await logRestores(l.app, 'closing')
+  await setBackendLocally(l.dataDir, 'up')
+  let code: number | null
+  try {
+    await l.app.close()
+    code = await l.exited
+  } finally {
+    l.closed = true
+  }
+  expect(code).toBe(0)
+  expect(l.log()).toContain('[switchable_backend] stdin closed: stopping')
+  expect(l.log()).toMatch(/backend \(pid \d+\) exited with code 0/)
+}
+
+// The same control file the command npm run walkthrough:backend writes, written directly (this is
+// the same function the command calls: tests/tools/walkthrough_lib.mjs setBackend).
+async function setBackendLocally(dataDir: string, wanted: 'down' | 'up'): Promise<void> {
+  await setBackendFile(dataDir, wanted)
+  backendDown = wanted === 'down'
+}
+
+// Open the app again on the data folder of a Launched that closeKeepingData closed: the same
+// --ct-test-data-dir, never %APPDATA%, with --ct-test-no-dialog (so the desktop logs the text of
+// the restore result instead of showing it). The data is not new, so the start page is not the
+// empty one: it waits for the list of clients to be loaded. On failure the folder is left to the
+// caller (close() of the previous Launched removes it).
+export async function reopen(previous: Launched): Promise<Launched> {
+  expect(previous.closed, 'reopen() needs an app closed by closeKeepingData').toBe(true)
+  const dataDir = previous.dataDir
+  let app: ElectronApplication | null = null
+  let log = ''
+  try {
+    app = await electron.launch({ executablePath: electronBinary(), args: launchArgs(dataDir, { noDialog: true, showInactive: showInactiveForRun() }), cwd: DESKTOP_ROOT })
+    launchedApp = app
+    const proc = app.process()
+    const exited = new Promise<number | null>((resolve) => proc.once('exit', (code) => resolve(code)))
+    proc.stderr?.on('data', (chunk: Buffer) => {
+      log += chunk.toString('utf8')
+    })
+    await expect.poll(() => portFromLog(log), { timeout: 60_000 }).not.toBeNull()
+    const baseUrl = baseUrlFor(portFromLog(log) as number)
+    writeSession({ dataDir, baseUrl, pid: proc.pid ?? null })
+    const page = await app.firstWindow()
+    await installRestoreGuard(app)
+    await expect(page.getByRole('heading', { level: 2, name: 'Khách hàng' })).toBeVisible({ timeout: 60_000 })
+    await expectShowInactiveState(() => log)
+    await page.waitForLoadState('load')
+    await expectListLoaded(page)
+    backendDown = false
+    return { app, page, dataDir, baseUrl, log: () => log, exited, closed: false }
+  } catch (e) {
+    console.log(`desktop main log of the reopened app:\n${log}`)
+    launchedApp = null
+    if (app !== null) await app.close()
+    clearSession()
+    throw e
+  }
 }
 
 // Whether the backend is switched off right now, for the screenshot timing log

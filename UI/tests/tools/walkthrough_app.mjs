@@ -1,4 +1,17 @@
-// npm run walkthrough:app [-- --empty | -- --commissions | -- --progress | -- --payments | -- --income | -- --reminders]
+// npm run walkthrough:app [-- --empty | -- --commissions | -- --progress | -- --payments | -- --income | -- --reminders] [-- --keep]
+// npm run walkthrough:app -- --reopen
+//
+// --keep (chặng F, session 37): do not remove the temporary data folder when the app closes; its path is
+// written to a file of its own (KEPT_FILE of walkthrough_lib.mjs, in the system temp folder), so that
+// --reopen can start the app again on that same folder. A kept folder that an earlier --keep left behind
+// and nobody reopened is removed first (it is this tool's own temporary folder).
+// --reopen: open the app again on the data folder of the last --keep run (no sample data, nothing created).
+// It does NOT pass --ct-test-no-dialog (nor does the first run): the dialog the desktop shows after it
+// applied a prepared restore is the real one, and the person reads its text and sees whether it comes to
+// the front (DSK-25). The fixture's control file is set to `up` first: a `down` left in it would switch the
+// backend off right after it is READY. When the reopened app exits with code 0 the folder and the kept
+// file are removed; on any other exit the folder is kept, and its path is printed.
+// The data folder is always a temporary one given with --ct-test-data-dir: never the real %APPDATA%.
 //
 // Starts the real desktop app (built UI/dist, real Backend.py behind the
 // switchable fixture) on a temporary data folder, reads the backend port from
@@ -32,9 +45,11 @@ import {
   d6ExpectedReminders,
   D5_PERIODS,
   electronBinary,
+  KEPT_FILE,
   launchArgs,
   makeDataDir,
   portFromLog,
+  resetFixtureControl,
   RUNNER_VARIABLE,
   SAMPLE_DETAILED,
   seedCommissionSample,
@@ -47,6 +62,12 @@ import {
   writeSession,
 } from './walkthrough_lib.mjs'
 
+const keep = process.argv.includes('--keep')
+const reopen = process.argv.includes('--reopen')
+if (keep && reopen) {
+  console.error('--keep and --reopen do not go together: --keep ends a run, --reopen starts the next one.')
+  process.exit(1)
+}
 const empty = process.argv.includes('--empty')
 const reminders = !empty && process.argv.includes('--reminders')
 const income = !empty && !reminders && process.argv.includes('--income')
@@ -63,7 +84,36 @@ if (!fs.existsSync(path.join(UI_ROOT, 'dist', 'index.html'))) {
   process.exit(1)
 }
 
-const dataDir = makeDataDir()
+// The folder an earlier --keep run left, if any (its own temporary folder).
+function readKeptFolder() {
+  if (!fs.existsSync(KEPT_FILE)) return null
+  const { dataDir: kept } = JSON.parse(fs.readFileSync(KEPT_FILE, 'utf8'))
+  return typeof kept === 'string' ? kept : null
+}
+
+let dataDir
+if (reopen) {
+  const kept = readKeptFolder()
+  if (kept === null || !fs.existsSync(kept)) {
+    console.error('Nothing to reopen: run npm run walkthrough:app -- --keep first, close its window, then --reopen.')
+    process.exit(1)
+  }
+  dataDir = kept
+  // A `down` left in the control file would switch the backend off again as soon as it is READY.
+  resetFixtureControl(dataDir)
+} else {
+  if (keep) {
+    // A folder kept by an earlier --keep and never reopened is this tool's own: remove it first.
+    const stale = readKeptFolder()
+    if (stale !== null) {
+      fs.rmSync(stale, { recursive: true, force: true })
+      fs.rmSync(KEPT_FILE, { force: true })
+      console.log(`Removed the folder an earlier --keep run left behind: ${stale}`)
+    }
+  }
+  dataDir = makeDataDir()
+}
+// No --ct-test-no-dialog, for the first run and for --reopen: the dialogs are the real ones.
 const app = spawn(electronBinary(), launchArgs(dataDir, { noDialog: false }), {
   cwd: DESKTOP_ROOT,
   stdio: ['ignore', 'inherit', 'pipe'],
@@ -85,7 +135,9 @@ app.stderr.on('data', (chunk) => {
 async function onReady(baseUrl) {
   writeSession({ dataDir, baseUrl, pid: app.pid ?? null })
   let reminderSample = null
-  if (reminders) {
+  if (reopen) {
+    // Nothing is made: the data is what the last run left, after the restore the desktop has just applied.
+  } else if (reminders) {
     console.log('Đang nạp dữ liệu mẫu D6: chờ qua phút của nhắc việc tổng hợp (tối đa khoảng một phút)…')
     reminderSample = await seedReminderSample(baseUrl)
   } else if (income) {
@@ -104,7 +156,12 @@ async function onReady(baseUrl) {
   console.log(`Người chạy (${RUNNER_VARIABLE}): ${walkthroughRunner()}`)
   console.log(`Thư mục dữ liệu tạm: ${dataDir}`)
   console.log(`Backend (qua fixture bật/tắt được): ${baseUrl}`)
-  if (empty) {
+  if (reopen) {
+    console.log('ĐÃ MỞ LẠI trên thư mục dữ liệu của lần trước (--reopen). Không nạp dữ liệu mẫu, và KHÔNG có --ct-test-no-dialog:')
+    console.log('  nếu lần trước đã "Chuẩn bị khôi phục", Desktop đã áp dụng nó trước khi mở cửa sổ và hiện hộp thoại "Khôi phục dữ liệu" THẬT.')
+    console.log('  Ghi lại: chữ trên hộp thoại; hộp thoại có tự lên trên cùng không, có tiêu điểm không (DSK-25). Rồi bấm "Đóng".')
+    console.log('  Kiểm: khách thêm sau bản sao lưu đã không còn; trang "Khôi phục" không còn lần chờ nào.')
+  } else if (empty) {
     console.log('Cơ sở dữ liệu TRỐNG.')
   } else if (reminders && reminderSample !== null) {
     console.log('ĐÃ NẠP XONG dữ liệu mẫu D6 (nhắc việc). Mở mục "Nhắc việc". Giao diện không tự tạo nhắc việc; công cụ này đã gọi POST /reminders/checks một lần.')
@@ -147,13 +204,27 @@ async function onReady(baseUrl) {
   console.log('Tắt / bật backend (từ thư mục UI, ở một cửa sổ lệnh khác):')
   console.log('  npm run walkthrough:backend -- down')
   console.log('  npm run walkthrough:backend -- up')
-  console.log('Đóng cửa sổ ứng dụng để kết thúc.')
+  if (keep) {
+    console.log('Đóng cửa sổ ứng dụng để kết thúc. Thư mục dữ liệu được GIỮ LẠI (--keep): mở lại bằng npm run walkthrough:app -- --reopen.')
+    console.log('  Trước khi đóng: nếu đã chạy walkthrough:backend -- down thì chạy -- up trước (công cụ --reopen cũng đặt lại, nhưng đừng để backend tắt khi đóng).')
+  } else {
+    console.log('Đóng cửa sổ ứng dụng để kết thúc.')
+  }
   console.log('==============================================================================')
 }
 
 app.on('exit', (code) => {
   clearSession()
-  fs.rmSync(dataDir, { recursive: true, force: true })
-  console.log(`walkthrough:app: the desktop app exited with code ${code}; temporary data removed.`)
+  if (keep) {
+    fs.writeFileSync(KEPT_FILE, JSON.stringify({ dataDir }, null, 2))
+    console.log(`walkthrough:app: the desktop app exited with code ${code}; the temporary data folder is KEPT for --reopen: ${dataDir}`)
+  } else if (reopen && code !== 0) {
+    // A reopening that did not end well: the folder stays, so it can be looked at or tried again.
+    console.log(`walkthrough:app: the reopened app exited with code ${code}; the temporary data folder is kept: ${dataDir}`)
+  } else {
+    fs.rmSync(dataDir, { recursive: true, force: true })
+    if (reopen) fs.rmSync(KEPT_FILE, { force: true })
+    console.log(`walkthrough:app: the desktop app exited with code ${code}; temporary data removed.`)
+  }
   process.exit(code ?? 1)
 })

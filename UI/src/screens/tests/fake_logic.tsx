@@ -7,6 +7,7 @@ import type { BackupDataRouters } from '../../logic/workflows/backup_data/router
 import type { ManageClientRouters } from '../../logic/workflows/manage_client/routers'
 import type { ManageCommissionRouters } from '../../logic/workflows/manage_commission/routers'
 import type { RecordPaymentRouters } from '../../logic/workflows/record_payment/routers'
+import type { RestoreDataRouters } from '../../logic/workflows/restore_data/routers'
 import type { SendReminderRouters } from '../../logic/workflows/send_reminder/routers'
 import type { UpdateProgressRouters } from '../../logic/workflows/update_progress/routers'
 import type { ViewIncomeReportRouters } from '../../logic/workflows/view_income_report/routers'
@@ -123,6 +124,16 @@ export function fakeBackupData(over: Partial<BackupDataRouters>): BackupDataRout
   }
 }
 
+export function fakeRestoreData(over: Partial<RestoreDataRouters>): RestoreDataRouters {
+  return {
+    loadStatus: unexpected('loadStatus'),
+    chooseArchive: unexpected('chooseArchive'),
+    prepare: unexpected('prepare'),
+    cancel: unexpected('cancel'),
+    ...over,
+  }
+}
+
 // Every Routers of the context; a workflow the test does not give fails on any call.
 function logicOf(
   manageClient: ManageClientRouters,
@@ -132,6 +143,7 @@ function logicOf(
   viewIncomeReport: ViewIncomeReportRouters | undefined,
   sendReminder: SendReminderRouters | undefined,
   backupData: BackupDataRouters | undefined,
+  restoreData: RestoreDataRouters | undefined,
 ): LogicRouters {
   return {
     manageClient,
@@ -141,6 +153,7 @@ function logicOf(
     viewIncomeReport: viewIncomeReport ?? fakeViewIncomeReport({}),
     sendReminder: sendReminder ?? fakeSendReminder({}),
     backupData: backupData ?? fakeBackupData({}),
+    restoreData: restoreData ?? fakeRestoreData({}),
   }
 }
 
@@ -153,9 +166,12 @@ export function renderWithLogic(
   viewIncomeReport?: ViewIncomeReportRouters,
   sendReminder?: SendReminderRouters,
   backupData?: BackupDataRouters,
+  restoreData?: RestoreDataRouters,
 ) {
   return render(
-    <LogicContext.Provider value={logicOf(manageClient, manageCommission, updateProgress, recordPayment, viewIncomeReport, sendReminder, backupData)}>{ui}</LogicContext.Provider>,
+    <LogicContext.Provider value={logicOf(manageClient, manageCommission, updateProgress, recordPayment, viewIncomeReport, sendReminder, backupData, restoreData)}>
+      {ui}
+    </LogicContext.Provider>,
   )
 }
 
@@ -178,9 +194,10 @@ export function renderFirstCommit(
   viewIncomeReport?: ViewIncomeReportRouters,
   sendReminder?: SendReminderRouters,
   backupData?: BackupDataRouters,
+  restoreData?: RestoreDataRouters,
 ): FirstCommit {
   let seen: FirstCommit | null = null
-  const logic = logicOf(manageClient, manageCommission, updateProgress, recordPayment, viewIncomeReport, sendReminder, backupData)
+  const logic = logicOf(manageClient, manageCommission, updateProgress, recordPayment, viewIncomeReport, sendReminder, backupData, restoreData)
   const calls = () =>
     [
       ...Object.values(logic.manageClient),
@@ -188,6 +205,7 @@ export function renderFirstCommit(
       ...Object.values(logic.updateProgress),
       ...Object.values(logic.recordPayment),
       ...Object.values(logic.backupData),
+      ...Object.values(logic.restoreData),
       // The operations that reshape the draft or its errors are synchronous and not calls that load: not counted.
       ...Object.entries(logic.sendReminder)
         .filter(([name]) => !['changePeriodicUnit', 'addLeadTime', 'removeLeadTime', 'dropLeadTimeErrors'].includes(name))

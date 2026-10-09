@@ -32,6 +32,7 @@ test.describe.serial('walkthrough progress_board', () => {
           ['Thu nhập', null],
           ['Nhắc việc', null],
           ['Sao lưu', null],
+          ['Khôi phục', null],
         ])
         expect(await l.page.getByRole('main').getByRole('button').allInnerTexts()).toEqual(['Tải lại', 'Thêm đơn hàng'])
         await rec.screenshot(l.page, `${PAGE}-S1-empty`)
@@ -75,6 +76,7 @@ test.describe.serial('walkthrough progress_board', () => {
           ['Thu nhập', null],
           ['Nhắc việc', null],
           ['Sao lưu', null],
+          ['Khôi phục', null],
         ])
       })
     })

@@ -2,8 +2,8 @@
 // workflow: screens
 // clause: external
 // component: screens
-// last_updated_by: coding-agent@2026-10-07#3
-// last_updated_at: 2026-10-07T20:44:38.4471702+07:00
+// last_updated_by: coding-agent@2026-10-09#1
+// last_updated_at: 2026-10-09T15:41:37.5276593+07:00
 //
 // EXPERIENCES:
 //   - id: screens-EXP-001
@@ -749,10 +749,71 @@
 //       ĐỀ XUẤT: backup -> hoan_tat sau khi Orchestrator audit và Project Owner chạy tay kịch bản với hộp thoại thật (tiêu đề hộp thoại có đúng "Chọn
 //       thư mục" không; mở thư mục thấy tệp .ctbackup). Chặng E xong khi trang đó hoàn tất. Không đảo thứ tự việc nào của plan; việc thêm ngoài plan:
 //       hai dòng UI/.gitignore và exact: true cho 11 locator e2e (main-EXP-033).
+//   - id: screens-EXP-051
+//     content: >
+//       Chặng F (phiên 37), điều hướng và trang restore. PageParams thêm restore: null (một dòng expect-error mới trong app_root.test.tsx). NAVIGATION
+//       thêm restore, menu "Khôi phục" SAU "Sao lưu" (bảy mục; sáu mục cũ không đổi chỗ), section restore. LogicRouters thêm restoreData. Kiểm thử cũ phải
+//       đổi vì ĐẾM mục (sáu → bảy): app_root.test.tsx (các danh sách mục đang mở thêm ['Khôi phục', null], bảng có mười lăm trang) và ba spec e2e
+//       (backup S1, commission_list S1, progress_board S1 và S3), chỉ thêm mục mới; lượt e2e đầu hỏng đúng ba ca đó (tính là hỏng, đếm lại từ đầu). Lần này
+//       KHÔNG gặp bẫy "chuỗi con" của main-EXP-033: nhãn "Khôi phục" không là chuỗi con của nút nào đang có; ngược lại các nút của trang (Chuẩn bị khôi phục,
+//       Hủy lần khôi phục đang chờ) chứa "khôi phục", nên spec của trang luôn định vị mục điều hướng trong vùng "Điều hướng chính" và nút bằng exact: true.
+//   - id: screens-EXP-052
+//     content: >
+//       Trang restore (Restore.tsx, use_restore.ts): Section page "Khôi phục dữ liệu" > hàng nút ("Chọn tệp sao lưu" primary; "Hủy lần khôi phục đang chờ"
+//       secondary chỉ khi pending.state là pending) > dòng chữ phụ cố định > chỉ báo (đọc trạng thái / chuẩn bị / hủy; thông báo "Đang hủy…" là phần thêm của tôi, đặc tả
+//       không nêu chữ) > ConfirmPanel "Xác nhận chuẩn bị khôi phục" (tiêu đề của tôi; "Chuẩn bị khôi phục" / "Quay lại"; busy label bằng nhãn nút vì chỉ báo đã nói
+//       "Đang chuẩn bị khôi phục…") > kết quả gần nhất (thông báo hoặc InlineAlert, tiêu đề theo thao tác sinh ra nó) > Waiting (khung Section group "Đang chờ khôi phục" với
+//       DescriptionList và câu đóng, hoặc dòng "Không có lần khôi phục nào đang chờ.", hoặc không gì khi trạng thái unknown). Hook giữ: pending, result (kèm
+//       thao tác), question, bốn cờ (opening khởi tạo true, UI-4), ref running (một thao tác một lúc, chặn cả lần gọi thứ hai của useEffect dưới StrictMode) và mounted. Nút
+//       hàng nút vô hiệu khi bất kỳ thao tác nào chạy HOẶC khung xác nhận đang mở (đúng đặc tả). Chọn tệp rồi hủy: không đổi gì kể cả kết quả cũ. Hộp thoại hỏng: chỉ đặt kết
+//       quả (khung chờ giữ nguyên). Không dùng localStorage, window.confirm, alert.
+//   - id: screens-EXP-053
+//     content: >
+//       Kịch bản và e2e chặng F: tests/e2e/restore_walkthrough.spec.ts S1..S8 nối tiếp trong một lần mở ứng dụng, S8 đóng rồi mở lại trên cùng thư mục dữ liệu qua
+//       harness (closeKeepingData, reopen: xem main-EXP-035). Luật phủ (ui_decomposition "Luật phủ ... chặng F"): ok cho mọi thao tác (S1 mở; S2 hủy hộp thoại, chọn, câu hỏi,
+//       "Quay lại"; S3 chuẩn bị; S4 câu "thay bằng lần này", hủy lần chờ; S8 khứ hồi); rejected_system 409 (S5, tệp văn bản .ctbackup) và 404 (S6, đường dẫn không tồn tại);
+//       unreachable (S7: backend tắt cho 503, bật lại thì chuẩn bị được); không rejected_input (không ô nhập, ghi trong walkthrough.yaml). Khẳng định chính của S8 là DỮ LIỆU và TỆP
+//       (GET /clients = A, B, danh sách khách trên giao diện, không còn restore-pending.json, restore-previous một tệp, hai bản sao lưu an toàn còn), dòng log "restore dialog text" chỉ là
+//       khẳng định phụ vì đo 5/5. Tín hiệu đã tải luôn là nội dung; mọi khẳng định chữ trên status đều lọc theo chữ (lint:e2e đạt). Bước S2 đo bố cục của khung xác nhận bằng
+//       getComputedStyle (pre-line, anywhere) qua page.evaluate dạng chuỗi (lint R12). Chạy tay: npm run walkthrough:app -- --keep, rồi -- --reopen (main-EXP-035).
+//   - id: screens-EXP-054
+//     content: >
+//       Đối chiếu bảy nguyên tắc §7.2 cho restore (I6 góc người dùng). (1) Một hành động chính: "Chọn tệp sao lưu" (primary, đứng đầu hàng nút); "Hủy lần khôi phục đang chờ"
+//       là phụ. Đạt. (2) Không dày: khung chờ bốn dòng, không hiện phiên bản của bản sao lưu. Đạt. (3) Nhãn tiếng Việt theo lời họa sĩ, đúng câu của đặc tả. Đạt. (4) Phản hồi sau
+//       mỗi thao tác: "Đã chuẩn bị khôi phục…", "Đã hủy lần khôi phục đang chờ…", mỗi lỗi một câu riêng với tiêu đề theo thao tác; chỉ báo trong lúc chờ. Đạt. (5) Xác nhận: chọn
+//       tệp chỉ đặt câu hỏi trong trang (nói hậu quả: thay toàn bộ dữ liệu, có bản sao lưu an toàn, dữ liệu nhập sau đó mất; nói khi sẽ thay lần đang chờ), focus ở "Chuẩn bị khôi
+//       phục", "Quay lại" không gửi gì (e2e S2, S4 đo bằng tệp trên đĩa); hủy lần chờ KHÔNG hỏi vì không đổi dữ liệu và chuẩn bị lại được bất cứ lúc nào. Đạt. (6) Trạng thái rỗng:
+//       "Không có lần khôi phục nào đang chờ." với nút chọn tệp ngay trên. Đạt. (7) Điều hướng ổn định: mục thứ bảy đứng cuối, sáu mục cũ không đổi chỗ; hàng nút ngay dưới tiêu đề (e2e S1 đo vị trí),
+//       hành động chính đứng đầu. Đạt.
+//   - id: screens-EXP-055
+//     content: >
+//       Tự kiểm I6, trang restore, năm góc. HỢP ĐỒNG: Data Schema 10.0.1 và API Contract 5.0.0 approved, restore_data đã_hoàn_thiện; Configs trỏ đúng hai phiên bản; bảng nhãn ba lối vào ipc và
+//       hộp thoại khớp từng dòng (kiểm thử so nguyên bảng); mỗi nhãn lỗi có câu (duyệt từ bảng nhãn); tìm trong src: không restore-preparations, pre_restore (làm mục đích), dialog:save-file,
+//       prepare_restore, apply_pending_restore, watermark-*, confirm(, alert( ngoài chú thích và dữ liệu thử. RANH GIỚI: npm run check đạt (R1–R14); Services chỉ quyết định trình bày; Routers
+//       không kiểm gì (không ô nhập); hook viết lại được bằng gọi, giữ, chuyển (waiting là giá trị đang giữ, truyền đi); ConfirmPanel chỉ thêm hai thuộc tính CSS. NGƯỜI DÙNG: tám bước chạy trên hệ thống
+//       thật có ảnh (UI/evidence/walkthroughs/restore), §7.2 ở screens-EXP-054; lần chạy tay của Project Owner với hộp thoại thật (2026-10-09, sau khi viết các khối đầu tiên): kịch bản A (A1-A6, kể cả đóng rồi mở lại bằng --reopen) và đo B (bản đóng gói mở bằng
+//       lối tắt, --ct-test-data-dir=C:\ct-owner-f37) đều đúng kỳ vọng, "không có vấn đề gì". Tiêu đề hộp thoại chọn tệp: "Chọn tệp" kèm biểu tượng ứng dụng. Hộp thoại kết quả thật có đủ hai đoạn đường dẫn
+//       (Windows cắt giữa đường dẫn dài của bản sao lưu an toàn bằng "…"; đường dẫn đầy đủ nằm ở khung của trang trước lúc đóng). DSK-25 đo khi mở bằng lối tắt: hộp thoại hiện lên TRƯỚC cửa sổ ứng dụng,
+//       có tiêu điểm (Enter đóng được), rồi ứng dụng mở, dữ liệu đúng bản sao lưu (khách thêm sau đã mất). Lần mở lại bằng --reopen (từ dòng lệnh) cũng hiện hộp thoại đúng chữ. CHECKPOINT: restore_data (mới), kit,
+//       screens, main. BẰNG CHỨNG: đủ ba loại. ĐỀ XUẤT: restore -> hoan_tat sau khi Orchestrator audit (Project Owner đã chạy tay xong).
+//       Không đảo thứ tự việc nào của plan; việc thêm ngoài plan: không có (cờ --keep cho công cụ chạy tay là cách thực hiện --reopen của plan, xem main-EXP-035).
 //
 // UNSOLVED_PROBLEMS: []
 //
 // EVIDENCE:
+//   - claim: >
+//       Trang restore: kiểm thử dựng trang phủ mọi kết quả của bốn lời gọi; chạy thật trên ứng dụng thật qua Desktop với hộp thoại thay thế, kể cả đóng rồi mở lại trên cùng thư mục
+//       dữ liệu; không có lời gọi prepare_restore, pre_restore hay dialog:save-file trong UI/src.
+//     how: >
+//       Trong UI/: npm run check (src/screens/pages/restore/tests/Restore.test.tsx 48 ca; app_root.test.tsx 10 ca); npx playwright test -c tests/e2e/playwright.config.ts restore_walkthrough
+//       (10 lần, có CT_WALKTHROUGH_RUNNER=coding-agent@2026-10-09#1); npm run e2e (5 lượt có runner, 1 lượt không biến, băm SHA-256 toàn thư mục UI/evidence trước và sau); Desktop: npm run dist rồi
+//       npm run test:packaged.
+//     result: >
+//       check "Tests 1936 passed (1936)" (mốc 1679). Spec riêng 10/10 "8 passed". e2e: lượt đầu hỏng 3 ca đếm sáu mục điều hướng (screens-EXP-051), sau khi sửa 5/5 lượt liên tiếp "83 passed"
+//       (5,2-5,8 phút; không lần chụp ảnh nào quá 193 ms), lượt không biến "83 passed (5.7m)", UI/evidence 140 tệp, cùng băm (4049ffa391026eae) trước và sau. dist: lần đầu hỏng EXDEV, với
+//       ELECTRON_BUILDER_CACHE tạm thì "Commission Tracker Setup 0.1.0.exe" (116846866 byte) được dựng; test:packaged "11 passed (1.3m)", sau bộ không còn python.exe của gói. Phép cắn dọn dẹp: ném lỗi
+//       giữa lúc đóng và mở lại (S8), và sau khi mở lại: cả hai lần không để lại thư mục ct-ui-* nào và tệp phiên được xóa.
+//     recorded_at: 2026-10-09T15:02:20.5011774+07:00
 //   - claim: >
 //       Trang backup: kiểm thử dựng trang phủ mọi kết quả; chạy thật trên ứng dụng thật qua Desktop với hộp thoại thay thế; tệp tạo từ giao diện qua được
 //       prepare_restore; không có lời gọi prepare_restore trong UI/src.
@@ -1234,6 +1295,7 @@ import { PaymentList } from './pages/payment_list/PaymentList'
 import { ProgressBoard } from './pages/progress_board/ProgressBoard'
 import { ReminderList } from './pages/reminder_list/ReminderList'
 import { ReminderSettings } from './pages/reminder_settings/ReminderSettings'
+import { Restore } from './pages/restore/Restore'
 import { StageChange } from './pages/stage_change/StageChange'
 
 // Layouts of .design/ui_decomposition.md §5 that pages live in. The startup
@@ -1244,7 +1306,7 @@ export type LayoutKey = 'main_layout'
 // (ui_decomposition.md §5, "Điều hướng giữa các trang khách hàng";
 // "Chặng D2", "Điều hướng của D2"; "Chặng D3", "Điều hướng của D3";
 // "Chặng D4", "Điều hướng của D4"; "Chặng D5", "Điều hướng của D5"; "Chặng D6", "Điều hướng của D6";
-// "Chặng E", "Điều hướng của chặng E").
+// "Chặng E", "Điều hướng của chặng E"; "Chặng F", "Điều hướng của chặng F").
 // stage_change receives the commission's title to show, handed by
 // commission_detail (it does not call get_commission again); so do
 // payment_list and payment_form (D4).
@@ -1263,6 +1325,7 @@ export type PageParams = {
   reminder_list: null
   reminder_settings: null
   backup: null
+  restore: null
 }
 
 // Keys of the pages (ui_decomposition.md §5), one per page that is built.
@@ -1300,7 +1363,7 @@ export const START_ROUTE: Route = { page: START_PAGE, params: null }
 
 // One entry per page. The type ties each page to the component that takes
 // exactly its parameters. The navigation region lists the entries that have a
-// menu, in this order: "Khách hàng", "Đơn hàng", "Tiến độ", "Thu nhập", "Nhắc việc", then "Sao lưu" (§5); a later
+// menu, in this order: "Khách hàng", "Đơn hàng", "Tiến độ", "Thu nhập", "Nhắc việc", then "Sao lưu", then "Khôi phục" (§5); a later
 // stage adds its entries after these, never moving them. stage_change is a
 // step of the commission detail: its item is "Đơn hàng" (D3).
 export const NAVIGATION: { readonly [K in PageKey]: NavigationEntry<K> } = {
@@ -1349,5 +1412,11 @@ export const NAVIGATION: { readonly [K in PageKey]: NavigationEntry<K> } = {
     component: Backup,
     section: 'backup',
     menu: { label: 'Sao lưu', route: { page: 'backup', params: null } },
+  },
+  restore: {
+    layout: 'main_layout',
+    component: Restore,
+    section: 'restore',
+    menu: { label: 'Khôi phục', route: { page: 'restore', params: null } },
   },
 }

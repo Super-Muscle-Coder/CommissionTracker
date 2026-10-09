@@ -34,6 +34,7 @@ test.describe.serial('walkthrough commission_list', () => {
           ['Thu nhập', null],
           ['Nhắc việc', null],
           ['Sao lưu', null],
+          ['Khôi phục', null],
         ])
         const adds = l.page.getByRole('button', { name: 'Thêm đơn hàng' })
         await expect(adds).toHaveCount(2)

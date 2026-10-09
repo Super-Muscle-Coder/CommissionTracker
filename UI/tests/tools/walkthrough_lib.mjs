@@ -102,8 +102,9 @@ export function baseUrlFor(port) {
   return `http://${desktopConfig.boundary.loopback_host}:${port}`
 }
 
-// Folder of CT_DB_FILE_PATH for this data folder (where the fixture reads its control file).
-function dbFolder(dataDir) {
+// Folder of CT_DB_FILE_PATH for this data folder (where the fixture reads its control file,
+// and where the desktop keeps restore-pending.json, safety-backups/ and restore-previous/).
+export function dbFolder(dataDir) {
   return path.dirname(path.join(dataDir, ...desktopConfig.boundary.db_file_relative_to_app_data.split('/')))
 }
 
@@ -529,4 +530,48 @@ export function makeBackupDir() {
 // temporary data folder. Answers the 200 body; any other label throws.
 export async function prepareRestore(baseUrl, archivePath) {
   return call(baseUrl, 'POST', '/backups/restore-preparations', { archive_path: archivePath }, 200)
+}
+
+// --- Chặng F: restore --------------------------------------------------------------
+
+// Test tooling ONLY (UI/tests/), never UI/src: it makes the data, and the backup file, that
+// the walkthrough of the page restore restores from, through the backend's declared
+// endpoints (api_contract.yaml 5.0.0: manage_client.create_client, backup_data.create_backup).
+// The interface never calls these for the restore: its four calls are all ipc.
+export async function createClient(baseUrl, displayName) {
+  return call(baseUrl, 'POST', '/clients', { client_input: { display_name: displayName, contacts: [], note: null } }, 201)
+}
+
+// create_backup: POST /backups, body { backup_request: { destination_dir, purpose } } with purpose 'manual'
+// (the one the interface itself uses); answers the path of the .ctbackup file made.
+export async function createBackupFile(baseUrl, destinationDir) {
+  const archive = await call(baseUrl, 'POST', '/backups', { backup_request: { destination_dir: destinationDir, purpose: 'manual' } }, 201)
+  return archive.archive_path
+}
+
+// The display names of all the clients now in the data, sorted: what "the data" is, for the
+// walkthrough to compare before and after a restore.
+export async function clientNames(baseUrl) {
+  const response = await fetch(`${baseUrl}/clients`)
+  const text = await response.text()
+  if (response.status !== 200) throw new Error(`GET /clients: expected 200, got ${response.status} ${text}`)
+  return JSON.parse(text)
+    .map((c) => c.display_name)
+    .sort()
+}
+
+// File that remembers the data folder of an app closed with --keep, for the manual
+// run --reopen (tests/tools/walkthrough_app.mjs). Not the session file: that one is for a
+// RUNNING app and goes when it exits, whereas this folder must outlive it.
+export const KEPT_FILE = path.join(os.tmpdir(), 'ct-ui-walkthrough-kept.json')
+
+// Before an app is opened again on a kept data folder (npm run walkthrough:app -- --reopen): the
+// control file of the fixture must say `up`, because a `down` left in it makes the fixture switch
+// the backend off right after it is READY (measured in session 37, item 2). The state file is
+// removed too: it is the fixture's own, written at READY, and a stale `down` in it would make
+// setBackend() wait for a state that never comes.
+export function resetFixtureControl(dataDir) {
+  const folder = dbFolder(dataDir)
+  fs.writeFileSync(path.join(folder, CONTROL_FILE), 'up')
+  fs.rmSync(path.join(folder, STATE_FILE), { force: true })
 }

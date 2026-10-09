@@ -1,0 +1,87 @@
+{
+  "page": "restore",
+  "walkthrough": "src/screens/pages/restore/walkthrough.yaml",
+  "steps": [
+    {
+      "step": "S1",
+      "passed": true,
+      "runner": "coding-agent@2026-10-09#1 (Playwright, tests/e2e/restore_walkthrough.spec.ts)",
+      "finished_at": "2026-10-09T07:50:17.940Z",
+      "screenshot": "evidence/walkthroughs/restore/restore-S1.png",
+      "covers": [
+        "ok"
+      ]
+    },
+    {
+      "step": "S2",
+      "passed": true,
+      "runner": "coding-agent@2026-10-09#1 (Playwright, tests/e2e/restore_walkthrough.spec.ts)",
+      "finished_at": "2026-10-09T07:50:18.392Z",
+      "screenshot": "evidence/walkthroughs/restore/restore-S2.png",
+      "covers": [
+        "ok"
+      ]
+    },
+    {
+      "step": "S3",
+      "passed": true,
+      "runner": "coding-agent@2026-10-09#1 (Playwright, tests/e2e/restore_walkthrough.spec.ts)",
+      "finished_at": "2026-10-09T07:50:18.865Z",
+      "screenshot": "evidence/walkthroughs/restore/restore-S3.png",
+      "covers": [
+        "ok"
+      ]
+    },
+    {
+      "step": "S4",
+      "passed": true,
+      "runner": "coding-agent@2026-10-09#1 (Playwright, tests/e2e/restore_walkthrough.spec.ts)",
+      "finished_at": "2026-10-09T07:50:19.150Z",
+      "screenshot": "evidence/walkthroughs/restore/restore-S4.png",
+      "covers": [
+        "ok"
+      ]
+    },
+    {
+      "step": "S5",
+      "passed": true,
+      "runner": "coding-agent@2026-10-09#1 (Playwright, tests/e2e/restore_walkthrough.spec.ts)",
+      "finished_at": "2026-10-09T07:50:19.561Z",
+      "screenshot": "evidence/walkthroughs/restore/restore-S5.png",
+      "covers": [
+        "rejected_system"
+      ]
+    },
+    {
+      "step": "S6",
+      "passed": true,
+      "runner": "coding-agent@2026-10-09#1 (Playwright, tests/e2e/restore_walkthrough.spec.ts)",
+      "finished_at": "2026-10-09T07:50:19.866Z",
+      "screenshot": "evidence/walkthroughs/restore/restore-S6.png",
+      "covers": [
+        "rejected_system"
+      ]
+    },
+    {
+      "step": "S7",
+      "passed": true,
+      "runner": "coding-agent@2026-10-09#1 (Playwright, tests/e2e/restore_walkthrough.spec.ts)",
+      "finished_at": "2026-10-09T07:50:24.662Z",
+      "screenshot": "evidence/walkthroughs/restore/restore-S7.png",
+      "covers": [
+        "unreachable",
+        "ok"
+      ]
+    },
+    {
+      "step": "S8",
+      "passed": true,
+      "runner": "coding-agent@2026-10-09#1 (Playwright, tests/e2e/restore_walkthrough.spec.ts)",
+      "finished_at": "2026-10-09T07:50:29.457Z",
+      "screenshot": "evidence/walkthroughs/restore/restore-S8.png",
+      "covers": [
+        "ok"
+      ]
+    }
+  ]
+}

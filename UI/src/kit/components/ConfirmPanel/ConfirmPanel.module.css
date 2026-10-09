@@ -17,6 +17,10 @@
 .text {
   margin: 0;
   color: var(--color-text);
+  /* A line break in the text is a line break on the screen, and a long path wraps
+     at any character instead of overflowing the panel (restore, session 37). */
+  white-space: pre-line;
+  overflow-wrap: anywhere;
 }
 
 .actions {

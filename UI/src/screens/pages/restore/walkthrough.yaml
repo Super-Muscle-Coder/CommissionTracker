@@ -1,0 +1,122 @@
+page: restore
+precondition: >
+  Desktop đã build (npm run build trong Desktop/). Trong UI/: npm run walkthrough:app -- --keep mở ứng dụng thật
+  với thư mục dữ liệu tạm (không đụng %APPDATA%) và dữ liệu mẫu D1 (bảy khách), Backend.py thật sau fixture
+  bật/tắt được; cờ --keep giữ thư mục dữ liệu lại khi ứng dụng đóng, để mở lại được. Bật/tắt backend: npm run
+  walkthrough:backend -- down|up (từ UI/, cửa sổ lệnh khác). Các bước S1 → S7 nối tiếp nhau trong cùng một lần mở
+  ứng dụng; S8 đóng ứng dụng rồi mở lại trên CÙNG thư mục dữ liệu (npm run walkthrough:app -- --reopen, lần mở
+  lại này KHÔNG truyền --ct-test-no-dialog, nên hộp thoại kết quả khôi phục của Desktop là hộp thoại thật). Trước
+  khi chạy, đặt CT_WALKTHROUGH_RUNNER là tên người chạy.
+  Dữ liệu của kịch bản: "dữ liệu lúc sao lưu" là các khách có sẵn lúc bấm "Tạo bản sao lưu" ở trang "Sao lưu";
+  rồi thêm MỘT khách mới (gọi là khách C). Khôi phục đúng thì sau khi mở lại khách C không còn.
+  HAI CÁCH CHẠY. (1) Tự động (npm run e2e, spec tests/e2e/restore_walkthrough.spec.ts): hộp thoại chọn tệp được
+  công cụ kiểm thử THAY (tests/tools/folder_dialog_stub.mjs gán đè dialog.showOpenDialog trong tiến trình chính,
+  dùng chung với trang "Sao lưu"); dữ liệu (khách A, B, tệp sao lưu, rồi khách C) do công cụ kiểm thử tạo qua
+  http, không phải giao diện; mọi tệp nằm trong thư mục tạm của lần chạy, xóa sau lần chạy (kể cả khi ca hỏng).
+  Ứng dụng luôn mở với --ct-test-data-dir tạm; lần mở lại ở S8 có --ct-test-no-dialog, nên Desktop ghi dòng "restore
+  dialog text" thay vì hiện hộp thoại (khẳng định phụ; khẳng định chính là dữ liệu và tệp). (2) Tay, do Project
+  Owner: hộp thoại THẬT của Windows cho cả hộp thoại chọn tệp lẫn hộp thoại kết quả sau khi mở lại. Ở lần chạy
+  tay, S6 (đường dẫn không tồn tại) không gây ra được bằng hộp thoại thật nên chỉ có ở lần chạy tự động; S5 làm
+  bằng một tệp văn bản đổi đuôi thành .ctbackup. 400, 424, 500, Promise bị từ chối và vi phạm hợp đồng được chứng
+  minh bằng kiểm thử dựng trang. Trang không có ô nhập, nên kịch bản không có bước rejected_input.
+  LƯU Ý: ảnh bằng chứng có thời điểm và đường dẫn thư mục tạm, nên đổi theo mỗi lần chạy; chấp nhận, vì ảnh được
+  chụp lại mỗi lần chạy có runner. Dưới đây <sao lưu> là tệp .ctbackup tạo ở bước chuẩn bị.
+steps:
+  - id: S1
+    setup: >
+      Ở lần chạy tay: bấm "Sao lưu", tạo một bản sao lưu vào một thư mục mới ngoài thư mục dự án (tệp
+      <sao lưu>); rồi bấm "Khách hàng" và thêm khách C. Ở lần chạy tự động: công cụ làm việc đó qua http.
+    action: >
+      Bấm mục "Khôi phục" ở vùng điều hướng.
+    expect: >
+      Trang "Khôi phục dữ liệu"; ngay dưới tiêu đề là hàng nút chỉ có "Chọn tệp sao lưu"; dưới đó dòng chữ phụ
+      "Khôi phục thay toàn bộ dữ liệu hiện tại bằng dữ liệu trong một tệp sao lưu. Việc thay diễn ra khi bạn đóng
+      rồi mở lại ứng dụng." Vùng điều hướng có bảy mục, "Khôi phục" là mục đang mở, sáu mục cũ giữ nguyên chỗ.
+      Dòng "Không có lần khôi phục nào đang chờ."; không khung, không thông báo, không hộp thoại chọn tệp.
+    covers: [ok]
+  - id: S2
+    setup: null
+    action: >
+      Bấm "Chọn tệp sao lưu" rồi hủy hộp thoại. Bấm lại, chọn <sao lưu>. Ở lần chạy tay: GHI LẠI tiêu đề của hộp
+      thoại chọn tệp (kỳ vọng "Chọn tệp"). Khi khung xác nhận hiện ra, bấm "Quay lại".
+    expect: >
+      Sau khi hủy hộp thoại: trang không đổi gì. Sau khi chọn: một khung xác nhận ngay trong trang (không phải hộp
+      thoại của hệ thống) với dòng "Khôi phục từ tệp: <đường dẫn <sao lưu>>" (xuống dòng được nếu dài) và câu nói
+      rõ toàn bộ dữ liệu hiện tại sẽ được thay khi đóng rồi mở lại, có một bản sao lưu an toàn trước đó, dữ liệu
+      nhập sau bước này sẽ không có; hai nút "Chuẩn bị khôi phục" (đang có tiêu điểm) và "Quay lại"; nút "Chọn
+      tệp sao lưu" bị vô hiệu. Chưa gửi gì: không có bản ghi chờ, không có bản sao lưu an toàn nào. "Quay lại"
+      đóng khung; trang như lúc đầu, nút bấm lại được.
+    covers: [ok]
+  - id: S3
+    setup: null
+    action: >
+      Bấm "Chọn tệp sao lưu", chọn <sao lưu>, bấm "Chuẩn bị khôi phục".
+    expect: >
+      Trong lúc chờ: "Đang chuẩn bị khôi phục…" và mọi nút bị vô hiệu. Xong: thông báo "Đã chuẩn bị khôi phục. Hãy
+      đóng rồi mở lại ứng dụng để hoàn tất."; khung "Đang chờ khôi phục" gồm "Tệp sao lưu" (đúng <sao lưu>), "Bản
+      sao lưu tạo lúc", "Chuẩn bị lúc" (HH:mm dd/mm/yyyy), "Bản sao lưu an toàn của dữ liệu trước khi khôi phục"
+      (tệp có thật, trong thư mục safety-backups cạnh cơ sở dữ liệu) và câu "Hãy đóng rồi mở lại ứng dụng để hoàn
+      tất. Dữ liệu bạn nhập từ lúc chuẩn bị tới lúc mở lại sẽ không có trong dữ liệu sau khôi phục."; dòng "Không
+      có lần khôi phục nào đang chờ." biến mất; hàng nút có "Chọn tệp sao lưu" rồi "Hủy lần khôi phục đang chờ".
+      Không hiện phiên bản ứng dụng của bản sao lưu.
+    covers: [ok]
+  - id: S4
+    setup: null
+    action: >
+      Bấm "Chọn tệp sao lưu", chọn <sao lưu>; khi khung xác nhận hiện ra, đọc nó rồi bấm "Quay lại". Rồi bấm "Hủy
+      lần khôi phục đang chờ".
+    expect: >
+      Khung xác nhận có thêm câu "Lần khôi phục đang chờ sẽ được thay bằng lần này."; nút "Hủy lần khôi phục đang
+      chờ" bị vô hiệu lúc khung mở; "Quay lại" không gửi gì (bản ghi chờ và các bản sao lưu an toàn như cũ). Bấm
+      "Hủy lần khôi phục đang chờ": KHÔNG hỏi gì, thông báo "Đã hủy lần khôi phục đang chờ. Dữ liệu hiện tại giữ
+      nguyên."; khung "Đang chờ khôi phục" và nút hủy biến mất; dòng "Không có lần khôi phục nào đang chờ." hiện
+      lại; bản ghi chờ không còn; bản sao lưu an toàn vẫn còn.
+    covers: [ok]
+  - id: S5
+    setup: >
+      Một tệp văn bản đổi đuôi thành .ctbackup (ở lần chạy tự động công cụ tạo nó trong thư mục tạm).
+    action: >
+      Bấm "Chọn tệp sao lưu", chọn tệp văn bản đó, bấm "Chuẩn bị khôi phục".
+    expect: >
+      Khung báo lỗi "Chưa chuẩn bị được khôi phục" với câu "Tệp này không dùng được để khôi phục: có thể không phải
+      bản sao lưu của Commission Tracker, đã bị hỏng, hoặc được tạo bởi phiên bản mới hơn của ứng dụng."; khung
+      xác nhận đóng; không có khung "Đang chờ khôi phục", dòng "Không có lần khôi phục nào đang chờ." hiện; không có
+      bản sao lưu an toàn mới (tệp bị từ chối trước bước đó).
+    covers: [rejected_system]
+  - id: S6
+    setup: >
+      CHỈ Ở LẦN CHẠY TỰ ĐỘNG: hộp thoại thay thế trả về một đường dẫn tệp không tồn tại.
+    action: >
+      Bấm "Chọn tệp sao lưu" ("chọn" tệp không tồn tại), bấm "Chuẩn bị khôi phục".
+    expect: >
+      Khung báo lỗi với câu "Không tìm thấy tệp này. Có thể tệp đã bị chuyển hoặc xóa. Hãy chọn lại."; câu của bước
+      S5 biến mất (chỉ một khung báo lỗi); không có gì đang chờ.
+    covers: [rejected_system]
+  - id: S7
+    setup: >
+      Chạy npm run walkthrough:backend -- down (ứng dụng vẫn mở).
+    action: >
+      Bấm "Chọn tệp sao lưu", chọn <sao lưu>, bấm "Chuẩn bị khôi phục". Khi khung báo lỗi hiện ra, chạy npm run
+      walkthrough:backend -- up, rồi làm lại: chọn <sao lưu>, "Chuẩn bị khôi phục".
+    expect: >
+      Lần đầu: khung "Chưa chuẩn bị được khôi phục" với câu "Ứng dụng chưa đọc được tệp sao lưu vì phần xử lý dữ
+      liệu không phản hồi. Hãy đóng rồi mở lại ứng dụng, rồi thử lại."; không có gì đang chờ (trang đọc lại trạng
+      thái, việc này không cần backend); không bản sao lưu an toàn mới. Sau khi backend chạy lại: thành công, thông
+      báo "Đã chuẩn bị khôi phục…" và khung "Đang chờ khôi phục".
+    covers: [unreachable, ok]
+  - id: S8
+    setup: >
+      Lần chạy tay: chạy npm run walkthrough:backend -- up nếu backend đang tắt. Đóng cửa sổ ứng dụng. Rồi chạy
+      npm run walkthrough:app -- --reopen (không dữ liệu mẫu mới, không --ct-test-no-dialog). Ở lần chạy tự động:
+      harness đóng ứng dụng sạch và giữ thư mục dữ liệu, rồi mở lại trên chính thư mục đó.
+    action: >
+      Chờ ứng dụng mở lại. Đọc hộp thoại "Khôi phục dữ liệu" (lần chạy tay: GHI LẠI chữ trên hộp thoại, và hộp
+      thoại có tự lên trên cùng không, có tiêu điểm không), bấm "Đóng". Mở "Khách hàng", rồi "Khôi phục".
+    expect: >
+      Hộp thoại kết quả (lần chạy tay): "Đã khôi phục dữ liệu từ bản sao lưu:" và đường dẫn <sao lưu>, rồi "Bản sao
+      lưu an toàn của dữ liệu trước đó:" và đường dẫn bản sao lưu an toàn. Danh sách khách là dữ liệu lúc sao lưu:
+      khách C KHÔNG còn. Tệp bản ghi chờ không còn; thư mục restore-previous cạnh cơ sở dữ liệu có đúng một tệp
+      data-<giờ>.db (dữ liệu cũ, giữ lại). Trang "Khôi phục": dòng "Không có lần khôi phục nào đang chờ.", không
+      khung. Ở lần chạy tự động: dữ liệu và tệp như trên; dòng log "restore dialog text" có kết quả đã khôi phục và
+      đường dẫn tệp (khẳng định phụ).
+    covers: [ok]

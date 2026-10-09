@@ -74,7 +74,7 @@ test.describe.serial('walkthrough backup', () => {
       expect(await folderDialogCalls(l.app)).toBe(0)
       expect(await l.page.getByRole('main').getByRole('button').allInnerTexts()).toEqual(['Tạo bản sao lưu'])
       await expect(l.page.getByText('Bản sao lưu là một tệp chứa toàn bộ dữ liệu của ứng dụng. Nên lưu ở ổ đĩa khác hoặc ổ USB, để vẫn còn dữ liệu nếu máy hỏng.')).toBeVisible()
-      // The navigation region has six items, "Sao lưu" the current one.
+      // The navigation region has seven items, "Sao lưu" the current one.
       const items = await l.page.getByRole('navigation', { name: 'Điều hướng chính' }).getByRole('button').all()
       expect(await Promise.all(items.map(async (i) => [await i.innerText(), await i.getAttribute('aria-current')]))).toEqual([
         ['Khách hàng', null],
@@ -83,6 +83,7 @@ test.describe.serial('walkthrough backup', () => {
         ['Thu nhập', null],
         ['Nhắc việc', null],
         ['Sao lưu', 'page'],
+        ['Khôi phục', null],
       ])
       await rec.screenshot(l.page, `${PAGE}-S1-open`)
 

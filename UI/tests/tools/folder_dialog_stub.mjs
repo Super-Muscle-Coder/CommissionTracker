@@ -1,19 +1,25 @@
-// Chặng E (session 34): the test tooling replaces the folder dialog of the desktop
-// app, so that an automated run (e2e, and the run that writes evidence) never opens
-// a real dialog and never needs a person. Test tooling only: never part of the
-// layer, never loaded by the renderer; no change to UI/src or Desktop/, no flag.
+// Chặng E (session 34), widened to the file dialog in chặng F (session 37): the test
+// tooling replaces the open dialog of the desktop app, so that an automated run (e2e,
+// and the run that writes evidence) never opens a real dialog and never needs a person.
+// Test tooling only: never part of the layer, never loaded by the renderer; no change
+// to UI/src or Desktop/, no flag.
 //
 // How (measured in session 34, item 2 of the plan; the Desktop did the same in
 // native_dialogs-EXP-003): dialog.showOpenDialog is a writable property of the
-// `dialog` object of the Electron MAIN process, and the compiled handler of
-// dialog:pick-folder reads it at call time. electronApp.evaluate assigns a function
-// to it, which answers by the reply set from the test (mode) and counts its calls.
-// The replacement is made once per app. Only the dialog:pick-folder handler uses
-// showOpenDialog, so nothing else is affected.
+// `dialog` object of the Electron MAIN process, and the compiled handlers read it at
+// call time. electronApp.evaluate assigns a function to it, which answers by the reply
+// set from the test (mode) and counts its calls. The replacement is made once per app.
+// Both dialog:pick-folder (chặng E) and dialog:open-file (chặng F, measured in session
+// 37, item 2: choose, cancel and throw answered as for the folder dialog, no window
+// opened, options { properties: ['openFile'], filters, title: 'Chọn tệp' }) use
+// showOpenDialog, so ONE replacement serves both, and they share one call counter and
+// one reply: a spec that uses both sets the reply before each press. Nothing else is
+// affected. The behaviour for the backup spec is unchanged.
 //
-// Replies: choose a folder (the folder must be a temporary folder of the run, never
-// one in UI/, in %APPDATA% or in a folder of the person), cancel, or throw (the
-// rejection a failing dialog gives: Electron wraps the text, so no page may depend on it).
+// Replies: choose a path (a folder for pick-folder, a file for open-file; either must be
+// in a temporary folder of the run, never in UI/, in %APPDATA% or in a folder of the
+// person), cancel, or throw (the rejection a failing dialog gives: Electron wraps the
+// text, so no page may depend on it).
 
 export async function installFolderDialogStub(app) {
   return app.evaluate(({ dialog }) => {

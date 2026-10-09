@@ -2,8 +2,8 @@
 // workflow: kit
 // clause: external
 // component: kit
-// last_updated_by: coding-agent@2026-10-03#1
-// last_updated_at: 2026-10-03T10:42:22.0487385+07:00
+// last_updated_by: coding-agent@2026-10-09#1
+// last_updated_at: 2026-10-09T15:02:03.5476248+07:00
 //
 // EXPERIENCES:
 //   - id: kit-EXP-001
@@ -252,6 +252,14 @@
 //       theo vị trí ("Mốc nhắc 2: số", "Mốc nhắc 2: đơn vị") để mỗi ô có tên duy nhất; nút "Bỏ mốc này" lặp tên
 //       ở mỗi dòng (spec bấm theo vị trí). Khung "Mốc nhắc" là FieldGroup. Không có kiểm thử riêng cho kit (như
 //       các phiên trước, kit được phủ qua kiểm thử dựng trang: ReminderSettings.test.tsx 27 ca).
+//   - id: kit-EXP-022
+//     content: >
+//       Phiên 37 (chặng F), MỞ RỘNG ConfirmPanel, không thêm component, không đổi prop, không đổi màu: .text thêm white-space: pre-line (một
+//       dấu xuống dòng trong text là một dòng mới trên màn hình, để khung xác nhận khôi phục có dòng "Khôi phục từ tệp: <đường dẫn>" riêng) và
+//       overflow-wrap: anywhere (đường dẫn dài của Windows xuống dòng ở ký tự bất kỳ, như DescriptionList của chặng E). Vì sao không component mới:
+//       spec chặng F bảo dùng ConfirmPanel; hai thuộc tính CSS không mang khái niệm nghiệp vụ. Không đổi hành vi của stage_change và payment_list
+//       (text của chúng không có dấu xuống dòng, không có từ dài; ảnh evidence của chúng giữ nguyên trong 5 lượt e2e). check_contrast không đổi
+//       (không cặp màu nào đổi). Dùng ở trang restore.
 //
 // UNSOLVED_PROBLEMS: []
 //

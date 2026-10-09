@@ -2,8 +2,8 @@
 // workflow: main
 // clause: external
 // component: main
-// last_updated_by: coding-agent@2026-10-07#3
-// last_updated_at: 2026-10-07T20:44:38.4471702+07:00
+// last_updated_by: coding-agent@2026-10-09#1
+// last_updated_at: 2026-10-09T15:02:55.1327978+07:00
 //
 // EXPERIENCES:
 //   - id: main-EXP-001
@@ -485,10 +485,36 @@
 //       Việc 2 của plan phiên 34 (đo trước khi viết): thay hộp thoại từ công cụ e2e của giao diện được, không cần cờ mới. Chi tiết số đo ở EVIDENCE
 //       bên dưới và ở EVIDENCE của scaffold_ui. Điều giao diện KHÔNG được dựa vào: chữ của message khi hàm thay thế ném lỗi (Electron bọc thêm
 //       "Error invoking remote method '<địa chỉ>': Error: …"); Adapters chỉ biết "Promise bị từ chối".
+//   - id: main-EXP-035
+//     content: >
+//       Phiên 37 (chặng F), ráp nối và công cụ. (1) Main thêm restore_data theo mẫu nhưng Adapters nhận CHỈ ipc_bridge: createRestoreDataAdapters(ipcBridge, RESTORE_DATA_CONFIGS) →
+//       createRestoreDataServices(adapters, RESTORE_DATA_CONFIGS, LAYER_CONFIGS.resultMessages) → createRestoreDataRouters(services) (Routers không cần giá trị Configs), đặt vào
+//       LogicRouters.restoreData; không đổi giá trị khởi động, cấu hình ESLint, stylelint, check_layer, check_contrast. fake_logic.tsx có fakeRestoreData và tham số thứ tám của renderWithLogic,
+//       renderFirstCommit. tests/main/main.test.tsx không đổi. (2) Harness (tests/e2e/walkthrough_harness.ts): Launched có thêm closed; closeKeepingData(l) đặt tệp điều khiển của fixture là
+//       "up", đóng ứng dụng sạch (mã 0, dòng fixture dừng) và GIỮ thư mục dữ liệu; reopen(previous) mở lại trên cùng thư mục với cùng --ct-test-data-dir tạm và --ct-test-no-dialog, chờ danh sách khách
+//       đã tải (dữ liệu không rỗng), ghi lại tệp phiên; close() của một Launched đã closed chỉ xóa thư mục. Dọn dẹp chứng minh bằng hai phép cắn (ném lỗi giữa lúc đóng và mở lại, và sau khi mở lại): không
+//       thư mục ct-ui-* nào bị bỏ lại, tệp phiên bị xóa. (3) tests/tools/walkthrough_lib.mjs: createClient, createBackupFile (POST /backups, chỉ từ công cụ), clientNames, dbFolder (xuất ra),
+//       resetFixtureControl, KEPT_FILE. (4) Công cụ chạy tay walkthrough_app.mjs: --keep giữ thư mục dữ liệu khi thoát (ghi KEPT_FILE) và --reopen mở lại trên đó, không dữ liệu mẫu, KHÔNG
+//       --ct-test-no-dialog (hộp thoại kết quả là hộp thoại thật); xóa thư mục khi thoát mã 0, giữ khi khác 0. Plan nói --reopen "đọc thư mục từ tệp phiên", nhưng tệp phiên và thư mục bị xóa khi ứng dụng
+//       thoát, nên cần --keep (đã báo ở báo cáo đầu phiên). Thử bằng tay không hộp thoại: --keep rồi đóng (taskkill), --reopen thấy 8 khách mẫu còn nguyên, thoát mã 0 thì dọn sạch. (5) folder_dialog_stub.mjs chỉ
+//       sửa chú thích (nay phục vụ cả dialog:open-file; hành vi với spec backup không đổi). (6) Phát hiện: tệp điều khiển còn "down" làm fixture tắt backend ngay sau READY của lần mở lại. (7) Thư mục
+//       %TEMP%\ct-ui-walkthrough-hSqxKR (ngày 2026-10-08 08:31) có từ trước phiên này, không phải của tôi; không xóa.
 //
 // UNSOLVED_PROBLEMS: []
 //
 // EVIDENCE:
+//   - claim: >
+//       Phiên 37 (chặng F, giao diện): môi trường, mốc và kết quả cuối; mốc %APPDATA% không đổi; mọi tiêu chí kiểm bằng máy đạt.
+//     how: >
+//       node --version; npm --version; git status --short; Backend/env/Scripts/python.exe --version; trong UI/: npm ci; npm run check (mốc và cuối); Desktop: npm run build; CT_WALKTHROUGH_RUNNER=coding-agent@2026-10-09#1
+//       npm run e2e (mốc; rồi 5 lượt liên tiếp bằng script bọc); một lượt không đặt biến với băm SHA-256 UI/evidence; Desktop: npm run dist (ELECTRON_BUILDER_CACHE tạm), npm run test:packaged; tên, kích thước,
+//       giờ ghi, SHA-256 của tệp trong %APPDATA%\CommissionTracker đầu và cuối phiên.
+//     result: >
+//       Node v24.14.1; npm 11.11.0; Python 3.13.12; git status đầu phiên rỗng; npm ci xong (npm audit còn báo lỗ hổng của công cụ phát triển như ENV-7; không chạy npm audit fix). Mốc: check "Tests 1679 passed (1679)",
+//       e2e "75 passed (5.4m)". Cuối: check "Tests 1936 passed (1936)"; e2e 5/5 lượt "83 passed" sau khi sửa ba spec đếm mục điều hướng (lượt đầu hỏng 3 ca, tính hỏng, đếm lại từ đầu); lượt không biến "83 passed", UI/evidence
+//       cùng băm trước và sau; test:packaged "11 passed". %APPDATA%: data.db 114688 byte và data.db.lock 0 byte, cùng giờ ghi 2026-09-28 21:09:42, SHA-256 B1996554… — không đổi (kiểm lại ở cuối phiên). Không eslint-disable, không ngoại lệ
+//       lint mới, không phụ thuộc mới, không sửa Desktop/ hay Backend/, không cờ --ct-test-* mới.
+//     recorded_at: 2026-10-09T15:02:55.1327978+07:00
 //   - claim: >
 //       Phiên 34 (chặng E, giao diện): môi trường, mốc và kết quả cuối; mốc %APPDATA% không đổi; mọi tiêu chí kiểm bằng máy đạt.
 //     how: >
@@ -1197,6 +1223,10 @@ import { createBackupDataAdapters } from './logic/workflows/backup_data/adapters
 import { BACKUP_DATA_CONFIGS } from './logic/workflows/backup_data/configs'
 import { createBackupDataRouters } from './logic/workflows/backup_data/routers'
 import { createBackupDataServices } from './logic/workflows/backup_data/services'
+import { createRestoreDataAdapters } from './logic/workflows/restore_data/adapters'
+import { RESTORE_DATA_CONFIGS } from './logic/workflows/restore_data/configs'
+import { createRestoreDataRouters } from './logic/workflows/restore_data/routers'
+import { createRestoreDataServices } from './logic/workflows/restore_data/services'
 import type { IpcInvoke } from './logic/shared/resources'
 import { createHttpClient, createIpcBridge } from './logic/workflows/scaffold_ui/adapters'
 import { SCAFFOLD_UI_CONFIGS } from './logic/workflows/scaffold_ui/configs'
@@ -1298,6 +1328,10 @@ if (!launch.ok) {
   // native_dialogs.pick_folder). prepare_restore is restore_data's, never the interface's.
   const backupDataAdapters = createBackupDataAdapters(httpClient, ipcBridge, BACKUP_DATA_CONFIGS)
   const backupDataServices = createBackupDataServices(backupDataAdapters, BACKUP_DATA_CONFIGS, LAYER_CONFIGS.resultMessages)
+  // restore_data: ipc_bridge ONLY (its four calls are all form ipc: no http_client). The
+  // restore is applied by the desktop's restore_trigger at the next start, never by the interface.
+  const restoreDataAdapters = createRestoreDataAdapters(ipcBridge, RESTORE_DATA_CONFIGS)
+  const restoreDataServices = createRestoreDataServices(restoreDataAdapters, RESTORE_DATA_CONFIGS, LAYER_CONFIGS.resultMessages)
   const routers: LogicRouters = {
     manageClient: createManageClientRouters(manageClientServices, MANAGE_CLIENT_CONFIGS.limits),
     manageCommission: createManageCommissionRouters(manageCommissionServices, {
@@ -1320,6 +1354,7 @@ if (!launch.ok) {
       leadUnits: SEND_REMINDER_CONFIGS.leadUnits,
     }),
     backupData: createBackupDataRouters(backupDataServices),
+    restoreData: createRestoreDataRouters(restoreDataServices),
   }
 
   // Step 5. Hand the Routers to the screens zone and render the root.
