@@ -294,6 +294,8 @@ Mỗi lần `restore:prepare` thành công tạo thêm một bản sao lưu an t
 
 ### DSK-25 — Hộp thoại kết quả khôi phục không tự lên trên cùng (trung bình; audit phiên 36 §5.2)
 
+> **ĐÃ ĐÓNG 2026-10-09, phiên 37** (audit `.reviews/audits/ui/audit_ui_session37.md` §5.1). Project Owner mở bản đóng gói bằng lối tắt (`--ct-test-data-dir=C:\ct-owner-f37`): hộp thoại "Khôi phục dữ liệu" hiện trước cửa sổ ứng dụng, có tiêu điểm, Enter đóng được; sau đó ứng dụng mở với dữ liệu của tệp sao lưu. Chỉ khi mở từ một tiến trình khác (script, `npm`) thì hộp thoại không lên trên cùng, và đó không phải cách họa sĩ dùng. Không cần sửa.
+
 `restore_trigger` hiện hộp thoại thông báo khi chưa có cửa sổ ứng dụng; Main chờ hộp thoại đóng rồi mới mở cửa sổ. Đo ở phiên 36: hộp thoại có trên thanh tác vụ nhưng không chiếm tiêu điểm, nên người dùng có thể tưởng ứng dụng không mở. Hai lần đo đều mở ứng dụng từ một tiến trình khác (script, `npm run probe`); chưa đo khi người dùng tự mở bằng lối tắt. **Việc:** đo khi mở bản đóng gói bằng lối tắt hoặc bấm đúp `Commission Tracker.exe` (kèm `--ct-test-data-dir`), ở lần chạy tay của phiên 37 hoặc ở chặng G. Vẫn không lên trên cùng thì phiên desktop kế tiếp sửa và đo lại; Orchestrator đề xuất cách sửa khi có số đo (có thể đổi thứ tự trong `.design/03_classification.md`).
 
 ### DSK-26 — Hoàn tác hỏng ở bước đổi tên: câu báo lỗi nói sai, lần mở sau có thể ra cơ sở dữ liệu rỗng (thấp; audit phiên 36 §5.3, §5.4) — phiên desktop kế tiếp
@@ -303,6 +305,12 @@ Mỗi lần `restore:prepare` thành công tạo thêm một bản sao lưu an t
 ### DSK-27 — Kiểm thử Desktop chờ một dòng log có thể đã mất (trung bình; audit phiên 36 §5.7) — phiên desktop kế tiếp
 
 `launchMain()` (`Desktop/tests/helpers.ts`) gắn bộ gom log sau khi `_electron.launch` trả về, nên dòng `backend started (pid N)` ghi sớm có thể mất khi máy tải. Các hàm dọn dẹp chờ dòng đó (`closeCleanly()` của `native_dialogs`, `reminder_ticker`, `restore_data`; `backendPids()`) thì hết giờ. Lượt chạy lại của Project Owner ngày 2026-10-08: N14 và D2 hỏng sau khoảng 1 phút dù chức năng đúng; log N14 không có dòng đó. Trên Linux dòng đó luôn mất: đây là nguyên nhân của các ca `desktop_main` hỏng "do môi trường" trong mọi bản audit desktop. **Việc:** lấy PID không qua dòng log sớm (ví dụ `app.evaluate(() => process.pid)` cộng cây tiến trình, hoặc PID trong dòng `backend READY`); chạy `npm test` ba lượt trong lúc máy tải; không nới thời gian chờ.
+
+## Layer giao diện — sau audit phiên 37
+
+### UI-22 — NOTES của khối `main` giao diện sắp hết hạn (thấp; audit phiên 37 §5.2)
+
+Khối checkpoint `main` (`UI/src/main.tsx`) còn sáu NOTES ghi ngày 2026-09-27 (ba), 09-28, 09-29, 10-07; ba NOTES ngày 09-27 hết hạn 14 ngày vào 2026-10-11 (`CLAUDE.md` mục 5). **Việc:** phiên giao diện kế tiếp, hoặc chặng H, xem lại từng NOTE: chuyển thành EXPERIENCES nếu còn giá trị, xóa nếu không.
 
 ## Layer backend — sau audit phiên 32
 

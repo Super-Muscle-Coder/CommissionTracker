@@ -108,7 +108,7 @@ Layout: `main_layout` (khung chính có điều hướng) — layout duy nhất.
 | `reminder_list` | Xem nhắc việc đang chờ; đánh dấu đã xem; lối vào cài đặt và chi tiết đơn | `send_reminder` | `main_layout` | `hoàn_tất` (2026-10-03: audit phiên 27 đạt, Project Owner chạy tay) |
 | `reminder_settings` | Xem và sửa cài đặt nhắc định kỳ và nhắc trước hạn giao | `send_reminder` | `main_layout` | `hoàn_tất` (2026-10-03: audit phiên 27 đạt, Project Owner chạy tay) |
 | `backup` | Tạo một tệp sao lưu toàn bộ dữ liệu vào thư mục họa sĩ chọn | `backup_data` | `main_layout` | `hoàn_tất` (2026-10-08: audit phiên 34 đạt, Project Owner chạy tay với hộp thoại thật) |
-| `restore` | Chọn một tệp sao lưu và chuẩn bị khôi phục (áp dụng ở lần mở ứng dụng kế tiếp); xem và hủy lần khôi phục đang chờ | `restore_data` | `main_layout` | `đang_làm` (2026-10-09: plan phiên 37) |
+| `restore` | Chọn một tệp sao lưu và chuẩn bị khôi phục (áp dụng ở lần mở ứng dụng kế tiếp); xem và hủy lần khôi phục đang chờ | `restore_data` | `main_layout` | `hoàn_tất` (2026-10-09: audit phiên 37 đạt, Project Owner chạy tay với hộp thoại thật, gồm một lần đóng rồi mở lại) |
 
 **Chi tiết trang `client_list`** (phiên B2b):
 - **Thao tác duy nhất:** tải danh sách khi mở trang, và tải lại khi người dùng bấm nút tải lại. Dùng `list_clients` (`GET /clients`). Không có dữ liệu nhập, nên luật phủ của kịch bản bấm thử không đòi `rejected_input`.
@@ -854,7 +854,7 @@ Không có lời gọi nào khác. Tên bộ lọc và đuôi `ctbackup` (không
 - **Không có hạn chờ riêng.** `ipc_bridge` không có hạn chờ (chặng E); `restore:prepare` chờ backend tối đa theo Configs của Desktop. Trong lúc chờ, trang hiện "Đang chuẩn bị khôi phục…".
 - **Giới hạn đã biết của V1:**
   - Bản sao lưu an toàn tích lũy theo mỗi lần chuẩn bị, và tệp dữ liệu cũ tích lũy trong `restore-previous` theo mỗi lần áp dụng; trang không nhắc tới và không dọn (DSK-24, V2).
-  - Hộp thoại kết quả sau khi mở lại là của Desktop; nó có thể không tự lên trên cùng (DSK-25, đang đo).
+  - Hộp thoại kết quả sau khi mở lại là của Desktop. Khi họa sĩ mở ứng dụng bằng lối tắt, nó lên trên cùng và có tiêu điểm (đo 2026-10-09, DSK-25 đóng); khi mở từ một tiến trình khác (công cụ kiểm thử) thì không.
 
 ### Điều hướng của chặng F
 
@@ -921,6 +921,8 @@ Kịch bản bấm thử và audit kiểm các điều sau.
 **Không làm ở V1:** animation, transition, hiệu ứng trang trí, component lấy từ nguồn ngoài (React Bits…), giao diện sáng, tùy chỉnh giao diện.
 
 ## Lịch sử cập nhật
+
+- 2026-10-09: `restore` → `hoàn_tất`. Audit phiên 37 đạt (`.reviews/audits/ui/audit_ui_session37.md`); Project Owner chạy tay kịch bản với hộp thoại thật (tiêu đề "Chọn tệp"; xác nhận, "Quay lại", câu "sẽ được thay", hủy không hỏi, 409 với tệp giả, 503 khi backend tắt, đóng rồi mở lại thì dữ liệu về đúng tệp sao lưu) và đo DSK-25 trên bản đóng gói mở bằng lối tắt. Chấp nhận các chỗ agent tự quyết: `--keep` và `--reopen` cho `walkthrough_app`; nút "Chọn tệp sao lưu" vẫn dùng được khi đọc trạng thái bị từ chối hay vi phạm hợp đồng; dòng chỉ báo "Đang hủy lần khôi phục đang chờ…"; `ConfirmPanel` xuống dòng giữa các câu và ngắt đường dẫn dài (CSS, không đổi màu). Phía giao diện của chặng F xong.
 
 - 2026-10-09: làm lại I1 cho chặng F, căn cứ Data Schema 10.0.1 và API Contract 5.0.0: trang `restore` → `đang_làm` (plan phiên 37); mục điều hướng thứ bảy "Khôi phục"; workflow giao diện `restore_data` chỉ dùng `ipc_bridge`; kiểm hình dạng câu trả lời của bốn lời gọi, kể cả `code` khớp nhãn; xác nhận trong trang trước khi chuẩn bị, không xác nhận khi hủy; đọc lại trạng thái sau mọi lần chuẩn bị hay hủy không thành; luật phủ có bước đóng rồi mở lại trên cùng thư mục dữ liệu. Hợp đồng không đổi.
 
