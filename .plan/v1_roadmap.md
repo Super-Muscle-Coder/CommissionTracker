@@ -21,6 +21,7 @@ Lý do cụ thể: nếu việc đóng gói buộc phải đổi cách Main tìm
 | E | `backup_data` | backend | Không (làm được song song) |
 | F | `restore_data` hoặc hoãn sang V2 | backend + desktop | C, E |
 | G | Hoàn thiện và đóng gói bản V1 | cả hệ thống | D, E |
+| H | Rà soát lại toàn bộ V1: đúng phạm vi, không nhảy cóc, kiểm thử đủ mọi trường hợp, mã đúng hai skill | cả hệ thống | A–G |
 
 Chặng E độc lập, có thể chen vào bất kỳ lúc nào nếu cần một phiên backend ngắn.
 
@@ -209,9 +210,10 @@ Chặng E xong khi họa sĩ tạo được tệp sao lưu từ giao diện, và
 **Chia phiên:**
 1. **Phiên 35 (desktop): pha 1.** Workflow `restore_data` (workflow đầu tiên của desktop) với `restore:prepare`, `restore:status`, `restore:cancel`; `native_dialogs.open_file`; DSK-22. Plan: `.plan/desktop_plan.md`. **Xong 2026-10-08, audit đạt** (`.reviews/audits/desktop/audit_desktop_session35.md`); Desktop 62 kiểm thử, `test:packaged` 10; DSK-22 đóng; mở DSK-23 (theo dõi), DSK-24 (V2).
 2. **Phiên 36 (desktop): pha 2.** `backend_controller`, `apply_pending_restore`, `restore_trigger`, khứ hồi thật, hoàn tác, bản đóng gói. Plan phát hành 2026-10-08: `.plan/desktop_plan.md`. **Xong 2026-10-08, audit đạt** (`.reviews/audits/desktop/audit_desktop_session36.md`); Project Owner chạy lại trên mã cuối: `dist`, `test:packaged` 11/11, `npm test` 67 đạt và 2 hỏng do chỗ đua của công cụ kiểm thử (DSK-27); Desktop 69 kiểm thử, `test:packaged` 11; đo: cùng cổng và đổi tên 0 lần hỏng. Mở DSK-25 (hộp thoại không lên trên cùng), DSK-26, DSK-27; CT-8 (`restore_data` lên `đã_hoàn_thiện`, Data Schema 10.0.1) duyệt và ghi 2026-10-09. DSK-26 phải đóng trước khi chặng F xong.
-3. **Phiên 37 (giao diện):** làm lại I1 cho khôi phục, rồi trang hoặc phần Khôi phục.
+3. **Phiên 37 (giao diện):** làm lại I1 cho khôi phục (xong 2026-10-09, `.design/ui_decomposition.md` mục "Chặng F — Khôi phục"), rồi trang `restore` và mục điều hướng thứ bảy "Khôi phục". Plan phát hành 2026-10-09: `.plan/ui_plan.md`. Lần chạy tay của phiên này đo luôn DSK-25 trên bản đóng gói mở bằng lối tắt.
+4. **Phiên 38 (desktop, vá ngắn):** DSK-26 (Orchestrator bổ sung `f_restore.md` §3 trước), DSK-27, dọn NOTES của Main sắp hết hạn, và DSK-25 nếu lần đo ở phiên 37 cho thấy cần sửa.
 
-**Chặng F xong khi:** họa sĩ chọn một tệp sao lưu từ giao diện, chuẩn bị, đóng rồi mở lại ứng dụng, và thấy đúng dữ liệu trong tệp; tệp hỏng hay mới hơn bị từ chối mà không có gì thay đổi; một lần áp dụng hỏng được hoàn tác về dữ liệu cũ; trang Khôi phục `hoàn_tất`.
+**Chặng F xong khi:** họa sĩ chọn một tệp sao lưu từ giao diện, chuẩn bị, đóng rồi mở lại ứng dụng, và thấy đúng dữ liệu trong tệp; tệp hỏng hay mới hơn bị từ chối mà không có gì thay đổi; một lần áp dụng hỏng được hoàn tác về dữ liệu cũ; trang Khôi phục `hoàn_tất`. Thêm (2026-10-09): DSK-26 đã đóng. Lý do: CT-8 đưa `restore_data` lên `đã_hoàn_thiện` trong khi chỗ hở đó còn, và changelog đã ghi rõ.
 
 ---
 
@@ -227,6 +229,64 @@ Chặng E xong khi họa sĩ tạo được tệp sao lưu từ giao diện, và
 5. Cài bản cũ hơn đè bản mới: hoặc bị chặn, hoặc backend dừng với hộp thoại tiếng Việt rõ ràng; không hỏng dữ liệu.
 
 Cách làm: Orchestrator soạn runbook cho Project Owner chạy tay, gộp với ENV-4 (máy sạch); phần nào cần đổi mã (số phiên bản, hành vi khi đang mở) thì vào một phiên desktop trước khi chạy runbook. Tự cập nhật (auto-update) vẫn ngoài V1. `npm run test:packaged` là tiêu chí của chặng này (DSK-16).
+
+---
+
+## Chặng H — Rà soát lại toàn bộ V1 (Project Owner nêu 2026-10-09)
+
+**Vì sao có chặng này.** Mỗi chặng từ A tới G được audit riêng, theo tiêu chí riêng của nó. Chưa lần nào toàn bộ V1 được nhìn lại cùng một lúc, theo cùng một thước đo. Chặng H là lượt nhìn lại đó, **sau khi** chặng G xong và **trước khi** gọi V1 là xong.
+
+**Bốn câu hỏi chặng H phải trả lời, bằng bằng chứng chạy lại được, không bằng trí nhớ hội thoại:**
+
+1. **Đúng phạm vi.**
+   - Mọi mục của `.design/v1_scope.md` mục 2 có trong sản phẩm và chạy được.
+   - Không có gì ở mục 3 (để dành phiên bản sau) lọt vào. Riêng ràng buộc "không có màn hình hồ sơ quyền sở hữu" kiểm bằng máy, không bằng mắt.
+   - Mọi workflow V1 ở `đã_hoàn_thiện`. Ba workflow watermark và `clause_c_ai_service` vẫn `đang_chờ_triển_khai`. Mọi trang ở `hoàn_tất`.
+2. **Không nhảy cóc.**
+   - Đối chiếu từng chặng A tới G với tiêu chí "xong khi" của chính nó trong lộ trình này. Mỗi tiêu chí phải có một bằng chứng còn tái lập được hôm nay: lệnh, ca kiểm thử, hay lần chạy tay đã ghi.
+   - Mọi mục trong `.plan/open_issues.md`: hoặc đóng có ngày và phiên, hoặc ghi rõ là V2 trở đi kèm lý do. Không mục nào "mở" mà không có chủ.
+3. **Kiểm thử đủ mọi trường hợp có thể xảy ra.**
+   - **Ma trận lối vào × nhãn:** mọi lối vào trong `api_contract.yaml` mà V1 dùng, nhân với mọi nhãn kết quả của nó, cộng "không tới được" và "vi phạm hợp đồng" ở phía bên gọi. Mỗi ô có ít nhất một ca kiểm thử chỉ đích danh. Ô nào không có thì hoặc thêm ca, hoặc ghi lý do không thể có.
+   - **Luồng của họa sĩ từ đầu tới cuối,** trên bản đóng gói: cài, mở lần đầu, nhập khách hàng, đơn hàng, tiến độ, thanh toán, xem thu nhập, nhắc việc, sao lưu, khôi phục, cập nhật bản mới đè bản cũ.
+   - **Tình huống bất thường:**
+     - backend chết giữa chừng;
+     - mở hai bản ứng dụng;
+     - thư mục dữ liệu không ghi được;
+     - ổ đầy (nếu dựng được);
+     - antivirus bật;
+     - máy chậm, chạy kiểm thử trong lúc máy tải (bài học DSK-27);
+     - đóng ứng dụng giữa lúc đang ghi;
+     - tắt máy giữa lúc khôi phục (nếu dựng được).
+   - **Ổn định:** mọi bộ kiểm thử (`Backend` pytest, `Desktop` `npm test` và `test:packaged`, `UI` `npm run check` và `npm run e2e`) đạt nhiều lượt liên tiếp trên máy Project Owner, kể cả khi máy đang được dùng. Số lượt chốt trong plan của chặng.
+4. **Mã nguồn theo đúng hai skill.**
+   - **`Backend/`, `Desktop/` theo WCA (`wca-implementation` v2.3):**
+     - bố cục Bước 4.0;
+     - mỗi workflow nghiệp vụ đủ năm lớp, ranh giới giữa các lớp đúng câu hỏi tự kiểm của từng thành phần (lý thuyết §4);
+     - Main chỉ đọc và ráp nối;
+     - hạ tầng cắt ngang không quyết định gì;
+     - không workflow nào gọi tắt vào nội bộ của workflow khác;
+     - mọi giá trị ranh giới truy được về hợp đồng;
+     - chạy lại `06-self-check.md` cho từng workflow.
+   - **`UI/` theo iWCA (`iwca-implementation` v1.0):**
+     - ba phân khu và Main;
+     - ma trận R1–R14 do máy giữ, không ngoại lệ chưa giải thích;
+     - mỗi trang qua đủ năm góc của I6.
+   - **Checkpoint:**
+     - mọi khối đúng Giao thức 07;
+     - không còn `UNSOLVED_PROBLEMS`;
+     - không NOTES quá hạn;
+     - EVIDENCE nào còn ghi thì còn chạy lại được.
+
+**Cách làm (đề xuất, chốt khi tới chặng):**
+- **Bước 1, kiểm kê:** Orchestrator kiểm kê, không viết code. Mỗi câu hỏi trên ra một danh sách chỗ thiếu, kèm mức độ. Để công việc không tự chấm điểm chính nó, phần kiểm mã theo hai skill nên do một phiên kiểm độc lập làm, chưa từng thấy mã được viết ra sao, rồi Orchestrator đối chiếu.
+- **Bước 2, vá:** các phiên vá theo layer, mỗi phiên một plan như thường lệ.
+- **Bước 3, chạy lại tiêu chí của chặng G:** mọi sửa đổi ở chặng H đều làm bản đóng gói đổi, nên phải chạy lại trên bản cuối: `dist`, `test:packaged`, runbook máy sạch và cài đè.
+
+**Chặng H xong khi:**
+- bốn câu hỏi trên đều có câu trả lời "có" kèm bằng chứng, hoặc từng chỗ "không" được Project Owner chấp nhận và ghi lại là V2 trở đi;
+- Project Owner chạy luồng của họa sĩ từ đầu tới cuối trên bản đóng gói cuối cùng.
+
+Khi đó V1 xong.
 
 ---
 

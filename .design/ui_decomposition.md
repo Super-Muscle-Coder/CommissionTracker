@@ -10,7 +10,7 @@ Mức chi tiết hiện tại: bảng workflow, bảng loại trừ và bảng g
 
 ## 1. Thực đơn — mọi lối vào có `external` trong `called_by` (Bước I1.1)
 
-Bảng này sinh ra từ `api_contract.yaml` 4.0.0. Mỗi khi hợp đồng đổi phiên bản, đối chiếu lại bảng.
+Bảng này sinh ra từ `api_contract.yaml` 4.0.0, đối chiếu lại với 5.0.0 ngày 2026-10-09 (chặng F). Mỗi khi hợp đồng đổi phiên bản, đối chiếu lại bảng.
 
 | Workflow hệ thống | Điểm giao tiếp | Hình thức, địa chỉ | Nhãn kết quả |
 |---|---|---|---|
@@ -39,7 +39,7 @@ Bảng này sinh ra từ `api_contract.yaml` 4.0.0. Mỗi khi hợp đồng đ�
 | | `list_pending` | http `GET /reminders/pending` | 200, 500 |
 | | `acknowledge` | http `PUT /reminders/{notification_id}/ack` | 200, 404, 500 |
 | `backup_data` | `create_backup` | http `POST /backups` | 201, 400, 500 |
-| `restore_data` (desktop) | `request_restore`, `get_restore_status`, `cancel_restore` | ipc `restore:prepare`, `restore:status`, `restore:cancel` | 200, 400, 404, 409, 424, 500, 503 (prepare); 200, 500 (status, cancel). Theo API Contract 5.0.0 (CT-7); chi tiết ở lần làm lại I1 trước phiên 37 |
+| `restore_data` (desktop) | `request_restore`, `get_restore_status`, `cancel_restore` | ipc `restore:prepare`, `restore:status`, `restore:cancel` | 200, 400, 404, 409, 424, 500, 503 (prepare); 200, 500 (status, cancel). Theo API Contract 5.0.0 (CT-7); chi tiết ở mục "Chặng F — Khôi phục". `apply_pending_restore` (`in_process`, chỉ `restore_trigger` gọi) không có `external`, nên không nằm trong bảng |
 | `native_dialogs` (cắt ngang, desktop) | `open_file`, `save_file`, `pick_folder` | ipc `dialog:open-file`, `dialog:save-file`, `dialog:pick-folder` | 200 |
 | `manage_watermark_profile` | `create_profile`, `list_profiles`, `get_profile`, `edit_profile`, `list_strengths` | http `/watermark-profiles…`, `GET /watermark-strengths` | — (loại trừ, §4) |
 | `apply_watermark` | `apply`, `list_artworks`, `get_artwork` | http `/artworks…` | — (loại trừ, §4) |
@@ -66,9 +66,9 @@ Mặc định của iWCA: mỗi workflow hệ thống mà giao diện dùng có 
 | `view_income_report` | `nghiệp_vụ` | `view_income_report` | Trình bày báo cáo theo tháng và theo tiền tệ. Không quy đổi tiền tệ (hợp đồng). Chọn khoảng thời gian mặc định, kiểm khoảng thời gian trước khi gửi. Chi tiết từ D5 ở §5. | D5 |
 | `send_reminder` | `nghiệp_vụ` | `send_reminder` | Trình bày danh sách nhắc việc đang chờ và phần cài đặt; tên tiếng Việt của thứ, đơn vị chu kỳ, mốc nhắc; kiểm form cài đặt. Không gọi `check_due` (chỉ `reminder_ticker` của desktop gọi). Chi tiết từ D6 ở §5. | D6 |
 | `backup_data` | `nghiệp_vụ` | `backup_data` | Mở hộp thoại chọn thư mục (Adapters gọi `native_dialogs.pick_folder` qua `ipc_bridge`), rồi tạo bản sao lưu vào thư mục đó (`create_backup`, luôn `purpose: 'manual'`); trình bày kết quả (đường dẫn tệp, dung lượng, lúc tạo); chọn câu thông báo cho từng nhãn và cho lần hộp thoại hỏng. Chi tiết ở mục "Chặng E — Sao lưu". | E |
-| `restore_data` | `nghiệp_vụ` | `restore_data` (desktop, `ipc`) | Để chi tiết ở lần làm lại I1 trước chặng F. | F |
+| `restore_data` | `nghiệp_vụ` | `restore_data` (desktop, `ipc`) | Đọc trạng thái khôi phục đang chờ (`restore:status`); mở hộp thoại chọn tệp sao lưu (Adapters gọi `native_dialogs.open_file` qua `ipc_bridge`); hỏi xác nhận trong trang, nói rõ hậu quả; chuẩn bị (`restore:prepare`); hủy lần đang chờ (`restore:cancel`); chọn câu thông báo cho từng nhãn; đọc lại trạng thái sau mọi lần chuẩn bị hay hủy không thành. Không dùng `http_client`. Chi tiết ở mục "Chặng F — Khôi phục". | F |
 
-**`native_dialogs`** là hạ tầng cắt ngang của desktop, không có workflow giao diện đối ứng. Workflow giao diện nào cần chọn tệp hay thư mục (`backup_data`, sau này `restore_data`) gọi nó qua Adapters của chính mình, dùng tài nguyên `ipc_bridge`; mỗi workflow giữ bản riêng của địa chỉ và cách kiểm hình dạng câu trả lời (trùng lặp có chủ đích, như I1.3). Desktop hiện chỉ có `pick_folder` (phiên 33); `open_file`, `save_file` chưa có, và giao diện không gọi chúng.
+**`native_dialogs`** là hạ tầng cắt ngang của desktop, không có workflow giao diện đối ứng. Workflow giao diện nào cần chọn tệp hay thư mục (`backup_data` với `pick_folder`, `restore_data` với `open_file`) gọi nó qua Adapters của chính mình, dùng tài nguyên `ipc_bridge`; mỗi workflow giữ bản riêng của địa chỉ và cách kiểm hình dạng câu trả lời (trùng lặp có chủ đích, như I1.3). Desktop có `pick_folder` từ phiên 33 và `open_file` từ phiên 35; `save_file` chưa có, và giao diện không gọi nó.
 
 ## 3. Giá trị khởi động (Bước I1.4)
 
@@ -90,7 +90,7 @@ Mặc định của iWCA: mỗi workflow hệ thống mà giao diện dùng có 
 
 ## 5. Trang và layout (Bước I1.5)
 
-Layout: `main_layout` (khung chính có điều hướng) — layout duy nhất. **Từ D1:** `main_layout` có một vùng điều hướng cố định, liệt kê các mục cấp cao nhất. Hiện có sáu mục, theo thứ tự: "Khách hàng" (mở `client_list`), "Đơn hàng" (mở `commission_list`, từ D2), "Tiến độ" (mở `progress_board`, từ D3), "Thu nhập" (mở `income_report`, từ D5), "Nhắc việc" (mở `reminder_list`, từ D6), rồi "Sao lưu" (mở `backup`, từ chặng E). Mỗi phiên sau thêm mục của mình vào đúng vùng này, không đổi vị trí các mục cũ (§7.2, nguyên tắc 7). Màn hình lỗi khởi động không phải layout và không phải đích điều hướng: Main dựng thẳng component kit `FatalMessage` khi giá trị khởi động hỏng, trước khi có trang nào (iWCA I2.6, bước 1).
+Layout: `main_layout` (khung chính có điều hướng) — layout duy nhất. **Từ D1:** `main_layout` có một vùng điều hướng cố định, liệt kê các mục cấp cao nhất. Hiện có bảy mục, theo thứ tự: "Khách hàng" (mở `client_list`), "Đơn hàng" (mở `commission_list`, từ D2), "Tiến độ" (mở `progress_board`, từ D3), "Thu nhập" (mở `income_report`, từ D5), "Nhắc việc" (mở `reminder_list`, từ D6), "Sao lưu" (mở `backup`, từ chặng E), rồi "Khôi phục" (mở `restore`, từ chặng F). Mỗi phiên sau thêm mục của mình vào đúng vùng này, không đổi vị trí các mục cũ (§7.2, nguyên tắc 7). Màn hình lỗi khởi động không phải layout và không phải đích điều hướng: Main dựng thẳng component kit `FatalMessage` khi giá trị khởi động hỏng, trước khi có trang nào (iWCA I2.6, bước 1).
 
 | Trang (khóa điều hướng) | Mục đích | Workflow giao diện dùng Routers | Layout | Trạng thái |
 |---|---|---|---|---|
@@ -108,7 +108,7 @@ Layout: `main_layout` (khung chính có điều hướng) — layout duy nhất.
 | `reminder_list` | Xem nhắc việc đang chờ; đánh dấu đã xem; lối vào cài đặt và chi tiết đơn | `send_reminder` | `main_layout` | `hoàn_tất` (2026-10-03: audit phiên 27 đạt, Project Owner chạy tay) |
 | `reminder_settings` | Xem và sửa cài đặt nhắc định kỳ và nhắc trước hạn giao | `send_reminder` | `main_layout` | `hoàn_tất` (2026-10-03: audit phiên 27 đạt, Project Owner chạy tay) |
 | `backup` | Tạo một tệp sao lưu toàn bộ dữ liệu vào thư mục họa sĩ chọn | `backup_data` | `main_layout` | `hoàn_tất` (2026-10-08: audit phiên 34 đạt, Project Owner chạy tay với hộp thoại thật) |
-| *(F)* khôi phục | — | `restore_data` | `main_layout` | `chưa_làm` (chặng F chưa quyết) |
+| `restore` | Chọn một tệp sao lưu và chuẩn bị khôi phục (áp dụng ở lần mở ứng dụng kế tiếp); xem và hủy lần khôi phục đang chờ | `restore_data` | `main_layout` | `đang_làm` (2026-10-09: plan phiên 37) |
 
 **Chi tiết trang `client_list`** (phiên B2b):
 - **Thao tác duy nhất:** tải danh sách khi mở trang, và tải lại khi người dùng bấm nút tải lại. Dùng `list_clients` (`GET /clients`). Không có dữ liệu nhập, nên luật phủ của kịch bản bấm thử không đòi `rejected_input`.
@@ -770,6 +770,118 @@ Cùng "không tới được" và "vi phạm hợp đồng" cho `create_backup`.
 - Ít nhất một bước `unreachable`: tắt backend bằng công cụ có sẵn, bấm "Tạo bản sao lưu", chọn thư mục, thấy câu "không tới được".
 - **Ảnh bằng chứng có giờ tạo và đường dẫn tạm** thay đổi theo lần chạy. Chấp nhận, như D6; kịch bản ghi rõ điều này.
 
+## Chặng F — Khôi phục (làm lại I1 ngày 2026-10-09, trước phiên 37)
+
+Căn cứ: Data Schema **10.0.1** (`restore_data`: `archive_path`, `restore_scheduled`, `restore_status`, `restore_cancellation`; `types.pending_restore_record`, `types.file_path`, `formats.timestamp`), API Contract **5.0.0** (`restore_data.request_restore`, `get_restore_status`, `cancel_restore`; `cross_cutting.native_dialogs.open_file`; `endpoint_forms.ipc`; `error_body`). Đặc tả hai pha: `.design/f_restore.md`. Hợp đồng không cần sửa cho phần giao diện.
+
+### Chặng F trải trên ba layer
+
+- **Backend (phiên 32, xong):** `prepare_restore` kiểm tệp sao lưu và đặt tệp chờ; `create_backup` với `purpose: 'pre_restore'` tạo bản sao lưu an toàn. Giao diện không gọi cả hai (§4; `'pre_restore'` chỉ dành cho `restore_data`).
+- **Desktop (phiên 35 và 36, xong):** pha 1 (`restore:prepare`, `restore:status`, `restore:cancel`, `native_dialogs.open_file`) và pha 2 (`apply_pending_restore`, `restore_trigger`: áp dụng ở lần mở kế tiếp, trước khi có cửa sổ, rồi hiện hộp thoại kết quả của hệ điều hành).
+- **Giao diện (phiên 37):** trang `restore`. Giao diện chỉ làm pha 1. Kết quả của pha 2 do Desktop báo bằng hộp thoại của chính nó, trước khi trang nào được vẽ; giao diện không đọc, không hiện lại kết quả đó.
+
+### Lời gọi của workflow giao diện `restore_data`
+
+Mọi lời gọi đi qua `ipc_bridge` (`invoke(address, argument)`); workflow không dùng `http_client`.
+
+| Lời gọi | Hình thức | Dùng ở | Kết quả phải xử lý |
+|---|---|---|---|
+| `get_restore_status` | `invoke('restore:status', {})` | `restore` | 200 `{ pending }`; 500; Promise bị từ chối; vi phạm hợp đồng |
+| `native_dialogs.open_file` | `invoke('dialog:open-file', { filters: [ { name: 'Bản sao lưu Commission Tracker', extensions: ['ctbackup'] } ] })` | `restore` | 200 `{ canceled, path }`; Promise bị từ chối; vi phạm hợp đồng |
+| `request_restore` | `invoke('restore:prepare', { archive_path: <path> })` | `restore` | 200 `pending_restore_record`; 400; 404; 409; 424; 500; 503; Promise bị từ chối; vi phạm hợp đồng |
+| `cancel_restore` | `invoke('restore:cancel', {})` | `restore` | 200 `{ canceled }`; 500; Promise bị từ chối; vi phạm hợp đồng |
+
+Không có lời gọi nào khác. Tên bộ lọc và đuôi `ctbackup` (không dấu chấm, cách Electron nhận) là `[UI-ONLY]`; đuôi khớp tệp mà `create_backup` tạo.
+
+**Kiểm hình dạng câu trả lời** (bản sao của hợp đồng, `[CONTRACT]`; ngoài các điều dưới đây là vi phạm hợp đồng):
+- Mọi câu trả lời là `{ status, body }` (`endpoint_forms.ipc`). `status` phải là một nhãn của đúng lối vào đó (bảng trên). Nhãn ngoài danh sách là vi phạm hợp đồng.
+- Nhãn không phải 200: `body` là `error_body` (`{ code: string, message: string, details: object|null }`), và `code` khớp nhãn theo hợp đồng: 400 `ERR_VALIDATION`, 404 `ERR_NOT_FOUND`, 409 `ERR_INCOMPATIBLE_BACKUP`, 424 và 500 `ERR_STORAGE_IO`, 503 `ERR_SERVICE_UNAVAILABLE`. Không đọc `message`, `details`.
+- `pending_restore_record`: `archive_path`, `safety_backup_path` là chuỗi không rỗng; `archive_app_version` là chuỗi; `archive_created_at`, `prepared_at` đúng `formats.timestamp`.
+- `restore:status` 200: `{ pending: pending_restore_record | null }`. `restore:cancel` 200: `{ canceled: boolean }`.
+- `open_file` 200: như luật của `pick_folder` ở chặng E (`canceled: true` đi cùng `path: null`; `canceled: false` đi cùng `path` là chuỗi không rỗng). Giao diện không tự kiểm `path` có tuyệt đối không.
+- Trường thừa trong các đối tượng trên: theo cách các workflow giao diện khác đang làm; ghi rõ trong checkpoint.
+
+### Luật trình bày của chặng F (quyết định của `restore_data`, đều `[UI-ONLY]` trừ khi ghi khác)
+
+- **Thời điểm** (`archive_created_at`, `prepared_at`): `HH:mm dd/mm/yyyy` theo giờ máy, như các trang khác. Workflow giữ bản riêng của cách định dạng (R2).
+- **Đường dẫn** hiện nguyên văn, xuống dòng được ở bất kỳ ký tự nào (như chặng E).
+- Không hiện `archive_app_version` (§7.2, nguyên tắc 2).
+- **Sau mọi lần chuẩn bị hay hủy không thành** (mọi kết quả không phải 200, kể cả Promise bị từ chối và vi phạm hợp đồng), trang gọi lại `restore:status` để khung "Đang chờ khôi phục" hiện đúng sự thật. Lý do: hợp đồng ghi phần lớn nhãn lỗi của `restore:prepare` là "không có gì đang chờ", nhưng 400 giữ nguyên bản ghi cũ, và có trường hợp hiếm 500 cũng giữ (`f_restore.md` §5). Đọc lại thì không phải tự suy. Câu thông báo của lần hỏng giữ nguyên; lần đọc lại chỉ đổi khung. Lần đọc lại cũng hỏng thì ẩn khung, không thêm câu mới.
+
+### Chi tiết trang `restore` (chặng F)
+
+- **Mở từ:** mục **"Khôi phục"** của vùng điều hướng, đứng sau "Sao lưu". Không tham số.
+- **Tiêu đề trang:** "Khôi phục dữ liệu".
+- **Hàng nút:** **"Chọn tệp sao lưu"** (hành động chính, luôn có); **"Hủy lần khôi phục đang chờ"** (hành động phụ, chỉ hiện khi có lần đang chờ).
+- **Dòng chữ phụ cố định**, đặt dưới hàng nút: "Khôi phục thay toàn bộ dữ liệu hiện tại bằng dữ liệu trong một tệp sao lưu. Việc thay diễn ra khi bạn đóng rồi mở lại ứng dụng."
+- **Khi mở trang:** gọi `restore:status`. Trong lúc chờ, các nút bị vô hiệu.
+  - `pending: null`: dòng "Không có lần khôi phục nào đang chờ."
+  - Có `pending`: **khung "Đang chờ khôi phục"**, gồm:
+    - "Tệp sao lưu: `<archive_path>`";
+    - "Bản sao lưu tạo lúc: `<archive_created_at>`";
+    - "Chuẩn bị lúc: `<prepared_at>`";
+    - "Bản sao lưu an toàn của dữ liệu trước khi khôi phục: `<safety_backup_path>`";
+    - câu "Hãy đóng rồi mở lại ứng dụng để hoàn tất. Dữ liệu bạn nhập từ lúc chuẩn bị tới lúc mở lại sẽ không có trong dữ liệu sau khôi phục."
+  - 500: "Không đọc được trạng thái khôi phục. Hãy mở lại trang này." Không hiện khung; nút "Chọn tệp sao lưu" vẫn dùng được (một lần chuẩn bị mới thay mọi lần cũ).
+  - Promise bị từ chối: "Không liên lạc được với ứng dụng. Hãy đóng rồi mở lại ứng dụng." Vi phạm hợp đồng: câu chung của layer.
+- **Bấm "Chọn tệp sao lưu":**
+  1. Gọi `open_file`. Mọi nút bị vô hiệu tới khi hộp thoại đóng; bấm liên tiếp chỉ mở một hộp thoại.
+     - `canceled: true`: dừng, trang giữ nguyên.
+     - Promise bị từ chối: "Không mở được hộp thoại chọn tệp. Hãy thử lại."
+     - Vi phạm hợp đồng: câu chung của layer.
+  2. Có `path`: **chưa gửi gì.** Hiện khung xác nhận trong trang (`ConfirmPanel`, §7.2 nguyên tắc 5: thay toàn bộ dữ liệu là thao tác khó quay lại), gồm:
+     - "Khôi phục từ tệp: `<path>`";
+     - "Khi bạn đóng rồi mở lại ứng dụng, toàn bộ dữ liệu hiện tại sẽ được thay bằng dữ liệu trong tệp này. Trước đó, ứng dụng tạo một bản sao lưu an toàn của dữ liệu hiện tại. Dữ liệu bạn nhập sau bước này sẽ không có trong dữ liệu sau khôi phục.";
+     - nếu đang có lần khôi phục chờ: thêm câu "Lần khôi phục đang chờ sẽ được thay bằng lần này.";
+     - nút **"Chuẩn bị khôi phục"** và **"Quay lại"**. Focus tới "Chuẩn bị khôi phục". Khi khung mở, hai nút của hàng nút bị vô hiệu.
+     - "Quay lại": đóng khung, không gửi gì.
+  3. Bấm "Chuẩn bị khôi phục": mọi nút bị vô hiệu; trạng thái "Đang chuẩn bị khôi phục…"; gọi `restore:prepare` với `archive_path = path`.
+     - 200: thông báo "Đã chuẩn bị khôi phục. Hãy đóng rồi mở lại ứng dụng để hoàn tất." Khung "Đang chờ khôi phục" dựng từ chính bản ghi trả về (không cần đọc lại).
+     - 400: "Không dùng được tệp này. Hãy chọn tệp khác."
+     - 404: "Không tìm thấy tệp này. Có thể tệp đã bị chuyển hoặc xóa. Hãy chọn lại."
+     - 409: "Tệp này không dùng được để khôi phục: có thể không phải bản sao lưu của Commission Tracker, đã bị hỏng, hoặc được tạo bởi phiên bản mới hơn của ứng dụng."
+     - 424: "Không tạo được bản sao lưu an toàn của dữ liệu hiện tại, nên chưa chuẩn bị khôi phục. Hãy kiểm tra ổ đĩa còn chỗ trống rồi thử lại."
+     - 500: "Không ghi được thông tin khôi phục, nên chưa chuẩn bị khôi phục. Hãy thử lại."
+     - 503: "Ứng dụng chưa đọc được tệp sao lưu vì phần xử lý dữ liệu không phản hồi. Hãy đóng rồi mở lại ứng dụng, rồi thử lại."
+     - Promise bị từ chối: "Không liên lạc được với ứng dụng. Hãy đóng rồi mở lại ứng dụng." Vi phạm hợp đồng: câu chung của layer.
+     - Mọi kết quả không phải 200: đọc lại `restore:status` (luật trình bày ở trên).
+- **Bấm "Hủy lần khôi phục đang chờ":** **không** hỏi xác nhận. Hủy không đổi dữ liệu nào, và chuẩn bị lại được bất cứ lúc nào, nên không thuộc §7.2 nguyên tắc 5. Mọi nút bị vô hiệu; gọi `restore:cancel`.
+  - 200 `canceled: true`: "Đã hủy lần khôi phục đang chờ. Dữ liệu hiện tại giữ nguyên." Ẩn khung.
+  - 200 `canceled: false`: "Không còn lần khôi phục nào đang chờ." Ẩn khung.
+  - 500: "Không hủy được lần khôi phục đang chờ. Hãy thử lại." Rồi đọc lại `restore:status`.
+  - Promise bị từ chối, vi phạm hợp đồng: như ở trên, rồi đọc lại `restore:status`.
+- **Không nhớ gì** giữa các lần mở trang ngoài những gì `restore:status` trả. Không dùng `localStorage` hay nơi lưu nào khác.
+- **Không có hạn chờ riêng.** `ipc_bridge` không có hạn chờ (chặng E); `restore:prepare` chờ backend tối đa theo Configs của Desktop. Trong lúc chờ, trang hiện "Đang chuẩn bị khôi phục…".
+- **Giới hạn đã biết của V1:**
+  - Bản sao lưu an toàn tích lũy theo mỗi lần chuẩn bị, và tệp dữ liệu cũ tích lũy trong `restore-previous` theo mỗi lần áp dụng; trang không nhắc tới và không dọn (DSK-24, V2).
+  - Hộp thoại kết quả sau khi mở lại là của Desktop; nó có thể không tự lên trên cùng (DSK-25, đang đo).
+
+### Điều hướng của chặng F
+
+- `restore` không có tham số.
+- Vùng điều hướng có bảy mục: "Khách hàng", "Đơn hàng", "Tiến độ", "Thu nhập", "Nhắc việc", "Sao lưu", "Khôi phục". Sáu mục cũ giữ nguyên vị trí.
+
+### Luật phủ của kịch bản bấm thử ở chặng F (iWCA I6.3)
+
+- **Hộp thoại chọn tệp trong kịch bản chạy tự động:** công cụ kiểm thử thay `dialog.showOpenDialog` của tiến trình chính qua `electronApp.evaluate`, như chặng E. `dialog:open-file` cũng dùng `showOpenDialog`, nên hàm thay thế của chặng E dùng lại được; phiên đo xác nhận trước khi dùng. Tệp sao lưu dùng trong kịch bản nằm trong thư mục tạm của lần chạy.
+- **Mở lại ứng dụng:** kịch bản đóng ứng dụng rồi mở lại **trên cùng thư mục dữ liệu tạm**, với cờ `--ct-test-no-dialog` như mọi lần chạy tự động. Desktop khi đó ghi dòng `restore dialog text: …` thay vì hiện hộp thoại; công cụ kiểm thử đọc dòng đó.
+- **Hộp thoại trong lần Project Owner chạy tay:** hộp thoại thật, cả hộp thoại chọn tệp lẫn hộp thoại kết quả sau khi mở lại.
+- **Dữ liệu cho bước khôi phục thật:** công cụ kiểm thử tạo dữ liệu qua `http` (ví dụ khách A, B), tạo tệp sao lưu bằng `POST /backups` vào thư mục tạm của lần chạy, rồi đổi dữ liệu (thêm khách C). Sau khi mở lại, công cụ khẳng định `GET /clients` chỉ còn A, B. Giao diện không gọi các lời gọi này; chỉ công cụ kiểm thử gọi.
+- `ok`:
+  - mở trang từ mục "Khôi phục": "Không có lần khôi phục nào đang chờ";
+  - chọn tệp, thấy khung xác nhận, bấm "Quay lại": không gửi gì, trang giữ nguyên;
+  - chọn tệp, xác nhận: thông báo và khung "Đang chờ khôi phục" đúng; tệp bản sao lưu an toàn có thật;
+  - hủy lần đang chờ: khung biến mất, thông báo đúng;
+  - chuẩn bị lại, đóng ứng dụng, mở lại trên cùng thư mục dữ liệu: dòng `restore dialog text` có kết quả `restored` và đường dẫn tệp; dữ liệu là dữ liệu trong tệp sao lưu; trang "Khôi phục" hiện "Không có lần khôi phục nào đang chờ".
+- `rejected_input`: không có, vì trang không có ô nhập. Ghi lý do trong `walkthrough.yaml`.
+- `rejected_system`:
+  - 409: hàm thay thế trả về một tệp `.ctbackup` không phải bản sao lưu (tệp văn bản trong thư mục tạm). Thấy đúng câu; không có gì đang chờ;
+  - 404: hàm thay thế trả về một đường dẫn không tồn tại. Thấy đúng câu.
+
+  Hai bước này chỉ có ở lần chạy tự động. 400, 424, 500, Promise bị từ chối và vi phạm hợp đồng được chứng minh bằng kiểm thử dựng trang.
+- Ít nhất một bước `unreachable`: tắt backend bằng công cụ có sẵn, chọn tệp, xác nhận, thấy câu của 503 (`restore:prepare` không tới được backend); bật lại backend.
+- **Ảnh bằng chứng có thời điểm và đường dẫn tạm** thay đổi theo lần chạy. Chấp nhận, như chặng E.
+
 ## 6. Đối chiếu độ phủ (Bước I1.6)
 
 - Mọi lối vào ở §1, hoặc có workflow giao diện đối ứng ở §2, hoặc nằm trong bảng loại trừ ở §4. Không lối vào nào ở trạng thái "chưa rõ".
@@ -777,6 +889,7 @@ Cùng "không tới được" và "vi phạm hợp đồng" cho `create_backup`.
 - D2 (2026-09-28): mọi lời gọi D2 cần đều có trong hợp đồng (bảng lời gọi ở phần D2). Nhu cầu không có lối vào: mở liên kết tham khảo bằng trình duyệt ngoài. Ghi nhận cho phiên bản sau, không vá ở V1.
 - Giá trị khởi động đã trả lời đủ ba câu. Cách trao nằm trong hợp đồng và đã được đo.
 - Chặng E (2026-10-07): mọi lời gọi trang `backup` cần đều có trong hợp đồng (`create_backup`, `native_dialogs.pick_folder`). `prepare_restore` vẫn nằm trong bảng loại trừ (§4); chỉ công cụ kiểm thử gọi nó.
+- Chặng F (2026-10-09): mọi lời gọi trang `restore` cần đều có trong hợp đồng (`restore:status`, `restore:prepare`, `restore:cancel`, `native_dialogs.open_file`). Không có nhu cầu nào thiếu lối vào. Kết quả của pha 2 do Desktop hiện; giao diện không cần lối vào để đọc nó.
 
 ## 7. Hướng giao diện V1 (quyết định của Project Owner, 2026-09-28)
 
@@ -808,6 +921,8 @@ Kịch bản bấm thử và audit kiểm các điều sau.
 **Không làm ở V1:** animation, transition, hiệu ứng trang trí, component lấy từ nguồn ngoài (React Bits…), giao diện sáng, tùy chỉnh giao diện.
 
 ## Lịch sử cập nhật
+
+- 2026-10-09: làm lại I1 cho chặng F, căn cứ Data Schema 10.0.1 và API Contract 5.0.0: trang `restore` → `đang_làm` (plan phiên 37); mục điều hướng thứ bảy "Khôi phục"; workflow giao diện `restore_data` chỉ dùng `ipc_bridge`; kiểm hình dạng câu trả lời của bốn lời gọi, kể cả `code` khớp nhãn; xác nhận trong trang trước khi chuẩn bị, không xác nhận khi hủy; đọc lại trạng thái sau mọi lần chuẩn bị hay hủy không thành; luật phủ có bước đóng rồi mở lại trên cùng thư mục dữ liệu. Hợp đồng không đổi.
 
 - 2026-10-08: `backup` → `hoàn_tất`. Project Owner chạy tay kịch bản với hộp thoại thật của Windows (S1, S2, S3, S5; S4 chỉ có ở lần chạy tự động): ba tệp `.ctbackup` được tạo, không trùng tên, không ghi đè; hủy không tạo tệp; backend tắt thì báo không kết nối được, bật lại thì tạo được. Log của Desktop khớp: bốn lần `chosen`, một lần `canceled`. Bước tùy chọn `C:\Windows` không chạy. Tiêu đề hộp thoại: Project Owner xác nhận ngày 2026-10-08 là "Chọn thư mục", kèm biểu tượng của ứng dụng (đóng điểm treo của audit phiên 33 §5.3). Chặng E xong.
 - 2026-10-07: audit phiên 34 đạt về chức năng (`.reviews/audits/ui/audit_ui_session34.md`). Chấp nhận các chỗ agent tự quyết: hộp thoại hỏng hiện khung "Chưa tạo được bản sao lưu" với câu riêng (mã riêng của giao diện `DIALOG_FAILED`, không phải mã của hợp đồng); tiêu đề khung lỗi "Chưa tạo được bản sao lưu"; "Đang tạo bản sao lưu…" chỉ hiện ở bước 2, qua một hàm báo mà Routers nhận. `backup` giữ `đang_làm`, chờ Project Owner chạy tay.
