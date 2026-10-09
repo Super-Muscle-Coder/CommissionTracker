@@ -55,7 +55,17 @@ Bên gọi: hạ tầng cắt ngang mới **`restore_trigger`** của desktop. M
 6. Khởi động backend qua `backend_controller`, trên **cùng cổng**, và chờ `READY`.
 7. `READY`: xóa bản ghi đang chờ, trả `outcome: 'restored'`.
 8. Bước 4, 5 hoặc 6 hỏng: dừng backend nếu nó đang chạy, đưa tệp ở bước 4 về lại `db_file_path`, khởi động backend, chờ `READY`. Xóa bản ghi đang chờ, trả `outcome: 'rolled_back'`, kèm `reason`. Bản ghi bị xóa để lần mở sau không thử lại mãi.
-9. Lần khởi động ở bước 8 cũng hỏng: báo lỗi `500 ERR_RESTORE_FAILED`. Main dừng với hộp thoại lỗi khởi động tiếng Việt như mọi lần backend không lên được. Tệp dữ liệu cũ nằm ở `db_file_path`, nên lần mở sau dùng lại dữ liệu cũ.
+
+   Bước 8 gồm ba việc có thể hỏng, theo thứ tự (bổ sung 2026-10-09, DSK-26):
+   - **8a.** Nếu tệp chờ đã được chuyển vào `db_file_path` (bước 5 đã xong): đổi tên nó sang `restore-previous/data-<thời điểm>-failed.db`. Không xóa.
+   - **8b.** Nếu tệp dữ liệu cũ đã được dời đi (bước 4 đã xong): đổi tên nó về `db_file_path`.
+   - **8c.** Khởi động backend, chờ `READY`.
+9. Bước 8 hỏng: báo lỗi `500 ERR_RESTORE_FAILED`, sau khi đã xóa bản ghi đang chờ. Main dừng với hộp thoại lỗi khởi động tiếng Việt. **Câu trên hộp thoại phải nói đúng chỗ của dữ liệu cũ**, nên có ba câu, chọn theo việc nào của bước 8 hỏng (bổ sung 2026-10-09, DSK-26; trước đó chỉ có câu của 9a cho mọi trường hợp):
+   - **9a. Hỏng ở 8c** (tệp đã về chỗ cũ, chỉ backend không lên): tệp dữ liệu cũ nằm ở `db_file_path`; lần mở sau dùng lại dữ liệu cũ. Câu như hiện tại.
+   - **9b. Hỏng ở 8a** (không dời được tệp vừa chuyển vào): ở `db_file_path` là tệp của bản sao lưu; tệp dữ liệu cũ vẫn ở `restore-previous`. Câu nói rõ đường dẫn tệp cũ, và rằng lần mở sau sẽ dùng dữ liệu của bản sao lưu nếu backend lên được.
+   - **9c. Hỏng ở 8b** (không đưa được tệp cũ về): `db_file_path` có thể trống, và **lần mở sau backend sẽ tạo một cơ sở dữ liệu rỗng**. Câu nói rõ đường dẫn tệp cũ, nói rằng đừng nhập dữ liệu mới trước khi đưa tệp đó về, và cách đưa về: đóng ứng dụng, chép tệp đó vào đúng chỗ, đặt lại tên `data.db`. Câu ghi luôn đường dẫn `db_file_path`.
+
+   Lỗi mang trong `details` của `error_body` việc nào hỏng và đường dẫn tệp cũ. Hợp đồng không quy định hình dạng `details`, nên đây là chuyện bên trong Desktop. Câu chữ nằm trong `configs/desktop.json`. Không thêm vòng thử lại cho các lần đổi tên: đo ở phiên 36 cho 0/20 lần hỏng.
 
 **`restore_trigger`** chỉ kích hoạt và trình bày, không quyết định gì:
 - `outcome` khác `'none'` thì hiện một hộp thoại thông báo của hệ điều hành, modal với cửa sổ (hoặc không có cửa sổ cha, vì cửa sổ chưa mở). Chữ dựng từ các trường của `restore_outcome`, nằm trong `configs/desktop.json`.
