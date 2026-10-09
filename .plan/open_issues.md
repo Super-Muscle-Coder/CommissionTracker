@@ -312,7 +312,7 @@ Phiên 32 cho `app_version` là tham số từ khóa tùy chọn, vì 20 chỗ g
 
 ## Hợp đồng — chờ Project Owner duyệt
 
-### CT-8 — `restore_data` lên `đã_hoàn_thiện` (đề xuất 2026-10-08, audit phiên 36 §6) — **chờ Project Owner duyệt**, và chỉ ghi sau khi Project Owner chạy lại một lượt trên mã cuối (audit phiên 36 §5.1, §7)
+### CT-8 — `restore_data` lên `đã_hoàn_thiện` (đề xuất 2026-10-08, audit phiên 36 §6) — **ĐÃ DUYỆT VÀ GHI 2026-10-09** (Data Schema 10.0.1). Project Owner đặt điều kiện: duyệt nếu hai ca hỏng ở lượt chạy lại (N14, D2) không nghiêm trọng; Orchestrator đánh giá không nghiêm trọng (audit phiên 36 §5.7: chỗ đua của công cụ kiểm thử, chức năng đúng; DSK-27). DSK-26 làm sai một cam kết trong `description` của `restore_data` ("never ends up without a working database") ở một trường hợp chưa từng xảy ra, nên phải đóng trong chặng F
 
 Data Schema 10.0.0 → **10.0.1**, `clause_d_desktop.restore_data.status`: `đang_chờ_triển_khai` → `đã_hoàn_thiện`. Không phá vỡ (chỉ đổi `status`), như CT-6. Lý do: đủ năm lớp; ba lối vào `ipc` và `apply_pending_restore` đúng nhãn; `UNSOLVED_PROBLEMS: []` ở `restore_data`, `restore_trigger`, Main; EVIDENCE tái lập trên Windows và Linux; Project Owner chạy khứ hồi thật. DSK-25, DSK-26 là chuyện bên trong và trình bày, không đổi ranh giới.
 

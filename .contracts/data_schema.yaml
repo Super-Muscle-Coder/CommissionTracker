@@ -334,9 +334,26 @@
 #            Approved by the Project Owner on 2026-10-08 (open_issues CT-7).
 #   v10.0.0 — [Clause A, THÊM] types.pending_restore_record, the shape of a
 #            pending restore as handed to the interface (CT-7).
+#   v10.0.1 — [Clause D, SỬA] status of restore_data: đang_chờ_triển_khai ->
+#            đã_hoàn_thiện — proposal of desktop session #36 verified by the
+#            Orchestrator (08, Part 5; .reviews/audits/desktop/
+#            audit_desktop_session36.md): both phases built (session #35:
+#            restore:prepare, restore:status, restore:cancel; session #36:
+#            apply_pending_restore through backend_controller, called by
+#            restore_trigger); independent re-run on another machine of the
+#            new tests three times; nine bite tests (four by the agent, five
+#            by the Orchestrator); the real round trip run by the Project
+#            Owner with the real dialog, and on the packaged build; no
+#            unsolved problem. Shapes, labels and rules unchanged. Known
+#            internal gap, tracked as open_issues DSK-26 and to be closed
+#            within stage F: when putting the previous database back fails
+#            at the rename step (not observed: 0 of 20 measured renames
+#            failed), the old file stays in restore-previous and the error
+#            message is wrong. Approved by the Project Owner on 2026-10-09
+#            (open_issues CT-8).
 # =============================================================================
 
-schema_version: 10.0.0
+schema_version: 10.0.1
 contract_state: approved
 
 # -----------------------------------------------------------------------------
@@ -772,7 +789,7 @@ clause_d_desktop:
   restore_data:
     tag: "[Clause D]"
     workflow_type: nghiệp_vụ
-    status: đang_chờ_triển_khai
+    status: đã_hoàn_thiện
     description: "Replaces the live database with a backup archive in two phases. Request (while the app runs): clear any pending restore; ask backup_data to prepare the archive (stop here if it is invalid or incompatible); ask backup_data for a pre-restore safety archive in restore_data's own folder next to db_file_path (stop here if it fails); record the pending restore in restore_data's own file next to db_file_path. The live database and the running backend are not touched. Apply (once per start of the desktop Main, after the backend is ready and before the window opens, when restore_trigger calls): if nothing is pending, do nothing; if the pending record is unreadable or its staged file is gone, discard it; otherwise stop the backend through backend_controller, move the live database file aside (kept), move the staged file into db_file_path, start the backend on the same port and wait for it to be ready. If any step after the stop fails, put the moved-aside file back and start the backend again, so the artist never ends up without a working database. The pending record is removed after every apply attempt. The pending restore can be read and cancelled while the app runs. Operates on whole files only (05-edge-cases.md, Step 5.6)."
     input_expected:
       archive_path: { type: file_path, from: end_user }
