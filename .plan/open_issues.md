@@ -322,11 +322,19 @@ Backend chết trong lúc trang đầu đang nạp: `onUnexpectedExit` gọi `fa
 
 (1) `launchMain` để lại một thư mục `ct-desktop-log-*` trong thư mục tạm mỗi lần chạy; dọn khi ca kết thúc. (2) Chú thích đầu `tee_stderr.cjs` còn nói `NODE_OPTIONS`, mã dùng `-r`. (3) `last_updated_by` của phiên 38 ghi `#1` dù là phiên thứ hai trong ngày 2026-10-09.
 
+**Bổ sung 2026-10-10 (Orchestrator, khi soạn plan phiên 39):** (1) mở rộng cho cả `ct-desktop-test-*` do `tempDataDir()` tạo (máy audit Linux: 414 thư mục); xóa khi ca đạt, giữ khi ca hỏng. (4) `Desktop/tests/helpers.ts` dòng 20 có `// eslint-disable-next-line @typescript-eslint/no-require-imports`, có từ commit đầu của kho (2026-09-28). Mọi audit desktop trước đây ghi "không `eslint-disable`" vì chỉ tìm trong mã mới của phiên, không tìm trên toàn bộ mã: đây là chỗ hở của Orchestrator. Từ nay mỗi audit tìm trên toàn bộ `Desktop/`, `UI/src` (`eslint-disable`, `@ts-ignore`, `@ts-expect-error`, `@ts-nocheck`) và `Backend/` (`noqa`, `type: ignore`). Plan phiên 39: `.plan/desktop_plan.md`.
+
 ## Layer giao diện — sau audit phiên 37
 
 ### UI-22 — NOTES của khối `main` giao diện sắp hết hạn (thấp; audit phiên 37 §5.2)
 
 Khối checkpoint `main` (`UI/src/main.tsx`) còn sáu NOTES ghi ngày 2026-09-27 (ba), 09-28, 09-29, 10-07; ba NOTES ngày 09-27 hết hạn 14 ngày vào 2026-10-11 (`CLAUDE.md` mục 5). **Việc:** phiên giao diện kế tiếp, hoặc chặng H, xem lại từng NOTE: chuyển thành EXPERIENCES nếu còn giá trị, xóa nếu không.
+
+## Layer backend — phát hiện khi soạn plan phiên 39
+
+### BE-10 — Chú thích tắt kiểm tra trong `Backend/` (thấp; Orchestrator phát hiện 2026-10-10) — xem lại ở chặng H
+
+Rà toàn bộ mã ngày 2026-10-10: bảy dòng `# noqa: F401` trên các dòng `from .adapters import … StorageIOError` ở `services.py` của `record_payment`, `view_income_report`, `backup_data`, `manage_watermark_profile`, `send_reminder`, `manage_client`, `update_progress`; hai dòng `# type: ignore[misc]` ở `backup_data/services.py` (`parse_semver`); một `# pragma: no cover` ở `manage_client/tests/test_manage_client.py`. Chưa audit nào nêu ra, cùng lý do như DSK-29 (4). Chưa rõ dự án có chạy linter hay kiểm kiểu nào cho `Backend/` không; nếu không có thì các chú thích này không tắt gì cả, nhưng vẫn cần lý do. **Việc:** ở chặng H (câu hỏi 4), với mỗi dòng: bỏ đi, hoặc ghi lý do giữ. Phía `UI/src`: 16 dòng `@ts-expect-error` ở `screens/tests/app_root.test.tsx` là kiểm thử kiểu phủ định (khẳng định một lời gọi sai kiểu thì không biên dịch được), là cách dùng đúng; ghi nhận, không phải lỗi.
 
 ## Layer backend — sau audit phiên 32
 
