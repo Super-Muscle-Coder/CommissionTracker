@@ -284,6 +284,8 @@ Người dùng thật cập nhật bằng cách chạy bộ cài mới; họ kh�
 
 ### DSK-23 — Ứng dụng thoát một lần với mã 0xC0000005 trên trang thử (theo dõi; audit phiên 35 §5.2)
 
+> **ĐÃ ĐÓNG 2026-10-10, phiên 38** (audit `.reviews/audits/desktop/audit_desktop_session38.md` §5.4). Không lặp lại trong suốt chặng F (phiên 35–38), đúng điều kiện đóng.
+
 Phiên 35: một lần chạy `npm run probe` thoát với mã 3221225477 (vi phạm truy cập bộ nhớ của tiến trình Electron), ngay sau ba lần hộp thoại chọn tệp **thật** trả "canceled". Log Main không có `FATAL`; các lượt khác của cùng phiên không sập; chưa tái hiện. Đường gọi chỉ có `dialog.showOpenDialog` của Electron. **Việc:** phiên 36 (cũng dùng hộp thoại thật) ghi lại nếu lặp lại; lặp lại thì đo (Windows Event Viewer, mục Application Error; số lần mở và hủy hộp thoại). Không lặp lại tới hết chặng F thì đóng. **Phiên 36 (2026-10-08): không lặp lại** (một lần hộp thoại chọn tệp thật, một lần hộp thoại kết quả thật).
 
 ### DSK-24 — Bản sao lưu an toàn tích lũy (thấp; V2; audit phiên 35 §5.4)
@@ -300,11 +302,25 @@ Mỗi lần `restore:prepare` thành công tạo thêm một bản sao lưu an t
 
 ### DSK-26 — Hoàn tác hỏng ở bước đổi tên: câu báo lỗi nói sai, lần mở sau có thể ra cơ sở dữ liệu rỗng (thấp; audit phiên 36 §5.3, §5.4) — phiên desktop kế tiếp
 
+> **ĐÃ ĐÓNG 2026-10-10, phiên 38** (audit `.reviews/audits/desktop/audit_desktop_session38.md` §3). `undo()` trả `rollback_stage` và `previous_database_path` trong `details`; ba câu 9a, 9b, 9c trong `desktop.json`, chọn ở `src/error_dialog.ts`; U1–U6 trong `tests/restore_undo.spec.ts`; bảy phép cắn bị bắt. NOTES quá hạn của Main đã dọn. Chặng F xong.
+
 `restore_data` `undo()` trả 500 ở ba chỗ: (1) dời tệp đã chuyển vào sang `-failed`, (2) đưa tệp cũ về `db_file_path`, (3) khởi động lại. Cả ba dùng chung câu `main.error_dialog.restore_failed_summary` ("Dữ liệu trước đó đã được đưa về chỗ cũ"), chỉ đúng với (3). Ở (2), `data.db` không còn ở chỗ cũ; lần mở sau backend tạo cơ sở dữ liệu rỗng, dữ liệu thật nằm trong `restore-previous/` mà không ai báo. Hiếm (đo phiên 36: 0/20 lần đổi tên hỏng), nhưng nặng. Chỗ hở là của đặc tả (`f_restore.md` §3 bước 9 chỉ nói lần khởi động hỏng). **Việc:** Orchestrator bổ sung `f_restore.md` §3 trước (**xong 2026-10-09**: bước 8a–8c, ba câu 9a–9c; plan phiên 38); phiên desktop kế tiếp tách câu báo lỗi theo tình huống (kèm đường dẫn tệp cũ trong `restore-previous`) và thêm một ca kiểm thử cho (2). **Gộp:** xem lại NOTES của Main ghi 2026-09-26, 09-27, 10-05 (hết hạn 14 ngày từ 2026-10-10): chuyển thành EXPERIENCES hoặc xóa.
 
 ### DSK-27 — Kiểm thử Desktop chờ một dòng log có thể đã mất (trung bình; audit phiên 36 §5.7) — phiên desktop kế tiếp
 
+> **ĐÃ ĐÓNG 2026-10-10, phiên 38** (audit `.reviews/audits/desktop/audit_desktop_session38.md` §3, §5.2). `tests/fixtures/tee_stderr.cjs` (nạp bằng `-r`) chép stderr của Main ra tệp từ dòng đầu, `LogCollector` đọc tệp; ca L1 và phép cắn (d). Ca 14 còn hỏng khi máy tải là lỗi khác (DSK-28). **Đính chính:** câu dưới đây "đây là nguyên nhân của các ca `desktop_main` hỏng do môi trường" là sai; 8 ca đó hỏng trên Linux vì khẳng định có hai tiến trình `python` (trình khởi chạy của venv Windows), không vì mất dòng log.
+
 `launchMain()` (`Desktop/tests/helpers.ts`) gắn bộ gom log sau khi `_electron.launch` trả về, nên dòng `backend started (pid N)` ghi sớm có thể mất khi máy tải. Các hàm dọn dẹp chờ dòng đó (`closeCleanly()` của `native_dialogs`, `reminder_ticker`, `restore_data`; `backendPids()`) thì hết giờ. Lượt chạy lại của Project Owner ngày 2026-10-08: N14 và D2 hỏng sau khoảng 1 phút dù chức năng đúng; log N14 không có dòng đó. Trên Linux dòng đó luôn mất: đây là nguyên nhân của các ca `desktop_main` hỏng "do môi trường" trong mọi bản audit desktop. **Việc:** lấy PID không qua dòng log sớm (ví dụ `app.evaluate(() => process.pid)` cộng cây tiến trình, hoặc PID trong dòng `backend READY`); chạy `npm test` ba lượt trong lúc máy tải; không nới thời gian chờ.
+
+## Layer desktop — sau audit phiên 38
+
+### DSK-28 — `fatal()` chạy hai lần khi backend chết ngay sau READY: hai hộp thoại lỗi (trung bình; audit phiên 38 §5.1) — phiên desktop đầu chặng G
+
+Backend chết trong lúc trang đầu đang nạp: `onUnexpectedExit` gọi `fatal(..., 'running')`, rồi lần nạp trang đầu báo `ERR_FAILED`, đi vào `.catch` của `whenReady().then(startLayer)` và gọi `fatal("The app could not start: ERR_FAILED …")` lần hai. Họa sĩ thấy hai hộp thoại, hộp thứ hai nói sai nguyên nhân. Ca 14 của `desktop_main` hỏng 2/4 lượt có tải trên Windows. Có từ trước phiên 38. **Việc:** trong `fatal()`, đã `shutdownStarted` thì chỉ ghi log (quyết có ghi dòng `FATAL:` thứ hai không); ca 14 đạt 3 lượt liên tiếp có tải.
+
+### DSK-29 — Việc nhỏ sau phiên 38 (thấp; audit phiên 38 §5.3) — làm kèm DSK-28
+
+(1) `launchMain` để lại một thư mục `ct-desktop-log-*` trong thư mục tạm mỗi lần chạy; dọn khi ca kết thúc. (2) Chú thích đầu `tee_stderr.cjs` còn nói `NODE_OPTIONS`, mã dùng `-r`. (3) `last_updated_by` của phiên 38 ghi `#1` dù là phiên thứ hai trong ngày 2026-10-09.
 
 ## Layer giao diện — sau audit phiên 37
 

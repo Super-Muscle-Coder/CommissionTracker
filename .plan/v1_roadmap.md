@@ -205,13 +205,15 @@ Chặng E xong khi họa sĩ tạo được tệp sao lưu từ giao diện, và
 
 ## Chặng F — `restore_data`, hoặc hoãn sang V2
 
+**XONG 2026-10-10** (phiên 35–38): khứ hồi thật từ giao diện, từ chối tệp hỏng hay mới hơn, hoàn tác khi áp dụng hỏng (kể cả ba cách hoàn tác hỏng báo đúng chỗ dữ liệu), trang `restore` `hoàn_tất`, `restore_data` `đã_hoàn_thiện`.
+
 **Đã quyết 2026-10-08: hướng B, "chuẩn bị, rồi mở lại để hoàn tất"** (Project Owner chọn; làm F trước, G sau). Đặc tả: `.design/f_restore.md`. Hợp đồng sửa theo CT-7: Data Schema 10.0.0, API Contract 5.0.0, Project Owner duyệt và ghi ngày 2026-10-08. Điều kiện cũ "quyết sau khi chặng C xong" coi như đạt: đóng gói, vòng đời backend và kênh `ipc` đã được chứng minh trên máy Project Owner; phần chạy trên máy sạch (ENV-4) gộp vào chặng G.
 
 **Chia phiên:**
 1. **Phiên 35 (desktop): pha 1.** Workflow `restore_data` (workflow đầu tiên của desktop) với `restore:prepare`, `restore:status`, `restore:cancel`; `native_dialogs.open_file`; DSK-22. Plan: `.plan/desktop_plan.md`. **Xong 2026-10-08, audit đạt** (`.reviews/audits/desktop/audit_desktop_session35.md`); Desktop 62 kiểm thử, `test:packaged` 10; DSK-22 đóng; mở DSK-23 (theo dõi), DSK-24 (V2).
 2. **Phiên 36 (desktop): pha 2.** `backend_controller`, `apply_pending_restore`, `restore_trigger`, khứ hồi thật, hoàn tác, bản đóng gói. Plan phát hành 2026-10-08: `.plan/desktop_plan.md`. **Xong 2026-10-08, audit đạt** (`.reviews/audits/desktop/audit_desktop_session36.md`); Project Owner chạy lại trên mã cuối: `dist`, `test:packaged` 11/11, `npm test` 67 đạt và 2 hỏng do chỗ đua của công cụ kiểm thử (DSK-27); Desktop 69 kiểm thử, `test:packaged` 11; đo: cùng cổng và đổi tên 0 lần hỏng. Mở DSK-25 (hộp thoại không lên trên cùng), DSK-26, DSK-27; CT-8 (`restore_data` lên `đã_hoàn_thiện`, Data Schema 10.0.1) duyệt và ghi 2026-10-09. DSK-26 phải đóng trước khi chặng F xong.
 3. **Phiên 37 (giao diện):** làm lại I1 cho khôi phục (xong 2026-10-09, `.design/ui_decomposition.md` mục "Chặng F — Khôi phục"), rồi trang `restore` và mục điều hướng thứ bảy "Khôi phục". Plan phát hành 2026-10-09: `.plan/ui_plan.md`. **Xong 2026-10-09, audit đạt** (`.reviews/audits/ui/audit_ui_session37.md`); UI 1936 kiểm thử, e2e 83; Project Owner chạy tay: `restore` `hoàn_tất`. DSK-25 đóng (mở bằng lối tắt thì hộp thoại lên trên cùng). Mở UI-22 (thấp).
-4. **Phiên 38 (desktop, vá ngắn):** DSK-26 (Orchestrator bổ sung `f_restore.md` §3 trước), DSK-27, dọn NOTES của Main sắp hết hạn. DSK-25 không cần sửa (đóng ở phiên 37). **Chặng F xong khi phiên 38 đóng DSK-26.** Plan phát hành 2026-10-09: `.plan/desktop_plan.md`; `f_restore.md` §3 bổ sung bước 8a–8c và ba câu 9a–9c.
+4. **Phiên 38 (desktop, vá ngắn):** DSK-26 (Orchestrator bổ sung `f_restore.md` §3 trước), DSK-27, dọn NOTES của Main sắp hết hạn. DSK-25 không cần sửa (đóng ở phiên 37). Plan phát hành 2026-10-09: `.plan/desktop_plan.md`; `f_restore.md` §3 bổ sung bước 8a–8c và ba câu 9a–9c. **Xong 2026-10-10, audit đạt** (`.reviews/audits/desktop/audit_desktop_session38.md`); Desktop 76 kiểm thử, `test:packaged` 11; DSK-26, DSK-27, DSK-23 đóng; mở DSK-28 (hai hộp thoại lỗi, làm đầu chặng G), DSK-29.
 
 **Chặng F xong khi:** họa sĩ chọn một tệp sao lưu từ giao diện, chuẩn bị, đóng rồi mở lại ứng dụng, và thấy đúng dữ liệu trong tệp; tệp hỏng hay mới hơn bị từ chối mà không có gì thay đổi; một lần áp dụng hỏng được hoàn tác về dữ liệu cũ; trang Khôi phục `hoàn_tất`. Thêm (2026-10-09): DSK-26 đã đóng. Lý do: CT-8 đưa `restore_data` lên `đã_hoàn_thiện` trong khi chỗ hở đó còn, và changelog đã ghi rõ.
 
@@ -227,6 +229,8 @@ Chặng E xong khi họa sĩ tạo được tệp sao lưu từ giao diện, và
 3. Cài đè khi ứng dụng **đang mở**: bộ cài báo hoặc tự đóng ứng dụng; không để lại bản cài nửa vời; không còn `python.exe` của backend sót lại.
 4. Dữ liệu do bản N tạo, có bước nâng cấp cấu trúc ở bản N+1: lần mở đầu của N+1 nâng cấp đúng.
 5. Cài bản cũ hơn đè bản mới: hoặc bị chặn, hoặc backend dừng với hộp thoại tiếng Việt rõ ràng; không hỏng dữ liệu.
+
+**Mở đầu chặng G (từ 2026-10-10):** một phiên desktop vá DSK-28 và DSK-29 trước khi đóng gói bản chính thức.
 
 Cách làm: Orchestrator soạn runbook cho Project Owner chạy tay, gộp với ENV-4 (máy sạch); phần nào cần đổi mã (số phiên bản, hành vi khi đang mở) thì vào một phiên desktop trước khi chạy runbook. Tự cập nhật (auto-update) vẫn ngoài V1. `npm run test:packaged` là tiêu chí của chặng này (DSK-16).
 
