@@ -2,8 +2,8 @@
 // workflow: restore_data
 // clause: clause_d_desktop
 // component: services
-// last_updated_by: coding-agent@2026-10-08#2
-// last_updated_at: 2026-10-08T19:09:25.3415976+07:00
+// last_updated_by: coding-agent@2026-10-09#1
+// last_updated_at: 2026-10-09T20:40:59.3234784+07:00
 //
 // EXPERIENCES:
 //   - id: restore_data-EXP-001
@@ -139,6 +139,20 @@
 //       BrowserWindow: hiện được, đủ dấu tiếng Việt, có mặt trên thanh tác vụ, KHÔNG tự lên trên cùng
 //       (Project Owner: "không tự nhiên chiếm cửa sổ đang hoạt động").
 //
+//   - id: restore_data-EXP-010
+//     content: >
+//       DSK-26: bước 8 của pha 2 có ba việc, mỗi việc hỏng cho một kết quả khác (phiên 38, f_restore.md mục 3
+//       bước 8a-8c, 9a-9c). undo() trả null hoặc {stage, reason}: 8a (đổi tên tệp vừa chuyển vào sang -failed)
+//       hỏng thì stage move_failed_aside, 8b (đưa tệp cũ về db_file_path) hỏng thì move_back, 8c (khởi động)
+//       hỏng thì start. Mỗi lần đổi tên chỉ thử một lần (không vòng thử lại: phiên 36 đo 0/20 hỏng). Khi hoàn
+//       tác cũng hỏng, applyPending xóa bản ghi rồi trả 500 ERR_RESTORE_FAILED; details giữ reason và
+//       rollback_reason như cũ, thêm rollback_stage và previous_database_path: ở stage start là db_file_path (tệp
+//       cũ đã về chỗ cũ), ở hai stage kia là đường dẫn tệp cũ trong restore-previous (moves.asidePath). Hợp đồng
+//       không quy định hình dạng details; RollbackStage nằm ở entities.ts. Main chọn câu theo rollback_stage
+//       (main-EXP-037). Không làm gì để chặn lần mở sau tạo cơ sở dữ liệu rỗng ở 9c (V1 chấp nhận, câu thông
+//       báo là biện pháp duy nhất). Cách dựng ba ca ở tests/restore_undo.spec.ts: lớp ScriptedAdapters kế thừa
+//       RestoreDataAdapters và làm moveFile hỏng ở lần gọi thứ N (lần 3 là 8a, lần 4 là 8b), controller không bao
+//       giờ khởi động được, tệp thật trong thư mục tạm; lần 1 và 2 là hai lần đổi tên của bước 4 và 5.
 // UNSOLVED_PROBLEMS: []
 //
 // EVIDENCE:
@@ -368,6 +382,27 @@
 //     result: >
 //       Cả hai thư mục: 69 dòng ở mỗi mốc, 0 dòng khác nhau (data.db, data.db.lock không đổi).
 //     recorded_at: 2026-10-08T19:09:25.3415976+07:00
+//   - claim: >
+//       DSK-26 (phiên 38): ba cách hoàn tác hỏng cho ba kết quả khác nhau, mỗi cách mang rollback_stage và đường
+//       dẫn tệp cũ trong details của ERR_RESTORE_FAILED; ba câu của Main đúng; ba phép cắn.
+//     how: >
+//       cd Desktop; npm run build; npx playwright test tests/restore_undo.spec.ts tests/restore_apply.spec.ts -g
+//       "U[1-6]|A5". U1-U3: RestoreDataService với Adapters thật trên thư mục tạm, moveFile hỏng ở lần gọi chọn
+//       trước (lần 3 là 8a, lần 4 là 8b), backend giả không bao giờ lên lại, gọi qua Routers
+//       (registerRestoreDataRouters, applyPendingRestore) như Main. U4-U6: buildErrorDialog với desktop.json thật.
+//       A5 là trường hợp 9a qua ứng dụng thật. Phép cắn: (a) tạm cho undo() luôn trả stage start; (b) tạm bỏ
+//       {previous_database_path} khỏi câu move_back trong desktop.json; (c) tạm ném lỗi ở 8a trước removeRecord;
+//       mỗi phép chạy tests/restore_undo.spec.ts rồi khôi phục tệp từ bản chép.
+//     result: >
+//       7 passed (A5, U1-U6). U1: 500 ERR_RESTORE_FAILED, rollback_stage start, previous_database_path là
+//       db_file_path, data.db là OLD DATABASE, một tệp -failed chứa STAGED DATABASE, bản ghi đã xóa, hai lần
+//       khởi động. U2: stage move_failed_aside, previous_database_path là tệp trong restore-previous (OLD
+//       DATABASE), db_file_path vẫn là STAGED DATABASE, một lần khởi động, bản ghi đã xóa, câu 9b có đường dẫn đó.
+//       U3: stage move_back, db_file_path không tồn tại, restore-previous có tệp cũ và tệp -failed, câu 9c có cả
+//       hai đường dẫn, "Đừng nhập dữ liệu mới" và "dữ liệu trống". Phép cắn (a): U2 và U3 hỏng (Expected
+//       "move_failed_aside"); (b): U3, U4, U6 hỏng; (c): U2 hỏng (bản ghi còn); sau khôi phục 6 passed. Ba
+//       lượt có tải và một lượt không tải của npm test đều chạy các ca này (xem EVIDENCE của Main).
+//     recorded_at: 2026-10-09T20:40:59.3234784+07:00
 //
 // NOTES:
 //   - content: >
@@ -376,6 +411,10 @@
 //       thông báo (một lần đo ở việc 2, một lần "Khôi phục dữ liệu" của Project Owner); lần chạy thứ nhất của anh thoát mã 0;
 //       anh không báo lần thoát bất thường nào. Chưa kiểm Windows Event Viewer vì không có lần sập nào
 //       để đối chiếu.
+//       Phiên 38 (2026-10-09): cũng KHÔNG lặp lại. Mọi lần chạy của phiên (npm test bốn lượt, test:packaged, UI
+//       e2e) không có lần nào thoát mã 3221225477; các ca của phiên thay hộp thoại bằng mã giả hoặc dùng cờ
+//       không hộp thoại, nên không có lần mở hộp thoại thật nào. DSK-25 đã đóng (audit phiên 37). DSK-23 chỉ còn
+//       theo dõi; Orchestrator đóng nếu không lặp lại tới hết phiên này.
 //     written_at: 2026-10-08
 //   - content: >
 //       Cho Orchestrator và phiên giao diện. (1) Hộp thoại kết quả của restore_trigger không có cửa sổ
@@ -408,6 +447,7 @@ import type {
   RestoreOutcome,
   RestoreReply,
   RestoreStatus,
+  RollbackStage,
   StoredPendingRecord,
 } from './entities'
 
@@ -419,6 +459,12 @@ interface AppliedMoves {
   asidePath: string | null
   /** True once the staged file has been moved into db_file_path. */
   stagedMovedIn: boolean
+}
+
+/** Why putting the previous database back failed, and at which job. */
+interface UndoFailure {
+  stage: RollbackStage
+  reason: string
 }
 
 /** The five fields of pending_restore_record: the stored record without
@@ -574,14 +620,21 @@ export class RestoreDataService {
     await this.removeRecord()
     if (undoFailure === null) return this.outcome('rolled_back', record, failure)
 
-    // 9. Putting back failed too.
-    this.log(`restore_data: apply -> failed (restore: ${failure}; put back: ${undoFailure})`)
+    // 9. Putting back failed too. Which of the three jobs of step 8 failed, and
+    //    where the previous database is now, tell the Main which sentence to show
+    //    (DSK-26): the three cases are not the same for the person.
+    this.log(`restore_data: apply -> failed (restore: ${failure}; put back failed at ${undoFailure.stage}: ${undoFailure.reason})`)
     return {
       status: this.config.labels.restore_failed,
       body: {
         code: this.config.error_codes.restore_failed,
         message: 'Applying the pending restore failed and the previous database could not be started again.',
-        details: { reason: failure, rollback_reason: undoFailure },
+        details: {
+          reason: failure,
+          rollback_reason: undoFailure.reason,
+          rollback_stage: undoFailure.stage,
+          previous_database_path: undoFailure.stage === 'start' ? this.adapters.dbFilePath : moves.asidePath,
+        },
       },
     }
   }
@@ -613,25 +666,29 @@ export class RestoreDataService {
     return null
   }
 
-  /** Step 8. Null when the old database is back and the backend is READY on it;
-   * otherwise why that failed. A database that was moved in is kept, with the
-   * failed suffix, never deleted. */
-  private async undo(moves: AppliedMoves): Promise<string | null> {
+  /** Step 8, in the order 8a, 8b, 8c. Null when the old database is back and the
+   * backend is READY on it; otherwise which job failed and why. A database that
+   * was moved in is kept, with the failed suffix, never deleted. Each rename is
+   * tried once (no retry: 0 of 20 failed when measured in session 36). */
+  private async undo(moves: AppliedMoves): Promise<UndoFailure | null> {
     const { files } = this.config
     await this.adapters.stopBackend()
+    // 8a. The staged database that was moved in goes aside.
     if (moves.stagedMovedIn) {
       const failedPath = await this.adapters.freePath(this.adapters.previousFolder, `${moves.stem}${files.failed_suffix}`, files.previous_file_extension)
       const put = await this.adapters.moveFile(this.adapters.dbFilePath, failedPath)
-      if (put.kind === 'failed') return `the restored database could not be moved out of the way (${put.reason})`
+      if (put.kind === 'failed') return { stage: 'move_failed_aside', reason: `the restored database could not be moved out of the way (${put.reason})` }
       this.log(`restore_data: apply: moved the failed database to ${failedPath}`)
     }
+    // 8b. The previous database goes back to db_file_path.
     if (moves.asidePath !== null) {
       const back = await this.adapters.moveFile(moves.asidePath, this.adapters.dbFilePath)
-      if (back.kind === 'failed') return `the previous database could not be put back (${back.reason})`
+      if (back.kind === 'failed') return { stage: 'move_back', reason: `the previous database could not be put back (${back.reason})` }
       this.log('restore_data: apply: put the previous database back')
     }
+    // 8c. The backend starts on it.
     const started = await this.adapters.startBackend()
-    if (started.kind === 'failed') return `the backend did not start on the previous database (${started.reason})`
+    if (started.kind === 'failed') return { stage: 'start', reason: `the backend did not start on the previous database (${started.reason})` }
     this.log('restore_data: apply: the backend is READY on the previous database')
     return null
   }

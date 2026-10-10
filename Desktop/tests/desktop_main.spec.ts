@@ -400,3 +400,18 @@ test('14. error dialog while running (DSK-13): the "stopped while running" sente
   expect(dialog.content).toContain('gặp lỗi khi đang chạy')
   expect(dialog.content).not.toContain(text.startup_summary)
 })
+
+test('L1. the log of a launchMain run starts at the first line (DSK-27): "main started" is there, once, before "backend started"', async () => {
+  const { app, log } = await launchMain(mainArgs({ dataDir: tempDataDir(), rendererRoot: PROBE_ROOT }))
+  try {
+    await expect((await app.firstWindow()).locator('#done')).toBeVisible({ timeout: 60_000 })
+    const lines = log.text.split(/\r?\n/)
+    const first = lines.findIndex((l) => /\[desktop-main\] main started: /.test(l))
+    const backend = lines.findIndex((l) => /backend started \(pid \d+\)/.test(l))
+    expect(first).toBe(0) // the very first line the Main writes; a stream attached after launch() always missed it
+    expect(backend).toBeGreaterThan(first)
+    expect(log.lines(/main started: /)).toHaveLength(1)
+  } finally {
+    await app.close()
+  }
+})

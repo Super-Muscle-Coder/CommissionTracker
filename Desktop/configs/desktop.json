@@ -79,7 +79,11 @@
       "startup_summary": "Commission Tracker không khởi động được. Hãy mở lại ứng dụng; nếu lỗi vẫn còn, hãy gửi nội dung chi tiết bên dưới cho người hỗ trợ.",
       "running_summary": "Commission Tracker gặp lỗi khi đang chạy và phải đóng. Hãy mở lại ứng dụng; nếu lỗi vẫn còn, hãy gửi nội dung chi tiết bên dưới cho người hỗ trợ.",
       "detail_label": "Chi tiết kỹ thuật:",
-      "restore_failed_summary": "Không khôi phục được dữ liệu và ứng dụng không mở lại được. Dữ liệu trước đó đã được đưa về chỗ cũ; hãy mở lại ứng dụng. Nếu lỗi vẫn còn, hãy gửi nội dung chi tiết bên dưới cho người hỗ trợ."
+      "restore_failed_summaries": {
+        "start": "Không khôi phục được dữ liệu và ứng dụng không mở lại được. Dữ liệu trước đó đã được đưa về chỗ cũ; hãy mở lại ứng dụng. Nếu lỗi vẫn còn, hãy gửi nội dung chi tiết bên dưới cho người hỗ trợ.",
+        "move_failed_aside": "Không khôi phục được dữ liệu và ứng dụng không mở lại được. Dữ liệu trước đó vẫn còn nguyên, nằm ở:\n{previous_database_path}\n\nLần mở sau, ứng dụng sẽ dùng dữ liệu của bản sao lưu đã chọn, nếu mở được. Nếu lỗi vẫn còn, hãy gửi nội dung chi tiết bên dưới cho người hỗ trợ.",
+        "move_back": "Không khôi phục được dữ liệu, và không đưa được dữ liệu trước đó về chỗ cũ. Dữ liệu trước đó nằm ở:\n{previous_database_path}\n\nĐừng nhập dữ liệu mới khi chưa đưa tệp đó về: lần mở sau, ứng dụng sẽ bắt đầu với dữ liệu trống.\n\nCách đưa về: đóng ứng dụng, rồi chép tệp đó vào đúng đường dẫn sau, với tên tệp là data.db:\n{db_file_path}\n\nNếu không làm được, hãy gửi nội dung chi tiết bên dưới cho người hỗ trợ."
+      }
     }
   },
   "packaged": {

@@ -12,10 +12,12 @@ directories:
 # app.asar: only the Main, its preload script, the cross-cutting components the
 # Main requires (dist/cross_cutting/, since desktop session 30), the workflows
 # it wires (dist/workflows/ and the Configs of each, since desktop session 35),
-# its configuration and package.json. No tests and no fixtures.
+# its configuration and package.json. No tests and no fixtures. Also the Main's
+# error dialog text (dist/error_dialog.js, since desktop session 38).
 files:
   - dist/main.js
   - dist/preload.js
+  - dist/error_dialog.js
   - dist/cross_cutting/**/*.js
   - dist/workflows/**/*.js
   - configs/desktop.json

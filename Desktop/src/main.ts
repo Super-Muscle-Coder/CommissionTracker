@@ -2,8 +2,8 @@
 // workflow: main
 // clause: clause_d_desktop
 // component: main
-// last_updated_by: coding-agent@2026-10-08#2
-// last_updated_at: 2026-10-08T19:09:25.3415976+07:00
+// last_updated_by: coding-agent@2026-10-09#1
+// last_updated_at: 2026-10-09T20:40:59.3234784+07:00
 //
 // EXPERIENCES:
 //   - id: main-EXP-001
@@ -374,7 +374,7 @@
 //     content: >
 //       Hộp thoại lỗi bằng tiếng Việt (DSK-13, phiên 26). Lời lẽ nằm trong
 //       desktop.json, main.error_dialog: startup_summary, running_summary,
-//       detail_label. buildErrorDialog(config, phase, detail) dựng nội dung:
+//       detail_label. buildErrorDialog (từ phiên 38 ở src/error_dialog.ts, main-EXP-037) dựng nội dung:
 //       câu tiếng Việt, một dòng trống, nhãn "Chi tiết kỹ thuật:", rồi đúng
 //       thông điệp tiếng Anh mà dòng "FATAL:" ghi (dòng FATAL không đổi chữ).
 //       phase 'startup' (mặc định: backend không lên, thiếu giao diện, lỗi nạp
@@ -596,7 +596,7 @@
 //       danh sách địa chỉ ipc, cửa sổ, lần nạp đầu, reminder_ticker. (3) InProcessCallError (500
 //       ERR_RESTORE_FAILED) do Main bắt và gọi fatal(..., 'restore_failed'): dòng "FATAL: Applying the
 //       pending restore failed: ERR_RESTORE_FAILED (500): ..." giữ dạng cũ; hộp thoại dùng
-//       main.error_dialog.restore_failed_summary, câu nói dữ liệu cũ đã được đưa về chỗ cũ. Lỗi khác của
+//       main.error_dialog.restore_failed_summary (từ phiên 38: restore_failed_summaries, ba câu, main-EXP-037; câu 9a vẫn nói dữ liệu cũ đã được đưa về chỗ cũ). Lỗi khác của
 //       restore_trigger là lỗi lập trình, đi vào đường "The app could not start" cũ. (4) Chữ hộp thoại kết
 //       quả nằm ở desktop.json restore_trigger (danh sách đoạn {text, field, layout}); đường dẫn cấu hình
 //       thư mục restore-previous nằm ở restore_data.json files. (5) Bản đóng gói không cần sửa
@@ -605,6 +605,50 @@
 //       tests/probe.cjs nhận npm run probe -- --data-dir <thư mục> để giữ thư mục dữ liệu giữa các lần
 //       chạy (vẫn là cờ --ct-test-data-dir của Main; không có tùy chọn thì thư mục tạm mới như cũ).
 //
+//   - id: main-EXP-034
+//     content: >
+//       Dịch vụ AI không được khởi động ở V1 (.design/v1_scope.md: watermark để dành V4 trở đi,
+//       .design/product_versions.md; chuyển từ NOTE ngày 2026-09-26). Main vẫn chọn một cổng trống cho nó và
+//       trao CT_AI_SERVICE_BASE_URL=http://127.0.0.1:<cổng> cho backend, vì backend bắt buộc có biến này
+//       (main-EXP-003 của backend). Không tiến trình nào nghe trên cổng đó. Khi làm watermark (V4 trở đi), Main
+//       khởi động clause_c_ai_service với CT_PORT là đúng cổng này (tìm aiPort trong startBackend) và chờ READY
+//       theo luật "the app must run without clause_c_ai_service".
+//   - id: main-EXP-035
+//     content: >
+//       Desktop.esproj (chuyển từ NOTE ngày 2026-09-26). JavaScriptTestFramework vẫn là Vitest: không chắc
+//       Visual Studio có giá trị cho Playwright nên không đoán. Test Explorer của Visual Studio có thể không thấy
+//       kiểm thử; chạy bằng npm test (TestCommand). StartupCommand = npm start, BuildCommand = npm run build,
+//       TestCommand = npm test, JavaScriptTestRoot = tests\.
+//   - id: main-EXP-036
+//     content: >
+//       Lần mở đầu của exe mới và npm run dist (chuyển từ NOTE ngày 2026-09-27, đã bỏ các ý lỗi thời). (1) Lần mở
+//       đầu tiên của một exe mới ở thư mục không có ngoại lệ antivirus có thể mất tới khoảng 64 giây mới có cửa
+//       sổ, và trong lúc đó một bản sao của ứng dụng chạy (main-EXP-015, main-EXP-018, main-EXP-019); người chạy
+//       thử cần được dặn chờ. Màn hình chờ không giúp được, vì JavaScript của Main chưa chạy trong khoảng chờ đó.
+//       Ký số là quyết định của Project Owner. (2) npm run dist có thể hỏng vì antivirus giữ tệp dù đã có ngoại lệ
+//       thư mục ("spawn EPERM" ở bước NSIS, "EPERM ... rename win-unpacked.tmp"); chạy lại cùng lệnh; nếu lặp lại
+//       thường xuyên thì báo. Phiên 38 chạy từ trạng thái sạch, đạt ngay lần đầu. Điều kiện build ở main-EXP-017.
+//   - id: main-EXP-037
+//     content: >
+//       DSK-26, phía Main (phiên 38). Ba câu báo lỗi cho ba cách hoàn tác hỏng nằm trong desktop.json,
+//       main.error_dialog.restore_failed_summaries.{start, move_failed_aside, move_back}, thay cho khóa
+//       restore_failed_summary duy nhất. Main chọn câu theo details.rollback_stage của ERR_RESTORE_FAILED
+//       (restore_data-EXP-010) và điền {previous_database_path} (details) và {db_file_path} (Main biết), qua
+//       src/error_dialog.ts (tệp mới của Main: buildErrorDialog, restoreFailureContext, kiểu FailurePhase; không
+//       import Electron nên kiểm thử nạp được; chỉ là chọn chữ để trình bày). Stage thiếu hoặc lạ, hoặc stage cần
+//       đường dẫn mà thiếu, thì dùng startup_summary, câu không nói gì về chỗ của dữ liệu (chọn thế để không khẳng
+//       định sai điều gì). Đường dẫn được điền bằng split/join, không bằng replace, vì đường dẫn có thể chứa "$&".
+//       Vì electron-builder.yml liệt kê tệp tường minh, thêm dist/error_dialog.js vào files, nếu không bản đóng gói
+//       thiếu module (test:packaged P1 sẽ hỏng).
+//   - id: main-EXP-038
+//     content: >
+//       DSK-27, phía kiểm thử (phiên 38). _electron.launch chỉ cho test thấy stderr của Main từ lúc launch() trả về
+//       (xem EVIDENCE), nên dòng đầu "main started" luôn mất. Sửa ở gốc, trong launchMain: tệp
+//       tests/fixtures/tee_stderr.cjs được nạp vào tiến trình Main bằng đối số "-r" (Playwright xóa NODE_OPTIONS
+//       và còn nạp loader của chính nó bằng "-r"); nó chép mọi dòng stderr vào tệp, LogCollector đọc tệp. Không đổi
+//       _electron.launch, không đổi Main, không nới thời gian chờ. Hai bẫy: NODE_OPTIONS bị Playwright xóa; và nó
+//       nuốt dấu chéo ngược trong đường dẫn. Khi viết ca mới cần dòng log sớm thì dùng launchMain hoặc spawnMain, không
+//       tự gọi _electron.launch rồi attach.
 // UNSOLVED_PROBLEMS: []
 //
 // EVIDENCE:
@@ -1271,69 +1315,85 @@
 //       thoát mã 0, UI e2e 75 passed, UI/evidence không đổi, lint sạch không ngoại lệ mới. Mốc
 //       %APPDATA% 69 dòng, 0 khác biệt.
 //     recorded_at: 2026-10-08T19:09:25.3415976+07:00
+//   - claim: >
+//       Phiên 38 (desktop, DSK-26, DSK-27, dọn NOTES): môi trường và mốc đầu phiên, với antivirus bật.
+//     how: >
+//       node -v; npm -v; electron package.json; Backend\env\Scripts\python.exe --version; Get-Service (AVG
+//       Antivirus, AVG Firewall, AVG Tools, Reason Security Engine/EDR/EPP đang chạy; Windows Defender
+//       WinDefend dừng); cd Desktop; npm ci; npm run lint; npm test; chụp %APPDATA%\CommissionTracker và
+//       %APPDATA%\Commission Tracker (đường dẫn, kích thước, LastWriteTimeUtc, SHA-256).
+//     result: >
+//       Node v24.14.1, npm 11.11.0, Electron 44.4.5, Python 3.13.12; 12 luồng logic, 8 lõi. npm ci và lint
+//       sạch (16:22:31-16:23:11). Mốc npm test (16:23-16:29): 68 passed, 1 failed (A5). A5 hỏng do CHÍNH
+//       PHIÊN: tôi sửa configs/desktop.json (đổi khóa restore_failed_summary) trong lúc lượt chạy đang diễn
+//       ra, Main cũ đọc thấy khóa mất nên hộp thoại ghi "undefined"; không có mốc sạch 69/69 đo lại trước
+//       khi sửa, nhưng 68 ca còn lại (kể cả mọi ca không liên quan tới DSK-26) đạt. Bài học: không sửa
+//       configs/ khi một lượt kiểm thử đang chạy, vì Main đọc configs/ lúc chạy, không đọc từ dist/.
+//       Mốc %APPDATA% 2 thư mục: 2 và 67 dòng.
+//     recorded_at: 2026-10-09T20:40:59.3234784+07:00
+//   - claim: >
+//       DSK-27, đo trước khi sửa: dòng log đầu bị mất khi gắn bộ gom log sau _electron.launch; chưa tái hiện
+//       được việc mất dòng "backend started".
+//     how: >
+//       Spec tạm tests/zz_measure_tmp.spec.ts (đã xóa sau khi đo): _electron.launch rồi gắn LogCollector, ghi
+//       thời gian launch trả về và các dòng main started / backend started / backend READY / first load có
+//       trong log hay không. Tải: tests ngoài dự án (scratchpad\load.js) chạy 11 tiến trình vòng lặp bận trên
+//       12 luồng logic. Hai lần thử tải nặng hơn (24 tiến trình, ưu tiên AboveNormal) bị ngắt giữa chừng khi
+//       phiên làm việc bị đóng và không có kết quả.
+//     result: >
+//       Không tải, 6 lượt: launch trả về sau 665-777 ms; "main started" MẤT 6/6; "backend started", READY,
+//       first load đều CÓ 6/6. Có tải (11 tiến trình), 10 lượt: launch trả về sau 772-6797 ms (lượt 2: 2143,
+//       lượt 6: 6797); "main started" MẤT 10/10; "backend started", READY CÓ 10/10; lượt 1 hỏng vì firstWindow hết
+//       30 s do máy quá tải. Kết luận: nguyên nhân cơ chế đã chứng minh (dòng đầu tiên mất 16/16 lần vì bộ gom
+//       log gắn sau khi launch trả về), nhưng mất dòng "backend started" CHƯA tái hiện được trong 16 lượt (Electron
+//       và Python bị chậm cùng lúc nên khoảng đệm giữa launch và dòng đó vẫn còn); vẫn sửa theo đặc tả.
+//     recorded_at: 2026-10-09T20:40:59.3234784+07:00
+//   - claim: >
+//       DSK-27, cách sửa: log của launchMain đọc từ tệp mà chính tiến trình Main chép stderr vào từ dòng đầu;
+//       cách cũ (gắn luồng sau launch) cộng độ trễ nhân tạo làm các ca dựa vào dòng log sớm hỏng.
+//     how: >
+//       tests/fixtures/tee_stderr.cjs (bọc process.stderr.write, ghi thêm vào tệp CT_TEE_STDERR_FILE), nạp bằng
+//       đối số "-r" của Electron trong launchMain (Playwright xóa NODE_OPTIONS nên không dùng được biến đó,
+//       và NODE_OPTIONS còn nuốt dấu chéo ngược); LogCollector có attachTeeFile và text là bộ đọc tệp. Ca mới L1
+//       trong desktop_main.spec.ts: dòng đầu của log là "main started", đúng một lần, trước "backend started".
+//       Phép cắn (d): tạm đặt helpers.ts về cách cũ (attach luồng) kèm sleep 4000 ms sau launch, chạy
+//       "-g L1|N2\.", rồi khôi phục bản đúng và chạy lại.
+//     result: >
+//       Có phép cắn: L1 và N2 (closeCleanly của native_dialogs) hỏng, N2 với "log line /backend started
+//       \(pid (\d+)\)/ not seen within 60000 ms". Khôi phục: 2 passed. Phân loại các ca: qua launchMain (đã
+//       sửa gốc, không cần đổi từng ca): closeCleanly của native_dialogs, reminder_ticker, restore_data;
+//       backendTree và dòng 297 của desktop_main (waitFor "backend started", backendPids, đếm "backend started"),
+//       stopRun và mọi backendPids của restore_apply, các waitFor "backend READY on port" của desktop_main và
+//       reminder_ticker. Qua spawnMain (child_process.spawn, vốn không mất dòng): các ca còn lại của
+//       desktop_main (đường fatal, ca hai bản ứng dụng ở vế bản thứ hai), A5 của restore_apply. Bản đóng gói:
+//       launchPackaged (_electron.launch) chỉ dùng dòng muộn (backend exited with code 0, closing its
+//       standard input, thiếu FATAL); P3, P7, P8 dùng spawn nên đã đủ dòng.
+//     recorded_at: 2026-10-09T20:40:59.3234784+07:00
+//   - claim: >
+//       Chạy toàn bộ phiên 38 với antivirus bật: lint, npm test ba lượt có tải và một lượt không tải, dist
+//       từ trạng thái sạch, test:packaged, UI e2e, mốc %APPDATA%.
+//     how: >
+//       cd Desktop; npm run lint; npm test chạy bốn lần liên tiếp bằng PowerShell (script ngoài dự án
+//       run_suite.ps1): ba lần trong lúc node load.js 11 tiến trình chạy, một lần sau khi dừng tải; xóa
+//       packaging\stage và release; ELECTRON_BUILDER_CACHE=%TEMP%\ct-eb-cache; npm run dist; liệt kê app.asar
+//       bằng require('@electron/asar').listPackage; npm run test:packaged. cd UI; npm run build; npm run e2e
+//       (CT_WALKTHROUGH_RUNNER không đặt; một lượt); git status --short UI/evidence.
+//     result: >
+//       Lượt có tải đầu tiên (trước khi sửa R10): 74 chạy, 72 passed, 2 failed (ca 14 của desktop_main, R10 của
+//       restore_data), 2 không chạy do serial. R10 là chỗ đua của kiểm thử (page.evaluate lúc trang data: chưa
+//       nạp xong, "Execution context was destroyed"), đã sửa bằng chờ nội dung trang, không nới thời gian chờ;
+//       ca 14 là lỗi thật của Main, xem NOTES. Sau khi sửa, ba lượt có tải: 76 passed (7,4 phút); 76 passed (9,5
+//       phút); 75 passed, 1 failed (9,7 phút; lại ca 14, cùng nguyên nhân hai lần fatal). Một lượt không tải: 76
+//       passed (4,8 phút, 20:27:19-20:32:13). Như vậy KHÔNG đạt tiêu chí "ba lượt có tải liên tiếp" vì ca 14;
+//       Project Owner chọn không sửa Main trong phiên này. npm run dist thoát mã 0 (20:32:38-20:33:44);
+//       app.asar có dist\error_dialog.js, configs\desktop.json, configs\restore_data.json, workflows\restore_data\*.js.
+//       test:packaged: 11 passed (20:33:51-20:34:56). UI npm run build đạt, npm run e2e: 83 passed (5,4 phút);
+//       git status --short UI/evidence trống. Mốc %APPDATA% cuối phiên (20:40:59): 2 và 67 dòng, 0 dòng khác
+//       mốc đầu phiên. Các số của npm test là của mã nguồn trước lần sửa cuối của các khối checkpoint (chỉ đổi
+//       chú thích) cộng một lượt chạy lại ghi trong báo cáo.
+//     recorded_at: 2026-10-09T20:40:59.3234784+07:00
 //
 // NOTES:
-//   - content: >
-//       Dịch vụ AI không được khởi động ở V1 (.design/v1_scope.md: watermark để
-//       dành V4 trở đi, .design/product_versions.md). Main vẫn chọn một cổng
-//       trống cho nó và trao CT_AI_SERVICE_BASE_URL=http://127.0.0.1:<cổng> cho
-//       backend, vì backend bắt buộc có biến này (main-EXP-003 của backend).
-//       Không tiến trình nào nghe trên cổng đó. Khi làm watermark (V4 trở đi),
-//       Main khởi động clause_c_ai_service với CT_PORT là đúng cổng này (tìm
-//       aiPort trong startBackend) và chờ READY theo luật "the app must run
-//       without clause_c_ai_service".
-//     written_at: 2026-09-26
-//   - content: >
-//       Desktop.esproj giữ nguyên JavaScriptTestFramework = Vitest: không chắc
-//       Visual Studio có giá trị cho Playwright nên không đoán. Test Explorer của
-//       Visual Studio có thể không thấy kiểm thử; chạy bằng npm test
-//       (TestCommand). Đã đổi StartupCommand = npm start, BuildCommand = npm run
-//       build, TestCommand = npm test, JavaScriptTestRoot = tests\. Phiên 13
-//       và 14 không sửa tệp này.
-//     written_at: 2026-09-26
-//   - content: >
-//       Cờ dòng lệnh chỉ dành cho kiểm thử (configs/desktop.json test_flags; lần
-//       chạy bình thường không truyền cờ nào): --ct-test-renderer-root=,
-//       --ct-test-data-dir= (đặt appData và userData, không bao giờ đụng
-//       %APPDATA% thật), --ct-test-backend-interpreter=, --ct-test-backend-script=,
-//       --ct-test-backend-working-dir=, --ct-test-first-backend-port= (ép cổng
-//       của lần thử đầu, dùng cho ca 4), --ct-test-no-dialog. Chạy từ mã nguồn:
-//       mọi cờ đều có hiệu lực; đường dẫn trong cờ tính theo thư mục hiện tại,
-//       đường dẫn trong desktop.json tính theo thư mục Desktop/. Bản đóng gói:
-//       chỉ --ct-test-data-dir= và --ct-test-no-dialog có hiệu lực, năm cờ kia
-//       bị bỏ qua và ghi log (main-EXP-010).
-//     written_at: 2026-09-27
-//   - content: >
-//       Cho Project Owner và phiên sau. (1) Lần mở đầu tiên của một exe mới ở
-//       thư mục không có ngoại lệ antivirus có thể mất tới khoảng 64 giây mới
-//       có cửa sổ, và trong lúc đó một bản sao của ứng dụng chạy
-//       (main-EXP-015, main-EXP-018, main-EXP-019); người chạy thử cần được
-//       dặn chờ. Màn hình chờ không giúp được, vì JavaScript của Main chưa
-//       chạy trong khoảng chờ đó. Ký số là quyết định của Project Owner. (2)
-//       Chưa có lượt quét antivirus nào (Defender tắt trên máy này). (3)
-//       Phiên backend sau tách pytest và httpx khỏi requirements.txt sẽ bớt
-//       khoảng 13,7 MB (D6). (4) npm run dist có thể hỏng vì antivirus giữ tệp
-//       dù đã có ngoại lệ thư mục: phiên 13 gặp "spawn EPERM" ở bước NSIS,
-//       phiên 14 gặp "EPERM ... rename win-unpacked.tmp" (1 trên 5 lần). Chạy
-//       lại cùng lệnh; nếu lặp lại thường xuyên thì báo. Điều kiện build ở
-//       main-EXP-017. (Nhận định cũ "máy bình thường không gặp" về PATH thiếu
-//       PowerShell là sai và đã bỏ.)
-//     written_at: 2026-09-27
-//   - content: >
-//       Cách làm của phiên 14 so với plan. Thứ tự: việc 6c cần một build
-//       nhưng release\ chưa có, nên đã dist một lần (build T) trước khi chạy
-//       thử công cụ; đợt A dùng hai build khác (A1, A2) có hash mới nhờ
-//       -c.extraMetadata.ctBuildStamp, không sửa mã nguồn. Ngoài danh sách của
-//       plan: stillAlive cũng so CreationDate (cùng nguyên nhân với DSK-1);
-//       prepare_runtime dùng cùng hàm xóa có thử lại cho cả packaging\stage;
-//       argv trong log của bản đóng gói che giá trị năm cờ bị bỏ qua (P3);
-//       measure_startup đếm thêm second_instance_events (dòng second-instance
-//       của Main), other_mains_in_folder, data_folder_left, và ghi vào
-//       startup-logs/ (test-results/ bị Playwright dọn mỗi lần chạy). Tệp mới:
-//       tests/process_tree.spec.ts. Sau khi chạm điểm dừng bắt buộc của việc 7
-//       (đợt C lượt 1), phiên chỉ vá công cụ đo và làm việc 8-10, không đo
-//       thêm DSK-2.
-//     written_at: 2026-09-27
 //   - content: >
 //       Phiên 30: hai cờ kiểm thử mới trong desktop.json test_flags, cả hai chỉ
 //       bản chạy từ mã nguồn (bản đóng gói bỏ qua và ghi log, nằm trong
@@ -1352,6 +1412,18 @@
 //       toast Windows thật ở các lượt có reminder_list (ticker chạy trong mọi ứng
 //       dụng e2e mở); đó là hành vi đúng.
 //     written_at: 2026-10-05
+//   - content: >
+//       Cho Orchestrator (phiên 38, ngoài plan, Project Owner chọn "không sửa Main, chỉ báo cáo"). Khi máy bị
+//       tải nặng, ca 14 của desktop_main.spec.ts hỏng ngắt quãng (2 trong 4 lượt có tải: lượt 1 trước khi sửa
+//       công cụ, và lượt 3 sau đó; 0 trong 1 lượt không tải): hộp thoại lỗi hiện HAI lần. Nguyên nhân (đọc
+//       từ log): backend giả chết ngay sau READY thì fatal("The backend stopped unexpectedly ...") chạy và
+//       ứng dụng bắt đầu thoát; lần nạp trang đầu của cửa sổ đang tải lúc đó báo ERR_FAILED (-2), đi vào
+//       .catch của whenReady().then(startLayer) và gọi fatal("The app could not start: ERR_FAILED ...")
+//       lần hai, nên có hai dòng "error dialog text" (người dùng thật sẽ thấy hai hộp thoại). Đây là lỗi thật
+//       của Main chứ không phải của công cụ kiểm thử. Hướng sửa đề xuất (chưa làm): trong fatal(), nếu
+//       shutdownStarted đã đúng thì chỉ ghi log và không hiện hộp thoại thứ hai. Cần quyết định của
+//       Orchestrator vì phiên 38 không có việc này.
+//     written_at: 2026-10-09
 // ===WCA-CHECKPOINT-END===
 /**
  * Main of the desktop layer (clause_d_desktop).
@@ -1372,6 +1444,7 @@
 
 import { app, BrowserWindow, dialog, ipcMain, Menu, Notification, protocol } from 'electron'
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process'
+import { buildErrorDialog, restoreFailureContext, type ErrorDialogText, type FailurePhase, type RestoreFailureContext } from './error_dialog'
 import * as fs from 'node:fs'
 import * as net from 'node:net'
 import * as path from 'node:path'
@@ -1420,7 +1493,7 @@ interface DesktopConfig {
   main: {
     failure_exit_code: number
     error_dialog_title: string
-    error_dialog: { startup_summary: string; running_summary: string; restore_failed_summary: string; detail_label: string }
+    error_dialog: ErrorDialogText
   }
   packaged: {
     backend: { interpreter: string; script: string; working_dir: string }
@@ -1792,21 +1865,6 @@ function argvForLog(config: DesktopConfig, argv: readonly string[], packaged: bo
   })
 }
 
-/** When the failure happened: before the window finished loading
- * ('startup'), after the app was up ('running'), or when applying a pending
- * restore failed and the previous database could not be started either
- * ('restore_failed'). Picks the sentence. */
-type FailurePhase = 'startup' | 'running' | 'restore_failed'
-
-/** Text of the error dialog: a Vietnamese sentence first, the technical
- * message (the one logged after "FATAL:") after it. Wording is in
- * configs/desktop.json (main.error_dialog). */
-function buildErrorDialog(config: DesktopConfig, phase: FailurePhase, detail: string): { title: string; content: string } {
-  const text = config.main.error_dialog
-  const summary = phase === 'startup' ? text.startup_summary : phase === 'running' ? text.running_summary : text.restore_failed_summary
-  return { title: config.main.error_dialog_title, content: `${summary}\n\n${text.detail_label}\n${detail}` }
-}
-
 function main(): void {
   const config = loadConfig()
   const resourcesPath = app.isPackaged ? process.resourcesPath : null
@@ -1965,10 +2023,10 @@ function main(): void {
     app.exit(exitCode)
   }
 
-  function fatal(message: string, phase: FailurePhase = 'startup'): void {
+  function fatal(message: string, phase: FailurePhase = 'startup', restore?: RestoreFailureContext): void {
     // Logged first, so the message can be checked without a click.
     log(`FATAL: ${message}`)
-    const box = buildErrorDialog(config, phase, message)
+    const box = buildErrorDialog(config.main.error_dialog_title, config.main.error_dialog, phase, message, restore)
     if (settings.showDialogs) dialog.showErrorBox(box.title, box.content)
     // No dialog (test flag): the text it would have shown goes to the log, so
     // tests can check it without a click (DSK-13).
@@ -2089,9 +2147,13 @@ function main(): void {
         log: (message) => log(message),
       })
     } catch (err) {
-      // 500 ERR_RESTORE_FAILED: the restored database and the previous one both
-      // failed to start. The previous database is back at db_file_path.
-      if (err instanceof InProcessCallError) return fatal(`Applying the pending restore failed: ${err.message}`, 'restore_failed')
+      // 500 ERR_RESTORE_FAILED: the restore failed and the previous database
+      // could not be put back either. Which job of the put-back failed, and where
+      // the previous data is, are in details; they pick the sentence (DSK-26).
+      if (err instanceof InProcessCallError) {
+        const context = restoreFailureContext(err.errorBody.details, dbFilePath)
+        return fatal(`Applying the pending restore failed: ${err.message}`, 'restore_failed', context)
+      }
       throw err
     }
     if (shutdownStarted) return

@@ -52,12 +52,31 @@ export function mainArgs(o: RunOptions): string[] {
 /** Collects stderr of the Electron process (the Main's log and the
  * backend's forwarded log). */
 export class LogCollector {
-  text = ''
+  private streamText = ''
+  private teeFile: string | null = null
+  /** Everything collected so far. From a tee file (attachTeeFile) it is the whole
+   * log since the first line; from a stream (attach) it is what arrived after the
+   * collector was attached. */
+  get text(): string {
+    if (this.teeFile === null) return this.streamText
+    try {
+      return fs.readFileSync(this.teeFile, 'utf8')
+    } catch {
+      return ''
+    }
+  }
   attach(child: ChildProcess): this {
     child.stderr?.setEncoding('utf8')
     child.stderr?.on('data', (chunk: string) => {
-      this.text += chunk
+      this.streamText += chunk
     })
+    return this
+  }
+  /** Reads the log from a file the Main's process copied its stderr into since its
+   * first line (tests/fixtures/tee_stderr.cjs), so that no early line is missed
+   * however late the test got hold of the process. */
+  attachTeeFile(file: string): this {
+    this.teeFile = file
     return this
   }
   lines(re: RegExp): string[] {
@@ -97,9 +116,14 @@ export async function launchMain(
   args: string[],
   extraEnv?: Record<string, string>,
 ): Promise<{ app: ElectronApplication; log: LogCollector }> {
-  const env = extraEnv === undefined ? undefined : { ...(process.env as Record<string, string>), ...extraEnv }
-  const app = await _electron.launch({ args, cwd: LAYER_ROOT, ...(env === undefined ? {} : { env }) })
-  const log = new LogCollector().attach(app.process())
+  // DSK-27: _electron.launch gives the test the Main's stderr only from the moment it
+  // returns. The Main's process copies its own stderr into a file from its first line
+  // (fixtures/tee_stderr.cjs, loaded with Electron's -r option: Playwright deletes
+  // NODE_OPTIONS but loads its own helper the same way), and the collector reads that.
+  const teeFile = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'ct-desktop-log-')), 'main-stderr.log')
+  const env = { ...(process.env as Record<string, string>), ...extraEnv, CT_TEE_STDERR_FILE: teeFile }
+  const app = await _electron.launch({ args: ['-r', path.join(FIXTURES, 'tee_stderr.cjs'), ...args], cwd: LAYER_ROOT, env })
+  const log = new LogCollector().attachTeeFile(teeFile)
   return { app, log }
 }
 

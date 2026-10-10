@@ -443,6 +443,9 @@ test.describe.serial('restore_data with the real backend and the probe page', ()
     const safetyBefore = safetyFiles()
     const mainWindow = await app.browserWindow(page)
     await mainWindow.evaluate((w) => w.loadURL('data:text/html,<title>other origin</title><p>other</p>'))
+    // Wait for the data: page itself: calling evaluate while the navigation is still
+    // settling destroys the execution context (seen under CPU load, DSK-27).
+    await expect(page.locator('p')).toHaveText('other')
     try {
       for (const address of [PREPARE, STATUS, CANCEL]) {
         const reply = await invokeIn(page, address, address === PREPARE ? { archive_path: good.archive_path } : {})

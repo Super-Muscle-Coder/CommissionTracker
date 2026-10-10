@@ -48,6 +48,12 @@ export interface RestoreDataConfig {
   }
 }
 
+/** Which job of step 8 (f_restore.md section 3, put the previous database back)
+ * failed: 8a `move_failed_aside`, 8b `move_back`, 8c `start`. Carried as
+ * `details.rollback_stage` of ERR_RESTORE_FAILED; the Main picks its sentence by it.
+ * `details` has no shape in the contract, so this is internal to the desktop. */
+export type RollbackStage = 'move_failed_aside' | 'move_back' | 'start'
+
 /** data_schema.yaml clause_d_desktop.restore_data.output_guaranteed.restore_outcome. */
 export interface RestoreOutcome {
   outcome: 'none' | 'restored' | 'rolled_back' | 'discarded'
