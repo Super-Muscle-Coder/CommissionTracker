@@ -1,178 +1,143 @@
 # ===WCA-PLAN===
 # session_for: desktop
 # drafted_by: Orchestrator + Project Owner
-# drafted_at: 2026-10-10T09:30:00+07:00
+# drafted_at: 2026-10-11T13:10:00+07:00
 # contract: data_schema 10.0.1, api_contract 5.0.0 (approved)
 
 ## MỤC TIÊU PHIÊN NÀY
 
-Phiên 39 của dự án, phiên desktop thứ mười, **mở đầu chặng G**. Phiên vá ngắn, chỉ hai mã:
+Phiên 40 của dự án, phiên desktop thứ mười một, thuộc chặng G. Phiên ngắn, ba việc:
 
 | Mã | Việc | Căn cứ |
 |---|---|---|
-| **DSK-28** | Backend chết ngay sau READY thì họa sĩ thấy **hai** hộp thoại lỗi, hộp thứ hai nói sai nguyên nhân. Sửa để chỉ còn một | audit phiên 38 §5.1; NOTE cuối của khối checkpoint Main |
-| **DSK-29** | Bốn việc nhỏ: dọn thư mục tạm của kiểm thử; sửa một chú thích sai; sửa một `last_updated_by`; bỏ chú thích `eslint-disable` duy nhất còn trong `Desktop/` | audit phiên 38 §5.3; mục (4) do Orchestrator phát hiện khi soạn plan này |
+| **G-VER** | Số phiên bản của ứng dụng thành **`1.0.0`** | `.plan/v1_roadmap.md`, chặng G, tiêu chí 1 (Project Owner quyết 2026-10-11) |
+| **DSK-30 (1)** | N7 của `native_dialogs.spec.ts` chờ trang `data:` nạp xong rồi mới `evaluate` | `.plan/open_issues.md`, DSK-30 mục 1 |
+| **DSK-30 (2)** | Ca 6 và ca 14 của `desktop_main.spec.ts` không phụ thuộc vào thứ tự thời gian | DSK-30 mục 2 |
 
-Hợp đồng không đổi. Phiên này không đóng gói bản chính thức và không đụng tới việc cài đè (DSK-21): việc đó thuộc runbook chặng G, soạn sau phiên này.
+Hợp đồng không đổi. Phiên này không cài bộ cài và không làm runbook cài đè (DSK-21): việc đó Project Owner chạy tay sau phiên này, với bộ cài `1.0.0` mà phiên này dựng.
 
 **Điểm dừng:**
-- tái hiện được lỗi hai hộp thoại bằng một ca kiểm thử **trước** khi sửa; sau khi sửa ca đó đạt;
-- `npm test` đạt 3 lượt liên tiếp **trong lúc máy bị làm tải**, rồi 1 lượt không tải;
-- `dist` và `test:packaged` đạt;
-- UI e2e đạt một lượt.
+- `npm run dist` ra `release\Commission Tracker Setup 1.0.0.exe`, và bản đóng gói báo đúng `1.0.0` cho cả Electron lẫn backend;
+- N7, ca 6, ca 14 đạt cả ba lượt có tải;
+- `test:packaged` và UI e2e đạt.
 
 ## ĐẶC TẢ ĐÃ CHỐT
 
-### DSK-28
+### G-VER — số phiên bản `1.0.0`
 
-**Lỗi, theo log phiên 38:**
-1. Backend chết ngay sau READY, trong lúc cửa sổ đang nạp trang đầu.
-2. `onUnexpectedExit` gọi `fatal("The backend stopped unexpectedly …", 'running')`, rồi `fatal()` gọi `shutdown(…)`.
-3. Lần nạp trang đầu bị hủy và báo `ERR_FAILED` (-2). Lỗi đó đi vào `.catch` của `whenReady().then(startLayer)` (cuối `src/main.ts`) và gọi `fatal("The app could not start: ERR_FAILED …")` **lần hai**.
-4. Kết quả: hai dòng `FATAL:`, hai dòng `error dialog text` (họa sĩ thật thấy hai hộp thoại), và hộp thứ hai nói "không khởi động được", sai nguyên nhân.
+- Sửa trường `version` của `Desktop/package.json` từ `0.1.0` thành `1.0.0`, và hai chỗ tương ứng ở đầu `Desktop/package-lock.json`, sao cho `npm ci` vẫn chạy đúng. Agent chọn cách sửa (tự sửa hai tệp, hoặc `npm version 1.0.0 --no-git-tag-version`; lệnh này không đụng tới git khi có cờ đó) và ghi lý do.
+- **Không sửa `UI/package.json`.** Trường đó không đi vào bản đóng gói, và phiên này không sửa `UI/`. Orchestrator sẽ xét lại ở chặng H.
+- **Lý do phải đủ ba số:** hợp đồng khai báo `backup_data.app_version` là "semantic version of the running build" (`data_schema.yaml`), và `backup_data` từ chối giá trị không đúng dạng `x.y.z`. Giá trị này đi từ `app.getVersion()` của Main qua biến `CT_APP_VERSION` sang backend.
+- **Kiểm thử ràng `package.json` với backend.** Phải có ít nhất một ca, chạy với backend thật, khẳng định `app_version` mà backend nhận được (ví dụ trong bản ghi do `create_backup` trả về) **bằng đúng** trường `version` đọc từ `package.json` lúc chạy kiểm thử, không phải một chuỗi gõ cứng. Nếu đã có ca như vậy thì chỉ ra; nếu chưa thì thêm. Có thể đặt trong `npm test`, trong `test:packaged`, hoặc cả hai. Với bản đóng gói thì nên có, vì đó là thứ họa sĩ cài.
+- **Chuỗi `'0.1.0'` trong dữ liệu mẫu của kiểm thử** (`restore_*.spec.ts`, `fake_backend_restore.py`) là dữ liệu giả của tệp sao lưu, không phải phiên bản của ứng dụng. Giữ nguyên, trừ khi một ca hỏng vì nó. Nếu có ca hỏng, ghi rõ ca nào và vì sao, rồi sửa ca đó cho đúng ý nghĩa (ví dụ đọc phiên bản từ `package.json`).
+- **Chữ trong checkpoint** nhắc `0.1.0` như hiện trạng (ví dụ dòng 22 của `src/main.ts`: "version của package.json (0.1.0)") thì sửa cho đúng. Các mục EVIDENCE cũ ghi tên bộ cài `0.1.0` là lịch sử, giữ nguyên.
 
-**Quyết định của Orchestrator:**
-- **Chỉ lần gọi `fatal()` đầu tiên được hiện hộp thoại và chọn mã thoát.** Mọi lần gọi sau đó, và mọi lần gọi khi `shutdown()` đã bắt đầu vì bất kỳ lý do nào (kể cả họa sĩ tự đóng cửa sổ), chỉ ghi **một** dòng log và không làm gì thêm.
-- **Dòng log của lần gọi bị bỏ qua không bắt đầu bằng `FATAL:`.** Ví dụ: `[desktop-main] fatal error after shutdown started (no dialog): <message>`. Chữ cụ thể do agent chọn, miễn là không chứa chuỗi `FATAL:`. Lý do: mọi kiểm thử hiện có đếm dòng `FATAL:`, và "đúng một dòng `FATAL:` cho mỗi lần ứng dụng hỏng" là điều nên giữ. Thông tin về lỗi thứ hai vẫn còn trong log để chẩn đoán.
-- **Cờ chặn phải được đặt ở đầu `fatal()`, trước khi hiện hộp thoại.** Lý do: `dialog.showErrorBox` chặn luồng chính cho tới khi họa sĩ bấm. Orchestrator **không nắm chắc** liệu trong lúc hộp thoại đang mở, Electron có chạy tiếp callback JS nào không (vòng lặp thông điệp lồng nhau của Windows). Đặt cờ trước hộp thoại thì đúng trong cả hai trường hợp. Agent không cần đo điều này.
-- Agent chọn cách dùng `shutdownStarted` hiện có, hoặc thêm một cờ riêng cho `fatal`, và ghi lý do. Không đổi chữ của dòng `FATAL:` đầu tiên, không đổi chữ của hộp thoại, không đổi `failure_exit_code`.
-- **Liệt kê mọi chỗ gọi `fatal()`** trong `src/main.ts`, và với mỗi chỗ, ghi xem nó có thể chạy khi `shutdown()` đã bắt đầu hay không. Chỗ nào bị chặn mà làm mất một thông báo họa sĩ cần thấy thì dừng lại và báo Orchestrator, không tự quyết.
-- `restore_data` gọi `fatal(..., 'restore_failed', context)` **trước khi** mở cửa sổ, nên lúc đó `shutdown()` chưa bắt đầu. Ca U1–U6 của `restore_undo.spec.ts` và A5 của `restore_apply.spec.ts` phải đạt như cũ.
+### DSK-30 (1) — N7
 
-**Đo trước khi sửa (việc 2).**
-- Dựng một ca **tái hiện được ổn định, không cần máy tải**:
-  - Fixture có sẵn `tests/fixtures/slow_first_load` giữ mỗi lần nạp trang bận 3 giây.
-  - `fake_backend_ready_then_die.py` chết 2 giây sau READY.
+- **Lỗi** (audit phiên 39 §5.3): N7 gọi `mainWindow.loadURL('data:…')` rồi `page.evaluate(...)` ngay. Khi máy tải, `evaluate` chạy lúc trang đang chuyển, nên hỏng với "Execution context was destroyed". Orchestrator đo trên Linux: 2/3 lượt có tải.
+- **Sửa** theo đúng cách R10 của `restore_data.spec.ts` đã dùng ở phiên 38: chờ chính trang `data:` nạp xong rồi mới `evaluate`. Agent đọc R10 và dùng cùng cách. Không nới thời gian chờ.
+- Rà toàn bộ spec của `Desktop/tests/` xem còn chỗ nào điều hướng rồi `evaluate` ngay mà không chờ. Liệt kê trong báo cáo, và sửa cùng cách.
 
-  Ghép hai thứ đó lại thì lúc backend chết, lần nạp đầu vẫn chưa xong. Orchestrator **chưa chạy thử** cách ghép này: agent đo xem nó có tái hiện hai dòng `FATAL:` trên mã hiện tại không, ở 5 lượt không tải.
-- Được thêm fixture mới trong `tests/fixtures/` nếu cần, ví dụ một backend giả chết sau một khoảng khác, hoặc một trang nạp chậm hơn. **Không thêm cờ `--ct-test-*`, không thêm gì vào mã sản phẩm chỉ để kiểm thử.**
-- Ghi số lượt tái hiện trên 5. Nếu dưới 5/5, thử chỉnh khoảng thời gian trong fixture. Nếu vẫn không ổn định, ghi lại kết quả, dùng ca 14 cùng ba lượt có tải làm bằng chứng, và nói rõ trong báo cáo rằng chưa có ca tái hiện ổn định.
+### DSK-30 (2) — ca 6 và ca 14
 
-  Báo kết quả đo trước dòng code sửa đầu tiên.
+- **Lỗi:** cả hai ca dùng `fake_backend_ready_then_die.py`, backend giả chết **2 giây sau READY**.
+  - Ca 6 khẳng định có dòng `opening the window`, tức giả định cửa sổ mở trước khi backend chết. Máy chậm thì giả định đó sai, dù ứng dụng xử lý đúng.
+  - Ca 14 cũng dựa vào cùng khoảng 2 giây đó.
+- **Sửa:** thêm một backend giả mới trong `tests/fixtures/`. Nó lắng nghe `http` trên cổng Main truyền qua `CT_PORT` (như `fake_backend_restore.py`), in READY, rồi **thoát với mã 3 ngay khi nhận lời gọi `http` đầu tiên**. Trang `probe` gọi `GET /clients` khi nạp, nên lúc backend chết thì chắc chắn cửa sổ đã mở và trang đã chạy.
+  - Không cần trả lời lời gọi đó; chọn cách nào do agent quyết, ghi lý do.
+  - Ca 6 và ca 14 dùng backend giả mới. Mọi khẳng định hiện có của hai ca giữ nguyên: đúng một dòng `FATAL:` với "exit code 3", đúng một dòng `error dialog text`, câu `running_summary`, mã thoát.
+- **Không đổi K1.** K1 cố ý cần lần nạp trang chưa xong lúc backend chết, nên giữ `fake_backend_ready_then_die.py` + `slow_first_load`. Nếu K1 hỏng khi có tải thì ghi lại nguyên nhân đọc từ log, không sửa trong phiên này.
+- **Không xóa `fake_backend_ready_then_die.py`**, vì K1 vẫn dùng nó.
 
-**Kiểm thử sau khi sửa:**
-- **Ca tái hiện mới** (nếu dựng được) khẳng định:
-  - đúng một dòng `FATAL:`, chính là dòng "backend stopped unexpectedly";
-  - đúng một dòng `error dialog text`, với câu `running_summary`;
-  - có dòng log của lần gọi bị bỏ qua, chứa `ERR_FAILED` hoặc lỗi thật xảy ra;
-  - mã thoát `failure_exit_code`.
-- **Ca 6 và ca 14** khẳng định thêm: đúng một dòng `error dialog text` (ca 14 hiện chỉ đếm dòng `FATAL:`).
-- **Ca đóng bình thường:** mở ứng dụng, đóng cửa sổ; không có dòng `FATAL:`, mã thoát 0. Kiểm lại ca hiện có nào đã phủ việc này; nếu chưa có thì thêm.
-- **Phép cắn** (chỉ trên bản sao tạm, khôi phục ngay):
-  - (a) bỏ cờ chặn: ca tái hiện hỏng **mỗi lượt** (nếu không có ca tái hiện ổn định thì ghi rõ phép cắn này không bắt được ổn định);
-  - (b) đảo điều kiện của cờ, khiến lần gọi **đầu tiên** cũng bị bỏ qua: ca 6, 13, 14 hỏng;
-  - (c) cho lần gọi bị bỏ qua vẫn ghi `FATAL:`: ca tái hiện và ca 14 hỏng.
+### DSK-30 (3) — ca 14 "did not exit within 60000 ms"
 
-### DSK-29
-
-1. **Thư mục tạm.**
-   - Hiện trạng: `tempDataDir()` tạo `ct-desktop-test-*`, `launchMain()` tạo `ct-desktop-log-*`, trong `os.tmpdir()`. Không chỗ nào xóa. Trên máy audit Linux có 414 thư mục `ct-desktop-test-*` sau vài lượt.
-   - **Việc:** khi một ca **đạt**, xóa mọi thư mục tạm mà ca đó tạo ra. Khi một ca **hỏng**, giữ lại và in đường dẫn ra, để còn chẩn đoán. Chỉ xóa sau khi ứng dụng của ca đã thoát (trên Windows, tệp đang mở thì không xóa được).
-   - Chỉ xóa thư mục mà chính lượt chạy đó tạo ra. Không quét và xóa theo tiền tố, vì như thế có thể xóa thư mục của một lượt khác hay của Project Owner.
-   - Cơ chế (fixture của Playwright, `afterEach`, hay cách khác) do agent chọn, ghi lý do.
-   - **Đo:** đếm số thư mục `ct-desktop-*` trong `%TEMP%` trước và sau một lượt `npm test` đạt. Sau phải bằng trước.
-   - Bản đóng gói (`tests/packaged/`): cũng làm như vậy nếu nó tạo thư mục tạm.
-2. **Chú thích đầu `tests/fixtures/tee_stderr.cjs`** còn nói "loaded … with NODE_OPTIONS=--require". Mã thật dùng đối số `-r` (xem `launchMain`). Sửa cho đúng.
-3. **`last_updated_by`.**
-   - Phiên 38 ghi `coding-agent@2026-10-09#1`, nhưng phiên 37 (giao diện) đã chạy trước trong cùng ngày 2026-10-09 với `#1`. Phiên 38 đúng ra là `#2`.
-   - Khối nào phiên này sửa thì ghi định danh mới của phiên này.
-   - Khối nào phiên này không sửa mà còn ghi `coding-agent@2026-10-09#1` của phiên 38 (ít nhất `src/workflows/restore_data/services.ts`): sửa thành `coding-agent@2026-10-09#2`, không đổi gì khác.
-   - **Đếm số phiên trong ngày cho đúng:** hỏi Project Owner hôm nay đã có phiên coding agent nào chạy chưa.
-4. **Chú thích `eslint-disable` ở `tests/helpers.ts`, dòng 20.**
-   - `// eslint-disable-next-line @typescript-eslint/no-require-imports` đứng trước `export const ELECTRON_BINARY: string = require('electron')`. Dòng này có từ commit đầu tiên của kho ("Add project files.", 2026-09-28), và chưa bản audit nào nêu ra.
-   - Đây là chỗ hở của Orchestrator: các audit trước chỉ tìm `eslint-disable` trong phần mã mới của phiên, không tìm trên toàn bộ mã.
-   - **Việc:** lấy đường dẫn tệp chạy Electron mà không cần chú thích đó, không tắt hay nới luật nào, không thêm phụ thuộc. Agent chọn cách và ghi lý do, ví dụ:
-     - `import` có kiểu đúng;
-     - đọc `path.txt` cạnh `require.resolve('electron')` như chính gói `electron` làm;
-     - cách khác.
-   - Sau khi sửa, `spawnMain` phải chạy đúng tệp như trước. Các ca dùng `spawnMain` (ca 2, 3, 5, 6, 10, 13, 14…) đạt.
-   - **Rà toàn bộ `Desktop/`** (trừ `node_modules`, `dist`, `release`, `packaging`): liệt kê mọi `eslint-disable`, `@ts-ignore`, `@ts-expect-error`, `@ts-nocheck`. Cuối phiên danh sách phải rỗng. Nếu thấy chỗ nào không bỏ được, dừng lại và báo, không tự giữ.
-
-### NOTE của Main về ca 14
-
-NOTE cuối của khối checkpoint Main (ghi 2026-10-09, "Cho Orchestrator … ca 14 …") đã được xử lý bằng DSK-28. Chuyển ý còn giá trị thành EXPERIENCES, có id mới, rồi xóa NOTE đó.
+Không sửa gì. Nếu trong phiên có ca nào báo "process did not exit within …", **giữ nguyên log của ca đó** và chép trong báo cáo: hai mươi dòng cuối Main ghi ra, và thời điểm của dòng `FATAL:`. Mục đích: phân biệt máy chậm với một lần treo thật lúc thoát.
 
 ## VIỆC CẦN LÀM, THEO THỨ TỰ
 
 0. **Đọc tài liệu** theo `08-operating-protocol.md`, Phần 1:
    - `CLAUDE.md`, mục 4, 5 và 6;
-   - hợp đồng:
-     - `api_contract.yaml`: phần `clause_d_desktop` và `error_body`;
-     - `data_schema.yaml`: `clause_d_desktop`, chỉ để xác nhận không có gì liên quan tới hộp thoại lỗi;
+   - hợp đồng: `data_schema.yaml`, phần `backup_data` (`app_version`) và `clause_d_desktop`; `api_contract.yaml`, phần `create_backup`;
    - code:
-     - `Desktop/src/main.ts`: khối checkpoint, `fatal`, `shutdown`, `BackendProcess`, `startLayer`, `.catch` ở cuối tệp;
-     - `Desktop/src/error_dialog.ts`;
-     - `Desktop/tests/helpers.ts` và mọi spec;
-     - `Desktop/tests/fixtures/`;
-   - `.plan/open_issues.md`: DSK-28, DSK-29, BE-8;
+     - `Desktop/package.json`, `Desktop/package-lock.json` (đầu tệp), `Desktop/electron-builder.yml`;
+     - `Desktop/src/main.ts`: khối checkpoint, chỗ truyền `CT_APP_VERSION`;
+     - `Desktop/tests/helpers.ts`, `desktop_main.spec.ts`, `native_dialogs.spec.ts` (N7), `restore_data.spec.ts` (R10), `tests/packaged/`;
+     - `Desktop/tests/fixtures/`: `fake_backend_ready_then_die.py`, `fake_backend_restore.py`, `probe/`;
+   - `.plan/open_issues.md`: DSK-30, DSK-21, BE-8;
    - plan này sau cùng.
 
    Xác nhận Data Schema **`10.0.1`** và API Contract **`5.0.0`**, cả hai `approved`. Sai thì dừng lại và báo.
 
 1. **Môi trường và mốc.**
    - Ghi phiên bản Node, npm, Electron, Python. Ghi trạng thái AVG và ReasonLabs theo lời Project Owner.
+   - **Hỏi Project Owner** đã chép bộ cài `release\Commission Tracker Setup 0.1.0.exe` ra ngoài `Desktop\` chưa (việc 5 sẽ xóa `release`). Chưa chép thì chờ Project Owner chép xong rồi mới đi tiếp. Agent không tự chép ra ngoài dự án.
    - Trong `Desktop/`:
      - `npm ci`;
      - `npm run lint`;
-     - `npm test`: mốc **76**. Ghi số đạt, số hỏng, và tên ca hỏng nếu có.
-   - Đếm số thư mục `ct-desktop-*` trong `%TEMP%`. Ghi lại, **không xóa**.
+     - `npm test`: mốc **78**. Ghi số đạt, số hỏng, và tên ca hỏng nếu có.
    - Chụp mốc `%APPDATA%\CommissionTracker` và `%APPDATA%\Commission Tracker`.
    - Ghi `git status --short` (chỉ đọc).
 
-2. **Đo DSK-28 trước khi sửa**, theo đặc tả. Báo kết quả trước dòng code sửa đầu tiên.
+2. **G-VER.** Đổi phiên bản; thêm hoặc chỉ ra ca ràng `package.json` với backend; chạy `npm ci` lại để chắc `package-lock.json` đúng.
 
-3. **DSK-28.** Sửa, thêm kiểm thử, làm ba phép cắn (a), (b), (c).
+3. **DSK-30 (1) và (2).** Sửa và thêm backend giả mới.
+   - **Phép cắn** (chỉ trên bản sao tạm, khôi phục ngay):
+     - (a) backend giả mới thoát **ngay sau READY**, không chờ lời gọi: ca 6 phải hỏng (mất `opening the window`, hoặc lời gọi của trang);
+     - (b) ca ràng phiên bản: trong bản sao, Main truyền `CT_APP_VERSION` là một chuỗi gõ cứng `0.1.0` thay cho `app.getVersion()`: ca đó phải hỏng;
+     - (c) N7: bỏ bước chờ trang `data:`, chạy N7 5 lượt trong lúc máy tải. Ghi số lượt hỏng. Không bắt được ổn định thì ghi rõ.
 
-4. **DSK-29**, bốn mục, theo thứ tự (4), (1), (2), (3). Mục (4) làm trước, vì nó đổi helper mà mọi ca dùng. Đo số thư mục tạm cho mục (1).
+4. **Chạy có tải.**
+   - Script làm tải ngoài dự án, như phiên 39, với **4 tiến trình** vòng lặp bận. Dùng lại script cũ nếu còn, ghi đường dẫn.
+   - `npm test` **3 lượt liên tiếp có tải**, rồi 1 lượt không tải.
+   - **N7, ca 6, ca 14, K1, C1 phải đạt cả 4 lượt.**
+   - Ca khác hỏng khi có tải thì ghi tên ca, lỗi, và log theo DSK-30 (3). Ca 15, 16 của `show_inactive` đo tiêu điểm cửa sổ: hỏng khi Project Owner đang chuyển cửa sổ thì ghi lại, không tính là lỗi của phiên.
+   - Lượt không tải phải đạt **toàn bộ**.
 
-5. **Chạy có tải.**
-   - Dựng script làm máy tải **ngoài dự án**, như phiên 38: vòng lặp bận trên số lõi trừ một, có giới hạn thời gian. Nếu script của phiên 38 còn trên máy thì dùng lại, ghi đường dẫn.
-   - `npm test` đủ **3 lượt liên tiếp, mỗi lượt trong lúc script tải đang chạy**. Ghi số đạt mỗi lượt.
-   - Rồi chạy 1 lượt không tải.
-   - Ca 14 và ca tái hiện mới phải đạt ở cả 4 lượt.
-
-6. **Bản đóng gói:**
-   - xóa `packaging\stage` và `release`;
-   - `npm run dist`;
-   - `npm run test:packaged`: mốc **11**, phải đạt cả 11.
+5. **Bản đóng gói:**
+   - xóa `packaging\stage` và `release` (sau khi Project Owner đã chép bộ cài `0.1.0` ra ngoài, việc 1);
+   - `npm run dist`: phải ra `release\Commission Tracker Setup 1.0.0.exe`;
+   - `npm run test:packaged`: mốc **11**, cộng ca mới nếu có; phải đạt toàn bộ;
+   - ghi kích thước và SHA-256 của bộ cài `1.0.0`. Runbook của chặng G dùng giá trị này để biết đúng tệp.
 
    Nếu `dist` hỏng EXDEV, đặt `ELECTRON_BUILDER_CACHE` vào một thư mục tạm.
 
-7. **UI:** trong `UI/`, `npm run build` rồi `npm run e2e` một lượt, không đặt `CT_WALKTHROUGH_RUNNER`. Phải đạt 83/83, và `UI/evidence` không đổi.
+6. **UI:** trong `UI/`, `npm run build` rồi `npm run e2e` một lượt, không đặt `CT_WALKTHROUGH_RUNNER`. Phải đạt 83/83, và `UI/evidence` không đổi.
 
-8. **Checkpoint** theo Giao thức 07:
-   - Main: EXPERIENCES cho DSK-28, gồm danh sách chỗ gọi `fatal()` và lý do chọn cờ; EVIDENCE gồm kết quả đo, ba phép cắn, bốn lượt `npm test`; NOTE ca 14 đã xử lý;
-   - các khối khác: chỉ sửa khi nội dung đổi, và theo DSK-29 (3).
+7. **Checkpoint** theo Giao thức 07:
+   - Main: EXPERIENCES cho G-VER (chỗ phiên bản đi từ `package.json` tới backend, ca ràng phiên bản) và DSK-30 (1), (2) (backend giả mới, N7); EVIDENCE gồm các phép cắn, bốn lượt `npm test`, kích thước và SHA-256 bộ cài;
+   - sửa các câu hiện trạng còn nói `0.1.0`.
 
-   **Giờ ghi:** chép **nguyên** giá trị `Get-Date -Format o` lấy ngay trước khi ghi (BE-8). **Nếu sửa checkpoint sau khi đã chạy toàn bộ, chạy lại `npm test` một lượt** và ghi điều đó trong báo cáo (bài học audit phiên 36 §5.1).
+   **Giờ ghi:** chép **nguyên** giá trị `Get-Date -Format o` lấy ngay trước khi ghi (BE-8). **Nếu sửa checkpoint sau khi đã chạy toàn bộ, chạy lại `npm test` một lượt** và ghi điều đó trong báo cáo.
 
 ## KẾ THỪA TỪ CHECKPOINT — vấn đề tồn đọng
 
-- **DSK-21** (cài đè, chặng G): không làm trong phiên này. Không đổi `version` của `package.json`.
+- **DSK-30 mục 4, 5:** không làm (chặng H).
+- **DSK-21** (cài đè): không làm; Project Owner chạy runbook sau phiên này. Không đụng `electron-builder.yml` trừ khi việc đổi phiên bản đòi hỏi, và nếu có thì ghi lý do.
+- **BE-9, BE-10, BE-11:** việc của layer backend; không làm.
+- **UI-21, UI-22:** việc của layer giao diện; không làm.
 - **DSK-24, DSK-20** (V2), **DSK-9, DSK-11:** không làm.
-- **UI-22, UI-21:** việc của layer giao diện; không làm.
-- **BE-9, BE-10:** việc của layer backend; không làm.
 - **ENV-7:** không chạy `npm audit fix`.
-- **Ứng dụng thoát với mã `3221225477`** (DSK-23 đã đóng): nếu gặp lại thì ghi lại, không sửa.
+- Ứng dụng thoát với mã `3221225477`: nếu gặp lại thì ghi lại, không sửa.
 
 ## RÀNG BUỘC CẦN NHỚ TỪ HỢP ĐỒNG
 
-- Hộp thoại lỗi là việc trình bày của Main. Hợp đồng không quy định chữ hay số lượng hộp thoại. Không lối vào, nhãn hay mã lỗi nào đổi.
-- `apply_pending_restore`: 200 `restore_outcome`; 500 `ERR_RESTORE_FAILED`. Không đổi.
-- Main chỉ đọc, ráp nối và quản lý vòng đời. Cờ chặn hộp thoại thứ hai là việc vòng đời, không phải quyết định nghiệp vụ.
+- `backup_data.app_version`: "semantic version of the running build, handed over at launch", `from: environment_config`. Main là bên trao giá trị này lúc khởi động backend.
+- `create_backup` trả `backup_archive_record` có `app_version`. Không lối vào, nhãn hay mã lỗi nào đổi.
+- Main chỉ đọc, ráp nối và quản lý vòng đời. Số phiên bản là giá trị cấu hình (`package.json`), không gõ thẳng vào code.
 
 ## CẢNH BÁO — điều KHÔNG được làm trong phiên này
 
-- Không đổi nhãn, mã lỗi, hay hành vi của các lối vào `ipc` hiện có. Không thêm lối vào `ipc` nào. Không thêm cờ `--ct-test-*`. Không thêm mã vào sản phẩm chỉ để phục vụ kiểm thử.
-- Không đổi chữ của dòng `FATAL:` đầu tiên, của các câu hộp thoại trong `desktop.json`, hay `failure_exit_code`.
+- Không đổi nhãn, mã lỗi hay hành vi của lối vào nào. Không thêm lối vào `ipc`, không thêm cờ `--ct-test-*`, không thêm mã vào sản phẩm chỉ để phục vụ kiểm thử.
+- Không sửa `src/main.ts` ngoài phần checkpoint, trừ khi việc đổi phiên bản đòi hỏi; nếu có thì ghi lý do.
 - Không thay `_electron.launch`, không đổi bộ công cụ kiểm thử. Không tăng thời gian chờ sẵn có, không `retries`, không `skip`.
 - Không sửa tệp nào ngoài `Desktop/`. Được **chạy** các lệnh của `Backend/` và `UI/`. Script làm tải nằm ngoài dự án và không đưa vào kho.
+- Không xóa `release\` trước khi Project Owner xác nhận đã chép bộ cài `0.1.0` ra ngoài.
+- Không cài bộ cài, không gỡ bản đã cài, không sửa registry.
 - Không bật `nodeIntegration`, không tắt `contextIsolation` hay `sandbox`, không đưa `ipcRenderer` cho renderer.
 - Không sửa `.contracts/`, `CLAUDE.md`, `.plan/`, `.design/`. Không đọc, không ghi `.reviews/`.
-- Không tắt, gỡ hay đổi cấu hình phần mềm diệt virus. Không sửa registry, không cài bộ cài.
+- Không tắt, gỡ hay đổi cấu hình phần mềm diệt virus.
 - Không tắt luật lint, không thêm `eslint-disable`, `@ts-ignore`, `@ts-expect-error` hay `@ts-nocheck`. Không viết kiểm thử luôn đạt.
-- Việc dọn thư mục tạm chỉ xóa thư mục do chính lượt chạy đó tạo ra.
-- Không chạy `git commit`, `push`, `reset`, `checkout`, `restore`, `stash` hay lệnh nào đổi trạng thái kho. Chỉ được đọc.
+- Không chạy `git commit`, `push`, `reset`, `checkout`, `restore`, `stash`, `tag` hay lệnh nào đổi trạng thái kho. Chỉ được đọc.
 - ⚠ Không kiểm thử hay lần chạy nào được đụng `%APPDATA%\CommissionTracker` thật. Mọi lần chạy ứng dụng phải kèm `--ct-test-data-dir`.
 - Không dùng sub-agent. Không chạy song song hai lệnh kiểm thử hay hai bản ứng dụng. Script làm tải không phải bản ứng dụng, nên được chạy song song với kiểm thử.
 
@@ -180,31 +145,26 @@ NOTE cuối của khối checkpoint Main (ghi 2026-10-09, "Cho Orchestrator … 
 
 Phiên xong khi **tất cả** những điều dưới đây đúng, trên máy Project Owner, với antivirus đang bật:
 
-1. **Đo DSK-28:** kết quả đo ở việc 2 có trong báo cáo: tái hiện được bao nhiêu trên 5 lượt, với fixture nào.
-2. **DSK-28:**
-   - mọi chỗ gọi `fatal()` đã được liệt kê;
-   - ca tái hiện, ca 6, ca 14 và ca đóng bình thường khẳng định đúng như đặc tả;
-   - U1–U6 và A5 vẫn đạt;
-   - ba phép cắn (a), (b), (c) đã làm.
-3. **DSK-29:**
-   - số thư mục `ct-desktop-*` trong `%TEMP%` sau một lượt đạt bằng số trước lượt đó;
-   - chú thích của `tee_stderr.cjs` đã đúng;
-   - `last_updated_by` đã đúng;
-   - `Desktop/` không còn `eslint-disable`, `@ts-ignore`, `@ts-expect-error` hay `@ts-nocheck`.
-4. `npm test` đạt **3 lượt liên tiếp có tải** và 1 lượt không tải, với 76 ca cộng các ca mới.
-5. `npm run lint` sạch; `npm run dist` chạy từ trạng thái sạch; `npm run test:packaged` đạt 11/11.
+1. **G-VER:**
+   - `package.json` và `package-lock.json` ghi `1.0.0`; `npm ci` chạy đúng;
+   - có ít nhất một ca chạy với backend thật khẳng định `app_version` bằng `version` đọc từ `package.json`;
+   - phép cắn (b) bắt được;
+   - bộ cài tên `Commission Tracker Setup 1.0.0.exe`, có kích thước và SHA-256 trong báo cáo.
+2. **DSK-30 (1):** N7 chờ trang `data:` như R10; danh sách các chỗ "điều hướng rồi `evaluate`" khác, kèm cách xử lý; phép cắn (c) đã làm.
+3. **DSK-30 (2):** backend giả mới; ca 6 và ca 14 dùng nó với khẳng định giữ nguyên; K1 không đổi; phép cắn (a) bắt được.
+4. **`npm test`:** 3 lượt liên tiếp có tải (4 tiến trình) và 1 lượt không tải. N7, ca 6, ca 14, K1, C1 đạt cả 4 lượt. Lượt không tải đạt toàn bộ.
+5. `npm run lint` sạch; `npm run dist` chạy từ trạng thái sạch; `npm run test:packaged` đạt toàn bộ.
 6. UI e2e đạt 83/83 một lượt; `UI/evidence` không đổi.
-7. **Checkpoint:** YAML hợp lệ; giờ ghi đúng BE-8; `UNSOLVED_PROBLEMS: []`; NOTE ca 14 đã xử lý.
+7. **Checkpoint:** YAML hợp lệ; giờ ghi đúng BE-8; `UNSOLVED_PROBLEMS: []`.
 8. Mốc `%APPDATA%` giống đầu phiên.
-9. `git status --short` cuối phiên chỉ có tệp trong `Desktop/`. Liệt kê trong báo cáo, kèm `git check-ignore -v` cho từng tệp mới.
+9. `git status --short` cuối phiên chỉ có tệp trong `Desktop/`. Liệt kê trong báo cáo, kèm `git check-ignore -v` cho từng tệp mới (`core.ignorecase=true`).
 10. **Báo cáo cuối phiên** theo `CLAUDE.md` mục 5, kèm:
-    - kết quả đo;
-    - danh sách chỗ gọi `fatal()`, và cờ đã chọn;
-    - chữ nguyên văn của dòng log cho lần gọi bị bỏ qua;
+    - cách đổi phiên bản và ca ràng phiên bản;
+    - danh sách ca từng hỏng vì chuỗi `0.1.0`, nếu có;
+    - các chỗ "điều hướng rồi `evaluate`" đã rà;
     - các phép cắn;
-    - số đạt của bốn lượt `npm test`;
-    - số thư mục tạm trước và sau;
-    - cách đã dùng để bỏ `eslint-disable`;
-    - kết quả `dist`, `test:packaged` và UI e2e;
+    - số đạt của bốn lượt `npm test`, tên và nguyên nhân mọi ca hỏng;
+    - log theo DSK-30 (3), nếu có;
+    - kích thước và SHA-256 bộ cài `1.0.0`; kết quả `test:packaged` và UI e2e;
     - các lệnh để chạy lại;
     - danh sách ngoại lệ lint mới (phải rỗng).
