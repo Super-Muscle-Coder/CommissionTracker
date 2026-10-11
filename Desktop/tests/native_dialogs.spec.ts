@@ -227,6 +227,9 @@ test.describe.serial('the real Main with the probe page', () => {
     const before = (await dialogCalls(app)).length
     const mainWindow = await app.browserWindow(page)
     await mainWindow.evaluate((w) => w.loadURL('data:text/html,<title>other origin</title><p>other</p>'))
+    // Wait for the data: page itself: calling evaluate while the navigation is still
+    // settling destroys the execution context (seen under CPU load, DSK-30; same as R10).
+    await expect(page.locator('p')).toHaveText('other')
     try {
       // The preload still runs there, so the bridge exists; only the origin differs.
       expect(await page.evaluate((name) => typeof (window as unknown as Record<string, { invoke: unknown }>)[name]?.invoke, BRIDGE)).toBe('function')

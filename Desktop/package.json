@@ -2,7 +2,7 @@
   "name": "commission-tracker",
   "productName": "Commission Tracker",
   "private": true,
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Commission Tracker — desktop layer (Electron main process)",
   "author": "TGN",
   "main": "dist/main.js",

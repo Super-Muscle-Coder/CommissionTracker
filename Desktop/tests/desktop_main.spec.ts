@@ -20,6 +20,7 @@ import {
   spawnMain,
   stillAlive,
   tempDataDir,
+  tempFolder,
   waitForExit,
 } from './helpers'
 
@@ -188,7 +189,7 @@ test('5. renderer root missing: error, backend stopped with code 0, app exits', 
 })
 
 test('6. backend dies after READY: error, app exits', async () => {
-  const run = spawnMain(mainArgs({ dataDir: tempDataDir(), rendererRoot: PROBE_ROOT, fakeBackend: 'fake_backend_ready_then_die.py' }))
+  const run = spawnMain(mainArgs({ dataDir: tempDataDir(), rendererRoot: PROBE_ROOT, fakeBackend: 'fake_backend_die_on_first_call.py' }))
   const code = await waitForExit(run.child)
   console.log(run.log.text)
   expect(code).toBe(FAILURE_EXIT_CODE)
@@ -394,7 +395,7 @@ test('13. error dialog at start-up (DSK-13): Vietnamese sentence first, technica
 })
 
 test('14. error dialog while running (DSK-13): the "stopped while running" sentence, same layout', async () => {
-  const run = spawnMain(mainArgs({ dataDir: tempDataDir(), rendererRoot: PROBE_ROOT, fakeBackend: 'fake_backend_ready_then_die.py' }))
+  const run = spawnMain(mainArgs({ dataDir: tempDataDir(), rendererRoot: PROBE_ROOT, fakeBackend: 'fake_backend_die_on_first_call.py' }))
   expect(await waitForExit(run.child)).toBe(FAILURE_EXIT_CODE)
   const dialog = dialogTextOf(run.log)
   console.log(`error dialog: ${JSON.stringify(dialog)}`)
@@ -436,6 +437,27 @@ test('C1. normal close (DSK-28): no FATAL line, no dialog text, no ignored error
   expect(log.lines(/FATAL/)).toEqual([])
   expect(log.lines(/error dialog text: /)).toEqual([])
   expect(log.lines(/error after shutdown started/)).toEqual([])
+})
+
+test('V1. G-VER: the app_version the real backend writes into a backup is the "version" of package.json, read at run time', async () => {
+  const packageVersion: string = JSON.parse(fs.readFileSync(path.join(LAYER_ROOT, 'package.json'), 'utf8')).version
+  expect(packageVersion).toMatch(/^\d+\.\d+\.\d+$/)
+  const { app } = await launchMain(mainArgs({ dataDir: tempDataDir(), rendererRoot: PROBE_ROOT }))
+  try {
+    const page = await app.firstWindow()
+    await expect(page.locator('#done')).toBeVisible({ timeout: 60_000 })
+    expect(await app.evaluate(({ app: electronApp }) => electronApp.getVersion())).toBe(packageVersion)
+    const baseUrl = await page.locator('#backend-base-url').innerText()
+    const response = await fetch(`${baseUrl}/backups`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ backup_request: { destination_dir: tempFolder('ct-desktop-version-'), purpose: 'manual' } }),
+    })
+    expect(response.status).toBe(201)
+    expect(((await response.json()) as { app_version: string }).app_version).toBe(packageVersion)
+  } finally {
+    await app.close()
+  }
 })
 
 test('L1. the log of a launchMain run starts at the first line (DSK-27): "main started" is there, once, before "backend started"', async () => {

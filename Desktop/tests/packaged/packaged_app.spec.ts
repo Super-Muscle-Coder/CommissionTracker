@@ -668,3 +668,22 @@ test('P11. desktop session 36: the real round trip in the package: prepare in ru
     if (second.proc.exitCode === null && second.proc.signalCode === null) await second.app.close().catch(() => undefined)
   }
 })
+
+test('P12. desktop session 40 (G-VER): the app_version the packaged backend writes into a backup is the "version" of package.json, and the product reports it', async () => {
+  const packageVersion: string = JSON.parse(fs.readFileSync(path.join(LAYER_ROOT, 'package.json'), 'utf8')).version
+  expect(packageVersion).toMatch(/^\d+\.\d+\.\d+$/)
+  await withPackaged(async (l) => {
+    const tree = await expectPackagedRun(l)
+    expect(await l.app.evaluate(({ app }) => app.getVersion())).toBe(packageVersion)
+    const archiveDir = path.join(l.dataDir, 'archives')
+    fs.mkdirSync(archiveDir)
+    const created = await fetch(`http://${HOST}:${l.port}/backups`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ backup_request: { destination_dir: archiveDir, purpose: 'manual' } }),
+    })
+    expect(created.status).toBe(201)
+    expect(((await created.json()) as { app_version: string }).app_version).toBe(packageVersion)
+    await closeWindow(l, tree)
+  })
+})

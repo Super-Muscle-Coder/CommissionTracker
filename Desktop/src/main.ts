@@ -2,8 +2,8 @@
 // workflow: main
 // clause: clause_d_desktop
 // component: main
-// last_updated_by: coding-agent@2026-10-10#1
-// last_updated_at: 2026-10-10T20:58:00.0655716+07:00
+// last_updated_by: coding-agent@2026-10-11#1
+// last_updated_at: 2026-10-11T14:45:43.5442513+07:00
 //
 // EXPERIENCES:
 //   - id: main-EXP-001
@@ -19,7 +19,7 @@
 //       không theo productName). backend.launch_env (CT_PORT, CT_DB_FILE_PATH,
 //       CT_AI_SERVICE_BASE_URL, CT_APP_VERSION) và backend.ready_line "READY":
 //       clause_a_common.mandatory_rules. CT_APP_VERSION là app.getVersion(), tức
-//       "version" của package.json (0.1.0), ở cả bản đóng gói. Mọi giá trị khác
+//       "version" của package.json (1.0.0 từ phiên 40), ở cả bản đóng gói. Mọi giá trị khác
 //       của tệp là giá trị nội bộ của Main: ready_timeout_ms 30000,
 //       shutdown_timeout_ms 10000 (phải lớn hơn graceful_shutdown_timeout_s 5
 //       của Backend/configs/backend.yaml), start_attempts 3, failure_exit_code
@@ -683,6 +683,40 @@
 //       (5) Không còn eslint-disable, @ts-ignore, @ts-expect-error, @ts-nocheck trong Desktop/ (trừ node_modules, dist,
 //       release, packaging). Bẫy: tests/restore_*.spec.ts có hàm tempFolder riêng cũng rò rỉ, đã chuyển sang hàm
 //       của helpers.
+//   - id: main-EXP-041
+//     content: >
+//       G-VER (phiên 40): số phiên bản của ứng dụng là "version" của Desktop/package.json, đã đổi 0.1.0 thành 1.0.0
+//       bằng "npm version 1.0.0 --no-git-tag-version" (không đụng git; chỉ đổi ba dòng: package.json và hai chỗ ở
+//       đầu package-lock.json; chọn lệnh này thay vì sửa tay để npm giữ hai tệp khớp nhau). Đường đi của giá trị:
+//       package.json -> app.getVersion() (Electron đọc package.json của gói, cả bản đóng gói qua app.asar) ->
+//       CT_APP_VERSION trong launchEnv của startBackend (src/main.ts, khóa launch_env.app_version của
+//       configs/desktop.json) -> backend -> app_version trong backup_archive_record và manifest của tệp sao lưu
+//       (backup_data rút giá trị này; hợp đồng bắt dạng x.y.z). packaging/prepare_runtime.mjs cũng đọc package.json
+//       cho CT_APP_VERSION của lần chạy thử trong stage, nên không có chỗ nào gõ cứng số phiên bản. Không đổi
+//       src/main.ts ngoài chú thích; không đổi electron-builder.yml (tên bộ cài lấy từ ${version}). Không sửa
+//       UI/package.json (không đi vào bản đóng gói; việc của chặng H). Ca ràng phiên bản chưa có trước phiên này
+//       (R2 chỉ so archive_app_version với app_version của cùng backend): thêm V1 (desktop_main.spec.ts, backend
+//       thật) và P12 (test:packaged, backend trong gói), cả hai đọc "version" từ package.json lúc chạy, so với
+//       app.getVersion() và với app_version trong bản ghi POST /backups. Chuỗi '0.1.0' trong restore_*.spec.ts và
+//       fake_backend_restore.py là dữ liệu giả của tệp sao lưu: giữ nguyên, không ca nào hỏng vì nó. Bẫy: npm ci
+//       xóa node_modules/electron/dist và Electron 44 không tự tải lại binary; chạy
+//       "node node_modules\electron\install.js" (lấy từ cache) trước npm test.
+//   - id: main-EXP-042
+//     content: >
+//       DSK-30 (1) và (2) (phiên 40). (1) N7: sau loadURL('data:...') chờ chính trang đó bằng
+//       expect(page.locator('p')).toHaveText('other') rồi mới evaluate, như R10 (evaluate lúc trang còn chuyển làm
+//       hỏng "Execution context was destroyed"). Đã rà mọi spec trong tests/ tìm chỗ điều hướng rồi evaluate ngay:
+//       loadURL chỉ có ở N7, R10 (đã chờ) và finally của hai ca đó (kế tiếp là expect của #done); location.href
+//       của ca 8 bị Main chặn (trang không rời app://, chờ dòng log rồi mới evaluate); reload của ca 11 đã chờ
+//       #loaded; N8 và R10 cửa sổ thứ hai dùng waitForLoadState('load'). Không còn chỗ nào khác. (2) Ca 6 và 14:
+//       backend giả mới tests/fixtures/fake_backend_die_on_first_call.py (socket thuần, lắng nghe CT_PORT, in
+//       READY, rồi thoát mã 3 ngay khi đọc xong dòng yêu cầu đầu tiên, không trả lời). Chọn không trả lời vì lời
+//       gọi đầu tiên đến là lúc backend "chết giữa chừng", và việc có hay không câu trả lời không đổi khẳng định
+//       nào; chờ hết dòng yêu cầu (chứ không chỉ kết nối) vì Chromium có thể mở sẵn socket. Lời gọi đầu tiên
+//       thực tế đo được là POST /reminders/checks của reminder_ticker, mà ticker chỉ khởi động sau "first load
+//       finished", nên khi backend chết thì cửa sổ đã mở và trang đã nạp xong, bất kể máy chậm cỡ nào (GET
+//       /clients của trang probe cũng chỉ đến sau khi trang chạy). Hai ca giữ nguyên mọi khẳng định. K1 không
+//       đổi và vẫn dùng fake_backend_ready_then_die.py (cần lần nạp chưa xong lúc backend chết).
 // UNSOLVED_PROBLEMS: []
 //
 // EVIDENCE:
@@ -1488,6 +1522,76 @@
 //       C1, L1 đạt trong mọi lượt có tải trừ lượt 24,1 phút và các lượt bị bỏ. Ca 6 hỏng ở mức tải nặng vì khẳng định "opening
 //       the window" giả định cửa sổ mở trước khi backend giả chết sau 2 giây.
 //     recorded_at: 2026-10-10T20:58:00.0655716+07:00
+//
+//   - claim: >
+//       Phiên 40, ba phép cắn: ca 6, ca ràng phiên bản V1 và N7 bắt được đúng lỗi chúng sinh ra để bắt.
+//     how: >
+//       Mỗi phép trên chính tệp, bản gốc chép vào scratchpad và khôi phục bằng Copy-Item, kiểm bằng Get-FileHash
+//       giống bản gốc. (a) fake_backend_die_on_first_call.py thay bằng bản thoát mã 3 ngay sau READY, rồi
+//       playwright test desktop_main.spec.ts -g "backend dies after READY: error". (b) src/main.ts: giá trị
+//       CT_APP_VERSION gõ cứng '0.1.0' thay cho app.getVersion(), npm run build, playwright test
+//       desktop_main.spec.ts -g "V1\.", rồi khôi phục và build lại. (c) bỏ dòng chờ trang data: của N7, bốn tiến
+//       trình bận (scratchpad\burn.js), playwright test native_dialogs.spec.ts -g "N7\." --repeat-each=5.
+//     result: >
+//       (a) ca 6 hỏng: expect(...).toMatch(/opening the window/) (cửa sổ chưa mở khi backend chết; dòng FATAL vẫn
+//       đúng). (b) V1 hỏng: Expected "1.0.0", Received "0.1.0". (c) 0 trên 5 lượt hỏng trong 5,1 phút (mỗi lượt
+//       1,4-1,8 giây; phần còn lại là beforeAll khởi động): KHÔNG bắt được lỗi "Execution context was
+//       destroyed" trên máy này với bốn tiến trình bận; Orchestrator đo 2/3 lượt trên Linux. Sửa N7 theo đúng
+//       cách R10 là sửa theo thiết kế, không có bằng chứng tái hiện ở đây.
+//     recorded_at: 2026-10-11T14:45:43.5442513+07:00
+//   - claim: >
+//       Phiên 40, mốc đầu phiên và môi trường.
+//     how: >
+//       node --version; npm --version; node -p "require('electron/package.json').version";
+//       ..\Backend\env\Scripts\python.exe --version; hỏi Project Owner về antivirus và bộ cài 0.1.0; Get-FileHash
+//       bản chép E:\installer\Commission Tracker Setup 0.1.0.exe so với release\; cd Desktop; npm ci;
+//       node node_modules\electron\install.js; npm run lint; npm test; chụp số tệp, tổng byte và tệp mới nhất của
+//       %APPDATA%\CommissionTracker và %APPDATA%\Commission Tracker; git status --short.
+//     result: >
+//       Node v24.14.1, npm 11.11.0, Electron 44.4.5, Python 3.13.12. AVG và ReasonLabs bật (lời Project Owner).
+//       Bộ cài 0.1.0 (116851159 byte, SHA-256 9430d080...a01d0) đã được Project Owner chép ra
+//       E:\installer\, trùng từng byte với release\ trước khi xóa. lint sạch; npm test 78 passed (5,9 phút,
+//       13:05:44-13:11:43); git status sạch. Mốc %APPDATA% đầu phiên: CommissionTracker 2 tệp 114688 byte, mới
+//       nhất 2026-09-28T21:09:42; Commission Tracker 67 tệp 8046479 byte, mới nhất 2026-10-05T10:45:16.
+//     recorded_at: 2026-10-11T14:45:43.5442513+07:00
+//   - claim: >
+//       Phiên 40, bốn lượt npm test (ba có tải bốn tiến trình bận, một không tải); N7, ca 6, ca 14, K1, C1 và V1
+//       đạt cả bốn lượt.
+//     how: >
+//       Tải: scratchpad\burn.js, bốn tiến trình node vòng lặp bận chạy song song trong lúc test (12 luồng logic).
+//       Mỗi lượt: npm test chạy từ shell của công cụ (PowerShell, nền), tuần tự, chuyển ra tệp; đếm dòng ok/x.
+//     result: >
+//       Lượt 1 có tải: 79 passed (9,5 phút, 14:03:39-14:13:16). Lượt 2 có tải: 79 passed (6,2 phút,
+//       14:13:46-14:20:00). Lượt 3 có tải: 79 passed (5,9 phút, 14:20:01-14:25:59). Lượt không tải: 79 passed
+//       (5,8 phút, 14:25:59-14:31:54). 79 = 78 của mốc + V1. Ghi thật: một lượt có tải ĐẦU TIÊN (13:23-14:01, bỏ
+//       dở lượt hai) chạy từ một tiến trình PowerShell ẩn (Start-Process -WindowStyle Hidden) cho 73 passed, 6
+//       failed: ca 1 (#done vẫn ẩn sau 60 s), ca 6 và 14 ("process did not exit within 60000 ms"; không có log vì
+//       ca chỉ in log sau khi chờ thoát xong, và hai tiến trình python giả còn sống đến afterAll), A2, A4, A6 (hết
+//       120 s); các ca chạy 40-80 giây mỗi ca. Tôi dừng lượt đó, dựng lại tái hiện ngoài Playwright
+//       (scratchpad\repro6.cjs, spawn thẳng electron.exe, bốn tiến trình bận): ca 6 thoát mã 1 sau 1,4-2,0 giây,
+//       ba lần liền, log đúng thứ tự (opening the window, first load finished, ticker, lời gọi đầu tiên, FATAL).
+//       Chạy lại ca 1, 6, 14 dưới tải từ shell thường: đạt (6,2 + 2,1 + 1,6 giây); từ launcher PowerShell ẩn,
+//       không tải và có tải: đạt cả hai. Lượt có tải ban đầu KHÔNG tái hiện được; nguyên nhân không xác định. Trùng
+//       thời điểm: một lệnh Get-ChildItem -Recurse -Depth 3 của chính phiên này quét E:\, %TEMP%, %USERPROFILE%
+//       chạy nền 13:2x-13:34 cùng lúc với lượt đó (antivirus bật). Cùng dạng "did not exit within 60000 ms" ở ca
+//       6 và 14 đã ghi ở EVIDENCE phiên 39; khi hỏng, các tiến trình python giả của ca còn sống. Không sửa gì.
+//     recorded_at: 2026-10-11T14:45:43.5442513+07:00
+//   - claim: >
+//       Phiên 40, bộ cài 1.0.0, test:packaged và UI e2e.
+//     how: >
+//       Xóa packaging\stage và release (sau khi Project Owner xác nhận đã chép bộ cài 0.1.0); đặt
+//       ELECTRON_BUILDER_CACHE vào scratchpad\ebcache; npm run dist; Get-FileHash -Algorithm SHA256;
+//       npm run test:packaged; cd UI; npm run build; npm run e2e (CT_WALKTHROUGH_RUNNER không đặt);
+//       git status --short; chụp lại %APPDATA%.
+//     result: >
+//       Lần dist đầu hỏng EXDEV ở bước NSIS (rename trong %LOCALAPPDATA%\electron-builder\Cache, như phiên 14);
+//       lần hai với ELECTRON_BUILDER_CACHE: thoát mã 0 (14:33:39-14:35:10). release\Commission Tracker Setup 1.0.0.exe:
+//       116853427 byte, SHA-256 C776FB0E1636FFC88130DAD4DF3BF0465634B345724DBF0520C7F7908A31E982.
+//       test:packaged: 12 passed (1,3 phút; 11 của mốc + P12). UI build đạt; e2e: 83 passed (5,5 phút);
+//       git status --short không có UI/evidence. Mốc %APPDATA% cuối phiên (14:46:28): CommissionTracker 2 tệp
+//       114688 byte, mới nhất 2026-09-28T21:09:42; Commission Tracker 67 tệp 8046479 byte, mới nhất
+//       2026-10-05T10:45:16: giống mốc đầu phiên.
+//     recorded_at: 2026-10-11T14:45:43.5442513+07:00
 //
 // NOTES:
 //   - content: >
