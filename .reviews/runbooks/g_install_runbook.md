@@ -283,3 +283,56 @@ Chép bảng này, điền, rồi gửi kèm các ảnh chụp:
 - **Tiêu chí 5 đạt** khi C1 bị chặn, **hoặc** C2 mở được với dữ liệu còn nguyên, **hoặc** C2 hiện một hộp thoại tiếng Việt rõ ràng và dữ liệu thử không hỏng (D5 vẫn mở được).
 - **ENV-4 đóng** khi các bước 4–6 của phần F đạt trên máy khác.
 - **DSK-21 đóng** khi tiêu chí 2, 3, 5 đạt (tiêu chí 1 xong ở phiên 40; tiêu chí 4 thay bằng BE-11).
+
+---
+
+## Kết quả — Project Owner chạy ngày 2026-10-11, 19:20–19:55 (Orchestrator đọc log và hỏi lại)
+
+**Nguồn:** log PowerShell đầy đủ Project Owner gửi, ảnh hộp thoại ở D3, và câu trả lời của Project Owner cho bốn câu hỏi của Orchestrator (20:00). AVG và ReasonLabs bật.
+
+| Mục | Kết quả |
+|---|---|
+| A2 | Sao lưu 69 tệp, 8 161 167 byte (2 tệp của `CommissionTracker`, 67 của `Commission Tracker`) |
+| A3 | Hai SHA-256 khớp: `9430D080…577A01D0` (0.1.0) và `C776FB0E…A31E982` (1.0.0) |
+| A5 | Không chạy `Show-Installed` trước B1, nên không biết có bản cũ hay không. Không ảnh hưởng kết luận: sau B1 chỉ có đúng một dòng `0.1.0` |
+| B1 | `Commission Tracker 0.1.0`, `exe: 0.1.0.0`. `InstallLocation` để trống trong registry (electron-builder không ghi); exe ở `C:\Users\A\AppData\Local\Programs\commission-tracker\` |
+| B3 | Bộ cài không hiện gì. Đúng một dòng `Commission Tracker 1.0.0`, `exe: 1.0.0.0` |
+| B4 | Mở được; `Runbook A` và `Don runbook` còn (Project Owner xác nhận) |
+| C1 | Bộ cài **không chặn**, cài lặng lẽ; sau đó `0.1.0`, `exe: 0.1.0.0` |
+| C2 | Mở được; dữ liệu còn (Project Owner xác nhận). Hai bản dùng cùng cấu trúc dữ liệu, nên đúng như dự đoán |
+| D2 | `Show-Leftovers` lúc `0.1.0` đang mở: bốn tiến trình `Commission Tracker.exe` (tiến trình chính và các tiến trình con của Electron), một `python.exe` trong thư mục cài, và một tiến trình id 800 không đọc được đường dẫn (§K2) |
+| D3 | Hộp thoại của bộ cài: "Commission Tracker is running. Click OK to close it. If it doesn't close, try closing it manually." Project Owner bấm OK: ứng dụng **tự đóng**, bộ cài chạy tiếp tới xong |
+| D4 | **Không còn tiến trình nào**; `1.0.0`, `exe: 1.0.0.0` |
+| D5 | Mở được; dữ liệu còn |
+| E1 | Log: `reminder check #1: 1 notification(s)`, toast "Sắp tới hạn giao: Don thong bao" `show`, rồi `click (window brought to the front: true)` |
+| E2 | Lối tắt Start Menu mở được, đúng dữ liệu thật, không lỗi (Project Owner xác nhận) |
+| E3 | `data.db` 114 688 byte và `data.db.lock` còn, giờ ghi 2026-09-28 21:09:42, giống trước runbook |
+| F | Chưa làm |
+
+### K1. Lần mở đầu của mỗi exe mới: một bản chạy ẩn khoảng 25 giây trước bản thật
+
+Bốn lần mở đầu sau một lần cài (B2, B4, C2, D5), log đều có **hai** tiến trình Main nối nhau, cùng đối số, cùng tiến trình cha (PowerShell):
+1. **Bản thứ nhất** in đủ các dòng khởi động: backend READY, `opening the window`. Nó còn in `Failed to find real location of …\resources\python\python.exe`, một dòng **chỉ** xuất hiện ở bản này.
+2. Khoảng 25 giây sau, ở B4, C2, D5, bản thứ nhất ghi `Failed to open persistent cache files … being used by another process`, rồi `backend (pid …) exited with code 0`, rồi `FATAL: The backend stopped unexpectedly (exit code 0)`. Ở B2 log của nó dừng ngay sau `opening the window`.
+3. **Bản thứ hai** khởi động ngay sau đó, không có dòng `Failed to find real location`, và chạy bình thường tới khi đóng.
+
+Project Owner **chỉ thấy phải chờ khoảng nửa phút**: không có cửa sổ thừa, không có hộp thoại lỗi.
+
+**Cách Orchestrator đọc** (suy luận từ log, chưa có xác nhận của antivirus):
+- Bản thứ nhất chạy trong một môi trường cách ly của antivirus (AVG hoặc ReasonLabs), kiểu "chạy thử exe lạ". Dòng `Failed to find real location` khớp với hệ thống tệp bị ảo hóa. Khóa một bản ứng dụng của Electron không chặn bản thứ hai, nghĩa là hai bản không cùng một không gian. Bản này không hiện lên màn hình.
+- Antivirus dừng bản đó, rồi cho bản thật chạy. Đây đúng là giả thuyết H1 của DSK-2 và DSK-3 (2026-09-27, 28), lần này có log của cả hai bản.
+- **Về dữ liệu:** backend của bản thứ nhất đã thoát (19:31:56) trước khi Main thứ hai khởi động (19:31:56,7), nên hai backend không bao giờ dùng tệp dữ liệu cùng lúc. Khóa `data.db.lock` (BE-3) vẫn chặn trường hợp chồng lên nhau. Bản cách ly không làm thao tác nào của người dùng. Dữ liệu thử còn nguyên qua mọi lần.
+- **Với họa sĩ:** lần mở đầu sau mỗi lần cài chậm khoảng 25–80 giây, rồi mọi thứ bình thường. Đó là DSK-3, đã biết. Cách xử lý duy nhất đã ghi là ký số (DSK-9).
+
+### K2. Tiến trình không đọc được đường dẫn, và một tiến trình sót tạm thời
+
+- Ở D2 có tiến trình "Commission Tracker" id 800 mà PowerShell không đọc được đường dẫn. Sau khi bộ cài đóng ứng dụng, nó cũng biến mất (D4 sạch). Nhiều khả năng đó là bản cách ly của K1, chạy ở một ngữ cảnh khác.
+- Sau D5, `Show-Leftovers` thấy `Commission Tracker.exe` id 30224, không phải tiến trình chính nào có trong log, rồi ở lần chạy sau thì không còn (E3 sạch). Nhiều khả năng là tiến trình con của bản cách ly, tự thoát chậm. Không có `python.exe` nào sót lại.
+
+### Chốt sổ
+
+- **Tiêu chí 2 ĐẠT:** B3, B4, E1, E2, E3.
+- **Tiêu chí 3 ĐẠT:** bộ cài phát hiện ứng dụng đang mở, đề nghị đóng, tự đóng khi bấm OK; không sót tiến trình, không bản cài nửa vời (D3–D5).
+- **Tiêu chí 5 ĐẠT:** bộ cài không chặn bản cũ, nhưng `0.1.0` mở được trên dữ liệu của `1.0.0` mà không hỏng (C1, C2). Khi có bước nâng cấp cấu trúc thật, backend của bản cũ sẽ từ chối khởi động (đã có kiểm thử "phiên bản mới hơn thì dừng" ở từng workflow), và khi đó cần xem lại tiêu chí này.
+- **DSK-21 ĐÓNG** (tiêu chí 1 ở phiên 40; tiêu chí 4 thay bằng BE-11).
+- **ENV-4 còn mở** (phần F).

@@ -60,6 +60,12 @@ Hai kết luận từ buổi bàn thiết kế watermark, lưu lại để V2 kh
 
 Kiểm tra trùng lặp ảnh qua Internet (họa sĩ tự cam kết nguyên tác). Làm mù AI chống train. Chịu được việc chụp lại màn hình bằng máy ảnh khác. Đồng bộ online. Nhiều người dùng.
 
+### 3.4 Để dành cho lúc thương mại hóa
+
+**Ký số bộ cài** (Project Owner quyết 2026-10-11). Ký số là cách duy nhất bỏ được khoảng chờ ở lần mở đầu sau mỗi lần cài (antivirus chạy thử exe lạ khoảng 25–80 giây, DSK-3) và cảnh báo SmartScreen. Nhưng nó cần mua chứng thư số có phí hằng năm, và là chuyện của thương mại hóa ứng dụng, không phải của một công cụ cá nhân. V1 chấp nhận khoảng chờ đó.
+
+**Biểu tượng riêng của ứng dụng** (Project Owner quyết 2026-10-11): để V3, cùng phần diện mạo (`.design/product_versions.md`). V1 dùng biểu tượng mặc định của Electron.
+
 ## 4. Ranh giới còn mở, chưa quyết
 
 **`restore_data`.** Nó phải dừng backend, thay tệp cơ sở dữ liệu, khởi động lại, và hoàn tác nguyên trạng nếu hỏng giữa đường — việc phức tạp nhất trong nhóm còn lại của V1. Theo ưu tiên 2 và 3, nó không thuộc phần đầu của V1. Có một dạng đơn giản hơn nhiều đáng cân nhắc: ứng dụng kiểm tra tệp sao lưu, chuẩn bị nó sẵn, rồi bảo họa sĩ đóng và mở lại ứng dụng để hoàn tất — bỏ hẳn phần điều phối vòng đời tiến trình. Dạng đó là thay đổi hợp đồng, nên chỉ nêu ra ở đây, chưa đề xuất. **Quyết sau khi nền tảng đã được chứng minh.** → **Đã quyết 2026-10-08:** Project Owner chọn dạng đơn giản hơn (hướng B), thuộc V1. Đặc tả `.design/f_restore.md`; hợp đồng sửa theo CT-7 (`.plan/open_issues.md`).

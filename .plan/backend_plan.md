@@ -1,212 +1,182 @@
 # ===WCA-PLAN===
 # session_for: backend
 # drafted_by: Orchestrator + Project Owner
-# drafted_at: 2026-10-07T09:40:00+07:00
-# contract: data_schema 9.0.2, api_contract 4.0.0 (approved)
+# drafted_at: 2026-10-11T20:30:00+07:00
+# contract: data_schema 10.0.1, api_contract 5.0.0 (approved)
 
 ## MỤC TIÊU PHIÊN NÀY
 
-Phiên 32 của dự án, phiên backend thứ mười ba, và là phiên đầu của **chặng E** (`.plan/v1_roadmap.md`). Một workflow mới, hai điểm giao tiếp:
+Phiên 41 của dự án, phiên backend thứ mười bốn, thuộc chặng G. Phiên ngắn, không thêm tính năng. Ba mã:
 
-| Workflow | Điểm giao tiếp | Địa chỉ | Bên gọi theo hợp đồng |
-|---|---|---|---|
-| `backup_data` (nghiệp vụ, Clause B) | `create_backup` | `POST /backups` | `external`, `restore_data` |
-| | `prepare_restore` | `POST /backups/restore-preparations` | `restore_data` |
+| Mã | Việc | Căn cứ |
+|---|---|---|
+| **BE-11** | Chứng minh cơ chế nâng cấp cấu trúc lưu trữ chạy đúng khi có một bước nâng cấp **thật sự áp lên dữ liệu đã có**. Hiện chưa từng có bước nào ngoài bước 1 | `.plan/open_issues.md` BE-11; thay cho tiêu chí 4 của DSK-21 ở bản 1.0 (Project Owner chọn hướng A, 2026-10-11) |
+| **BE-9** | `wire_workflows` bắt buộc nhận `app_version`; bỏ nhánh "không ráp `backup_data`" | BE-9 (audit phiên 32 §5.4) |
+| **BE-10** | Bỏ mọi chú thích tắt kiểm tra trong `Backend/` (`# noqa`, `# type: ignore`, `# pragma`) | BE-10 (Orchestrator phát hiện 2026-10-10) |
 
-`backup_data` là **thao tác cấp kho lưu trữ** (`05-edge-cases.md`, Bước 5.6):
-- chụp toàn bộ cơ sở dữ liệu thành một tệp sao lưu;
-- kiểm một tệp sao lưu, rồi giải nén cơ sở dữ liệu trong đó ra một tệp chờ khôi phục (staging).
-
-Nó xử lý cơ sở dữ liệu như một khối nguyên vẹn, **không bao giờ đọc hay diễn giải bảng của workflow nào**.
-
-`restore_data` (Desktop) chưa tồn tại, và chặng F chưa quyết. `prepare_restore` vẫn làm ngay, vì phương án nào của chặng F cũng cần bước kiểm và chuẩn bị tệp sao lưu (roadmap, chặng E).
+**Không đổi hành vi nào mà bên ngoài nhìn thấy.** Không điểm giao tiếp, nhãn, mã lỗi hay cấu trúc bảng nào đổi. Không thêm bước nâng cấp nào vào mã sản phẩm. Hợp đồng không đổi.
 
 **Điểm dừng:**
-- hai điểm giao tiếp đúng hợp đồng, có kiểm thử, có phép cắn;
-- **460 kiểm thử cũ** cộng các ca mới đều đạt;
-- Desktop, giao diện và bản đóng gói vẫn chạy đúng với backend mới;
-- sao lưu và chuẩn bị khôi phục chạy được trên **bản đóng gói** (Python nhúng);
-- checkpoint `backup_data` có EVIDENCE và NOTE đề xuất trạng thái.
+- 564 kiểm thử cũ cộng các ca mới đều đạt, ba lượt liên tiếp;
+- mỗi workflow có bảng có một kiểm thử nâng cấp đủ năm khẳng định của BE-11;
+- `Backend/` không còn `noqa`, `type: ignore` hay `pragma`;
+- Desktop `npm test` và UI e2e vẫn đạt với backend mới.
 
-Không có giao diện, không có Desktop ở phiên này.
+## ĐẶC TẢ ĐÃ CHỐT
+
+### BE-11 — kiểm thử cơ chế nâng cấp cấu trúc lưu trữ
+
+**Hiện trạng** (Orchestrator đọc ngày 2026-10-11):
+- Sáu workflow có bảng: `manage_client`, `manage_commission`, `update_progress`, `record_payment`, `manage_watermark_profile`, `send_reminder`.
+- Mỗi workflow có `_STORAGE_UPGRADES` ở cấp module trong `adapters.py`, hiện chỉ có bước 1, và `ensure_storage()` chạy các bước còn thiếu rồi ghi phiên bản, trong **một** `db.transaction()`.
+- `scaffold_backend` mở kết nối với `isolation_level=None`, và `transaction()` tự `BEGIN IMMEDIATE` … `COMMIT` / `ROLLBACK`. Về lý thuyết, SQLite cho DDL nằm trong giao dịch, nên một bước hỏng giữa chừng phải được hoàn tác cả. **Chưa ai đo điều đó.**
+- Kiểm thử hiện có chỉ phủ: tạo mới (phiên bản 0 lên 1), và "phiên bản mới hơn bản build biết thì dừng khởi động".
+
+**Quyết định của Orchestrator: kiểm cả sáu workflow, không chọn một workflow đại diện.** Lý do: mỗi workflow tự viết `ensure_storage()` của mình, không dùng chung một hàm. Một workflow đúng không chứng minh năm workflow kia đúng. Mỗi kiểm thử ngắn và giống nhau.
+
+**Mỗi workflow có một kiểm thử, nằm trong `workflows/<tên>/tests/`, làm như sau:**
+1. Tạo cơ sở dữ liệu bằng **mã thật** ở phiên bản 1, rồi ghi ít nhất một bản ghi qua đúng điểm giao tiếp `http` của workflow đó (như các kiểm thử hiện có).
+2. Dừng, rồi khởi động lại trên cùng tệp dữ liệu, với `_STORAGE_UPGRADES` của workflow đó được thay **chỉ trong kiểm thử** (ví dụ `monkeypatch.setattr`) bằng danh sách cũ cộng một **bước 2 giả**. Bước 2 chỉ chạm bảng của chính workflow đó, ví dụ thêm một cột mới vào một bảng của nó.
+3. Khẳng định **năm** điều:
+   - **(a) bước 2 đã chạy:** cột hay chỉ mục mới có trong bảng (đọc bằng `PRAGMA table_info` hay `sqlite_master` trên tệp dữ liệu, trong kiểm thử);
+   - **(b) dữ liệu cũ còn nguyên:** đọc lại bản ghi ở bước 1 qua điểm giao tiếp `http`, kết quả giống hệt trước khi nâng cấp;
+   - **(c) phiên bản ghi lên 2:** bảng `<tên>_schema_version` có đúng một dòng, giá trị 2;
+   - **(d) khởi động lại lần nữa thì không chạy lại bước 2:** khởi động lần ba với cùng danh sách. Phải chạy được (nếu bước 2 là `ALTER TABLE … ADD COLUMN`, chạy lại sẽ báo trùng cột), và phiên bản vẫn là 2;
+   - **(e) bước hỏng thì hoàn tác cả:** trên một tệp dữ liệu mới ở phiên bản 1, khởi động với bước 2 gồm **một câu lệnh đúng rồi một câu lệnh sai**. Việc khởi động phải thất bại; phiên bản vẫn là 1; tác dụng của câu lệnh đúng không còn; dữ liệu cũ còn nguyên.
+4. Cách khởi động lại do agent chọn: gọi lại `wire_workflows` trên kết nối mới, hay khởi động tiến trình như các kiểm thử tiến trình hiện có. Ghi lý do.
+
+**Nếu khẳng định (e) không đạt ở workflow nào:**
+- dừng lại và báo Orchestrator, kèm điều đo được;
+- **không** tự sửa `scaffold_backend` hay `ensure_storage()`.
+
+Đó là một lỗi thật về an toàn dữ liệu, cần Orchestrator quyết cách sửa.
+
+**Phép cắn** (chỉ trên bản sao tạm, khôi phục ngay):
+- (a) trong `ensure_storage()` của một workflow, bỏ dòng `UPDATE … SET version`: khẳng định (c) và (d) phải hỏng;
+- (b) đổi điều kiện `version > current` thành `version >= current`: khẳng định (d) phải hỏng;
+- (c) cho từng bước chạy trong một `transaction()` riêng thay vì chung: khẳng định (e) phải hỏng.
+
+Mỗi phép làm trên một workflow, ghi workflow nào.
+
+### BE-9 — `app_version` bắt buộc
+
+- `wire_workflows(app, db, configs, *, app_version, reminder_clock=None, backup_clock=None)`: `app_version` thành tham số từ khóa **bắt buộc, không có giá trị mặc định**.
+- Mọi chỗ gọi trong kiểm thử truyền một giá trị đúng dạng `x.y.z`, ví dụ `"1.0.0"`, đặt ở một chỗ dùng chung của từng tệp kiểm thử. Orchestrator đếm được 22 chỗ gọi trong 10 tệp (kể cả `Backend.py` và `workflows/send_reminder/services.py`). Agent đếm lại cho đủ.
+- Bỏ nhánh `if app_version is not None:` ở bước ráp `backup_data`: `backup_data` luôn được ráp.
+- **`test_backup_is_not_wired_without_app_version`** (`workflows/backup_data/tests/test_backup_data.py`) không còn đúng ý. Thay bằng một ca khẳng định: gọi `wire_workflows` mà không có `app_version` thì báo `TypeError`, và không ráp workflow nào.
+- `main()` đã truyền `app_version`. Không đổi gì ở `main()` ngoài khối checkpoint.
+
+### BE-10 — chú thích tắt kiểm tra
+
+**Hiện trạng** (Orchestrator rà ngày 2026-10-10):
+- 7 dòng `# noqa: F401` trên `from .adapters import … StorageIOError` ở `services.py` của `record_payment`, `view_income_report`, `backup_data`, `manage_watermark_profile`, `send_reminder`, `manage_client`, `update_progress`;
+- 2 dòng `# type: ignore[misc]` ở `compare_semver` của `workflows/backup_data/services.py`;
+- 1 dòng `# pragma: no cover` ở `workflows/manage_client/tests/test_manage_client.py`.
+
+`Backend/` **không cài linter, công cụ kiểm kiểu hay công cụ đo độ phủ nào** (`requirements-dev.txt` chỉ có `pytest`, `httpx`). Vì vậy các chú thích này hiện không tắt gì cả. Bỏ chúng để chặng H không phải giải thích từng dòng.
+
+**Cách làm:**
+- **`noqa: F401`:** mỗi dòng nhập lại `StorageIOError` để Routers chỉ phụ thuộc Services, như chú thích ngay trên dòng đó đã nói. Giữ việc nhập lại, bỏ `# noqa`, và khai báo tên được nhập lại trong `__all__` của `services.py`. `__all__` là cách chuẩn của Python để nói "tên này cố ý được xuất ra". Nếu một tên trong dòng đó **không** được dùng ở đâu cả, cả trong Services lẫn Routers, thì bỏ tên đó khỏi dòng nhập. Liệt kê trong báo cáo từng tên giữ hay bỏ.
+- **`type: ignore[misc]`:** `parse_semver` trả `None` khi chuỗi không hợp lệ, nên kiểu trả về là `… | None`. Trong `compare_semver`, thay hai dòng bằng phép kiểm tường minh: nếu `parse_semver` trả `None` thì ném `ValueError` nêu chuỗi không hợp lệ. Hiện mọi chỗ gọi `compare_semver` đều đã kiểm chuỗi trước, nên hành vi với giá trị hợp lệ không đổi. Thêm một ca kiểm thử: chuỗi không hợp lệ thì có `ValueError`.
+- **`pragma: no cover`:** bỏ chú thích, giữ nguyên mã.
+- **Cuối phiên**, rà toàn bộ `Backend/` (trừ `env/`, `__pycache__/`): không còn `noqa`, `type: ignore`, `pragma`. Chỗ nào không bỏ được thì dừng lại và báo, không tự giữ.
+
+**Không thêm linter hay công cụ kiểm kiểu** vào `requirements-dev.txt` trong phiên này. Việc đó, nếu cần, thuộc chặng H và phải được Project Owner duyệt (`CLAUDE.md` mục 5, công nghệ theo layer).
 
 ## VIỆC CẦN LÀM, THEO THỨ TỰ
 
 0. **Đọc tài liệu** theo `08-operating-protocol.md`, Phần 1:
-   - `CLAUDE.md`: mục 4 (bố cục workflow), mục 5 (Backend, phiên bản cấu trúc lưu trữ, tệp `Backend.pyproj`), mục 6;
-   - `05-edge-cases.md`, **Bước 5.6** (thao tác cấp kho lưu trữ); `04-implement.md` (năm lớp, vị trí kiểm định dạng và kiểm nghiệp vụ); `07-checkpoint-protocol.md`;
-   - `.design/03_classification.md`: `backup_data` và thứ tự ráp nối (Order 2);
-   - hợp đồng:
-     - `data_schema.yaml`: `backup_data` (toàn mục, nhất là `description`); `restore_data` (để hiểu bên tiêu thụ `restore_staging`); `types.backup_request_record`, `types.backup_archive_record`; `formats.file_path`, `formats.timestamp`; `clause_a_common.mandatory_rules` (biến môi trường lúc khởi động, có `CT_APP_VERSION`);
-     - `api_contract.yaml`: `backup_data` (hai điểm giao tiếp và nhãn), `endpoint_forms.http`, `error_codes`, `error_body`;
+   - `CLAUDE.md`: mục 4, mục 5 (Backend, **phiên bản cấu trúc lưu trữ**, tệp `Backend.pyproj`), mục 6;
+   - `04-implement.md` (năm lớp), `07-checkpoint-protocol.md`;
+   - hợp đồng: `data_schema.yaml`, mục `clause_a_common.mandatory_rules` (luật mỗi workflow tự tạo và nâng cấp bảng của mình) và `backup_data` (`app_version`);
    - code:
-     - `Backend/Backend.py`: khối checkpoint Main, `read_launch_values` (đã đọc và kiểm `CT_APP_VERSION`), phần ráp nối các workflow;
-     - `Backend/workflows/scaffold_backend/adapters.py`: `SharedConnection` (chỉ có `transaction()` và `read()`, cả hai mở giao dịch và giữ khóa của tiến trình);
-     - một workflow mẫu đã audit đạt, ví dụ `Backend/workflows/send_reminder/` (năm lớp, `configs.yaml`, đồng hồ do Main tiêm vào, `_error_body`, kiểm thử qua HTTP);
-     - `Backend/tests/test_cors.py`, `Backend/tests/test_backend_process.py`;
-     - `Desktop/packaging/prepare_runtime.mjs`, chỉ đọc: xem `Backend/` được chép vào gói thế nào;
+     - `Backend/Backend.py`: khối checkpoint Main, `wire_workflows`, `main()`;
+     - `Backend/workflows/scaffold_backend/adapters.py`: `SharedConnection`, `transaction()`;
+     - `adapters.py` của sáu workflow có bảng (`_STORAGE_UPGRADES`, `ensure_storage`);
+     - `services.py` của bảy workflow có dòng `noqa`; `workflows/backup_data/services.py` (`parse_semver`, `compare_semver`);
+     - kiểm thử của các workflow và `Backend/tests/`;
+   - `.plan/open_issues.md`: BE-9, BE-10, BE-11, BE-8;
    - plan này sau cùng.
 
-   Xác nhận Data Schema **`9.0.2`**, API Contract **`4.0.0`**, cả hai `approved`, và `backup_data` đang ở `đang_chờ_triển_khai`. Sai thì dừng lại và báo.
+   Xác nhận Data Schema **`10.0.1`** và API Contract **`5.0.0`**, cả hai `approved`. Sai thì dừng lại và báo.
 
 1. **Môi trường và mốc.**
    - Ghi phiên bản Python (`Backend\env\Scripts\python.exe --version`).
-   - `cd Backend; env\Scripts\python.exe -m pytest -q`: phải đạt **460/460**; khác thì dừng lại và báo.
-   - Chụp mốc `%APPDATA%\CommissionTracker`: tên, kích thước, giờ ghi, SHA-256 của mọi tệp.
+   - `cd Backend; env\Scripts\python.exe -m pytest -q`: mốc **564**. Khác thì dừng lại và báo.
+   - Chụp mốc `%APPDATA%\CommissionTracker`.
    - Ghi `git status --short` (chỉ đọc).
+   - Hỏi Project Owner hôm nay đã có phiên coding agent nào chạy chưa, để đếm `last_updated_by` cho đúng.
 
-2. **Đo trước khi viết: chụp cơ sở dữ liệu qua `db_connection`.**
-   - `SharedConnection` chỉ cho truy cập bên trong một giao dịch: `read()` mở `BEGIN DEFERRED` và giữ khóa của tiến trình. Phiên này **không được sửa** `scaffold_backend`.
-   - **Orchestrator không nắm chắc** `sqlite3.Connection.backup()` của Python 3.13 có chạy được bên trong khối `read()` không, và có cho bản chụp nhất quán không (`VACUUM INTO` thì chắc chắn không chạy được trong giao dịch). Đo bằng một script nhỏ ngoài mã dự án:
-     - `backup()` trong `read()` có lỗi không;
-     - bản chụp mở được không, `PRAGMA integrity_check` ra `ok` không;
-     - một luồng khác gọi `transaction()` trong lúc chụp thì chờ, và sau đó ghi được bình thường.
-   - **Nếu không có cách nào chụp được qua `SharedConnection` hiện có:** dừng phiên ở đây và báo số đo. Không sửa `scaffold_backend`, không mở kết nối thứ hai tới tệp dữ liệu. Orchestrator sẽ đề xuất cách sửa.
+2. **BE-9** trước, vì nó đổi các chỗ gọi `wire_workflows` mà kiểm thử của BE-11 sẽ dùng. Chạy `pytest` toàn bộ: phải đạt.
 
-3. **Định dạng tệp sao lưu** (chỉ `backup_data` biết định dạng, theo hợp đồng). Chốt như sau; muốn đổi điểm nào thì ghi lý do trong checkpoint.
-   - Tệp zip (nén deflate), đuôi `.ctbackup`. Tên `commission-tracker-<purpose>-<YYYYMMDD-HHMMSS>.ctbackup` theo giờ máy. Trùng tên thì thêm hậu tố `-2`, `-3`…; **không bao giờ ghi đè** tệp có sẵn.
-   - Đúng hai thành phần:
-     - `manifest.json`: `{ format, format_version, app_version, created_at, purpose, db_size_bytes, db_sha256 }`;
-     - `data.db`: bản chụp của việc 2.
-   - Đuôi tệp, tiền tố tên, tên thành phần, `format` và `format_version` là giá trị nội bộ, đặt trong `workflows/backup_data/configs.yaml`.
-   - `created_at` theo `formats.timestamp` (ISO 8601 có độ lệch giờ), lấy từ đồng hồ do Main tiêm vào, như `send_reminder`, để kiểm thử cố định được.
+3. **BE-11.** Viết sáu kiểm thử; làm ba phép cắn.
 
-4. **`create_backup` (`POST /backups`).**
-   - **Routers**, chỉ kiểm định dạng:
-     - thân `{ backup_request: { destination_dir, purpose } }`;
-     - `destination_dir` là đường dẫn tuyệt đối (`formats.file_path`);
-     - `purpose` là `'manual'` hoặc `'pre_restore'`;
-     - thừa trường hay sai kiểu: `400 ERR_VALIDATION`. FastAPI không bao giờ được tự trả `422`.
-   - **Services:**
-     - `destination_dir` không tồn tại hoặc không phải thư mục: `400 ERR_VALIDATION`, `details` chỉ rõ trường. Lý do: `create_backup` không có nhãn 404, và `ERR_VALIDATION` nghĩa là "outside its allowed values";
-     - còn lại: chụp, đóng gói, ghi.
-   - **Adapters, ghi nguyên tử:** ghi ra một tên tạm trong cùng thư mục đích, xong rồi mới đổi tên. Hỏng giữa chừng thì xóa tệp tạm, không để lại tệp sao lưu dở.
-   - **Trả `201`** với `backup_archive_record`:
-     - `archive_path` tuyệt đối;
-     - `app_version` là giá trị đang chạy;
-     - `size_bytes` và `sha256` (hex chữ thường) là của **tệp sao lưu**, không phải của `data.db`;
-     - `created_at`.
-   - Lỗi đọc hay ghi bất ngờ (quyền, đĩa đầy, tệp bị khóa): `500 ERR_STORAGE_IO`.
-   - `purpose` chỉ ghi vào tên tệp và `manifest`; hai giá trị không khác nhau về hành vi.
-   - Không tự xóa tệp sao lưu cũ. Không giữ danh sách các bản sao lưu: hợp đồng không có điều đó.
+4. **BE-10.** Bỏ các chú thích; thêm ca `ValueError`; rà toàn bộ `Backend/`.
 
-5. **`prepare_restore` (`POST /backups/restore-preparations`).**
-   - **Routers:** thân `{ archive_path }`, đường dẫn tuyệt đối; sai định dạng: `400 ERR_VALIDATION`.
-   - **Không tồn tại hoặc không phải tệp:** `404 ERR_NOT_FOUND`. Không đọc được vì lỗi hệ thống: `500 ERR_STORAGE_IO`.
-   - **Mọi trường hợp còn lại trả `200`** với `restore_staging` đủ trường. API Contract ghi `is_valid` hay `is_compatible` có thể `false` mà vẫn `200`.
-   - **Không hợp lệ** (`is_valid: false`, `is_compatible: false`, `staged_db_path: null`, `reason` nói vì sao):
-     - không phải zip;
-     - thành phần khác đúng hai tên đã chốt, hoặc tên thành phần có đường dẫn (chống zip slip);
-     - `manifest` không đọc được, `format` hay `format_version` lạ;
-     - `app_version` không phải phiên bản ngữ nghĩa;
-     - `db_sha256` hoặc `db_size_bytes` không khớp;
-     - `data.db` giải ra không mở được, hoặc `PRAGMA integrity_check` khác `ok`.
+5. **`Backend.pyproj`:** nếu thêm tệp kiểm thử mới thì thêm mục `<Compile Include>` tương ứng (`CLAUDE.md` mục 5). Sửa bằng công cụ soạn thảo tệp trực tiếp, không bằng script.
 
-     Khi `manifest` còn đọc được thì vẫn điền `app_version` và `created_at`; không thì để `null`.
-   - **Hợp lệ nhưng không tương thích:** `app_version` của tệp **mới hơn** bản đang chạy, theo thứ tự ưu tiên của SemVer 2.0 (bản có hậu tố tiền phát hành nhỏ hơn bản phát hành; bỏ qua phần build). Trả `is_valid: true, is_compatible: false, staged_db_path: null`, kèm `reason`.
-   - **Hợp lệ và tương thích:** giải `data.db` ra tệp chờ, trả `staged_db_path`.
-     - **Vị trí tệp chờ:** một thư mục con trong **thư mục chứa tệp dữ liệu đang chạy**, cùng ổ đĩa, để `restore_data` sau này đổi tên nguyên tử được. Lấy vị trí tệp dữ liệu qua chính `db_connection` (`PRAGMA database_list`), vì Bước 5.6 cho phép đi qua tài nguyên của workflow nền tảng. Không đọc `CT_DB_FILE_PATH` lần nữa, không đoán.
-     - Tên thư mục con là giá trị nội bộ trong `configs.yaml`.
-     - Mỗi lần chuẩn bị thay hẳn tệp chờ cũ: chỉ một tệp chờ tại một thời điểm, ghi tên tạm rồi đổi tên.
-   - `prepare_restore` **không đụng** tệp dữ liệu đang chạy, và không giữ tệp sao lưu mở sau khi trả lời.
-   - Kiểm hợp lệ chỉ ở mức khối tệp. Không đọc bảng nào bên trong `data.db` (Bước 5.6).
+6. **Chạy toàn bộ:**
+   - `pytest` **3 lượt liên tiếp**; ghi số đạt mỗi lượt;
+   - trong `Desktop/`: `npm test` một lượt (mốc **79**; trước đó chạy `node node_modules\electron\install.js` nếu `npm ci` làm mất tệp chạy Electron, ENV-10);
+   - trong `UI/`: `npm run build` rồi `npm run e2e` một lượt (mốc **83**), không đặt `CT_WALKTHROUGH_RUNNER`; `UI/evidence` không đổi.
 
-6. **Ráp nối trong Main (`Backend.py`).**
-   - Đăng ký `backup_data` theo thứ tự của `.design/03_classification.md` (Order 2). Trao cho nó `db_connection`, `app_version` (giá trị Main đã đọc từ `CT_APP_VERSION`) và đồng hồ.
-   - Main không chứa logic nào của sao lưu.
-   - Cập nhật `Backend/Backend.pyproj` cho các tệp và thư mục mới, theo `CLAUDE.md` mục 5: sửa bằng công cụ soạn thảo tệp, không dùng script hay heredoc.
-   - Kiểm thử `test_cors.py` về các phương thức được phép phải vẫn đạt; `POST` đã có.
+   Không cần `dist` hay `test:packaged` ở phiên này: bản đóng gói chính thức sẽ được dựng và kiểm lại ở chặng H.
 
-7. **Kiểm thử**, trong `Backend/workflows/backup_data/tests/`, gọi qua HTTP như các workflow khác. Mọi tệp đều ở thư mục tạm; **không đụng `%APPDATA%` thật**.
-   - **create_backup:**
-     - tạo vài khách hàng và đơn hàng qua các điểm giao tiếp thật, rồi sao lưu: `201`, tệp tồn tại, `size_bytes` và `sha256` khớp tệp trên đĩa, tên đúng mẫu;
-     - hai lần sao lưu trong cùng một giây: hai tệp khác tên, không ghi đè;
-     - `purpose` là `pre_restore`: tên tệp và `manifest` đúng;
-     - `destination_dir` tương đối, không tồn tại, là một tệp, `purpose` lạ, thừa trường: `400`, và không có tệp nào được tạo;
-     - lỗi ghi giả lập (Adapters ném lỗi I/O): `500 ERR_STORAGE_IO`, không còn tệp tạm.
-   - **prepare_restore:**
-     - **khứ hồi:** sao lưu, chuẩn bị khôi phục; rồi chạy một backend thứ hai (tiến trình riêng, cổng khác) trên `staged_db_path`. `GET /clients` và `GET /commissions` của nó trả **đúng** dữ liệu đã tạo trước khi sao lưu;
-     - không tồn tại: `404`; đường dẫn tương đối: `400`;
-     - tệp không phải zip; zip thiếu `manifest`; zip có thành phần thừa; tên thành phần có `../`; `manifest` hỏng; `db_sha256` sai; `data.db` hỏng nhưng khớp checksum: mỗi trường hợp `200`, `is_valid: false`, có `reason`, không có tệp chờ;
-     - tệp do bản mới hơn tạo (chạy backend với `CT_APP_VERSION=9.9.9` để sao lưu, rồi chuẩn bị trên backend `0.1.0`): `is_valid: true, is_compatible: false`;
-     - bản cũ hơn và bản bằng nhau: tương thích. Thứ tự SemVer có ca tiền phát hành (`1.0.0-rc.1` < `1.0.0`);
-     - chuẩn bị hai lần: chỉ còn một tệp chờ;
-     - tệp dữ liệu đang chạy không đổi sau `prepare_restore` (SHA-256 trước và sau).
-   - **Trong lúc sao lưu**, một yêu cầu ghi khác vẫn thành công sau đó, và bản sao lưu mở được.
-   - **Phép cắn**, ghi số liệu rồi khôi phục:
-     - (a) bỏ kiểm `db_sha256`: ca checksum sai phải hỏng;
-     - (b) đảo phép so phiên bản: ca bản mới hơn phải hỏng;
-     - (c) bỏ `integrity_check`: ca `data.db` hỏng phải hỏng.
+7. **Checkpoint** theo Giao thức 07:
+   - Main (`Backend.py`): EXPERIENCES cho BE-9; sửa các câu hiện trạng còn nói `app_version` là tùy chọn;
+   - mỗi workflow có kiểm thử mới: EVIDENCE của kiểm thử nâng cấp;
+   - `backup_data`: EXPERIENCES cho `compare_semver`;
+   - khối có NOTES quá 14 ngày (`CLAUDE.md` mục 5): chuyển thành EXPERIENCES hoặc xóa, ghi trong báo cáo.
 
-     Nếu công cụ phân quyền chặn bước này thì không tìm cách vòng: khôi phục ngay, ghi lại, Orchestrator sẽ tự làm.
+   **Giờ ghi:** chép **nguyên** giá trị `Get-Date -Format o` lấy ngay trước khi ghi (BE-8). **Nếu sửa checkpoint sau khi đã chạy toàn bộ, chạy lại `pytest` một lượt** và ghi điều đó trong báo cáo.
 
-8. **Checkpoint của `backup_data`**, ở đầu `services.py` (Giao thức 07):
-   - EXPERIENCES:
-     - kết quả đo ở việc 2;
-     - định dạng tệp sao lưu và lý do;
-     - vị trí tệp chờ, và vì sao lấy qua `PRAGMA database_list`;
-     - cách chia mã lỗi `400`, `404`, `500`;
-     - các giới hạn đã biết (ví dụ: không kiểm nội dung nghiệp vụ trong `data.db`, đúng Bước 5.6).
-   - EVIDENCE: lệnh, số ca, phép cắn, việc 10.
-   - NOTE: đề xuất `backup_data` từ `đang_chờ_triển_khai` lên `đã_hoàn_thiện`. Không tự sửa hợp đồng.
-   - Main (`Backend.py`): một EXPERIENCE về việc ráp nối.
-   - **Giờ ghi:** chép **nguyên** giá trị của `Get-Date -Format o` lấy ngay trước khi ghi; không làm tròn (BE-8).
+## KẾ THỪA TỪ CHECKPOINT — vấn đề tồn đọng
 
-9. **Chạy toàn bộ trên Windows:**
-   - `cd Backend; env\Scripts\python.exe -m pytest -q`: 460 cộng số ca mới, đều đạt, **3 lần liên tiếp**;
-   - `cd Desktop; npm test`: đạt đủ (31);
-   - `cd UI; npm run e2e`, **không** đặt `CT_WALKTHROUGH_RUNNER`: 70/70; sau đó `git status --short UI/evidence` trống.
-
-10. **Bản đóng gói** (DSK-16: mã backend trong gói đã đổi).
-    - `cd Desktop`; xóa `packaging\stage` và `release`; `npm run dist`; `npm run test:packaged` đạt (8).
-    - **Đo tay trên bản đóng gói**, vì Python nhúng phải có đủ `zipfile`, `zlib`, `hashlib`:
-      - chạy `release\win-unpacked\Commission Tracker.exe --ct-test-data-dir=<thư mục tạm> --ct-test-no-dialog`;
-      - đọc cổng trong log; gọi `POST /backups` vào một thư mục tạm, rồi `POST /backups/restore-preparations` với tệp vừa tạo;
-      - ghi hai câu trả lời vào EVIDENCE; đóng ứng dụng.
-    - Không cài bộ cài.
-    - Chụp lại mốc `%APPDATA%`: phải giống mốc ở việc 1.
+- **DSK-30, ENV-10, UI-21, UI-22:** việc của layer khác; không làm.
+- **ENV-7:** không chạy `npm audit fix`.
+- Không đụng `apply_watermark`, `verify_watermark` (V4 trở đi).
 
 ## RÀNG BUỘC CẦN NHỚ TỪ HỢP ĐỒNG
 
-- `backup_data.description`, nguyên văn: *"Storage-level operation (05-edge-cases.md, Step 5.6): writes a consistent snapshot of the whole database to one archive file, and prepares an archive for restore by checking it and extracting its database into a staging file. Works on the database as a whole through db_connection; never reads or interprets any workflow's records. Only this workflow knows the archive format. An archive is compatible when its app_version is not newer than the running app_version."*
-- `backup_request_record`: `{ destination_dir: file_path, purpose: 'manual' | 'pre_restore' }`.
-- `backup_archive_record`: `{ archive_path, app_version, size_bytes, sha256, created_at }`.
-- `restore_staging`: `{ archive_path, is_valid, is_compatible, app_version|null, created_at|null, reason|null, staged_db_path|null (set only when is_valid and is_compatible) }`.
-- Nhãn:
-  - `create_backup`: 201, 400 `ERR_VALIDATION`, 500 `ERR_STORAGE_IO`;
-  - `prepare_restore`: 200, 400, 404 `ERR_NOT_FOUND`, 500.
-
-  Không thêm nhãn. Không dùng `ERR_INCOMPATIBLE_BACKUP` ở đây: `prepare_restore` báo qua cờ trong `200`.
-- `app_version` là `CT_APP_VERSION` mà Main đã đọc (Desktop truyền `app.getVersion()`). Không đọc nơi khác, không đặt mặc định.
-- Một backend cho một tệp dữ liệu (Data Schema 6.2.0). Kiểm thử chạy backend thứ hai thì dùng **tệp khác**, tức tệp chờ, không dùng chung tệp dữ liệu.
+- Mỗi workflow backend chỉ tạo và nâng cấp **bảng của chính nó**, qua Adapters của nó, lúc khởi động. Không bảng nào tham chiếu bảng của workflow khác. Cơ sở dữ liệu khôi phục từ một `app_version` cũ hơn được nâng cấp bằng chính bước khởi động đó (`clause_a_common.mandatory_rules`).
+- Gặp phiên bản cấu trúc mới hơn bản build biết thì dừng khởi động, không in `READY` (`CLAUDE.md` mục 5).
+- `backup_data.app_version`: semantic version của bản đang chạy, do Main trao lúc khởi động.
+- Không lối vào, nhãn, mã lỗi hay `status` nào đổi.
 
 ## CẢNH BÁO — điều KHÔNG được làm trong phiên này
 
-- Chỉ tạo và sửa trong `Backend/`: `workflows/backup_data/` (mới), phần ráp nối trong `Backend.py`, `Backend.pyproj`, và kiểm thử cấp layer nếu cần. **Không sửa `scaffold_backend`** hay workflow nào khác, kể cả kiểm thử của chúng. Không tạo `Backend/shared/`.
-- Được **chạy** các lệnh của `Desktop/` và `UI/`, không sửa tệp nào ở đó. Không chạy UI e2e với `CT_WALKTHROUGH_RUNNER`.
+- Không thêm bước nâng cấp nào vào `_STORAGE_UPGRADES` của mã sản phẩm. Bước 2 chỉ tồn tại trong kiểm thử.
+- Không sửa `scaffold_backend`. Không đổi cách `ensure_storage()` chạy, trừ khi BE-11 (e) hỏng, và khi đó thì dừng lại báo, không tự sửa.
+- Không đổi cấu trúc bảng, điểm giao tiếp, nhãn hay mã lỗi.
+- Không thêm phụ thuộc mới vào `requirements.txt` hay `requirements-dev.txt`.
+- Không sửa tệp nào ngoài `Backend/`. Được **chạy** các lệnh của `Desktop/` và `UI/`.
 - Không sửa `.contracts/`, `CLAUDE.md`, `.plan/`, `.design/`. Không đọc, không ghi `.reviews/`.
-- Không đọc hay diễn giải bảng của workflow nào trong `backup_data`. Không mở kết nối thứ hai tới tệp dữ liệu đang chạy.
-- Không thêm phụ thuộc vào `requirements.txt`; chỉ dùng thư viện chuẩn.
-- Không kiểm thử hay lần chạy nào đụng `%APPDATA%\CommissionTracker` thật.
-- Không tắt, không đổi cấu hình phần mềm diệt virus. Không cài bộ cài.
-- Không tắt luật lint, không thêm `eslint-disable`; không `skip`, không `xfail`, không tăng thời gian chờ có sẵn.
+- Không tắt, gỡ hay đổi cấu hình phần mềm diệt virus. Không sửa registry, không cài bộ cài.
+- Không thêm `noqa`, `type: ignore`, `pragma` hay chú thích tắt kiểm tra nào khác. Không viết kiểm thử luôn đạt.
 - Không chạy `git commit`, `push`, `reset`, `checkout`, `restore`, `stash` hay lệnh nào đổi trạng thái kho. Chỉ được đọc.
-- Không dùng sub-agent.
+- ⚠ Không kiểm thử hay lần chạy nào được đụng `%APPDATA%\CommissionTracker` thật. Kiểm thử dùng thư mục tạm; Desktop luôn chạy kèm `--ct-test-data-dir`.
+- Không dùng sub-agent. Không chạy song song hai lệnh kiểm thử.
 
 ## TIÊU CHÍ HOÀN TẤT PHIÊN
 
 Phiên xong khi **tất cả** những điều dưới đây đúng, trên máy Project Owner, với antivirus đang bật:
 
-1. Kết quả đo ở việc 2, có ghi trong checkpoint. Nếu không chụp được thì phiên dừng ở đó, và đó cũng là một kết quả hợp lệ.
-2. `create_backup` và `prepare_restore` đúng hợp đồng: đủ các ca ở việc 7, ca khứ hồi chạy trên backend thứ hai, ba phép cắn.
-3. `pytest` 3 lần liên tiếp đạt (460 + ca mới); Desktop `npm test` đạt; UI e2e 70/70, `UI/evidence` không đổi.
-4. `npm run dist` từ trạng thái sạch; `npm run test:packaged` đạt; sao lưu và chuẩn bị khôi phục chạy được trên bản đóng gói.
-5. Mọi lần chụp mốc `%APPDATA%` giống nhau.
-6. Checkpoint `backup_data` và Main: YAML hợp lệ, `UNSOLVED_PROBLEMS: []` hoặc ghi rõ việc còn lại; giờ đúng quy ước BE-8; NOTE đề xuất trạng thái.
-7. `git status --short` cuối phiên chỉ có tệp trong `Backend/`. Liệt kê trong báo cáo.
-8. Báo cáo cuối phiên theo `CLAUDE.md` mục 5, kèm:
-   - kết quả đo ở việc 2;
-   - bảng ca kiểm thử theo điểm giao tiếp;
-   - ba phép cắn;
-   - kết quả trên bản đóng gói;
+1. **BE-11:**
+   - sáu workflow có bảng, mỗi workflow một kiểm thử đủ năm khẳng định (a)–(e);
+   - ba phép cắn bắt được, có ghi workflow;
+   - không thêm bước nâng cấp nào vào mã sản phẩm.
+2. **BE-9:** `app_version` bắt buộc; mọi chỗ gọi đã truyền; nhánh "không ráp" đã bỏ; ca `TypeError` thay cho ca cũ.
+3. **BE-10:** `Backend/` (trừ `env/`, `__pycache__/`) không còn `noqa`, `type: ignore`, `pragma`; có `__all__` ở các `services.py` cần; có ca `ValueError` của `compare_semver`.
+4. `pytest` đạt **3 lượt liên tiếp**: 564 cộng các ca mới.
+5. Desktop `npm test` đạt 79/79 một lượt; UI e2e đạt 83/83 một lượt, `UI/evidence` không đổi.
+6. **Checkpoint:** YAML hợp lệ; giờ ghi đúng BE-8; `UNSOLVED_PROBLEMS: []` ở mọi khối đã sửa.
+7. Mốc `%APPDATA%` giống đầu phiên.
+8. `git status --short` cuối phiên chỉ có tệp trong `Backend/`. Liệt kê trong báo cáo, kèm `git check-ignore -v` cho từng tệp mới (`core.ignorecase=true`).
+9. **Báo cáo cuối phiên** theo `CLAUDE.md` mục 5, kèm:
+   - với từng workflow của BE-11: bước 2 giả là gì, và kết quả năm khẳng định;
+   - kết quả khẳng định (e) nói riêng (hoàn tác có chạy đúng không);
+   - các phép cắn;
+   - số chỗ gọi `wire_workflows` đã sửa;
+   - bảng BE-10: từng dòng, đã làm gì;
+   - số đạt của ba lượt `pytest`, của Desktop `npm test` và UI e2e;
    - các lệnh để chạy lại.

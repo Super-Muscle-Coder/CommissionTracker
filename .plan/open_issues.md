@@ -53,6 +53,9 @@ Mức độ:
 
 ### DSK-3 — Lần mở đầu tiên chờ khoảng 33–36 s (trung bình; là Q-C1 của audit phiên 13)
 
+> **Thêm bằng chứng 2026-10-11** (runbook chặng G, mục K1): ở lần mở đầu của mỗi exe mới, log có **hai** tiến trình Main nối nhau. Bản thứ nhất (có dòng `Failed to find real location of …python.exe`) chạy khoảng 25 s, không hiện lên màn hình, rồi backend của nó thoát với mã 0 và nó ghi `FATAL: The backend stopped unexpectedly (exit code 0)`. Bản thứ hai chạy bình thường. Project Owner chỉ thấy phải chờ. Đọc là antivirus chạy thử exe trong môi trường cách ly (giả thuyết H1), lần này có log của cả hai bản. Hai backend không chồng thời gian lên nhau; khóa BE-3 vẫn chặn. Hướng xử lý vẫn là ký số (DSK-9). **Project Owner quyết 2026-10-11: không ký số ở V1; V1 chấp nhận khoảng chờ này** (`.design/v1_scope.md` §3.4).
+> **Project Owner xác nhận 2026-10-11:** khi mở ứng dụng, thấy hai phần mềm antivirus quét rồi mới cho khởi động. Log cho thấy việc quét chỉ kéo dài ở lần mở đầu của một exe mới; các lần mở sau cùng exe (19:46, 19:52) có backend READY trong khoảng 1 s, chỉ một tiến trình Main.
+
 > **Xác nhận lại 2026-09-28 (ENV-5), lần này có log gốc:** exe mới vừa cài, cả hai antivirus bật. Tiến trình bị giữ **75 s** trước khi chạy dòng code đầu tiên; lần mở thứ hai và thứ ba mất khoảng 4–5 s. Hướng xử lý giữ nguyên: ký số ở chặng G (DSK-9).
 
 > **ĐÓNG PHẦN CHẨN ĐOÁN 2026-09-27, phiên 14. Phần chậm nằm trước khi code JavaScript của Main chạy: antivirus giữ exe lạ chưa ký. Không sửa được trong code; hướng xử lý là ký số (DSK-9, chặng G). Trong thư mục có ngoại lệ, lượt đầu chỉ khoảng 1,1 s.**
@@ -116,6 +119,8 @@ Phiên desktop sau thêm vào.
 - **Q4** (audit phiên 10): cuộc đua khi nhận SIGINT lúc đang khởi động.
 - **Q-C2** (audit phiên 13): điều hướng thay thế sau `ERR_ABORTED` nếu hỏng thì không ai báo.
 - **Biểu tượng riêng và ký số:** thuộc chặng G. **Ký số là hướng xử lý duy nhất cho DSK-3**, và có thể cả nguyên nhân gốc của DSK-2; sau khi ký phải đo lại đợt C.
+  - **2026-10-11:** chặng G cần Project Owner quyết: ký số ở V1 hay để V2 (cần mua chứng thư số, có phí hằng năm; Orchestrator không nắm chắc giá hiện tại). Biểu tượng riêng cũng chờ quyết cùng lúc.
+  - **Đã quyết 2026-10-11 (Project Owner): không ký số ở V1.** Đó là chuyện thương mại hóa, tính sau; V1 chấp nhận khoảng chờ ở lần mở đầu (`.design/v1_scope.md` §3.4). Biểu tượng riêng: **Project Owner quyết 2026-10-11 để V3** cùng phần diện mạo. DSK-9 không còn việc nào của V1 ngoài các mục đã chấp nhận ở trên.
 
 ## Layer backend — phiên 15 (plan ở `.plan/backend_plan.md`)
 
@@ -250,6 +255,8 @@ Chưa có thành phần này thì trong dùng thật danh sách nhắc việc đ
 Main bỏ tham chiếu tới `Notification` khi nhận `close`, mà agent đo được `close` sau khoảng 9,5 s, lúc toast lui vào Action Center. Bấm ở Action Center sau đó có tới tiến trình hay không: chưa đo. Đặc tả V1 không đòi. Xem lại ở V2, cùng việc đo trên bản cài sạch (ENV-8).
 
 ### DSK-21 — Cài bản mới đè lên bản cũ chưa được định nghĩa và chưa được kiểm (trung bình; thuộc V1, chặng G; Project Owner nêu 2026-10-05) — **Project Owner duyệt 2026-10-05**: năm tiêu chí dưới đây vào tiêu chí chặng G (`.plan/v1_roadmap.md`)
+
+> **ĐÃ ĐÓNG 2026-10-11** (Project Owner chạy runbook `.reviews/runbooks/g_install_runbook.md`, mục "Kết quả"). Tiêu chí 1: phiên 40 (`1.0.0`). Tiêu chí 2, 3, 5 đạt: cài `1.0.0` đè `0.1.0` khi đóng giữ dữ liệu, lối tắt và thông báo chạy; khi đang mở, bộ cài hỏi "Commission Tracker is running. Click OK to close it.", tự đóng ứng dụng, không sót `python.exe`; cài `0.1.0` đè `1.0.0` không bị chặn, mở được, dữ liệu còn. Tiêu chí 4 không áp dụng cho bản 1.0, thay bằng BE-11.
 
 Người dùng thật cập nhật bằng cách chạy bộ cài mới; họ không gỡ bản cũ trước. Hiện chưa có quy định hay kiểm thử nào cho việc này.
 
