@@ -258,6 +258,8 @@ Người dùng thật cập nhật bằng cách chạy bộ cài mới; họ kh�
 - Dữ liệu ở `%APPDATA%\CommissionTracker`, ngoài thư mục cài, nên bộ cài không đụng tới.
 - Mỗi workflow tự nâng cấp cấu trúc bảng (`<workflow>_schema_version`); gặp phiên bản mới hơn bản build hiểu được thì backend dừng, không in `READY` (`CLAUDE.md` mục 5).
 - `Desktop/package.json` vẫn là `0.1.0` từ đầu: mọi bộ cài đến nay cùng số phiên bản.
+- **Đã quyết 2026-10-11:** bản chính thức V1 là `1.0.0` (Project Owner; `.plan/v1_roadmap.md`, chặng G, tiêu chí 1).
+- **Orchestrator rà ngày 2026-10-11 (cho tiêu chí 4 và 5):** cả sáu workflow backend có bảng (`manage_client`, `manage_commission`, `update_progress`, `record_payment`, `manage_watermark_profile`, `send_reminder`) đều ở phiên bản cấu trúc **1**, `_STORAGE_UPGRADES` chỉ có bước 1: chưa từng có bước nâng cấp nào. Mỗi workflow có kiểm thử "phiên bản mới hơn thì dừng khởi động"; **chưa có kiểm thử nào áp một bước nâng cấp lên dữ liệu đã có**. Giữa bản `0.1.0` và `1.0.0` không có khác biệt cấu trúc, nên tiêu chí 4 không đo được bằng hai bản thật.
 - Lỗi `Cannot find module` ngày 4/10 **không** do cài đè: bộ cài đó thiếu tệp (audit phiên 30 §5.5); cài sạch từ chính bộ cài đó cũng hỏng như vậy.
 
 **Orchestrator chưa nắm chắc** (đo, không đoán): electron-builder 26.15.3 với NSIS `oneClick` xử lý cài đè thế nào (gỡ bản cũ trước hay chép đè, có phát hiện ứng dụng đang chạy không); điều gì xảy ra khi ứng dụng, và `python.exe` của backend, đang mở lúc cài; cài bản cũ hơn đè bản mới có bị chặn không.
@@ -350,6 +352,12 @@ Khối checkpoint `main` (`UI/src/main.tsx`) còn sáu NOTES ghi ngày 2026-09-2
 ### BE-10 — Chú thích tắt kiểm tra trong `Backend/` (thấp; Orchestrator phát hiện 2026-10-10) — xem lại ở chặng H
 
 Rà toàn bộ mã ngày 2026-10-10: bảy dòng `# noqa: F401` trên các dòng `from .adapters import … StorageIOError` ở `services.py` của `record_payment`, `view_income_report`, `backup_data`, `manage_watermark_profile`, `send_reminder`, `manage_client`, `update_progress`; hai dòng `# type: ignore[misc]` ở `backup_data/services.py` (`parse_semver`); một `# pragma: no cover` ở `manage_client/tests/test_manage_client.py`. Chưa audit nào nêu ra, cùng lý do như DSK-29 (4). Chưa rõ dự án có chạy linter hay kiểm kiểu nào cho `Backend/` không; nếu không có thì các chú thích này không tắt gì cả, nhưng vẫn cần lý do. **Việc:** ở chặng H (câu hỏi 4), với mỗi dòng: bỏ đi, hoặc ghi lý do giữ. Phía `UI/src`: 16 dòng `@ts-expect-error` ở `screens/tests/app_root.test.tsx` là kiểm thử kiểu phủ định (khẳng định một lời gọi sai kiểu thì không biên dịch được), là cách dùng đúng; ghi nhận, không phải lỗi.
+
+## Layer backend — chặng G
+
+### BE-11 — Cơ chế nâng cấp cấu trúc lưu trữ chưa từng chạy một bước nâng cấp thật (trung bình; Orchestrator rà 2026-10-11; thay cho tiêu chí 4 của DSK-21 ở bản 1.0, Project Owner chọn hướng A)
+
+Cả sáu workflow có bảng đều ở phiên bản cấu trúc 1; `_STORAGE_UPGRADES` chỉ có bước 1. Kiểm thử hiện có chỉ phủ "tạo mới" và "phiên bản mới hơn thì dừng khởi động". Chưa có gì chứng minh rằng khi một bản sau thêm bước 2, dữ liệu do bản trước tạo được nâng cấp đúng (bước chạy đúng một lần, dữ liệu cũ còn nguyên, phiên bản ghi lên 2, khởi động lại không chạy lại bước). **Việc:** với mỗi workflow có bảng (hoặc một workflow mẫu cộng lý do vì sao đủ đại diện, Orchestrator chốt trong plan), kiểm thử tạo dữ liệu ở phiên bản 1 bằng mã thật, rồi khởi động lại với danh sách bước có thêm một bước 2 giả **chỉ trong kiểm thử**, và khẳng định bốn điều trên. Không thêm bước nâng cấp nào vào mã sản phẩm. Làm trong phiên backend của chặng G, kèm BE-9 và BE-10.
 
 ## Layer backend — sau audit phiên 32
 

@@ -224,16 +224,19 @@ Chặng E xong khi họa sĩ tạo được tệp sao lưu từ giao diện, và
 Đóng gói bản chính thức. Chạy thử trên một máy sạch. Kiểm tra lần cuối theo `.design/v1_scope.md`: mọi thứ trong mục 2 đã xong, không có gì ở mục 3 lọt vào.
 
 **Cài bản mới đè lên bản cũ** (DSK-21; Project Owner duyệt 2026-10-05). Người dùng cập nhật bằng cách chạy bộ cài mới, không gỡ bản cũ trước. Tiêu chí:
-1. Quy ước số phiên bản: mỗi bản phát hành tăng `version` của `Desktop/package.json` (hiện vẫn `0.1.0` từ đầu).
+1. Quy ước số phiên bản: mỗi bản phát hành tăng `version` của `Desktop/package.json` (hiện vẫn `0.1.0` từ đầu). **Đã quyết 2026-10-11 (Project Owner):** bản chính thức V1 là **`1.0.0`**, gọi tắt là "bản 1.0"; số thứ ba chỉ tăng cho bản vá nhỏ. Phải đủ ba số vì `app_version` là semantic version theo hợp đồng (`data_schema.yaml`, `backup_data.app_version`) và `backup_data` từ chối giá trị không đúng dạng `x.y.z`.
 2. Cài bản N+1 đè bản N khi ứng dụng **đóng**: không cần gỡ; dữ liệu còn nguyên; ứng dụng mở được; lối tắt Start Menu và thông báo Windows còn chạy.
 3. Cài đè khi ứng dụng **đang mở**: bộ cài báo hoặc tự đóng ứng dụng; không để lại bản cài nửa vời; không còn `python.exe` của backend sót lại.
-4. Dữ liệu do bản N tạo, có bước nâng cấp cấu trúc ở bản N+1: lần mở đầu của N+1 nâng cấp đúng.
+4. Dữ liệu do bản N tạo, có bước nâng cấp cấu trúc ở bản N+1: lần mở đầu của N+1 nâng cấp đúng. **Đã quyết 2026-10-11 (Project Owner chọn hướng A):** với bản 1.0, tiêu chí này **không áp dụng**, vì giữa `0.1.0` và `1.0.0` không có bước nâng cấp cấu trúc nào (mọi workflow ở phiên bản 1). Thay bằng kiểm thử cơ chế ở mức backend (BE-11). Lần đầu có bước nâng cấp thật, tiêu chí 4 chạy đầy đủ qua bộ cài.
 5. Cài bản cũ hơn đè bản mới: hoặc bị chặn, hoặc backend dừng với hộp thoại tiếng Việt rõ ràng; không hỏng dữ liệu.
 
 **Mở đầu chặng G (từ 2026-10-10):** một phiên desktop vá DSK-28 và DSK-29 trước khi đóng gói bản chính thức.
 
 1. **Phiên 39 (desktop, vá ngắn):** DSK-28 (chỉ lần `fatal()` đầu hiện hộp thoại; ca tái hiện không cần máy tải), DSK-29 (thư mục tạm, chú thích, `last_updated_by`, bỏ `eslint-disable` cuối cùng của `Desktop/`). Plan phát hành 2026-10-10: `.plan/desktop_plan.md`. **Xong 2026-10-11, audit đạt** (`.reviews/audits/desktop/audit_desktop_session39.md`); Desktop 78 kiểm thử, `test:packaged` 11; DSK-28, DSK-29 đóng; tiêu chí ba lượt có tải liền nhau chưa đạt vì các ca nhạy có từ trước, Orchestrator chấp nhận, mở DSK-30 (thấp).
-2. **Tiếp theo:** Orchestrator soạn runbook ENV-4 + DSK-21; xác định trước phần nào cần một phiên desktop (số phiên bản, dữ liệu cần nâng cấp cấu trúc cho tiêu chí 4).
+2. **Thứ tự còn lại (đề xuất 2026-10-11):**
+   - phiên desktop 40: `version` → `1.0.0`; DSK-30 mục 1 (N7) và 2 (ca 6);
+   - phiên backend ngắn: BE-11 (kiểm thử cơ chế nâng cấp cấu trúc), kèm BE-9 và BE-10 vì cùng chạm kiểm thử backend;
+   - runbook Project Owner chạy tay: cài `0.1.0`, rồi `1.0.0` đè lên khi đóng và khi đang mở (tiêu chí 2, 3), cài bản cũ đè bản mới (tiêu chí 5), máy sạch (ENV-4). Tiêu chí 3 đo trước; chỉ sửa mã nếu đo ra lỗi.
 
 Cách làm: Orchestrator soạn runbook cho Project Owner chạy tay, gộp với ENV-4 (máy sạch); phần nào cần đổi mã (số phiên bản, hành vi khi đang mở) thì vào một phiên desktop trước khi chạy runbook. Tự cập nhật (auto-update) vẫn ngoài V1. `npm run test:packaged` là tiêu chí của chặng này (DSK-16).
 
