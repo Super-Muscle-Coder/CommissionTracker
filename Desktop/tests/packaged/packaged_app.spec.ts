@@ -16,11 +16,14 @@ import {
   LogCollector,
   processTable,
   processTree,
+  removeTempFoldersOfPassedCases,
   stillAlive,
   tempDataDir,
   waitForExit,
   type ProcessRow,
 } from '../helpers'
+
+removeTempFoldersOfPassedCases()
 
 const UNPACKED = path.join(LAYER_ROOT, 'release', 'win-unpacked')
 const PRODUCT_NAME: string = JSON.parse(fs.readFileSync(path.join(LAYER_ROOT, 'package.json'), 'utf8')).productName

@@ -19,9 +19,12 @@ import {
   PROBE_ROOT,
   processTree,
   stillAlive,
+  removeTempFoldersOfPassedCases,
   tempDataDir,
   waitForExit,
 } from './helpers'
+
+removeTempFoldersOfPassedCases()
 
 const UI_ORIGIN: string = config.boundary.ui_origin
 const BRIDGE: string = config.boundary.renderer_bridge

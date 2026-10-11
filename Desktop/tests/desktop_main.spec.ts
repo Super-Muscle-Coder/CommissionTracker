@@ -13,6 +13,7 @@ import {
   type LogCollector,
   mainArgs,
   PROBE_ROOT,
+  removeTempFoldersOfPassedCases,
   SLOW_FIRST_LOAD_ROOT,
   processTree,
   projectPythonProcesses,
@@ -21,6 +22,8 @@ import {
   tempDataDir,
   waitForExit,
 } from './helpers'
+
+removeTempFoldersOfPassedCases()
 
 const UI_ORIGIN: string = config.boundary.ui_origin
 const HOST: string = config.boundary.loopback_host
@@ -193,6 +196,8 @@ test('6. backend dies after READY: error, app exits', async () => {
   expect(run.log.lines(/FATAL: The backend stopped unexpectedly \(exit code 3\)\. The app will close\./)).toHaveLength(1)
   // No restart in V1.
   expect(run.log.lines(/backend start attempt/)).toHaveLength(1)
+  // DSK-28: one dialog, not two.
+  expect(run.log.lines(/error dialog text: /)).toHaveLength(1)
 })
 
 test('7. backend ignores the closing of stdin: terminated after the timeout, app exits, nothing left', async () => {
@@ -399,6 +404,38 @@ test('14. error dialog while running (DSK-13): the "stopped while running" sente
   expect(dialog.content).toBe(`${text.running_summary}\n\n${text.detail_label}\n${detail}`)
   expect(dialog.content).toContain('gặp lỗi khi đang chạy')
   expect(dialog.content).not.toContain(text.startup_summary)
+  // DSK-28: exactly one dialog text (dialogTextOf counted it), and no second failure.
+  expect(run.log.lines(/error dialog text: /)).toHaveLength(1)
+})
+
+test('K1. backend dies after READY while the first page is still loading (DSK-28): one FATAL, one dialog, the later load error is only logged', async () => {
+  // slow_first_load keeps the first load busy for 3 s; the backend dies 2 s after READY, so
+  // the load is cut by the exit and reports ERR_FAILED while the first failure is handled.
+  const run = spawnMain(mainArgs({ dataDir: tempDataDir(), rendererRoot: SLOW_FIRST_LOAD_ROOT, fakeBackend: 'fake_backend_ready_then_die.py' }))
+  expect(await waitForExit(run.child)).toBe(FAILURE_EXIT_CODE)
+  console.log(run.log.text)
+  const text = config.main.error_dialog
+  const detail = 'The backend stopped unexpectedly (exit code 3). The app will close.'
+  expect(run.log.lines(/\[desktop-main\] FATAL: /)).toEqual([`[desktop-main] FATAL: ${detail}`])
+  const dialog = dialogTextOf(run.log)
+  expect(dialog.content).toBe(`${text.running_summary}\n\n${text.detail_label}\n${detail}`)
+  expect(dialog.content).not.toContain(text.startup_summary)
+  // The second error is not lost: it is in the log, without the FATAL prefix.
+  const ignored = run.log.lines(/\[desktop-main\] error after shutdown started or after an earlier failure was reported/)
+  expect(ignored).toHaveLength(1)
+  expect(ignored[0]).toContain('ERR_FAILED')
+  expect(ignored[0]).not.toContain('FATAL:')
+})
+
+test('C1. normal close (DSK-28): no FATAL line, no dialog text, no ignored error, exit code 0', async () => {
+  const { app, log } = await launchMain(mainArgs({ dataDir: tempDataDir(), rendererRoot: PROBE_ROOT }))
+  await expect((await app.firstWindow()).locator('#done')).toBeVisible({ timeout: 60_000 })
+  const electronProcess = app.process()
+  await app.close()
+  expect(await waitForExit(electronProcess)).toBe(0)
+  expect(log.lines(/FATAL/)).toEqual([])
+  expect(log.lines(/error dialog text: /)).toEqual([])
+  expect(log.lines(/error after shutdown started/)).toEqual([])
 })
 
 test('L1. the log of a launchMain run starts at the first line (DSK-27): "main started" is there, once, before "backend started"', async () => {

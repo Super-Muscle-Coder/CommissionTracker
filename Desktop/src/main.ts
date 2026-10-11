@@ -2,8 +2,8 @@
 // workflow: main
 // clause: clause_d_desktop
 // component: main
-// last_updated_by: coding-agent@2026-10-09#1
-// last_updated_at: 2026-10-09T20:40:59.3234784+07:00
+// last_updated_by: coding-agent@2026-10-10#1
+// last_updated_at: 2026-10-10T20:58:00.0655716+07:00
 //
 // EXPERIENCES:
 //   - id: main-EXP-001
@@ -649,6 +649,40 @@
 //       _electron.launch, không đổi Main, không nới thời gian chờ. Hai bẫy: NODE_OPTIONS bị Playwright xóa; và nó
 //       nuốt dấu chéo ngược trong đường dẫn. Khi viết ca mới cần dòng log sớm thì dùng launchMain hoặc spawnMain, không
 //       tự gọi _electron.launch rồi attach.
+//   - id: main-EXP-039
+//     content: >
+//       DSK-28 (phiên 39): chỉ lần gọi fatal() đầu tiên hiện hộp thoại và chọn mã thoát. Lỗi gốc: backend chết
+//       sau READY khi trang đầu đang nạp thì fatal("backend stopped unexpectedly") bắt đầu thoát, lần nạp bị hủy
+//       báo ERR_FAILED (-2) vào .catch của whenReady().then(startLayer) và gọi fatal lần hai: hai dòng FATAL, hai
+//       hộp thoại, hộp thứ hai nói sai nguyên nhân. Cách sửa: cờ fatalReported riêng, đặt ở ĐẦU fatal(), trước
+//       dialog.showErrorBox (hộp thoại chặn luồng chính, và Orchestrator không nắm chắc callback có chạy trong
+//       lúc đó không); lần gọi sau, hoặc lần gọi khi shutdownStarted đã đúng, chỉ ghi một dòng log
+//       "error after shutdown started or after an earlier failure was reported (no dialog, exit code
+//       unchanged): <message>" (không có chuỗi "FATAL:", để "đúng một dòng FATAL cho mỗi lần hỏng" còn đúng).
+//       Không dùng lại shutdownStarted làm cờ chặn: shutdown() tự trả về ngay khi cờ đó đã đặt, nên fatal() đặt
+//       nó trước hộp thoại sẽ làm ứng dụng không bao giờ thoát. Các chỗ gọi fatal() (src/main.ts) và khả năng
+//       chạy khi shutdown() đã bắt đầu: (1) onUnexpectedExit: có, trong khoảng reminderTicker.stop() đang chờ,
+//       trước khi backend.stop() đặt stopping (trước đây hiện hộp thoại thừa khi đang đóng bình thường); (2)
+//       startBackend thất bại và (3) thiếu tệp giao diện: chỉ khi SIGINT/SIGTERM đến giữa chừng; (4)
+//       restore_failed sau runRestoreTrigger: như (2), cửa sổ chưa mở nên không có nguồn đóng cửa sổ; (5) .catch
+//       của startLayer: có, chính là ca lỗi (sau (1)). Một ca lý thuyết ghi lại, không chặn: backend chết giữa
+//       lúc khôi phục sau khi đã khởi động lại thì hộp "running" hiện trước và hộp restore_failed (có đường dẫn
+//       dữ liệu cũ) bị bỏ qua, nhưng thông điệp của nó vẫn nằm trong log.
+//   - id: main-EXP-040
+//     content: >
+//       DSK-29 (phiên 39), phía kiểm thử. (1) Thư mục tạm: tests/helpers.ts đăng ký mọi thư mục do tempDataDir(),
+//       tempFolder() và launchMain() tạo; removeTempFoldersOfPassedCases() (gọi một dòng ở đầu mỗi spec, qua
+//       test.beforeEach/afterEach/afterAll) xóa thư mục của ca ĐẠT sau khi ca xong (thư mục tạo trong beforeAll
+//       thì xóa ở afterAll của tệp nếu cả tệp đạt), giữ và in đường dẫn khi ca hỏng; chỉ xóa thư mục do chính
+//       lượt chạy tạo, không quét theo tiền tố; rmSync có maxRetries vì Windows giữ tệp một lúc. Dùng hook gọi từ
+//       từng spec, không dùng fixture tự động, vì fixture của Playwright bắt tham số đầu phải là mẫu hủy cấu trúc
+//       và luật no-empty-pattern không cho viết {}. (2) ELECTRON_BINARY: đọc path.txt cạnh
+//       require.resolve('electron') (như index.js của gói electron, có ELECTRON_OVERRIDE_DIST_PATH), thay cho
+//       require('electron') kèm eslint-disable; đã kiểm ra cùng đường dẫn electron.exe. (3) Chú thích đầu
+//       tee_stderr.cjs nói đúng đối số -r. (4) last_updated_by của restore_data/services.ts sửa #1 thành 2026-10-09#2.
+//       (5) Không còn eslint-disable, @ts-ignore, @ts-expect-error, @ts-nocheck trong Desktop/ (trừ node_modules, dist,
+//       release, packaging). Bẫy: tests/restore_*.spec.ts có hàm tempFolder riêng cũng rò rỉ, đã chuyển sang hàm
+//       của helpers.
 // UNSOLVED_PROBLEMS: []
 //
 // EVIDENCE:
@@ -1393,6 +1427,68 @@
 //       chú thích) cộng một lượt chạy lại ghi trong báo cáo.
 //     recorded_at: 2026-10-09T20:40:59.3234784+07:00
 //
+//   - claim: >
+//       Phiên 39, DSK-28 đo trước khi sửa: lỗi hai hộp thoại tái hiện ổn định không cần máy tải.
+//     how: >
+//       Spec tạm tests/measure_dsk28.spec.ts (đã xóa): spawnMain với fake_backend_ready_then_die.py (chết 2 giây
+//       sau READY), --repeat-each 5, đếm dòng "FATAL:" và "error dialog text", với rendererRoot là
+//       tests/fixtures/slow_first_load (mỗi lần nạp bận 3 giây) và là tests/fixtures/probe.
+//     result: >
+//       slow_first_load: 5/5 lượt có 2 dòng FATAL và 2 dòng error dialog text (dòng thứ hai "The app could not
+//       start: ERR_FAILED (-2) loading 'app://commission-tracker/index.html'"), mã thoát 1. probe: 0/5 (1 dòng).
+//       Không cần fixture mới. Ca mới K1 dùng đúng cặp slow_first_load + ready_then_die.
+//     recorded_at: 2026-10-10T20:58:00.0655716+07:00
+//   - claim: >
+//       DSK-28, ba phép cắn trên bản sao của src/main.ts (khôi phục bằng cmp và build lại sau mỗi phép).
+//     how: >
+//       Bản gốc chép vào scratchpad; (a) thay điều kiện chặn bằng "if (false)"; (b) đảo điều kiện, lần gọi đầu bị
+//       bỏ qua; (c) lần gọi bị bỏ qua ghi "FATAL: <message>"; mỗi phép: npm run build rồi
+//       playwright test desktop_main.spec.ts -g "(^| )(6|13|14|K1)\. ".
+//     result: >
+//       (a) K1 hỏng, ca 6, 13, 14 đạt (đúng ý: chỉ ca nạp chậm bắt được). (b) ca 6, 13, 14 và K1 đều hỏng.
+//       (c) K1 hỏng; ca 14 ĐẠT, khác với plan (plan nói ca 14 hỏng): ca 14 dùng trang probe nên không bao giờ có
+//       lần gọi thứ hai, nó chỉ bắt được phép (c) khi máy tải làm lần gọi thứ hai xuất hiện. Khôi phục: cmp
+//       giống bản gốc.
+//     recorded_at: 2026-10-10T20:58:00.0655716+07:00
+//   - claim: >
+//       Phiên 39: ca 6, 14, K1, C1 và U1-U6, A5 đạt; npm test không tải, lint, dist, test:packaged, UI e2e.
+//     how: >
+//       cd Desktop; npm ci; npm run lint; npm test (mốc 09:29, 76 ca; sau phiên 78 ca: thêm K1 và C1); đếm
+//       thư mục ct-desktop-* trong %TEMP% quanh lượt đạt; xóa packaging\stage và release; ELECTRON_BUILDER_CACHE đặt
+//       vào %TEMP%\ct-eb-cache; npm run dist; listPackage của @electron/asar; npm run test:packaged; cd UI;
+//       npm run build; npm run e2e (CT_WALKTHROUGH_RUNNER không đặt); git status --short UI/evidence; chụp
+//       %APPDATA%\CommissionTracker và %APPDATA%\Commission Tracker.
+//     result: >
+//       Node v24.14.1, npm 11.11.0, Electron 44.4.5, Python 3.13.12; AVG và ReasonLabs bật. Mốc đầu phiên: lint
+//       sạch, npm test 76 passed (5,9 phút). Không tải sau khi sửa: 78 passed (5,6 phút), ct-desktop-* trước 2130,
+//       sau 2130. dist thoát mã 0 (20:48-20:49), app.asar có dist\error_dialog.js, dist\main.js, configs\desktop.json;
+//       test:packaged 11 passed. UI build đạt, e2e 83 passed (6,2 phút), UI/evidence không đổi. Mốc %APPDATA% đầu
+//       và cuối phiên giống nhau: 2 tệp 114688 byte; 67 tệp 8046479 byte. Số liệu npm test của phiên là của mã
+//       trước lần sửa cuối của khối checkpoint (chỉ đổi chú thích); chạy lại một lượt sau khi sửa ghi ở báo cáo.
+//     recorded_at: 2026-10-10T20:58:00.0655716+07:00
+//   - claim: >
+//       Phiên 39, npm test có tải: kết quả các bộ ba lượt và nguyên nhân các ca hỏng.
+//     how: >
+//       Tải: script ngoài dự án (scratchpad\burn.cjs) chạy N tiến trình vòng lặp bận, N = 11 (số luồng logic trừ
+//       một, như phiên 38), 7 (số lõi vật lý trừ một, đúng chữ của plan) và 4; npm test chạy tuần tự trong lúc
+//       tải. Một tiến trình "python -" mồ côi do chính lệnh heredoc rỗng của phiên (09:37-11:11) quay 100% một lõi
+//       trong các lượt đầu; đã dừng.
+//     result: >
+//       11 tiến trình (kèm tiến trình mồ côi): lượt 1 71 passed, 7 failed (ca 6 và 14 "process did not exit within
+//       60000 ms", A3b, A4, A6 hết 120 s, ca 15 và 16 của show_inactive); ca 6, 14 và K1 chạy lại 3 lượt có tải:
+//       8 passed, 1 failed (ca 14, cùng nguyên nhân). 7 tiến trình (kèm tiến trình mồ côi): bỏ dở ở 52/78 với D2 và
+//       A4 hết 120 s. Sau khi dừng tiến trình mồ côi, 4 tiến trình: lượt 11:37 76 passed, 2 failed (24,1 phút; ca 6
+//       vì backend giả chết trước khi cửa sổ mở, ca 14 "process did not exit within 60000 ms"); buổi chiều: 78
+//       passed (11,9 phút), một lượt bị bỏ vì máy treo (nhiều ca hết 120 s, không rõ nguyên nhân), rồi 78 passed
+//       (5,7) và 78 passed (5,7), nên không liền kề lượt đầu. 7 tiến trình:
+//       78 passed (10,5); 78 passed (5,3); 74 passed, 4 failed (19,8 phút; A2, A4, A6, ca 15, đều hết 120 s). 4
+//       tiến trình, bộ cuối: lượt 1 76 passed, 2 failed (ca 15 và 16 của show_inactive, 35,2 phút), bỏ phần còn
+//       lại. KHÔNG có một bộ ba lượt có tải liền kề đạt 78/78; mọi ca hỏng là hết giờ hay đo tiêu điểm
+//       (show_inactive phụ thuộc người dùng chuyển cửa sổ), không phải lỗi logic của fatal(). Ca 6, 14, K1,
+//       C1, L1 đạt trong mọi lượt có tải trừ lượt 24,1 phút và các lượt bị bỏ. Ca 6 hỏng ở mức tải nặng vì khẳng định "opening
+//       the window" giả định cửa sổ mở trước khi backend giả chết sau 2 giây.
+//     recorded_at: 2026-10-10T20:58:00.0655716+07:00
+//
 // NOTES:
 //   - content: >
 //       Phiên 30: hai cờ kiểm thử mới trong desktop.json test_flags, cả hai chỉ
@@ -1412,18 +1508,6 @@
 //       toast Windows thật ở các lượt có reminder_list (ticker chạy trong mọi ứng
 //       dụng e2e mở); đó là hành vi đúng.
 //     written_at: 2026-10-05
-//   - content: >
-//       Cho Orchestrator (phiên 38, ngoài plan, Project Owner chọn "không sửa Main, chỉ báo cáo"). Khi máy bị
-//       tải nặng, ca 14 của desktop_main.spec.ts hỏng ngắt quãng (2 trong 4 lượt có tải: lượt 1 trước khi sửa
-//       công cụ, và lượt 3 sau đó; 0 trong 1 lượt không tải): hộp thoại lỗi hiện HAI lần. Nguyên nhân (đọc
-//       từ log): backend giả chết ngay sau READY thì fatal("The backend stopped unexpectedly ...") chạy và
-//       ứng dụng bắt đầu thoát; lần nạp trang đầu của cửa sổ đang tải lúc đó báo ERR_FAILED (-2), đi vào
-//       .catch của whenReady().then(startLayer) và gọi fatal("The app could not start: ERR_FAILED ...")
-//       lần hai, nên có hai dòng "error dialog text" (người dùng thật sẽ thấy hai hộp thoại). Đây là lỗi thật
-//       của Main chứ không phải của công cụ kiểm thử. Hướng sửa đề xuất (chưa làm): trong fatal(), nếu
-//       shutdownStarted đã đúng thì chỉ ghi log và không hiện hộp thoại thứ hai. Cần quyết định của
-//       Orchestrator vì phiên 38 không có việc này.
-//     written_at: 2026-10-09
 // ===WCA-CHECKPOINT-END===
 /**
  * Main of the desktop layer (clause_d_desktop).
@@ -1923,6 +2007,9 @@ function main(): void {
 
   let mainWindow: BrowserWindow | null = null
   let shutdownStarted = false
+  // Set by the first fatal(); not shutdownStarted, because shutdown() returns at
+  // once when that one is set and fatal() must still be able to start it.
+  let fatalReported = false
   let reminderTicker: ReminderTicker | null = null
   // Toasts still alive: a Notification that is garbage collected can lose its
   // events, so each one is kept until it closes, fails or is clicked.
@@ -2024,6 +2111,17 @@ function main(): void {
   }
 
   function fatal(message: string, phase: FailurePhase = 'startup', restore?: RestoreFailureContext): void {
+    // Only the first failure shows a dialog and picks the exit code (DSK-28). A
+    // later one is a consequence of the same stop (a page load cancelled by the
+    // exit, a backend that dies while the app is already closing): it is logged,
+    // without the "FATAL:" prefix so "one FATAL line per failed run" stays true.
+    // The flag is set before the dialog: showErrorBox blocks the main thread, and
+    // a callback that runs meanwhile must already see it.
+    if (fatalReported || shutdownStarted) {
+      log(`error after shutdown started or after an earlier failure was reported (no dialog, exit code unchanged): ${message}`)
+      return
+    }
+    fatalReported = true
     // Logged first, so the message can be checked without a click.
     log(`FATAL: ${message}`)
     const box = buildErrorDialog(config.main.error_dialog_title, config.main.error_dialog, phase, message, restore)

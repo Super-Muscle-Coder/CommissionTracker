@@ -22,7 +22,7 @@ import { RestoreDataAdapters } from '../src/workflows/restore_data/adapters'
 import type { BackendController, PendingRestoreRecord, RestoreDataConfig } from '../src/workflows/restore_data/entities'
 import { archivePathArgument, emptyArgumentProblem, senderProblem } from '../src/workflows/restore_data/routers'
 import { RestoreDataService } from '../src/workflows/restore_data/services'
-import { BACKEND_PYTHON, config, launchMain, type LogCollector, mainArgs, PROBE_ROOT, processTree, stillAlive, tempDataDir, waitForExit } from './helpers'
+import { BACKEND_PYTHON, config, launchMain, type LogCollector, mainArgs, PROBE_ROOT, processTree, removeTempFoldersOfPassedCases, stillAlive, tempDataDir, tempFolder, waitForExit } from './helpers'
 
 const restoreConfig: RestoreDataConfig = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'configs', 'restore_data.json'), 'utf8'))
 const UI_ORIGIN: string = config.boundary.ui_origin
@@ -40,9 +40,7 @@ const unusedController: BackendController = {
   start: () => Promise.reject(new Error('the backend must not be started in this test')),
 }
 
-function tempFolder(prefix: string): string {
-  return fs.mkdtempSync(path.join(os.tmpdir(), prefix))
-}
+removeTempFoldersOfPassedCases()
 
 // --- R1: no Electron -----------------------------------------------------------------
 

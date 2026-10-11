@@ -12,7 +12,9 @@ import * as http from 'node:http'
 import * as path from 'node:path'
 import { ReminderTicker, type Toast } from '../src/cross_cutting/reminder_ticker/reminder_ticker'
 import { buildToastText, formatDate, readNotification, type ToastTextConfig } from '../src/cross_cutting/reminder_ticker/toast_text'
-import { config, LAYER_ROOT, launchMain, type LogCollector, mainArgs, PROBE_ROOT, stillAlive, processTree, tempDataDir, waitForExit } from './helpers'
+import { config, LAYER_ROOT, launchMain, type LogCollector, mainArgs, PROBE_ROOT, stillAlive, processTree, removeTempFoldersOfPassedCases, tempDataDir, waitForExit } from './helpers'
+
+removeTempFoldersOfPassedCases()
 
 const TEXT: ToastTextConfig = config.reminder_ticker.toast
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))

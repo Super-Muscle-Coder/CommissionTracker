@@ -11,7 +11,9 @@
 // belong to the Electron process tree. Synthetic key presses to get around the
 // lock are not used: they would reach whatever the person is typing in.
 import { test, expect } from '@playwright/test'
-import { ForegroundHolder, launchMain, mainArgs, PROBE_ROOT, stillAlive, processTree, tempDataDir, waitForExit } from './helpers'
+import { ForegroundHolder, launchMain, mainArgs, PROBE_ROOT, stillAlive, processTree, removeTempFoldersOfPassedCases, tempDataDir, waitForExit } from './helpers'
+
+removeTempFoldersOfPassedCases()
 
 interface Trial {
   visible: boolean

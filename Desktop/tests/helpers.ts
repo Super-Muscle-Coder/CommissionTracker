@@ -1,5 +1,5 @@
 // Shared helpers of the desktop layer tests (not used by the Main).
-import { _electron, type ElectronApplication } from '@playwright/test'
+import { _electron, test, type ElectronApplication } from '@playwright/test'
 import { spawn, execFileSync, type ChildProcess } from 'node:child_process'
 import * as fs from 'node:fs'
 import * as os from 'node:os'
@@ -16,12 +16,72 @@ export const BACKEND_PYTHON = path.join(PROJECT_ROOT, 'Backend', 'env', 'Scripts
 export const config = JSON.parse(fs.readFileSync(path.join(LAYER_ROOT, 'configs', 'desktop.json'), 'utf8'))
 const flags = config.test_flags
 
-// require('electron') from Node returns the path of the Electron binary.
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-export const ELECTRON_BINARY: string = require('electron')
+// The path of the Electron binary, found the way the `electron` package itself
+// finds it for require('electron') (its index.js reads path.txt next to itself).
+// Done here without require(), whose result is typed as the Electron API.
+function electronBinaryPath(): string {
+  const packageDir = path.dirname(require.resolve('electron'))
+  const override = process.env.ELECTRON_OVERRIDE_DIST_PATH
+  const relative = fs.readFileSync(path.join(packageDir, 'path.txt'), 'utf8')
+  return override !== undefined && override !== '' ? path.join(override, relative) : path.join(packageDir, 'dist', relative)
+}
+export const ELECTRON_BINARY: string = electronBinaryPath()
+
+// --- temporary folders (DSK-29) ---------------------------------------------------
+// Every folder a case makes is registered when it is made, and removed after the case
+// passed (after its application has exited). A failed case keeps its folders and prints
+// them. Only folders made by this run are ever removed: nothing is found by prefix.
+
+/** Folders made while a test body runs ('test') or outside one, in beforeAll ('file'). */
+const madeFolders: Array<{ dir: string; scope: 'test' | 'file' }> = []
+let insideTest = false
+let failedInFile = false
+
+/** A temporary folder that is removed after the case passed (see removeTempFoldersOfPassedCases). */
+export function tempFolder(prefix: string): string {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), prefix))
+  madeFolders.push({ dir, scope: insideTest ? 'test' : 'file' })
+  return dir
+}
+
+function settleFolders(scope: 'test' | 'file', passed: boolean): void {
+  const mine = madeFolders.filter((f) => f.scope === scope)
+  for (const f of mine) madeFolders.splice(madeFolders.indexOf(f), 1)
+  if (mine.length === 0) return
+  if (!passed) {
+    console.log(`temporary folders kept (the case failed): ${mine.map((f) => f.dir).join(', ')}`)
+    return
+  }
+  for (const f of mine) {
+    try {
+      fs.rmSync(f.dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 })
+    } catch (err) {
+      console.log(`temporary folder not removed: ${f.dir} (${err instanceof Error ? err.message : String(err)})`)
+    }
+  }
+}
+
+/** Call once at the top level of a spec file: removes the folders of each passed case
+ * after it, and the ones made in beforeAll when the whole file passed. */
+export function removeTempFoldersOfPassedCases(): void {
+  test.beforeEach(() => {
+    insideTest = true
+  })
+  test.afterEach(() => {
+    insideTest = false
+    const info = test.info()
+    const passed = info.status === info.expectedStatus
+    if (!passed) failedInFile = true
+    settleFolders('test', passed)
+  })
+  test.afterAll(() => {
+    settleFolders('file', !failedInFile)
+    failedInFile = false
+  })
+}
 
 export function tempDataDir(): string {
-  return fs.mkdtempSync(path.join(os.tmpdir(), 'ct-desktop-test-'))
+  return tempFolder('ct-desktop-test-')
 }
 
 export interface RunOptions {
@@ -120,7 +180,7 @@ export async function launchMain(
   // returns. The Main's process copies its own stderr into a file from its first line
   // (fixtures/tee_stderr.cjs, loaded with Electron's -r option: Playwright deletes
   // NODE_OPTIONS but loads its own helper the same way), and the collector reads that.
-  const teeFile = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'ct-desktop-log-')), 'main-stderr.log')
+  const teeFile = path.join(tempFolder('ct-desktop-log-'), 'main-stderr.log')
   const env = { ...(process.env as Record<string, string>), ...extraEnv, CT_TEE_STDERR_FILE: teeFile }
   const app = await _electron.launch({ args: ['-r', path.join(FIXTURES, 'tee_stderr.cjs'), ...args], cwd: LAYER_ROOT, env })
   const log = new LogCollector().attachTeeFile(teeFile)

@@ -1,5 +1,6 @@
-// Test-only: loaded into the Electron main process with NODE_OPTIONS=--require (set by
-// launchMain in tests/helpers.ts). Copies everything the Main writes to stderr into the file
+// Test-only: loaded into the Electron main process with Electron's -r option (launchMain in
+// tests/helpers.ts puts "-r <this file>" before the app arguments; Playwright removes NODE_OPTIONS,
+// so --require there would not reach the Main). Copies everything the Main writes to stderr into the file
 // named by CT_TEE_STDERR_FILE, from the very first line (DSK-27). Playwright's
 // _electron.launch only lets a test see stderr from the moment launch() returns, so the
 // first lines ("main started", often "backend started") were lost. The Main itself is

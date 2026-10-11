@@ -14,7 +14,6 @@
 import { test, expect, type ElectronApplication, type Page } from '@playwright/test'
 import { execFileSync } from 'node:child_process'
 import * as fs from 'node:fs'
-import * as os from 'node:os'
 import * as path from 'node:path'
 import {
   BACKEND_PYTHON,
@@ -24,10 +23,12 @@ import {
   mainArgs,
   PROBE_ROOT,
   processTree,
+  removeTempFoldersOfPassedCases,
   projectPythonProcesses,
   spawnMain,
   stillAlive,
   tempDataDir,
+  tempFolder,
   waitForExit,
 } from './helpers'
 
@@ -35,9 +36,7 @@ const BRIDGE: string = config.boundary.renderer_bridge
 const DB_RELATIVE: string[] = config.boundary.db_file_relative_to_app_data.split('/')
 const DIALOG: { title: string; restored: string } = { title: config.restore_trigger.title, restored: config.restore_trigger.restored[0].text }
 
-function tempFolder(prefix: string): string {
-  return fs.mkdtempSync(path.join(os.tmpdir(), prefix))
-}
+removeTempFoldersOfPassedCases()
 
 interface Run {
   app: ElectronApplication

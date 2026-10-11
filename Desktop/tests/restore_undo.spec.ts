@@ -13,14 +13,15 @@
 // folders only; the user's real %APPDATA%\CommissionTracker is never touched.
 import { test, expect } from '@playwright/test'
 import * as fs from 'node:fs'
-import * as os from 'node:os'
 import * as path from 'node:path'
 import { buildErrorDialog, restoreFailureContext, type ErrorDialogText } from '../src/error_dialog'
 import { RestoreDataAdapters } from '../src/workflows/restore_data/adapters'
 import type { BackendController, BackendStartResult, MoveFileOutcome, RestoreDataConfig, StoredPendingRecord } from '../src/workflows/restore_data/entities'
 import { InProcessCallError, registerRestoreDataRouters } from '../src/workflows/restore_data/routers'
 import { RestoreDataService } from '../src/workflows/restore_data/services'
-import { config } from './helpers'
+import { config, removeTempFoldersOfPassedCases, tempFolder } from './helpers'
+
+removeTempFoldersOfPassedCases()
 
 const restoreConfig: RestoreDataConfig = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'configs', 'restore_data.json'), 'utf8'))
 const TEXT: ErrorDialogText = config.main.error_dialog
@@ -64,7 +65,7 @@ interface Setup {
 }
 
 async function setup(failMoveCall: number | null): Promise<Setup> {
-  const folder = fs.mkdtempSync(path.join(os.tmpdir(), 'ct-undo-'))
+  const folder = tempFolder('ct-undo-')
   const dbFilePath = path.join(folder, 'CommissionTracker', 'data.db')
   fs.mkdirSync(path.dirname(dbFilePath), { recursive: true })
   const stagedFile = path.join(path.dirname(dbFilePath), 'restore-staging', 'data.db')
