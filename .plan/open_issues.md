@@ -259,6 +259,7 @@ Người dùng thật cập nhật bằng cách chạy bộ cài mới; họ kh�
 - Mỗi workflow tự nâng cấp cấu trúc bảng (`<workflow>_schema_version`); gặp phiên bản mới hơn bản build hiểu được thì backend dừng, không in `READY` (`CLAUDE.md` mục 5).
 - `Desktop/package.json` vẫn là `0.1.0` từ đầu: mọi bộ cài đến nay cùng số phiên bản.
 - **Đã quyết 2026-10-11:** bản chính thức V1 là `1.0.0` (Project Owner; `.plan/v1_roadmap.md`, chặng G, tiêu chí 1).
+- **Runbook 2026-10-11:** `.reviews/runbooks/g_install_runbook.md` (tiêu chí 2, 3, 5 và ENV-4), Project Owner chạy tay với bộ cài `0.1.0` (`E:\installer\`) và `1.0.0` (`Desktop\release\`).
 - **Orchestrator rà ngày 2026-10-11 (cho tiêu chí 4 và 5):** cả sáu workflow backend có bảng (`manage_client`, `manage_commission`, `update_progress`, `record_payment`, `manage_watermark_profile`, `send_reminder`) đều ở phiên bản cấu trúc **1**, `_STORAGE_UPGRADES` chỉ có bước 1: chưa từng có bước nâng cấp nào. Mỗi workflow có kiểm thử "phiên bản mới hơn thì dừng khởi động"; **chưa có kiểm thử nào áp một bước nâng cấp lên dữ liệu đã có**. Giữa bản `0.1.0` và `1.0.0` không có khác biệt cấu trúc, nên tiêu chí 4 không đo được bằng hai bản thật.
 - Lỗi `Cannot find module` ngày 4/10 **không** do cài đè: bộ cài đó thiếu tệp (audit phiên 30 §5.5); cài sạch từ chính bộ cài đó cũng hỏng như vậy.
 
