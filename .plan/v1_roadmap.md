@@ -234,7 +234,7 @@ Chặng E xong khi họa sĩ tạo được tệp sao lưu từ giao diện, và
 
 1. **Phiên 39 (desktop, vá ngắn):** DSK-28 (chỉ lần `fatal()` đầu hiện hộp thoại; ca tái hiện không cần máy tải), DSK-29 (thư mục tạm, chú thích, `last_updated_by`, bỏ `eslint-disable` cuối cùng của `Desktop/`). Plan phát hành 2026-10-10: `.plan/desktop_plan.md`. **Xong 2026-10-11, audit đạt** (`.reviews/audits/desktop/audit_desktop_session39.md`); Desktop 78 kiểm thử, `test:packaged` 11; DSK-28, DSK-29 đóng; tiêu chí ba lượt có tải liền nhau chưa đạt vì các ca nhạy có từ trước, Orchestrator chấp nhận, mở DSK-30 (thấp).
 2. **Thứ tự còn lại (đề xuất 2026-10-11):**
-   - phiên desktop 40: `version` → `1.0.0`; DSK-30 mục 1 (N7) và 2 (ca 6, ca 14). Plan phát hành 2026-10-11: `.plan/desktop_plan.md`. Trước phiên, Project Owner chép bộ cài `0.1.0` ra ngoài `Desktop\release` (bản N của runbook);
+   - phiên desktop 40: `version` → `1.0.0`; DSK-30 mục 1 (N7) và 2 (ca 6, ca 14). Plan phát hành 2026-10-11: `.plan/desktop_plan.md`. Trước phiên, Project Owner chép bộ cài `0.1.0` ra ngoài `Desktop\release` (bản N của runbook). **Xong 2026-10-11, audit đạt** (`.reviews/audits/desktop/audit_desktop_session40.md`); Desktop 79 kiểm thử, `test:packaged` 12; bộ cài `1.0.0` (SHA-256 `C776FB0E…A31E982`) ở `Desktop\release\`, bộ cài `0.1.0` (SHA-256 `9430d080…a01d0`) ở `E:\installer\`; DSK-30 mục 1, 2 đóng; mở ENV-10;
    - phiên backend ngắn: BE-11 (kiểm thử cơ chế nâng cấp cấu trúc), kèm BE-9 và BE-10 vì cùng chạm kiểm thử backend;
    - runbook Project Owner chạy tay: cài `0.1.0`, rồi `1.0.0` đè lên khi đóng và khi đang mở (tiêu chí 2, 3), cài bản cũ đè bản mới (tiêu chí 5), máy sạch (ENV-4). Tiêu chí 3 đo trước; chỉ sửa mã nếu đo ra lỗi.
 
