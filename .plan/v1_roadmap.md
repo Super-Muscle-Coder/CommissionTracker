@@ -232,7 +232,8 @@ Chặng E xong khi họa sĩ tạo được tệp sao lưu từ giao diện, và
 
 **Mở đầu chặng G (từ 2026-10-10):** một phiên desktop vá DSK-28 và DSK-29 trước khi đóng gói bản chính thức.
 
-1. **Phiên 39 (desktop, vá ngắn):** DSK-28 (chỉ lần `fatal()` đầu hiện hộp thoại; ca tái hiện không cần máy tải), DSK-29 (thư mục tạm, chú thích, `last_updated_by`, bỏ `eslint-disable` cuối cùng của `Desktop/`). Plan phát hành 2026-10-10: `.plan/desktop_plan.md`.
+1. **Phiên 39 (desktop, vá ngắn):** DSK-28 (chỉ lần `fatal()` đầu hiện hộp thoại; ca tái hiện không cần máy tải), DSK-29 (thư mục tạm, chú thích, `last_updated_by`, bỏ `eslint-disable` cuối cùng của `Desktop/`). Plan phát hành 2026-10-10: `.plan/desktop_plan.md`. **Xong 2026-10-11, audit đạt** (`.reviews/audits/desktop/audit_desktop_session39.md`); Desktop 78 kiểm thử, `test:packaged` 11; DSK-28, DSK-29 đóng; tiêu chí ba lượt có tải liền nhau chưa đạt vì các ca nhạy có từ trước, Orchestrator chấp nhận, mở DSK-30 (thấp).
+2. **Tiếp theo:** Orchestrator soạn runbook ENV-4 + DSK-21; xác định trước phần nào cần một phiên desktop (số phiên bản, dữ liệu cần nâng cấp cấu trúc cho tiêu chí 4).
 
 Cách làm: Orchestrator soạn runbook cho Project Owner chạy tay, gộp với ENV-4 (máy sạch); phần nào cần đổi mã (số phiên bản, hành vi khi đang mở) thì vào một phiên desktop trước khi chạy runbook. Tự cập nhật (auto-update) vẫn ngoài V1. `npm run test:packaged` là tiêu chí của chặng này (DSK-16).
 

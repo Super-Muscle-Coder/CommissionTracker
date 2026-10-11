@@ -316,13 +316,28 @@ Mỗi lần `restore:prepare` thành công tạo thêm một bản sao lưu an t
 
 ### DSK-28 — `fatal()` chạy hai lần khi backend chết ngay sau READY: hai hộp thoại lỗi (trung bình; audit phiên 38 §5.1) — phiên desktop đầu chặng G
 
+> **ĐÃ ĐÓNG 2026-10-11, phiên 39** (audit `.reviews/audits/desktop/audit_desktop_session39.md`). Cờ `fatalReported` đặt ở đầu `fatal()`, trước hộp thoại; lần gọi sau, hoặc khi `shutdownStarted` đã đúng, chỉ ghi một dòng log không có `FATAL:`. Ca tái hiện K1 (`slow_first_load` + `fake_backend_ready_then_die.py`, 5/5 trước khi sửa), ca C1 (đóng bình thường). Ca 14 đạt 3 lượt có tải liền nhau **không** đạt như plan đòi, vì các ca hết giờ và đo tiêu điểm khác của bộ kiểm thử; Orchestrator chấp nhận (audit §5.1) và chuyển phần ổn định sang DSK-30.
+
 Backend chết trong lúc trang đầu đang nạp: `onUnexpectedExit` gọi `fatal(..., 'running')`, rồi lần nạp trang đầu báo `ERR_FAILED`, đi vào `.catch` của `whenReady().then(startLayer)` và gọi `fatal("The app could not start: ERR_FAILED …")` lần hai. Họa sĩ thấy hai hộp thoại, hộp thứ hai nói sai nguyên nhân. Ca 14 của `desktop_main` hỏng 2/4 lượt có tải trên Windows. Có từ trước phiên 38. **Việc:** trong `fatal()`, đã `shutdownStarted` thì chỉ ghi log (quyết có ghi dòng `FATAL:` thứ hai không); ca 14 đạt 3 lượt liên tiếp có tải.
 
 ### DSK-29 — Việc nhỏ sau phiên 38 (thấp; audit phiên 38 §5.3) — làm kèm DSK-28
 
+> **ĐÃ ĐÓNG 2026-10-11, phiên 39** (audit phiên 39 §3, §4). Thư mục tạm của ca đạt được xóa, ca hỏng giữ và in đường dẫn; chú thích `tee_stderr.cjs` đúng; `last_updated_by` của `restore_data/services.ts` là `2026-10-09#2`; `Desktop/` không còn `eslint-disable` hay `@ts-*` (đường dẫn Electron đọc từ `path.txt` như gói `electron`).
+
 (1) `launchMain` để lại một thư mục `ct-desktop-log-*` trong thư mục tạm mỗi lần chạy; dọn khi ca kết thúc. (2) Chú thích đầu `tee_stderr.cjs` còn nói `NODE_OPTIONS`, mã dùng `-r`. (3) `last_updated_by` của phiên 38 ghi `#1` dù là phiên thứ hai trong ngày 2026-10-09.
 
 **Bổ sung 2026-10-10 (Orchestrator, khi soạn plan phiên 39):** (1) mở rộng cho cả `ct-desktop-test-*` do `tempDataDir()` tạo (máy audit Linux: 414 thư mục); xóa khi ca đạt, giữ khi ca hỏng. (4) `Desktop/tests/helpers.ts` dòng 20 có `// eslint-disable-next-line @typescript-eslint/no-require-imports`, có từ commit đầu của kho (2026-09-28). Mọi audit desktop trước đây ghi "không `eslint-disable`" vì chỉ tìm trong mã mới của phiên, không tìm trên toàn bộ mã: đây là chỗ hở của Orchestrator. Từ nay mỗi audit tìm trên toàn bộ `Desktop/`, `UI/src` (`eslint-disable`, `@ts-ignore`, `@ts-expect-error`, `@ts-nocheck`) và `Backend/` (`noqa`, `type: ignore`). Plan phiên 39: `.plan/desktop_plan.md`.
+
+## Layer desktop — sau audit phiên 39
+
+### DSK-30 — Kiểm thử Desktop chưa ổn định khi máy tải nặng (thấp; audit phiên 39 §5.1, §5.3) — chặng H câu hỏi 3, hoặc phiên desktop kế tiếp của chặng G
+
+Phiên 39 không có ba lượt `npm test` có tải liền nhau đạt đủ 78/78; mọi ca hỏng là chỗ nhạy của kiểm thử, có từ trước. **Việc:**
+1. **N7** (`native_dialogs.spec.ts`) gọi `page.evaluate` ngay sau khi điều hướng sang trang `data:`, nên hỏng "Execution context was destroyed" khi có tải (Orchestrator đo trên Linux: 2/3 lượt có tải). Sửa như R10 của phiên 38: chờ trang mới nạp xong.
+2. **Ca 6** khẳng định `opening the window`, tức giả định cửa sổ mở trước khi backend giả chết 2 giây sau READY. Máy chậm thì sai, dù ứng dụng xử lý đúng. Đề xuất: backend giả chỉ chết sau khi nhận lời gọi đầu tiên của trang, để thứ tự là chắc chắn; không nới thời gian chờ.
+3. **Ca 14 "process did not exit within 60000 ms"** (hai lượt có tải của agent): chưa loại trừ được một lần treo thật lúc thoát. Lần gặp lại thì giữ log và đọc dòng cuối Main ghi.
+4. **Ca 15, 16 của `show_inactive`** đo tiêu điểm cửa sổ, nên hỏng khi Project Owner chuyển cửa sổ trong lúc chạy. Chặng H chạy bộ ổn định khi Project Owner không dùng máy, hoặc tách hai ca này khỏi bộ đo ổn định, kèm lý do.
+5. Ca lý thuyết (audit phiên 39 §3): backend tự chết sau READY trong lúc `restore_data` đang ở bước sau khởi động, thì hộp thoại `restore_failed` (có đường dẫn dữ liệu cũ) bị che bởi hộp thoại "lỗi khi đang chạy". Chặng H xét có cần xử lý không.
 
 ## Layer giao diện — sau audit phiên 37
 
