@@ -15,6 +15,7 @@ from workflows.manage_watermark_profile.services import (
 )
 from workflows.scaffold_backend import adapters as scaffold
 
+APP_VERSION = "1.0.0"
 UNKNOWN_ID = "0b7f5a3e-1d2c-4e5f-8a9b-0c1d2e3f4a5b"
 RECORD_KEYS = {"profile_id", "display_name", "legal_name", "contact", "ownership_statement", "default_strength"}
 
@@ -28,7 +29,7 @@ def wired(tmp_path):
     scaffold.ensure_database_folder(db_path)
     db = scaffold.open_connection(db_path, **configs["scaffold_backend"])
     app = Backend.create_http_app(Backend.load_yaml(Backend.LAYER_CONFIG_FILE))
-    entries = Backend.wire_workflows(app, db, configs)
+    entries = Backend.wire_workflows(app, db, configs, app_version=APP_VERSION)
     with TestClient(app) as http:
         yield http, entries, db, db_path
     db.close()
@@ -198,7 +199,12 @@ def test_wire_workflows_fails_on_wrong_presets(tmp_path):
     db = scaffold.open_connection(db_path, **configs["scaffold_backend"])
     try:
         with pytest.raises(InvalidStrengthPresetsError):
-            Backend.wire_workflows(Backend.create_http_app(Backend.load_yaml(Backend.LAYER_CONFIG_FILE)), db, configs)
+            Backend.wire_workflows(
+                Backend.create_http_app(Backend.load_yaml(Backend.LAYER_CONFIG_FILE)),
+                db,
+                configs,
+                app_version=APP_VERSION,
+            )
     finally:
         db.close()
 

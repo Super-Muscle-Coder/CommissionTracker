@@ -23,6 +23,7 @@ import Backend
 from workflows.scaffold_backend import adapters as scaffold
 from workflows.send_reminder.adapters import ReminderRepository, StorageVersionError
 
+APP_VERSION = "1.0.0"
 TZ = timezone(timedelta(hours=7))
 MAX_INT = 2**53 - 1
 UNKNOWN_ID = "0b7f5a3e-1d2c-4e5f-8a9b-0c1d2e3f4a5b"
@@ -58,7 +59,7 @@ def wired(tmp_path):
     db = scaffold.open_connection(db_path, **configs["scaffold_backend"])
     clock = FakeClock("2026-10-01T08:00:00+07:00")
     app = Backend.create_http_app(Backend.load_yaml(Backend.LAYER_CONFIG_FILE))
-    Backend.wire_workflows(app, db, configs, reminder_clock=clock)
+    Backend.wire_workflows(app, db, configs, app_version=APP_VERSION, reminder_clock=clock)
     with TestClient(app) as http:
         yield http, clock, db, db_path
     db.close()

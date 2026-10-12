@@ -2,8 +2,8 @@
 # workflow: main
 # clause: clause_b_backend
 # component: main
-# last_updated_by: coding-agent@2026-10-07#1
-# last_updated_at: 2026-10-07T10:29:51.1415583+07:00
+# last_updated_by: coding-agent@2026-10-11#3
+# last_updated_at: 2026-10-11T20:46:15.5976649+07:00
 #
 # EXPERIENCES:
 #   - id: main-EXP-001
@@ -232,12 +232,9 @@
 #       backup_data), và app_version, chính giá trị main() đã đọc và kiểm từ
 #       CT_APP_VERSION (launch.app_version). Main không chứa dòng logic sao lưu
 #       nào. wire_workflows có thêm hai tham số từ khóa: app_version và
-#       backup_clock. app_version KHÔNG có giá trị mặc định: None nghĩa là không
-#       đăng ký backup_data. Lý do: 20 chỗ gọi wire_workflows(app, db, configs)
-#       trong kiểm thử của các workflow khác không truyền nó và không được sửa;
-#       đặt "0.0.0" làm mặc định thì bịa ra một phiên bản. Hệ quả: quên truyền ở
-#       main() sẽ làm mất hai điểm giao tiếp mà không báo lỗi (test_backup_is_not_wired_without_app_version
-#       và mọi kiểm thử tiến trình thật của backup_data bắt được). backup_clock
+#       backup_clock. Từ phiên 41 (BE-9) app_version là tham số từ khóa BẮT
+#       BUỘC, không có giá trị mặc định (xem main-EXP-016); backup_data luôn được
+#       ráp. backup_clock
 #       giống reminder_clock (main-EXP-009): Main không bao giờ truyền, chỉ
 #       kiểm thử của workflow truyền đồng hồ giả. Bước 5.6 được giữ: backup_data
 #       chỉ chạm db_connection (chụp, và hỏi PRAGMA database_list), không có
@@ -245,6 +242,36 @@
 #       Bản đóng gói tự có workflow mới vì prepare_runtime chép mọi .py và .yaml
 #       dưới workflows/ (trừ tests); Python nhúng có zipfile, zlib, hashlib
 #       (đo ở EVIDENCE của backup_data).
+#   - id: main-EXP-016
+#     content: >
+#       app_version bắt buộc (BE-9, phiên 41): wire_workflows(app, db, configs,
+#       *, app_version, reminder_clock=None, backup_clock=None). Quên truyền thì
+#       Python báo TypeError ngay khi gọi, trước khi ráp workflow nào (ca
+#       test_wiring_without_app_version_is_a_type_error_and_wires_nothing:
+#       app.routes không đổi, DB không có bảng nào). Vì vậy không còn trạng
+#       thái "backup_data lặng lẽ không được ráp". Mỗi tệp kiểm thử gọi hàm này
+#       khai báo APP_VERSION = "1.0.0" ở một chỗ. Có 19 chỗ gọi thật (không phải
+#       22 như plan ước): 17 chỗ trong kiểm thử được sửa, 1 chỗ của
+#       test_backup_data.py đã truyền sẵn, và main().
+#     derived_from: main-EXP-015
+#   - id: main-EXP-017
+#     content: >
+#       Kiểm thử nâng cấp cấu trúc lưu trữ (BE-11, phiên 41): bước 2 chỉ tồn tại
+#       trong kiểm thử. Mỗi workflow có bảng có một ca ở workflows/<tên>/tests/
+#       test_<tên>_storage_upgrade.py, dùng tests/storage_upgrade.py (boot,
+#       version_rows, has_column, has_index). Ca thay _STORAGE_UPGRADES của chính
+#       workflow bằng danh sách thật + một bước 2 giả (monkeypatch), rồi khởi
+#       động lại bằng cách gọi wire_workflows trên kết nối mới của cùng tệp:
+#       đó chính là cuộc gọi chạy mọi ensure_storage(), nên đo đúng mã thật mà
+#       không tốn một tiến trình mỗi lần. Năm khẳng định: (a) bước 2 đã chạy,
+#       (b) dữ liệu cũ đọc lại qua http giống hệt, (c) bảng <tên>_schema_version
+#       có một dòng = 2, (d) khởi động lần ba không chạy lại bước 2, (e) bước 2 =
+#       "một câu đúng rồi một câu sai" thì khởi động thất bại
+#       (sqlite3.OperationalError), phiên bản vẫn 1, tác dụng của câu đúng không
+#       còn, dữ liệu cũ nguyên vẹn. (e) đạt ở cả sáu workflow: DDL của SQLite nằm
+#       trong giao dịch BEGIN IMMEDIATE ... ROLLBACK của SharedConnection.
+#       Khi thêm bước nâng cấp thật đầu tiên vào một workflow, ca này cho thấy
+#       cần thay đổi gì: bỏ monkeypatch, giữ nguyên năm khẳng định.
 #
 # UNSOLVED_PROBLEMS: []
 #
@@ -409,6 +436,35 @@
 #       đầu, không có "restart attempt ... failed" hay ERROR; fixture thoát mã 0.
 #       Mốc %APPDATA%\CommissionTracker: không tồn tại trước và sau phiên.
 #     recorded_at: 2026-09-27T22:21:00+07:00
+#   - claim: >
+#       Cơ chế nâng cấp cấu trúc lưu trữ của sáu workflow có bảng nâng cấp đúng
+#       dữ liệu đã có, không chạy lại bước đã áp dụng, và hoàn tác cả khi một
+#       bước hỏng; kiểm thử không luôn đạt (ba phép cắn bắt được).
+#     how: >
+#       cd Backend; env\Scripts\python.exe -m pytest -q
+#       workflows/manage_client/tests/test_manage_client_storage_upgrade.py
+#       workflows/manage_commission/tests/test_manage_commission_storage_upgrade.py
+#       workflows/update_progress/tests/test_update_progress_storage_upgrade.py
+#       workflows/record_payment/tests/test_record_payment_storage_upgrade.py
+#       workflows/manage_watermark_profile/tests/test_manage_watermark_profile_storage_upgrade.py
+#       workflows/send_reminder/tests/test_send_reminder_storage_upgrade.py
+#       (Python 3.13.12 của Backend/env, Windows 11, AVG và ReasonLabs bật; tệp
+#       SQLite thật trong tmp_path). Phép cắn, trên tệp thật rồi khôi phục ngay
+#       (git diff trống ở ba adapters.py): (a) manage_client: thay dòng UPDATE
+#       ... SET version trong ensure_storage() bằng pass; (b) record_payment:
+#       "version > current" thành "version >= current"; (c) update_progress:
+#       mỗi câu lệnh của bước một giao dịch riêng thay vì chung, rồi ghi phiên
+#       bản trong giao dịch khác.
+#     result: >
+#       6 passed in 3.79s. Cắn (a): "assert [1] == [2]" ở khẳng định (c); (d)
+#       không tới được vì pytest dừng ở lỗi đầu tiên. Cắn (b): khởi động nâng cấp
+#       hỏng ngay, "sqlite3.OperationalError: table payment already exists" (vì
+#       bước 1 chạy lại), nên chưa tới (a). Cắn (c): khẳng định (e) hỏng,
+#       "assert not True" cho has_column(stage_change, upgrade_probe), tức tác
+#       dụng của câu đúng còn lại sau khi câu sai làm khởi động thất bại.
+#       Toàn bộ layer: 573 passed (564 cũ + 6 ca nâng cấp + 3 ca
+#       compare_semver) in 441.02s.
+#     recorded_at: 2026-10-11T20:46:15.5976649+07:00
 #
 # NOTES: []
 # ===WCA-CHECKPOINT-END===
@@ -716,15 +772,13 @@ def _stop_when_stdin_closes(server: uvicorn.Server) -> None:
 # --- wiring of the workflows -------------------------------------------------
 
 def wire_workflows(
-    app: FastAPI, db, configs: dict, *, app_version: str | None = None, reminder_clock=None, backup_clock=None
+    app: FastAPI, db, configs: dict, *, app_version: str, reminder_clock=None, backup_clock=None
 ) -> dict:
     """Wire business workflows in the order of .design/03_classification.md,
     Step 3.2. Returns the in_process entries kept for later callers.
 
     app_version: the CT_APP_VERSION the Main read at launch, handed to
-    backup_data. main() always passes it. It has no default value: when it is
-    None, backup_data is not wired (the workflow tests of the other workflows
-    call this function without it).
+    backup_data. Required, no default value: backup_data is always wired.
     reminder_clock, backup_clock: the clocks handed to send_reminder's and
     backup_data's Services. The Main never passes them: the machine clock is
     used. Only workflow tests pass a fake clock here."""
@@ -741,19 +795,18 @@ def wire_workflows(
     # Order 2: backup_data — storage-level operation: no table, no call to any
     #          workflow. Its Adapters receive db_connection; its Services the
     #          running app_version and the machine clock.
-    if app_version is not None:
-        backup_cfg = configs["backup_data"]
-        archive_settings = ArchiveSettings(**backup_cfg["archive"])
-        chunk_bytes = int(backup_cfg["io_chunk_bytes"])
-        backup_service = BackupDataService(
-            DatabaseSnapshots(db, chunk_bytes),
-            ArchiveFiles(archive_settings, chunk_bytes),
-            StagingArea(db, StagingSettings(**backup_cfg["staging"]), archive_settings.temp_suffix, chunk_bytes),
-            backup_clock if backup_clock is not None else BackupClock(),
-            archive_settings,
-            app_version,
-        )
-        app.include_router(create_backup_data_routers(backup_service))
+    backup_cfg = configs["backup_data"]
+    archive_settings = ArchiveSettings(**backup_cfg["archive"])
+    chunk_bytes = int(backup_cfg["io_chunk_bytes"])
+    backup_service = BackupDataService(
+        DatabaseSnapshots(db, chunk_bytes),
+        ArchiveFiles(archive_settings, chunk_bytes),
+        StagingArea(db, StagingSettings(**backup_cfg["staging"]), archive_settings.temp_suffix, chunk_bytes),
+        backup_clock if backup_clock is not None else BackupClock(),
+        archive_settings,
+        app_version,
+    )
+    app.include_router(create_backup_data_routers(backup_service))
 
     # Order 3: manage_commission — its Adapters receive get_client_summary.
     supported_currencies = [str(c) for c in configs["manage_commission"]["supported_currencies"]]

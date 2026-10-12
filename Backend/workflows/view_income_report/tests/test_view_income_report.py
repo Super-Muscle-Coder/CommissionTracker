@@ -12,6 +12,7 @@ from fastapi.testclient import TestClient
 import Backend
 from workflows.scaffold_backend import adapters as scaffold
 
+APP_VERSION = "1.0.0"
 MAX_INT = 2**53 - 1
 REPORT_KEYS = {"period_from", "period_to", "currencies", "generated_at"}
 CURRENCY_KEYS = {"currency", "received_net_minor", "refunded_minor", "outstanding_minor", "by_month"}
@@ -26,7 +27,7 @@ def wired(tmp_path):
     scaffold.ensure_database_folder(db_path)
     db = scaffold.open_connection(db_path, **configs["scaffold_backend"])
     app = Backend.create_http_app(Backend.load_yaml(Backend.LAYER_CONFIG_FILE))
-    Backend.wire_workflows(app, db, configs)
+    Backend.wire_workflows(app, db, configs, app_version=APP_VERSION)
     with TestClient(app) as http:
         yield http, db, db_path
     db.close()

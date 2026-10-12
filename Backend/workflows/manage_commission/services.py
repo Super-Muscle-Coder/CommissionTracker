@@ -2,8 +2,8 @@
 # workflow: manage_commission
 # clause: clause_b_backend
 # component: services
-# last_updated_by: coding-agent@2026-09-28#3
-# last_updated_at: 2026-09-28T21:45:00+07:00
+# last_updated_by: coding-agent@2026-10-11#3
+# last_updated_at: 2026-10-11T20:46:15.5976649+07:00
 #
 # EXPERIENCES:
 #   - id: manage_commission-EXP-001
@@ -203,6 +203,19 @@
 #       (2) 14 passed. (3) 17 passed. (4) giống hệt: data.db 114688 byte,
 #       data.db.lock 0 byte, cùng băm và thời điểm.
 #     recorded_at: 2026-09-28T22:05:00+07:00
+#   - claim: >
+#       Bước nâng cấp 2 (giả, chỉ trong kiểm thử) áp lên dữ liệu đã có đúng
+#       một lần, giữ nguyên dữ liệu, ghi phiên bản 2; một bước hỏng thì hoàn
+#       tác cả và phiên bản vẫn 1.
+#     how: >
+#       cd Backend; env\Scripts\python.exe -m pytest -q
+#       workflows/manage_commission/tests/test_manage_commission_storage_upgrade.py
+#       (Python 3.13.12 của Backend/env, Windows 11; bước 2 giả: ALTER TABLE
+#       commission ADD COLUMN upgrade_probe; bước hỏng: câu đúng đó rồi ALTER
+#       TABLE một bảng không có)
+#     result: >
+#       1 passed; (a)-(e) đều đạt.
+#     recorded_at: 2026-10-11T20:46:15.5976649+07:00
 #
 # NOTES:
 #   - content: >
@@ -220,8 +233,10 @@ from datetime import datetime
 
 # StorageIOError is raised by the Adapters and passes through unchanged;
 # it is re-exported so the Routers depend on Services only.
-from .adapters import ClientDirectory, CommissionRepository, StorageIOError  # noqa: F401
+from .adapters import ClientDirectory, CommissionRepository, StorageIOError
 from .entities import Commission, CommissionInput, CommissionListItem, CommissionSummary
+
+__all__ = ["StorageIOError"]  # the name imported only to be re-exported
 
 
 class CommissionNotFoundError(Exception):

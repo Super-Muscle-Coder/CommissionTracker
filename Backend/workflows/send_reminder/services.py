@@ -2,8 +2,8 @@
 # workflow: send_reminder
 # clause: clause_b_backend
 # component: services
-# last_updated_by: coding-agent@2026-09-25#2
-# last_updated_at: 2026-09-25T09:35:00+07:00
+# last_updated_by: coding-agent@2026-10-11#3
+# last_updated_at: 2026-10-11T20:46:15.5976649+07:00
 #
 # EXPERIENCES:
 #   - id: send_reminder-EXP-001
@@ -163,6 +163,20 @@
 #     result: >
 #       67 passed (Python 3.13.12 của Backend/env, Windows 11).
 #     recorded_at: 2026-09-25T09:30:55+07:00
+#   - claim: >
+#       Bước nâng cấp 2 (giả, chỉ trong kiểm thử) áp lên dữ liệu đã có đúng
+#       một lần, giữ nguyên dữ liệu, ghi phiên bản 2; một bước hỏng thì hoàn
+#       tác cả và phiên bản vẫn 1.
+#     how: >
+#       cd Backend; env\Scripts\python.exe -m pytest -q
+#       workflows/send_reminder/tests/test_send_reminder_storage_upgrade.py
+#       (Python 3.13.12 của Backend/env, Windows 11; đồng hồ giả +07:00; bước 2
+#       giả: ALTER TABLE reminder_notification ADD COLUMN upgrade_probe; bước
+#       hỏng: câu đúng đó rồi ALTER TABLE một bảng không có)
+#     result: >
+#       1 passed; (a)-(e) đều đạt; dữ liệu cũ gồm cài đặt và một thông báo
+#       chưa xác nhận.
+#     recorded_at: 2026-10-11T20:46:15.5976649+07:00
 #
 # NOTES: []
 # ===WCA-CHECKPOINT-END===
@@ -179,7 +193,7 @@ from datetime import date, datetime, time, timedelta
 
 # StorageIOError is raised by the Adapters and passes through unchanged;
 # it is re-exported so the Routers depend on Services only.
-from .adapters import ReminderRepository, ReminderSources, StorageIOError, SystemClock  # noqa: F401
+from .adapters import ReminderRepository, ReminderSources, StorageIOError, SystemClock
 from .entities import (
     CommissionEntry,
     DeadlineItem,
@@ -195,6 +209,8 @@ from .entities import (
     SettingsState,
     StoredSettings,
 )
+
+__all__ = ["StorageIOError"]  # the name imported only to be re-exported
 
 
 class NotificationNotFoundError(Exception):

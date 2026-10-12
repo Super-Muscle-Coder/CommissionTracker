@@ -334,7 +334,7 @@ def test_concurrent_creates_through_shared_connection(wired):
             for i in range(10):
                 r = http.post("/clients", json={"client_input": client_input(name=f"c{n}-{i}")})
                 assert r.status_code == 201
-        except Exception as exc:  # pragma: no cover - reported below
+        except Exception as exc:  # reported below
             errors.append(exc)
 
     threads = [threading.Thread(target=worker, args=(n,)) for n in range(8)]

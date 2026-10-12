@@ -2,8 +2,8 @@
 # workflow: backup_data
 # clause: clause_b_backend
 # component: services
-# last_updated_by: coding-agent@2026-10-07#1
-# last_updated_at: 2026-10-07T10:29:51.1415583+07:00
+# last_updated_by: coding-agent@2026-10-11#3
+# last_updated_at: 2026-10-11T20:46:15.5976649+07:00
 #
 # EXPERIENCES:
 #   - id: backup_data-EXP-001
@@ -111,10 +111,17 @@
 #       db_connection (prepare_restore không đụng DB đang chạy); create_backup
 #       thì giữ khóa suốt lúc chụp, không suốt lúc nén. (4) Không xóa, không
 #       liệt kê bản sao lưu cũ, không có hạn mức dung lượng. (5) Chưa chạy nhánh
-#       POSIX của publish (os.link) trên Linux. (6) wire_workflows trong Main
-#       nhận app_version là tham số từ khóa tùy chọn và KHÔNG đăng ký backup_data
-#       khi nó là None, vì 20 chỗ gọi trong kiểm thử cũ không truyền nó; main()
-#       luôn truyền.
+#       POSIX của publish (os.link) trên Linux. (6) Từ phiên 41, wire_workflows
+#       trong Main nhận app_version là tham số từ khóa bắt buộc và luôn ráp
+#       backup_data (main-EXP-016).
+#   - id: backup_data-EXP-007
+#     content: >
+#       compare_semver(left, right) chỉ so hai chuỗi đã hợp lệ. Từ phiên 41
+#       (BE-10) nó tự kiểm: parse_semver trả None thì ném ValueError("not a
+#       semantic version: ...") thay vì để một TypeError khó hiểu khi giải nén
+#       None. Mọi chỗ gọi trong Services đã kiểm chuỗi bằng parse_semver trước,
+#       nên hành vi với giá trị hợp lệ không đổi; phép kiểm này thay cho hai
+#       chú thích bỏ qua kiểm kiểu trước đây.
 #
 # UNSOLVED_PROBLEMS: []
 #
@@ -252,6 +259,18 @@
 #       data.db.lock 0 byte, giống hệt ở đầu phiên (09:25:02) và cuối phiên
 #       (10:28:43).
 #     recorded_at: 2026-10-07T10:29:09.2410570+07:00
+#   - claim: >
+#       compare_semver ném ValueError với chuỗi không phải semantic version;
+#       wire_workflows không có app_version là TypeError và không ráp gì.
+#     how: >
+#       cd Backend; env\Scripts\python.exe -m pytest -q
+#       workflows/backup_data/tests/test_backup_data.py -k
+#       "compare_semver or wiring_without_app_version" (Python 3.13.12 của
+#       Backend/env, Windows 11)
+#     result: >
+#       4 passed (ba ca tham số hóa của compare_semver cộng ca TypeError).
+#       Toàn bộ layer: 573 passed in 441.02s.
+#     recorded_at: 2026-10-11T20:46:15.5976649+07:00
 #
 # NOTES:
 #   - content: >
@@ -284,7 +303,7 @@ from datetime import datetime
 
 # StorageIOError is raised by the Adapters and passes through unchanged; it is
 # re-exported so the Routers depend on Services only.
-from .adapters import (  # noqa: F401
+from .adapters import (
     ArchiveFiles,
     ArchiveReadError,
     DatabaseSnapshots,
@@ -293,6 +312,8 @@ from .adapters import (  # noqa: F401
     SystemClock,
 )
 from .entities import ArchiveRecord, ArchiveSettings, BackupRequest, Manifest, RestoreStaging
+
+__all__ = ["StorageIOError"]  # the name imported only to be re-exported
 
 # data_schema.yaml, backup_request_record.purpose.
 PURPOSES = ("manual", "pre_restore")
@@ -327,9 +348,16 @@ def _identifier_key(identifier: str) -> tuple[int, int, str]:
 
 
 def compare_semver(left: str, right: str) -> int:
-    """-1, 0 or 1: SemVer 2.0 precedence of two valid versions."""
-    left_core, left_pre = parse_semver(left)  # type: ignore[misc]
-    right_core, right_pre = parse_semver(right)  # type: ignore[misc]
+    """-1, 0 or 1: SemVer 2.0 precedence of two valid versions. Raises
+    ValueError when either text is not a semantic version."""
+    left_parsed = parse_semver(left)
+    if left_parsed is None:
+        raise ValueError(f"not a semantic version: {left!r}")
+    right_parsed = parse_semver(right)
+    if right_parsed is None:
+        raise ValueError(f"not a semantic version: {right!r}")
+    left_core, left_pre = left_parsed
+    right_core, right_pre = right_parsed
     if left_core != right_core:
         return -1 if left_core < right_core else 1
     if left_pre == right_pre:

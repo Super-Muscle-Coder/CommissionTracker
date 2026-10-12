@@ -28,6 +28,7 @@
     <Compile Include="tests\__init__.py" />
     <Compile Include="tests\test_backend_process.py" />
     <Compile Include="tests\test_cors.py" />
+    <Compile Include="tests\storage_upgrade.py" />
     <Compile Include="tests\test_database_ownership.py" />
     <Compile Include="workflows\__init__.py" />
     <Compile Include="workflows\backup_data\__init__.py" />
@@ -44,6 +45,7 @@
     <Compile Include="workflows\manage_client\services.py" />
     <Compile Include="workflows\manage_client\tests\__init__.py" />
     <Compile Include="workflows\manage_client\tests\test_manage_client.py" />
+    <Compile Include="workflows\manage_client\tests\test_manage_client_storage_upgrade.py" />
     <Compile Include="workflows\manage_commission\__init__.py" />
     <Compile Include="workflows\manage_commission\adapters.py" />
     <Compile Include="workflows\manage_commission\entities.py" />
@@ -51,6 +53,7 @@
     <Compile Include="workflows\manage_commission\services.py" />
     <Compile Include="workflows\manage_commission\tests\__init__.py" />
     <Compile Include="workflows\manage_commission\tests\test_manage_commission.py" />
+    <Compile Include="workflows\manage_commission\tests\test_manage_commission_storage_upgrade.py" />
     <Compile Include="workflows\manage_watermark_profile\__init__.py" />
     <Compile Include="workflows\manage_watermark_profile\adapters.py" />
     <Compile Include="workflows\manage_watermark_profile\entities.py" />
@@ -58,6 +61,7 @@
     <Compile Include="workflows\manage_watermark_profile\services.py" />
     <Compile Include="workflows\manage_watermark_profile\tests\__init__.py" />
     <Compile Include="workflows\manage_watermark_profile\tests\test_manage_watermark_profile.py" />
+    <Compile Include="workflows\manage_watermark_profile\tests\test_manage_watermark_profile_storage_upgrade.py" />
     <Compile Include="workflows\record_payment\__init__.py" />
     <Compile Include="workflows\record_payment\adapters.py" />
     <Compile Include="workflows\record_payment\entities.py" />
@@ -65,6 +69,7 @@
     <Compile Include="workflows\record_payment\services.py" />
     <Compile Include="workflows\record_payment\tests\__init__.py" />
     <Compile Include="workflows\record_payment\tests\test_record_payment.py" />
+    <Compile Include="workflows\record_payment\tests\test_record_payment_storage_upgrade.py" />
     <Compile Include="workflows\scaffold_backend\__init__.py" />
     <Compile Include="workflows\scaffold_backend\adapters.py" />
     <Compile Include="workflows\scaffold_backend\tests\__init__.py" />
@@ -76,6 +81,7 @@
     <Compile Include="workflows\send_reminder\services.py" />
     <Compile Include="workflows\send_reminder\tests\__init__.py" />
     <Compile Include="workflows\send_reminder\tests\test_send_reminder.py" />
+    <Compile Include="workflows\send_reminder\tests\test_send_reminder_storage_upgrade.py" />
     <Compile Include="workflows\update_progress\__init__.py" />
     <Compile Include="workflows\update_progress\adapters.py" />
     <Compile Include="workflows\update_progress\entities.py" />
@@ -83,6 +89,7 @@
     <Compile Include="workflows\update_progress\services.py" />
     <Compile Include="workflows\update_progress\tests\__init__.py" />
     <Compile Include="workflows\update_progress\tests\test_update_progress.py" />
+    <Compile Include="workflows\update_progress\tests\test_update_progress_storage_upgrade.py" />
     <Compile Include="workflows\view_income_report\__init__.py" />
     <Compile Include="workflows\view_income_report\adapters.py" />
     <Compile Include="workflows\view_income_report\entities.py" />

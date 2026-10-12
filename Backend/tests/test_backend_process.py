@@ -23,6 +23,7 @@ import pytest
 LAYER_ROOT = Path(__file__).resolve().parent.parent
 READY_TIMEOUT_S = 30
 EXIT_TIMEOUT_S = 15
+APP_VERSION = "1.0.0"
 UNKNOWN_ID = "0b7f5a3e-1d2c-4e5f-8a9b-0c1d2e3f4a5b"
 
 
@@ -213,7 +214,7 @@ def test_process_lifecycle_crud_errors_and_restart(tmp_path):
     db = scaffold.open_connection(str(db_file), **configs["scaffold_backend"])
     try:
         app = Backend.create_http_app(Backend.load_yaml(Backend.LAYER_CONFIG_FILE))
-        entries = Backend.wire_workflows(app, db, configs)
+        entries = Backend.wire_workflows(app, db, configs, app_version=APP_VERSION)
         summary = entries["get_client_summary"](client_id=cid)
         print(f"  get_client_summary(client_id={cid!r}) -> {summary}")
         assert summary == {"client_id": cid, "is_archived": False}
@@ -400,7 +401,8 @@ def test_process_commissions_restart_in_process_and_storage_failure(tmp_path):
     configs = {n: Backend.load_yaml(p) for n, p in Backend.WORKFLOW_CONFIG_FILES.items()}
     db = scaffold.open_connection(str(db_file), **configs["scaffold_backend"])
     try:
-        entries = Backend.wire_workflows(Backend.create_http_app(Backend.load_yaml(Backend.LAYER_CONFIG_FILE)), db, configs)
+        app = Backend.create_http_app(Backend.load_yaml(Backend.LAYER_CONFIG_FILE))
+        entries = Backend.wire_workflows(app, db, configs, app_version=APP_VERSION)
         summary = entries["get_commission_summary"](commission_id=mid)
         out(f"  get_commission_summary(commission_id={mid!r}) -> {summary}")
         assert summary == {"commission_id": mid, "title": edited["title"],
@@ -564,7 +566,8 @@ def test_process_payments_balance_void_restart_ledger_and_storage_failure(tmp_pa
     configs = {n: Backend.load_yaml(p) for n, p in Backend.WORKFLOW_CONFIG_FILES.items()}
     db = scaffold.open_connection(str(db_file), **configs["scaffold_backend"])
     try:
-        entries = Backend.wire_workflows(Backend.create_http_app(Backend.load_yaml(Backend.LAYER_CONFIG_FILE)), db, configs)
+        app = Backend.create_http_app(Backend.load_yaml(Backend.LAYER_CONFIG_FILE))
+        entries = Backend.wire_workflows(app, db, configs, app_version=APP_VERSION)
         ledger = entries["list_payment_ledger"]()
         out(f"  list_payment_ledger() -> {ledger}")
         assert {e["payment_id"] for e in ledger} == {
@@ -822,7 +825,8 @@ def test_process_progress_stages_history_board_restart_and_storage_failure(tmp_p
     configs = {n: Backend.load_yaml(p) for n, p in Backend.WORKFLOW_CONFIG_FILES.items()}
     db = scaffold.open_connection(str(db_file), **configs["scaffold_backend"])
     try:
-        entries = Backend.wire_workflows(Backend.create_http_app(Backend.load_yaml(Backend.LAYER_CONFIG_FILE)), db, configs)
+        app = Backend.create_http_app(Backend.load_yaml(Backend.LAYER_CONFIG_FILE))
+        entries = Backend.wire_workflows(app, db, configs, app_version=APP_VERSION)
         board = entries["list_progress_board"]()
         out(f"  list_progress_board() -> {board}")
         assert len(board) == 3 and all(set(e) == {"commission_id", "current_stage", "stage_kind"} for e in board)
@@ -937,7 +941,8 @@ def test_process_payments_tip_rule_and_ledger_kind(tmp_path):
     configs = {n: Backend.load_yaml(p) for n, p in Backend.WORKFLOW_CONFIG_FILES.items()}
     db = scaffold.open_connection(str(db_file), **configs["scaffold_backend"])
     try:
-        ledger = Backend.wire_workflows(Backend.create_http_app(Backend.load_yaml(Backend.LAYER_CONFIG_FILE)), db, configs)["list_payment_ledger"]()
+        app = Backend.create_http_app(Backend.load_yaml(Backend.LAYER_CONFIG_FILE))
+        ledger = Backend.wire_workflows(app, db, configs, app_version=APP_VERSION)["list_payment_ledger"]()
         out(f"  list_payment_ledger() -> {ledger}")
         assert len(ledger) == 4
         assert all(set(e) == {"payment_id", "commission_id", "direction", "kind", "amount", "paid_at"}
@@ -1296,7 +1301,8 @@ def test_process_watermark_profiles_crud_errors_restart_in_process_and_storage_f
     configs = {n: Backend.load_yaml(p) for n, p in Backend.WORKFLOW_CONFIG_FILES.items()}
     db = scaffold.open_connection(str(db_file), **configs["scaffold_backend"])
     try:
-        entries = Backend.wire_workflows(Backend.create_http_app(Backend.load_yaml(Backend.LAYER_CONFIG_FILE)), db, configs)
+        app = Backend.create_http_app(Backend.load_yaml(Backend.LAYER_CONFIG_FILE))
+        entries = Backend.wire_workflows(app, db, configs, app_version=APP_VERSION)
         record = entries["get_watermark_profile"](profile_id=pid)
         out(f"  get_watermark_profile(profile_id={pid!r}) -> {record}")
         assert record == edited

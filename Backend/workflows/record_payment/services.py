@@ -2,8 +2,8 @@
 # workflow: record_payment
 # clause: clause_b_backend
 # component: services
-# last_updated_by: coding-agent@2026-09-30#1
-# last_updated_at: 2026-09-30T23:40:00+07:00
+# last_updated_by: coding-agent@2026-10-11#3
+# last_updated_at: 2026-10-11T20:46:15.5976649+07:00
 #
 # EXPERIENCES:
 #   - id: record_payment-EXP-001
@@ -299,6 +299,21 @@
 #       200. %APPDATA%\CommissionTracker\data.db trước và sau giống hệt: 114688
 #       byte, ghi lúc 2026-09-28T21:09:42+07:00, SHA-256 B1996554...F390B.
 #     recorded_at: 2026-09-30T23:40:00+07:00
+#   - claim: >
+#       Bước nâng cấp 2 (giả, chỉ trong kiểm thử) áp lên dữ liệu đã có đúng
+#       một lần, giữ nguyên dữ liệu, ghi phiên bản 2; một bước hỏng thì hoàn
+#       tác cả và phiên bản vẫn 1.
+#     how: >
+#       cd Backend; env\Scripts\python.exe -m pytest -q
+#       workflows/record_payment/tests/test_record_payment_storage_upgrade.py
+#       (Python 3.13.12 của Backend/env, Windows 11; bước 2 giả: CREATE INDEX
+#       payment_by_paid_at ON payment (paid_at), tức một chỉ mục; bước hỏng:
+#       câu đúng đó rồi ALTER TABLE một bảng không có)
+#     result: >
+#       1 passed; (a)-(e) đều đạt. Phép cắn (b) trên workflow này, "version
+#       >= current": khởi động nâng cấp hỏng ngay, "table payment already
+#       exists", vì bước 1 chạy lại.
+#     recorded_at: 2026-10-11T20:46:15.5976649+07:00
 #
 # NOTES:
 #   - id: record_payment-NOTE-001
@@ -316,8 +331,10 @@ from datetime import datetime
 
 # StorageIOError is raised by the Adapters and passes through unchanged;
 # it is re-exported so the Routers depend on Services only.
-from .adapters import CommissionDirectory, PaymentRepository, StorageIOError  # noqa: F401
+from .adapters import CommissionDirectory, PaymentRepository, StorageIOError
 from .entities import CommissionBalance, CommissionSummary, LedgerEntry, Money, Payment, PaymentInput
+
+__all__ = ["StorageIOError"]  # the name imported only to be re-exported
 
 
 class CommissionNotFoundError(Exception):

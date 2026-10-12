@@ -11,6 +11,7 @@ from fastapi.testclient import TestClient
 import Backend
 from workflows.scaffold_backend import adapters as scaffold
 
+APP_VERSION = "1.0.0"
 UNKNOWN_ID = "0b7f5a3e-1d2c-4e5f-8a9b-0c1d2e3f4a5b"
 DETAIL_KEYS = {
     "commission_id", "client_id", "title", "description", "commission_type",
@@ -29,7 +30,7 @@ def wired(tmp_path):
     scaffold.ensure_database_folder(db_path)
     db = scaffold.open_connection(db_path, **configs["scaffold_backend"])
     app = Backend.create_http_app(Backend.load_yaml(Backend.LAYER_CONFIG_FILE))
-    entries = Backend.wire_workflows(app, db, configs)
+    entries = Backend.wire_workflows(app, db, configs, app_version=APP_VERSION)
     with TestClient(app) as http:
         yield http, entries, db, db_path
     db.close()

@@ -67,7 +67,7 @@ class Env:
         return sorted(p.name for p in self.staging_dir.iterdir()) if self.staging_dir.exists() else []
 
 
-def build(tmp_path: Path, app_version: str | None, name: str = "data"):
+def build(tmp_path: Path, app_version: str, name: str = "data"):
     db_path = str(tmp_path / name / "data.db")
     configs = {n: Backend.load_yaml(p) for n, p in Backend.WORKFLOW_CONFIG_FILES.items()}
     configs["scaffold_backend"] = {**configs["scaffold_backend"], "busy_timeout_ms": 200}
@@ -379,12 +379,19 @@ def test_writes_during_a_backup_succeed_and_the_backup_is_a_consistent_database(
     assert len(env.http.get("/clients").json()) == 18
 
 
-def test_backup_is_not_wired_without_app_version(tmp_path):
-    app, db, _, _ = build(tmp_path, None)
+def test_wiring_without_app_version_is_a_type_error_and_wires_nothing(tmp_path):
+    db_path = str(tmp_path / "data" / "data.db")
+    configs = {n: Backend.load_yaml(p) for n, p in Backend.WORKFLOW_CONFIG_FILES.items()}
+    scaffold.ensure_database_folder(db_path)
+    db = scaffold.open_connection(db_path, **configs["scaffold_backend"])
     try:
-        with TestClient(app) as http:
-            r = http.post("/backups", json={"backup_request": {"destination_dir": str(tmp_path), "purpose": "manual"}})
-        assert r.status_code == 404
+        app = Backend.create_http_app(Backend.load_yaml(Backend.LAYER_CONFIG_FILE))
+        routes_before = list(app.routes)
+        with pytest.raises(TypeError, match="app_version"):
+            Backend.wire_workflows(app, db, configs)
+        assert list(app.routes) == routes_before  # no workflow was wired
+        with db.read() as conn:
+            assert conn.execute("SELECT COUNT(*) FROM sqlite_master").fetchone()[0] == 0  # no table was made
     finally:
         db.close()
 
@@ -521,6 +528,12 @@ def test_semver_helpers_directly():
     assert compare_semver("1.0.0-1", "1.0.0-alpha") == -1, "numeric identifiers rank below alphanumeric ones"
     assert compare_semver("1.0.0-alpha", "1.0.0-alpha.1") == -1
     assert compare_semver("1.0.0+a", "1.0.0+b") == 0
+
+
+@pytest.mark.parametrize("left, right", [("latest", "1.0.0"), ("1.0.0", "1.0"), ("v1.0.0", "")])
+def test_compare_semver_rejects_a_text_that_is_not_a_version(left, right):
+    with pytest.raises(ValueError, match="not a semantic version"):
+        compare_semver(left, right)
 
 
 # --- prepare_restore: invalid archives ---------------------------------------------------------

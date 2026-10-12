@@ -20,6 +20,7 @@ import Backend
 from tests.test_backend_process import BackendProcess, call, commission_input, free_port, launch_env
 from workflows.scaffold_backend import adapters as scaffold
 
+APP_VERSION = "1.0.0"
 LAYER_CFG = Backend.load_yaml(Backend.LAYER_CONFIG_FILE)
 UI_ORIGIN = LAYER_CFG["ui_origin"]
 ALLOWED_METHODS = {str(m) for m in LAYER_CFG["http_server"]["cors_allow_methods"]}
@@ -40,7 +41,7 @@ def build_app(db_path: str):
     scaffold.ensure_database_folder(db_path)
     db = scaffold.open_connection(db_path, **configs["scaffold_backend"])
     app = Backend.create_http_app(LAYER_CFG)
-    Backend.wire_workflows(app, db, configs)
+    Backend.wire_workflows(app, db, configs, app_version=APP_VERSION)
     return app, db
 
 

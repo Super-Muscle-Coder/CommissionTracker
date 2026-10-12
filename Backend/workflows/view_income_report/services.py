@@ -185,8 +185,10 @@ from datetime import date, datetime
 
 # StorageIOError is raised by the Adapters and passes through unchanged;
 # it is re-exported so the Routers depend on Services only.
-from .adapters import IncomeSources, StorageIOError  # noqa: F401
+from .adapters import IncomeSources, StorageIOError
 from .entities import CurrencyTotals, IncomeReport, LedgerEntry, MonthTotal
+
+__all__ = ["StorageIOError"]  # the name imported only to be re-exported
 
 
 class InvalidPeriodError(Exception):
