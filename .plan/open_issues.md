@@ -452,6 +452,32 @@ Suy luận từ `.design/f_restore.md` §3 là an toàn, nhưng chưa có ca. Vi
 
 Desktop chưa hiện thực `dialog:save-file` (checkpoint `native_dialogs`, phiên 35); preload từ chối, ca N2 khẳng định. **Hướng A (Orchestrator đề xuất):** bỏ `save_file` khỏi `clause_a_common.cross_cutting.native_dialogs.entries`; phá vỡ, API Contract 5.0.0 → 6.0.0; không bên nào bị ảnh hưởng. **Hướng B:** giữ, ghi changelog là chưa hiện thực.
 
+## Chặng H — phiên kiểm độc lập backend (phiên 42)
+
+Báo cáo pha 1 và đánh giá: `.reviews/audits/backend/audit_backend_session42_phase1.md`. Pha 2: `.plan/backend_plan.md` (2026-10-12).
+
+| Mã | Mức | Nội dung | Quyết định |
+|---|---|---|---|
+| R42-1 | cao | Chuỗi chứa surrogate lẻ (`"\ud800"`) ở trường chữ tự do làm backend trả 500 dạng chữ thường (`UnicodeEncodeError` lúc ghi SQLite) | pha 2 |
+| R42-2 | trung bình | `at_time` nhận chữ số Ả Rập (`\d` của Pydantic là mọi chữ số Unicode) | pha 2 |
+| R42-3 | trung bình | `manage_client.edit` và `set_archived` đọc, ghi ở hai giao dịch: chen nhau thì mất cờ lưu trữ | pha 2 |
+| R42-4 | trung bình | Không kiểm thử nào khóa luật "mỗi workflow chỉ chạm bảng của mình" (phép cắn đọc thẳng bảng `commission` không bị bắt) | pha 2 |
+| R42-5 | thấp | Không ca nào bắt được `READY` in trước khi lắng nghe | pha 2 |
+| R42-6 | thấp | Sáu workflow gọi `datetime.now()` trong Services | **V2 trở đi:** ví dụ của chính skill làm vậy; sửa sáu workflow là nhiều thay đổi cho lợi ích nhỏ |
+| R42-7 | thấp | `_MAX_COMPUTED_INTEGER` nằm trong Services | pha 2: chỉ ghi ngoại lệ vào checkpoint |
+| R42-8 | thấp | Thứ tự ngày của `view_income_report` kiểm ở Services thay vì Routers | pha 2 |
+| R42-9 | thấp | Tham số truy vấn thừa được nhận | CT-10 (API Contract 6.1.0); pha 2 gỡ mã chết, thêm ca khóa luật |
+| R42-10 | thấp | `CT_PORT`, `_SEMVER` nhận chữ số không phải ASCII | pha 2 |
+| R42-11 | thấp | 5 NOTES lỗi thời | pha 2 |
+| R42-12 | thấp | EVIDENCE nêu script ngoài dự án | pha 2: ghi lại là bằng chứng một lần |
+| R42-13 | thấp | Số liệu cũ trong EVIDENCE | pha 2 |
+| R42-14 | thấp | Hai import không dùng trong kiểm thử | pha 2 |
+| R42-15 | thấp | Không ca nào của `manage_commission` bắt Routers từ chối `deadline` quá khứ | pha 2 |
+
+### CT-10 — Tham số truy vấn không khai báo (R42-9) — **ĐÃ DUYỆT VÀ GHI 2026-10-12**
+
+Project Owner chọn ghi luật "bỏ qua" (hướng B). API Contract 6.0.0 → **6.1.0**, `clause_a_common.endpoint_forms.http`: tham số truy vấn không phải input của lối vào thì bị bỏ qua. Mở rộng, không phá vỡ. Lý do: 16 trong 17 lối vào `GET` không khai 400, nên luật từ chối của `02-contract.md` Bước 2.3 không áp được; muốn từ chối phải thêm 400 vào 16 lối vào (phá vỡ) cho một lợi ích nhỏ. Đính chính của Orchestrator ở audit phiên 42 pha 1 §4.
+
 ## Hợp đồng — chờ Project Owner duyệt
 
 ### CT-8 — `restore_data` lên `đã_hoàn_thiện` (đề xuất 2026-10-08, audit phiên 36 §6) — **ĐÃ DUYỆT VÀ GHI 2026-10-09** (Data Schema 10.0.1). Project Owner đặt điều kiện: duyệt nếu hai ca hỏng ở lượt chạy lại (N14, D2) không nghiêm trọng; Orchestrator đánh giá không nghiêm trọng (audit phiên 36 §5.7: chỗ đua của công cụ kiểm thử, chức năng đúng; DSK-27). DSK-26 làm sai một cam kết trong `description` của `restore_data` ("never ends up without a working database") ở một trường hợp chưa từng xảy ra, nên phải đóng trong chặng F

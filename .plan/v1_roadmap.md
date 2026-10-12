@@ -296,7 +296,7 @@ Cách làm: Orchestrator soạn runbook cho Project Owner chạy tay, gộp vớ
 
 Bước 1, phần 2 (câu hỏi 3, ma trận lối vào × nhãn và tình huống bất thường): `.reviews/stage_h/h1_q3_matrix.md` (2026-10-12). Mở H-7, H-9, H-10, H-11, CT-9. **CT-9 duyệt 2026-10-12:** API Contract 6.0.0 bỏ `native_dialogs.save_file`. Đề xuất: mỗi layer một phiên kiểm độc lập, pha 2 nhận luôn việc đã biết của layer; thứ tự Backend → Desktop → Giao diện.
 
-**Phiên 42 (backend, kiểm độc lập, pha 1 chỉ đọc):** plan phát hành 2026-10-12, `.plan/backend_plan.md`. Pha 2 (vá) có plan riêng sau khi Orchestrator đọc báo cáo pha 1; việc đã biết của backend: BE-8, BE-12, H-10.
+**Phiên 42 (backend, kiểm độc lập, pha 1 chỉ đọc):** plan phát hành 2026-10-12, `.plan/backend_plan.md`. Pha 2 (vá) có plan riêng sau khi Orchestrator đọc báo cáo pha 1; việc đã biết của backend: BE-8, BE-12, H-10. **Pha 1 xong 2026-10-12, audit đạt** (`.reviews/audits/backend/audit_backend_session42_phase1.md`): 15 phát hiện (R42-1 → R42-15); CT-10 (API Contract 6.1.0). Plan pha 2 phát hành 2026-10-12.
 
 **Cách làm (đề xuất, chốt khi tới chặng):**
 - **Bước 1, kiểm kê:** Orchestrator kiểm kê, không viết code. Mỗi câu hỏi trên ra một danh sách chỗ thiếu, kèm mức độ. Để công việc không tự chấm điểm chính nó, phần kiểm mã theo hai skill nên do một phiên kiểm độc lập làm, chưa từng thấy mã được viết ra sao, rồi Orchestrator đối chiếu.

@@ -80,9 +80,19 @@
 #            code: none (no caller; nothing implements it). Found in the
 #            stage H inventory (.reviews/stage_h/h1_q3_matrix.md, H-8);
 #            approved by the Project Owner on 2026-10-12 (open_issues CT-9).
+#   v6.1.0 — [Clause A, SỬA] endpoint_forms.http: a query parameter that is
+#            not an input of the endpoint is ignored. The backend already
+#            ignored them; the rule of 02-contract.md step 2.3 (a receiver
+#            refuses extra input with its declared format-error label) could
+#            not apply, since 16 of the 17 GET endpoints declare no 400.
+#            Refusing would have meant adding 400 to 16 endpoints (breaking)
+#            for no gain. Extension: more input is accepted, nothing a caller
+#            relies on changes. Affected code: none. Found in backend session
+#            42 (independent review, R42-9); approved by the Project Owner on
+#            2026-10-12 (open_issues CT-10).
 # =============================================================================
 
-api_version: 6.0.0
+api_version: 6.1.0
 contract_state: approved
 
 # -----------------------------------------------------------------------------
@@ -92,7 +102,7 @@ clause_a_common:
   lock_status: open
 
   endpoint_forms:
-    http: "HTTP/1.1 on shared_values.loopback_host, port handed over at launch. address is '<METHOD> <path>'. A path segment written {name} carries the input of that name. Remaining inputs travel as query parameters named after the input (GET; such inputs are never objects), or as a JSON body whose keys are the input names (POST, PUT). The result label is the HTTP status code; the response body is the referenced output, or error_body."
+    http: "HTTP/1.1 on shared_values.loopback_host, port handed over at launch. address is '<METHOD> <path>'. A path segment written {name} carries the input of that name. Remaining inputs travel as query parameters named after the input (GET; such inputs are never objects), or as a JSON body whose keys are the input names (POST, PUT). The result label is the HTTP status code; the response body is the referenced output, or error_body. A query parameter whose name is not an input of the endpoint is ignored: it is not an error and it reaches no workflow (the only exception to the rule that a receiver refuses extra input, 02-contract.md step 2.3; most GET endpoints declare no format-error label to refuse it with)."
     in_process: "A direct call to a Routers function of another workflow in the same process. address is the function name. The function takes one keyword argument per input name and returns the referenced output. A non-2xx result label is raised as an error carrying that label and error_body."
     ipc: "An Electron IPC channel handled in the desktop main process. The renderer invokes it as invoke(address, argument) on the renderer bridge (data_schema.yaml shared_values.renderer_bridge); the desktop preload script relays the call to ipcRenderer.invoke, and the renderer has no direct access to ipcRenderer. address is the channel name. The single argument is an object whose keys are the input names. The reply is object { status: integer (the result label), body: the referenced output or error_body }."
 
