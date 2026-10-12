@@ -237,7 +237,7 @@ Chặng E xong khi họa sĩ tạo được tệp sao lưu từ giao diện, và
    - ký số (DSK-9): **Project Owner quyết 2026-10-11 không làm ở V1** (chuyện thương mại hóa; `.design/v1_scope.md` §3.4). Biểu tượng riêng: để V3 (Project Owner quyết 2026-10-11);
    - phiên desktop 40: `version` → `1.0.0`; DSK-30 mục 1 (N7) và 2 (ca 6, ca 14). Plan phát hành 2026-10-11: `.plan/desktop_plan.md`. Trước phiên, Project Owner chép bộ cài `0.1.0` ra ngoài `Desktop\release` (bản N của runbook). **Xong 2026-10-11, audit đạt** (`.reviews/audits/desktop/audit_desktop_session40.md`); Desktop 79 kiểm thử, `test:packaged` 12; bộ cài `1.0.0` (SHA-256 `C776FB0E…A31E982`) ở `Desktop\release\`, bộ cài `0.1.0` (SHA-256 `9430d080…a01d0`) ở `E:\installer\`; DSK-30 mục 1, 2 đóng; mở ENV-10;
    - phiên backend ngắn (**phiên 41**): BE-11 (kiểm thử cơ chế nâng cấp cấu trúc, cả sáu workflow có bảng), kèm BE-9 và BE-10 vì cùng chạm kiểm thử backend. Plan phát hành 2026-10-11: `.plan/backend_plan.md`. **Xong 2026-10-11, audit đạt 2026-10-12** (`.reviews/audits/backend/audit_backend_session41.md`); backend 573 kiểm thử; BE-9, BE-10, BE-11 đóng;
-   - runbook Project Owner chạy tay (soạn 2026-10-11: `.reviews/runbooks/g_install_runbook.md`). **Phần A–E chạy xong 2026-10-11: tiêu chí 2, 3, 5 đạt, DSK-21 đóng.** Lần mở đầu của mỗi exe mới có một bản chạy ẩn khoảng 25 s do antivirus (DSK-3, có log). Còn phần F (ENV-4). Nội dung gốc: cài `0.1.0`, rồi `1.0.0` đè lên khi đóng và khi đang mở (tiêu chí 2, 3), cài bản cũ đè bản mới (tiêu chí 5), máy sạch (ENV-4). Tiêu chí 3 đo trước; chỉ sửa mã nếu đo ra lỗi.
+   - runbook Project Owner chạy tay (soạn 2026-10-11: `.reviews/runbooks/g_install_runbook.md`). **Phần A–E chạy xong 2026-10-11: tiêu chí 2, 3, 5 đạt, DSK-21 đóng.** Lần mở đầu của mỗi exe mới có một bản chạy ẩn khoảng 25 s do antivirus (DSK-3, có log). Còn phần F (ENV-4). **Project Owner quyết 2026-10-12:** phần F chạy song song với chặng H, không chặn chặng H; chặng H bước 3 vẫn chạy lại máy sạch trên bản cuối. Nội dung gốc: cài `0.1.0`, rồi `1.0.0` đè lên khi đóng và khi đang mở (tiêu chí 2, 3), cài bản cũ đè bản mới (tiêu chí 5), máy sạch (ENV-4). Tiêu chí 3 đo trước; chỉ sửa mã nếu đo ra lỗi.
 
 Cách làm: Orchestrator soạn runbook cho Project Owner chạy tay, gộp với ENV-4 (máy sạch); phần nào cần đổi mã (số phiên bản, hành vi khi đang mở) thì vào một phiên desktop trước khi chạy runbook. Tự cập nhật (auto-update) vẫn ngoài V1. `npm run test:packaged` là tiêu chí của chặng này (DSK-16).
 
@@ -287,6 +287,8 @@ Cách làm: Orchestrator soạn runbook cho Project Owner chạy tay, gộp vớ
      - không còn `UNSOLVED_PROBLEMS`;
      - không NOTES quá hạn;
      - EVIDENCE nào còn ghi thì còn chạy lại được.
+
+**Bắt đầu 2026-10-12.** Bước 1, phần 1 (câu hỏi 1 và 2): `.reviews/stage_h/h1_inventory.md`; chờ Project Owner duyệt bảng sổ tồn đọng và cách làm câu hỏi 3, 4.
 
 **Cách làm (đề xuất, chốt khi tới chặng):**
 - **Bước 1, kiểm kê:** Orchestrator kiểm kê, không viết code. Mỗi câu hỏi trên ra một danh sách chỗ thiếu, kèm mức độ. Để công việc không tự chấm điểm chính nó, phần kiểm mã theo hai skill nên do một phiên kiểm độc lập làm, chưa từng thấy mã được viết ra sao, rồi Orchestrator đối chiếu.
