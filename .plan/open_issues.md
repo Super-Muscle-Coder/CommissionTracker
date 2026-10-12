@@ -365,17 +365,23 @@ Khối checkpoint `main` (`UI/src/main.tsx`) còn sáu NOTES ghi ngày 2026-09-2
 
 ### BE-10 — Chú thích tắt kiểm tra trong `Backend/` (thấp; Orchestrator phát hiện 2026-10-10) — xem lại ở chặng H
 
+> **ĐÃ ĐÓNG 2026-10-12** (phiên 41; `.reviews/audits/backend/audit_backend_session41.md` §5.2). Thực tế có **8** dòng `noqa` (plan đếm sót `manage_commission`), cả 8 đã bỏ, thay bằng `__all__ = ["StorageIOError"]`; hai `type: ignore` thay bằng kiểm tường minh ném `ValueError`, có ca kiểm thử; `pragma` đã bỏ. Grep toàn `Backend/` không còn chú thích tắt kiểm tra. **Để chặng H xem (audit §5.3, L1):** `__all__` chỉ liệt kê `StorageIOError`, không đủ mọi tên công khai như quy ước Python; vô hại vì không ai `import *`. Giữ nguyên kèm chú thích, hoặc liệt kê đủ.
+
 Rà toàn bộ mã ngày 2026-10-10: bảy dòng `# noqa: F401` trên các dòng `from .adapters import … StorageIOError` ở `services.py` của `record_payment`, `view_income_report`, `backup_data`, `manage_watermark_profile`, `send_reminder`, `manage_client`, `update_progress`; hai dòng `# type: ignore[misc]` ở `backup_data/services.py` (`parse_semver`); một `# pragma: no cover` ở `manage_client/tests/test_manage_client.py`. Chưa audit nào nêu ra, cùng lý do như DSK-29 (4). Chưa rõ dự án có chạy linter hay kiểm kiểu nào cho `Backend/` không; nếu không có thì các chú thích này không tắt gì cả, nhưng vẫn cần lý do. **Việc:** ở chặng H (câu hỏi 4), với mỗi dòng: bỏ đi, hoặc ghi lý do giữ. Phía `UI/src`: 16 dòng `@ts-expect-error` ở `screens/tests/app_root.test.tsx` là kiểm thử kiểu phủ định (khẳng định một lời gọi sai kiểu thì không biên dịch được), là cách dùng đúng; ghi nhận, không phải lỗi.
 
 ## Layer backend — chặng G
 
 ### BE-11 — Cơ chế nâng cấp cấu trúc lưu trữ chưa từng chạy một bước nâng cấp thật (trung bình; Orchestrator rà 2026-10-11; thay cho tiêu chí 4 của DSK-21 ở bản 1.0, Project Owner chọn hướng A)
 
+> **ĐÃ ĐÓNG 2026-10-12** (phiên 41; audit §4). Sáu tệp `test_<w>_storage_upgrade.py` cùng harness `Backend/tests/storage_upgrade.py`; năm khẳng định (a)–(e) đạt ở cả sáu workflow, kể cả (e) "bước hỏng thì hoàn tác cả"; 573 kiểm thử, ba lượt trên Windows và ba lượt trên Linux. Ba phép cắn của agent cùng ba phép riêng của Orchestrator đều bị bắt đúng khẳng định cần bắt. DSK-21 tiêu chí 4 với bản 1.0 có bằng chứng cơ chế theo hướng A.
+
 Cả sáu workflow có bảng đều ở phiên bản cấu trúc 1; `_STORAGE_UPGRADES` chỉ có bước 1. Kiểm thử hiện có chỉ phủ "tạo mới" và "phiên bản mới hơn thì dừng khởi động". Chưa có gì chứng minh rằng khi một bản sau thêm bước 2, dữ liệu do bản trước tạo được nâng cấp đúng (bước chạy đúng một lần, dữ liệu cũ còn nguyên, phiên bản ghi lên 2, khởi động lại không chạy lại bước). **Việc:** với mỗi workflow có bảng (hoặc một workflow mẫu cộng lý do vì sao đủ đại diện, Orchestrator chốt trong plan), kiểm thử tạo dữ liệu ở phiên bản 1 bằng mã thật, rồi khởi động lại với danh sách bước có thêm một bước 2 giả **chỉ trong kiểm thử**, và khẳng định bốn điều trên. Không thêm bước nâng cấp nào vào mã sản phẩm. Làm trong phiên backend của chặng G, kèm BE-9 và BE-10.
 
 ## Layer backend — sau audit phiên 32
 
 ### BE-9 — `wire_workflows(app_version=None)` thì không ráp `backup_data` (thấp; audit phiên 32 §5.4)
+
+> **ĐÃ ĐÓNG 2026-10-12** (phiên 41; audit §5.1). `app_version` là tham số từ khóa bắt buộc, `backup_data` luôn được ráp; 19 chỗ gọi (plan ghi nhầm 22). Ca cũ thay bằng ca khẳng định `TypeError`, routes không đổi, DB không có bảng; Orchestrator cắn bằng cách đặt lại giá trị mặc định và ca này bắt được.
 
 Phiên 32 cho `app_version` là tham số từ khóa tùy chọn, vì 20 chỗ gọi `wire_workflows(app, db, configs)` trong kiểm thử của các workflow khác không truyền nó, và agent không được sửa chúng. Quên truyền ở `main()` thì mất hai điểm giao tiếp mà không báo lỗi; kiểm thử tiến trình thật của `backup_data` chặn được điều đó. **Việc:** khi một phiên backend chạm lại các kiểm thử đó, cho chúng truyền `app_version`, rồi bỏ nhánh "không ráp".
 
