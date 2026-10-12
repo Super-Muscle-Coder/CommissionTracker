@@ -430,6 +430,28 @@ Hiện chỉ được kiểm bằng grep do agent tự chạy rồi ghi vào EVI
 
 Giao cho phiên kiểm độc lập của `UI/` (chặng H, câu hỏi 4).
 
+### H-7 — Ba ô chưa có ca: `restore_data` gọi sang backend (thấp; `.reviews/stage_h/h1_q3_matrix.md` §3)
+
+`create_backup` trả 400, `create_backup` trả thân sai hình dạng (mã đã trả 424), `prepare_restore` trả 400 (mã đã trả 503). Việc (phiên desktop chặng H): thêm ba chế độ vào `Desktop/tests/fixtures/fake_backend_restore.py` và ba ca kiểm thử.
+
+### H-9 — Chưa có ca khởi động cả ứng dụng khi thư mục dữ liệu không dùng được (trung bình; §4)
+
+Việc (phiên desktop chặng H): `--ct-test-data-dir` trỏ vào một tệp, hoặc một thư mục không ghi được. Khẳng định: hộp thoại lỗi tiếng Việt, mã thoát khác 0, không treo, không sót tiến trình python.
+
+### H-10 — Chưa có ca giết backend giữa lúc ghi (thấp; §4)
+
+Việc (phiên backend chặng H): một luồng ghi liên tục qua `http`, giết tiến trình giữa chừng, khởi động lại. Khẳng định: `PRAGMA integrity_check` = `ok`; mỗi bản ghi hoặc đủ hoặc không có; backend lên lại bình thường.
+
+### H-11 — Chưa có ca cho trạng thái sót lại khi tắt máy giữa lúc khôi phục (trung bình; §4)
+
+Suy luận từ `.design/f_restore.md` §3 là an toàn, nhưng chưa có ca. Việc (phiên desktop chặng H): dựng trạng thái sau bước 4 (bản ghi đang chờ, tệp chờ còn, `db_file_path` trống) → khẳng định `restored`, đúng dữ liệu bản sao lưu; dựng trạng thái sau bước 5 (bản ghi đang chờ, tệp chờ đã ở `db_file_path`) → khẳng định `discarded`, dữ liệu bản sao lưu, tệp cũ còn ở `restore-previous`. Kết quả khác suy luận thì là lỗi thật của chặng F: dừng và báo.
+
+### CT-9 — `native_dialogs.save_file` được khai trong API Contract nhưng không tồn tại (trung bình; H-8, §3) — **ĐÃ DUYỆT VÀ GHI 2026-10-12** (hướng A)
+
+> Project Owner chọn hướng A ngày 2026-10-12. Orchestrator ghi API Contract **6.0.0**: bỏ `clause_a_common.cross_cutting.native_dialogs.entries.save_file`, kèm changelog; sửa bảng §1 và đoạn `native_dialogs` của `.design/ui_decomposition.md`, `CLAUDE.md` mục 6. **Việc còn lại cho phiên desktop chặng H (pha 2):** chú thích và checkpoint của `Desktop/src/cross_cutting/native_dialogs/native_dialogs.ts` còn nói `save_file` "vẫn nằm trong hợp đồng"; sửa cho đúng 6.0.0. Ca N2 (preload từ chối `dialog:save-file`) vẫn đúng: nay đó là một địa chỉ không khai báo. Mọi tệp ghi phiên bản API Contract trong `Desktop/`, `UI/` (Configs, chú thích) được rà ở phiên kiểm độc lập của từng layer.
+
+Desktop chưa hiện thực `dialog:save-file` (checkpoint `native_dialogs`, phiên 35); preload từ chối, ca N2 khẳng định. **Hướng A (Orchestrator đề xuất):** bỏ `save_file` khỏi `clause_a_common.cross_cutting.native_dialogs.entries`; phá vỡ, API Contract 5.0.0 → 6.0.0; không bên nào bị ảnh hưởng. **Hướng B:** giữ, ghi changelog là chưa hiện thực.
+
 ## Hợp đồng — chờ Project Owner duyệt
 
 ### CT-8 — `restore_data` lên `đã_hoàn_thiện` (đề xuất 2026-10-08, audit phiên 36 §6) — **ĐÃ DUYỆT VÀ GHI 2026-10-09** (Data Schema 10.0.1). Project Owner đặt điều kiện: duyệt nếu hai ca hỏng ở lượt chạy lại (N14, D2) không nghiêm trọng; Orchestrator đánh giá không nghiêm trọng (audit phiên 36 §5.7: chỗ đua của công cụ kiểm thử, chức năng đúng; DSK-27). DSK-26 làm sai một cam kết trong `description` của `restore_data` ("never ends up without a working database") ở một trường hợp chưa từng xảy ra, nên phải đóng trong chặng F

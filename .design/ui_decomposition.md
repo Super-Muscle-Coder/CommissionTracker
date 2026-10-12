@@ -40,7 +40,7 @@ Bảng này sinh ra từ `api_contract.yaml` 4.0.0, đối chiếu lại với 5
 | | `acknowledge` | http `PUT /reminders/{notification_id}/ack` | 200, 404, 500 |
 | `backup_data` | `create_backup` | http `POST /backups` | 201, 400, 500 |
 | `restore_data` (desktop) | `request_restore`, `get_restore_status`, `cancel_restore` | ipc `restore:prepare`, `restore:status`, `restore:cancel` | 200, 400, 404, 409, 424, 500, 503 (prepare); 200, 500 (status, cancel). Theo API Contract 5.0.0 (CT-7); chi tiết ở mục "Chặng F — Khôi phục". `apply_pending_restore` (`in_process`, chỉ `restore_trigger` gọi) không có `external`, nên không nằm trong bảng |
-| `native_dialogs` (cắt ngang, desktop) | `open_file`, `save_file`, `pick_folder` | ipc `dialog:open-file`, `dialog:save-file`, `dialog:pick-folder` | 200 |
+| `native_dialogs` (cắt ngang, desktop) | `open_file`, `pick_folder` | ipc `dialog:open-file`, `dialog:pick-folder` | 200. `save_file` bị bỏ khỏi hợp đồng ở API Contract 6.0.0 (CT-9, 2026-10-12) |
 | `manage_watermark_profile` | `create_profile`, `list_profiles`, `get_profile`, `edit_profile`, `list_strengths` | http `/watermark-profiles…`, `GET /watermark-strengths` | — (loại trừ, §4) |
 | `apply_watermark` | `apply`, `list_artworks`, `get_artwork` | http `/artworks…` | — (loại trừ, §4) |
 | `verify_watermark` | `verify` | http `POST /verifications` | — (loại trừ, §4) |
@@ -68,7 +68,7 @@ Mặc định của iWCA: mỗi workflow hệ thống mà giao diện dùng có 
 | `backup_data` | `nghiệp_vụ` | `backup_data` | Mở hộp thoại chọn thư mục (Adapters gọi `native_dialogs.pick_folder` qua `ipc_bridge`), rồi tạo bản sao lưu vào thư mục đó (`create_backup`, luôn `purpose: 'manual'`); trình bày kết quả (đường dẫn tệp, dung lượng, lúc tạo); chọn câu thông báo cho từng nhãn và cho lần hộp thoại hỏng. Chi tiết ở mục "Chặng E — Sao lưu". | E |
 | `restore_data` | `nghiệp_vụ` | `restore_data` (desktop, `ipc`) | Đọc trạng thái khôi phục đang chờ (`restore:status`); mở hộp thoại chọn tệp sao lưu (Adapters gọi `native_dialogs.open_file` qua `ipc_bridge`); hỏi xác nhận trong trang, nói rõ hậu quả; chuẩn bị (`restore:prepare`); hủy lần đang chờ (`restore:cancel`); chọn câu thông báo cho từng nhãn; đọc lại trạng thái sau mọi lần chuẩn bị hay hủy không thành. Không dùng `http_client`. Chi tiết ở mục "Chặng F — Khôi phục". | F |
 
-**`native_dialogs`** là hạ tầng cắt ngang của desktop, không có workflow giao diện đối ứng. Workflow giao diện nào cần chọn tệp hay thư mục (`backup_data` với `pick_folder`, `restore_data` với `open_file`) gọi nó qua Adapters của chính mình, dùng tài nguyên `ipc_bridge`; mỗi workflow giữ bản riêng của địa chỉ và cách kiểm hình dạng câu trả lời (trùng lặp có chủ đích, như I1.3). Desktop có `pick_folder` từ phiên 33 và `open_file` từ phiên 35; `save_file` chưa có, và giao diện không gọi nó.
+**`native_dialogs`** là hạ tầng cắt ngang của desktop, không có workflow giao diện đối ứng. Workflow giao diện nào cần chọn tệp hay thư mục (`backup_data` với `pick_folder`, `restore_data` với `open_file`) gọi nó qua Adapters của chính mình, dùng tài nguyên `ipc_bridge`; mỗi workflow giữ bản riêng của địa chỉ và cách kiểm hình dạng câu trả lời (trùng lặp có chủ đích, như I1.3). Desktop có `pick_folder` từ phiên 33 và `open_file` từ phiên 35. `save_file` chưa từng được hiện thực, và đã bị bỏ khỏi hợp đồng ở API Contract 6.0.0 (CT-9, 2026-10-12).
 
 ## 3. Giá trị khởi động (Bước I1.4)
 

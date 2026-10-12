@@ -70,9 +70,19 @@
 #            restore_data.apply_pending_restore and shows the outcome (CT-7).
 #   v5.0.0 — [Clause A, SỬA] error_codes.ERR_RESTORE_FAILED.meaning fitted
 #            to the apply phase. Wording only (CT-7).
+#   v6.0.0 — [Clause A, XÓA] cross_cutting.native_dialogs.entries.save_file
+#            (ipc dialog:save-file) removed. It was declared in v1.0.0 but
+#            never built: the desktop preload refuses the address (desktop
+#            checkpoint native_dialogs, session 35; case N2), so the
+#            contract described an entry the system does not have. No page
+#            needs to save a file in V1; the entry is added back when one
+#            does. Breaking change: a declared entry was removed. Affected
+#            code: none (no caller; nothing implements it). Found in the
+#            stage H inventory (.reviews/stage_h/h1_q3_matrix.md, H-8);
+#            approved by the Project Owner on 2026-10-12 (open_issues CT-9).
 # =============================================================================
 
-api_version: 5.0.0
+api_version: 6.0.0
 contract_state: approved
 
 # -----------------------------------------------------------------------------
@@ -131,13 +141,6 @@ clause_a_common:
           address: "dialog:open-file"
           called_by: [external]
           input: { filters: "list[object { name: string, extensions: list[string] }]|null" }
-          output:
-            200: { type: "object { canceled: boolean, path: file_path|null }" }
-        save_file:
-          form: ipc
-          address: "dialog:save-file"
-          called_by: [external]
-          input: { suggested_name: "string|null", filters: "list[object { name: string, extensions: list[string] }]|null" }
           output:
             200: { type: "object { canceled: boolean, path: file_path|null }" }
         pick_folder:

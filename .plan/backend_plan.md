@@ -1,182 +1,150 @@
 # ===WCA-PLAN===
 # session_for: backend
 # drafted_by: Orchestrator + Project Owner
-# drafted_at: 2026-10-11T20:30:00+07:00
-# contract: data_schema 10.0.1, api_contract 5.0.0 (approved)
+# drafted_at: 2026-10-12T15:30:00+07:00
+# contract: data_schema 10.0.1, api_contract 6.0.0 (approved)
 
 ## MỤC TIÊU PHIÊN NÀY
 
-Phiên 41 của dự án, phiên backend thứ mười bốn, thuộc chặng G. Phiên ngắn, không thêm tính năng. Ba mã:
+Phiên 42 của dự án, phiên backend thứ mười lăm, thuộc **chặng H: rà soát lại toàn bộ V1**. Đây là một **phiên kiểm độc lập** cho layer `Backend/`.
 
-| Mã | Việc | Căn cứ |
-|---|---|---|
-| **BE-11** | Chứng minh cơ chế nâng cấp cấu trúc lưu trữ chạy đúng khi có một bước nâng cấp **thật sự áp lên dữ liệu đã có**. Hiện chưa từng có bước nào ngoài bước 1 | `.plan/open_issues.md` BE-11; thay cho tiêu chí 4 của DSK-21 ở bản 1.0 (Project Owner chọn hướng A, 2026-10-11) |
-| **BE-9** | `wire_workflows` bắt buộc nhận `app_version`; bỏ nhánh "không ráp `backup_data`" | BE-9 (audit phiên 32 §5.4) |
-| **BE-10** | Bỏ mọi chú thích tắt kiểm tra trong `Backend/` (`# noqa`, `# type: ignore`, `# pragma`) | BE-10 (Orchestrator phát hiện 2026-10-10) |
+Bạn chưa từng thấy mã này được viết ra sao, và đó là lý do bạn được giao việc. Hãy đọc mã như một người kiểm, không phải người viết: không mặc định là mã đúng, không mặc định là mã sai. Mọi kết luận dựa trên tệp, dòng và lệnh chạy được.
 
-**Không đổi hành vi nào mà bên ngoài nhìn thấy.** Không điểm giao tiếp, nhãn, mã lỗi hay cấu trúc bảng nào đổi. Không thêm bước nâng cấp nào vào mã sản phẩm. Hợp đồng không đổi.
+Phiên có **hai pha**:
+- **Pha 1 (plan này): chỉ đọc.** Đọc mã, chạy kiểm thử, làm phép cắn trên **bản sao nằm ngoài kho**. Không sửa tệp nào trong kho. Cuối pha 1, gửi báo cáo đầy đủ mọi phát hiện, rồi **dừng và chờ**.
+- **Pha 2: vá.** Chỉ bắt đầu khi Project Owner mang tới quyết định của Orchestrator, kèm plan pha 2 (tệp này sẽ được ghi đè). Pha 2 gồm những phát hiện được chọn sửa, cộng vài việc đã biết của layer.
 
-**Điểm dừng:**
-- 564 kiểm thử cũ cộng các ca mới đều đạt, ba lượt liên tiếp;
-- mỗi workflow có bảng có một kiểm thử nâng cấp đủ năm khẳng định của BE-11;
-- `Backend/` không còn `noqa`, `type: ignore` hay `pragma`;
-- Desktop `npm test` và UI e2e vẫn đạt với backend mới.
+**Điểm dừng pha 1:** báo cáo có đủ các phần ở mục "BÁO CÁO PHA 1"; `git status --short` không đổi so với đầu phiên.
 
-## ĐẶC TẢ ĐÃ CHỐT
+## CÂU HỎI CẦN TRẢ LỜI
 
-### BE-11 — kiểm thử cơ chế nâng cấp cấu trúc lưu trữ
+Một câu hỏi lớn: **`Backend/` có theo đúng WCA (`wca-implementation` v2.3) và đúng hợp đồng không?** Chia thành bảy phần.
 
-**Hiện trạng** (Orchestrator đọc ngày 2026-10-11):
-- Sáu workflow có bảng: `manage_client`, `manage_commission`, `update_progress`, `record_payment`, `manage_watermark_profile`, `send_reminder`.
-- Mỗi workflow có `_STORAGE_UPGRADES` ở cấp module trong `adapters.py`, hiện chỉ có bước 1, và `ensure_storage()` chạy các bước còn thiếu rồi ghi phiên bản, trong **một** `db.transaction()`.
-- `scaffold_backend` mở kết nối với `isolation_level=None`, và `transaction()` tự `BEGIN IMMEDIATE` … `COMMIT` / `ROLLBACK`. Về lý thuyết, SQLite cho DDL nằm trong giao dịch, nên một bước hỏng giữa chừng phải được hoàn tác cả. **Chưa ai đo điều đó.**
-- Kiểm thử hiện có chỉ phủ: tạo mới (phiên bản 0 lên 1), và "phiên bản mới hơn bản build biết thì dừng khởi động".
+### K1 — Bố cục (`04-implement.md`, Bước 4.0; `CLAUDE.md` mục 4)
+- Theo workflow trước, theo lớp sau. Mỗi workflow nghiệp vụ đủ năm lớp: Configs, Entities, Adapters, Services, Routers. Workflow nền tảng chỉ có lớp nó thật sự cần.
+- `shared/`, nếu có, thỏa `05-edge-cases.md` Bước 5.3.
+- `Backend.pyproj` khớp với thư mục thật (`CLAUDE.md` mục 5).
 
-**Quyết định của Orchestrator: kiểm cả sáu workflow, không chọn một workflow đại diện.** Lý do: mỗi workflow tự viết `ensure_storage()` của mình, không dùng chung một hàm. Một workflow đúng không chứng minh năm workflow kia đúng. Mỗi kiểm thử ngắn và giống nhau.
+### K2 — Ranh giới giữa các lớp (lý thuyết §4, câu hỏi tự kiểm của từng thành phần)
+Với **từng** workflow, đọc từng lớp và trả lời đúng câu hỏi tự kiểm in nghiêng của lớp đó trong `wca_theory_compressed.md` §4. Cụ thể:
+- Entities chỉ mô tả hình dạng: không động từ, không điều kiện, không phép tính.
+- Adapters chỉ làm một hành động kỹ thuật, không tự quyết trình tự. Dùng phép thử "công cụ hay quyết định" (§4, Adapters).
+- Services là nơi duy nhất quyết định; không tự tạo Adapters; không gõ thẳng lệnh kỹ thuật (SQL, đọc tệp…) mà không qua Adapters.
+- Routers chỉ kiểm định dạng (đúng những gì `type` mô tả) và chuyển giao. Mọi kiểm tra cần ý nghĩa nghiệp vụ hay dữ liệu đang lưu thuộc Services.
+- Configs: không con số hay chuỗi nào có ý nghĩa bị gõ thẳng vào code.
 
-**Mỗi workflow có một kiểm thử, nằm trong `workflows/<tên>/tests/`, làm như sau:**
-1. Tạo cơ sở dữ liệu bằng **mã thật** ở phiên bản 1, rồi ghi ít nhất một bản ghi qua đúng điểm giao tiếp `http` của workflow đó (như các kiểm thử hiện có).
-2. Dừng, rồi khởi động lại trên cùng tệp dữ liệu, với `_STORAGE_UPGRADES` của workflow đó được thay **chỉ trong kiểm thử** (ví dụ `monkeypatch.setattr`) bằng danh sách cũ cộng một **bước 2 giả**. Bước 2 chỉ chạm bảng của chính workflow đó, ví dụ thêm một cột mới vào một bảng của nó.
-3. Khẳng định **năm** điều:
-   - **(a) bước 2 đã chạy:** cột hay chỉ mục mới có trong bảng (đọc bằng `PRAGMA table_info` hay `sqlite_master` trên tệp dữ liệu, trong kiểm thử);
-   - **(b) dữ liệu cũ còn nguyên:** đọc lại bản ghi ở bước 1 qua điểm giao tiếp `http`, kết quả giống hệt trước khi nâng cấp;
-   - **(c) phiên bản ghi lên 2:** bảng `<tên>_schema_version` có đúng một dòng, giá trị 2;
-   - **(d) khởi động lại lần nữa thì không chạy lại bước 2:** khởi động lần ba với cùng danh sách. Phải chạy được (nếu bước 2 là `ALTER TABLE … ADD COLUMN`, chạy lại sẽ báo trùng cột), và phiên bản vẫn là 2;
-   - **(e) bước hỏng thì hoàn tác cả:** trên một tệp dữ liệu mới ở phiên bản 1, khởi động với bước 2 gồm **một câu lệnh đúng rồi một câu lệnh sai**. Việc khởi động phải thất bại; phiên bản vẫn là 1; tác dụng của câu lệnh đúng không còn; dữ liệu cũ còn nguyên.
-4. Cách khởi động lại do agent chọn: gọi lại `wire_workflows` trên kết nối mới, hay khởi động tiến trình như các kiểm thử tiến trình hiện có. Ghi lý do.
+### K3 — Main (`Backend/Backend.py`)
+- Main chỉ đọc cấu hình, khởi tạo và ráp nối, quản lý vòng đời. Không có dòng logic nghiệp vụ nào.
+- Thứ tự ráp nối khớp `.design/03_classification.md`.
+- Tín hiệu sẵn sàng (`READY`) chỉ phát sau khi mọi workflow đã được ráp.
+- Main không đọc tệp hợp đồng lúc chạy.
 
-**Nếu khẳng định (e) không đạt ở workflow nào:**
-- dừng lại và báo Orchestrator, kèm điều đo được;
-- **không** tự sửa `scaffold_backend` hay `ensure_storage()`.
+### K4 — Cô lập giữa các workflow (lý thuyết §4, workflow nghiệp vụ; `06-self-check.md` Bước 6.1)
+- Không workflow nào nhập (`import`) mã nội bộ của workflow khác. Lời gọi sang workflow khác đi qua Adapters của bên gọi, tới đúng Routers của bên được gọi.
+- Mỗi bảng thuộc đúng một workflow. Không workflow nào đọc hay ghi thẳng bảng của workflow khác, kể cả qua SQL thô. Hãy kiểm bằng cách tìm mọi câu SQL trong `Backend/` và đối chiếu tên bảng với workflow sở hữu.
+- Dữ liệu nhận từ workflow khác được mô tả bằng Entities của chính bên nhận.
+- `input_expected` của từng workflow: dữ liệu thật sự đọc vào đến từ đúng nguồn `from` đã khai.
 
-Đó là một lỗi thật về an toàn dữ liệu, cần Orchestrator quyết cách sửa.
+### K5 — Đối chiếu hợp đồng, cả hai chiều (`06-self-check.md` Bước 6.1)
+Với từng workflow trong `clause_b_backend`, trừ `apply_watermark` và `verify_watermark` (chưa triển khai, V4 trở đi):
+- Mỗi điểm giao tiếp trong `api_contract.yaml` có **đúng một** lối vào trong Routers, khớp `form`, `address`, `input` và **từng** nhãn trong `output`. Ngược lại, không có lối vào nào mà hợp đồng không khai (tài liệu tự sinh của FastAPI phải tắt, `CLAUDE.md` mục 5).
+- `output_guaranteed` là tập con của Entities; dữ liệu đi ra ranh giới mang đúng các trường của `type`, không lọt trường nội bộ.
+- Quy tắc trường thừa theo ba vai (`02-contract.md` Bước 2.3): input có trường thừa bị từ chối; dữ liệu nhận từ workflow khác bỏ qua trường thừa.
+- Mọi giá trị ranh giới trong Configs (kể cả `shared_values`, `mandatory_rules`) truy được về đúng dòng trong hợp đồng.
+- `status` trong hợp đồng: mọi workflow `đã_hoàn_thiện` có bằng chứng tương ứng (K7).
 
-**Phép cắn** (chỉ trên bản sao tạm, khôi phục ngay):
-- (a) trong `ensure_storage()` của một workflow, bỏ dòng `UPDATE … SET version`: khẳng định (c) và (d) phải hỏng;
-- (b) đổi điều kiện `version > current` thành `version >= current`: khẳng định (d) phải hỏng;
-- (c) cho từng bước chạy trong một `transaction()` riêng thay vì chung: khẳng định (e) phải hỏng.
+### K6 — Ma trận lối vào × nhãn, tự dựng
+Tự dựng, không dựa vào tài liệu nào khác: với mỗi lối vào `http` và `in_process` của backend mà V1 dùng (bỏ hai workflow watermark chưa triển khai), với **mỗi** nhãn kết quả của nó, chỉ ra ít nhất một ca kiểm thử khẳng định đích danh nhãn đó qua đúng lối vào thật. Ô nào không có ca thì ghi rõ.
 
-Mỗi phép làm trên một workflow, ghi workflow nào.
+`manage_watermark_profile` đang chạy nhưng V1 không ai gọi; vẫn dựng ma trận cho nó, ghi riêng.
 
-### BE-9 — `app_version` bắt buộc
+### K7 — Checkpoint và bằng chứng (`07-checkpoint-protocol.md`; `06-self-check.md` Bước 6.5, 6.6)
+- Mọi khối checkpoint trong `Backend/` đúng khuôn Giao thức 07: vị trí, khung, bốn mục, quy tắc ID, YAML hợp lệ.
+- Không còn `UNSOLVED_PROBLEMS`. Không NOTES quá 14 ngày tính tới hôm nay (`CLAUDE.md` mục 5).
+- **Mỗi mục EVIDENCE còn chạy lại được:** với mỗi mục, chạy lại đúng lệnh hoặc đúng ca kiểm thử nó nêu, và ghi đạt hay không. Mục nào nêu một thứ không còn tồn tại (ca đã đổi tên, lệnh không chạy được, con số đã khác) thì ghi rõ.
+- Nội dung checkpoint có khớp với mã hiện tại không: một EXPERIENCES mô tả hành vi mà mã không còn làm là một phát hiện.
 
-- `wire_workflows(app, db, configs, *, app_version, reminder_clock=None, backup_clock=None)`: `app_version` thành tham số từ khóa **bắt buộc, không có giá trị mặc định**.
-- Mọi chỗ gọi trong kiểm thử truyền một giá trị đúng dạng `x.y.z`, ví dụ `"1.0.0"`, đặt ở một chỗ dùng chung của từng tệp kiểm thử. Orchestrator đếm được 22 chỗ gọi trong 10 tệp (kể cả `Backend.py` và `workflows/send_reminder/services.py`). Agent đếm lại cho đủ.
-- Bỏ nhánh `if app_version is not None:` ở bước ráp `backup_data`: `backup_data` luôn được ráp.
-- **`test_backup_is_not_wired_without_app_version`** (`workflows/backup_data/tests/test_backup_data.py`) không còn đúng ý. Thay bằng một ca khẳng định: gọi `wire_workflows` mà không có `app_version` thì báo `TypeError`, và không ráp workflow nào.
-- `main()` đã truyền `app_version`. Không đổi gì ở `main()` ngoài khối checkpoint.
-
-### BE-10 — chú thích tắt kiểm tra
-
-**Hiện trạng** (Orchestrator rà ngày 2026-10-10):
-- 7 dòng `# noqa: F401` trên `from .adapters import … StorageIOError` ở `services.py` của `record_payment`, `view_income_report`, `backup_data`, `manage_watermark_profile`, `send_reminder`, `manage_client`, `update_progress`;
-- 2 dòng `# type: ignore[misc]` ở `compare_semver` của `workflows/backup_data/services.py`;
-- 1 dòng `# pragma: no cover` ở `workflows/manage_client/tests/test_manage_client.py`.
-
-`Backend/` **không cài linter, công cụ kiểm kiểu hay công cụ đo độ phủ nào** (`requirements-dev.txt` chỉ có `pytest`, `httpx`). Vì vậy các chú thích này hiện không tắt gì cả. Bỏ chúng để chặng H không phải giải thích từng dòng.
-
-**Cách làm:**
-- **`noqa: F401`:** mỗi dòng nhập lại `StorageIOError` để Routers chỉ phụ thuộc Services, như chú thích ngay trên dòng đó đã nói. Giữ việc nhập lại, bỏ `# noqa`, và khai báo tên được nhập lại trong `__all__` của `services.py`. `__all__` là cách chuẩn của Python để nói "tên này cố ý được xuất ra". Nếu một tên trong dòng đó **không** được dùng ở đâu cả, cả trong Services lẫn Routers, thì bỏ tên đó khỏi dòng nhập. Liệt kê trong báo cáo từng tên giữ hay bỏ.
-- **`type: ignore[misc]`:** `parse_semver` trả `None` khi chuỗi không hợp lệ, nên kiểu trả về là `… | None`. Trong `compare_semver`, thay hai dòng bằng phép kiểm tường minh: nếu `parse_semver` trả `None` thì ném `ValueError` nêu chuỗi không hợp lệ. Hiện mọi chỗ gọi `compare_semver` đều đã kiểm chuỗi trước, nên hành vi với giá trị hợp lệ không đổi. Thêm một ca kiểm thử: chuỗi không hợp lệ thì có `ValueError`.
-- **`pragma: no cover`:** bỏ chú thích, giữ nguyên mã.
-- **Cuối phiên**, rà toàn bộ `Backend/` (trừ `env/`, `__pycache__/`): không còn `noqa`, `type: ignore`, `pragma`. Chỗ nào không bỏ được thì dừng lại và báo, không tự giữ.
-
-**Không thêm linter hay công cụ kiểm kiểu** vào `requirements-dev.txt` trong phiên này. Việc đó, nếu cần, thuộc chặng H và phải được Project Owner duyệt (`CLAUDE.md` mục 5, công nghệ theo layer).
-
-## VIỆC CẦN LÀM, THEO THỨ TỰ
+## VIỆC CẦN LÀM, THEO THỨ TỰ (PHA 1)
 
 0. **Đọc tài liệu** theo `08-operating-protocol.md`, Phần 1:
-   - `CLAUDE.md`: mục 4, mục 5 (Backend, **phiên bản cấu trúc lưu trữ**, tệp `Backend.pyproj`), mục 6;
-   - `04-implement.md` (năm lớp), `07-checkpoint-protocol.md`;
-   - hợp đồng: `data_schema.yaml`, mục `clause_a_common.mandatory_rules` (luật mỗi workflow tự tạo và nâng cấp bảng của mình) và `backup_data` (`app_version`);
-   - code:
-     - `Backend/Backend.py`: khối checkpoint Main, `wire_workflows`, `main()`;
-     - `Backend/workflows/scaffold_backend/adapters.py`: `SharedConnection`, `transaction()`;
-     - `adapters.py` của sáu workflow có bảng (`_STORAGE_UPGRADES`, `ensure_storage`);
-     - `services.py` của bảy workflow có dòng `noqa`; `workflows/backup_data/services.py` (`parse_semver`, `compare_semver`);
-     - kiểm thử của các workflow và `Backend/tests/`;
-   - `.plan/open_issues.md`: BE-9, BE-10, BE-11, BE-8;
+   - `CLAUDE.md`, toàn bộ;
+   - bộ skill `wca-implementation`: `wca_theory_compressed.md`, `SKILL.md`, `02-contract.md` (Bước 2.3, 2.4), `04-implement.md`, `05-edge-cases.md`, `06-self-check.md`, `07-checkpoint-protocol.md`, `08-operating-protocol.md`;
+   - hợp đồng: `.contracts/data_schema.yaml` và `.contracts/api_contract.yaml`, phần `clause_a_common` và `clause_b_backend`, kèm changelog đầu mỗi tệp;
+   - `.design/03_classification.md`;
+   - toàn bộ `Backend/` (trừ `env/`, `__pycache__/`), mã lẫn kiểm thử;
    - plan này sau cùng.
 
-   Xác nhận Data Schema **`10.0.1`** và API Contract **`5.0.0`**, cả hai `approved`. Sai thì dừng lại và báo.
+   **Để giữ tính độc lập, ở pha 1 không đọc `.plan/open_issues.md` và `.plan/v1_roadmap.md`.** Hai tệp đó ghi các phát hiện cũ. Báo cáo pha 1 phải là cái nhìn của riêng bạn.
+
+   Xác nhận Data Schema **`10.0.1`** và API Contract **`6.0.0`**, cả hai `approved`. Sai thì dừng lại và báo.
 
 1. **Môi trường và mốc.**
    - Ghi phiên bản Python (`Backend\env\Scripts\python.exe --version`).
-   - `cd Backend; env\Scripts\python.exe -m pytest -q`: mốc **564**. Khác thì dừng lại và báo.
-   - Chụp mốc `%APPDATA%\CommissionTracker`.
-   - Ghi `git status --short` (chỉ đọc).
-   - Hỏi Project Owner hôm nay đã có phiên coding agent nào chạy chưa, để đếm `last_updated_by` cho đúng.
+   - Ghi `git status --short` (chỉ đọc). Kết quả này phải giống hệt lúc cuối pha 1.
+   - `cd Backend; env\Scripts\python.exe -m pytest -q`, **một lượt**: mốc **573**. Khác thì ghi rõ, không dừng.
+   - Hỏi Project Owner hôm nay đã có phiên coding agent nào chạy chưa (để ghi định danh phiên `coding-agent@<ngày>#<số>` trong báo cáo).
 
-2. **BE-9** trước, vì nó đổi các chỗ gọi `wire_workflows` mà kiểm thử của BE-11 sẽ dùng. Chạy `pytest` toàn bộ: phải đạt.
+2. **Đọc và trả lời K1 → K7**, theo thứ tự đó. Ghi phát hiện ngay khi thấy, kèm tệp và dòng.
 
-3. **BE-11.** Viết sáu kiểm thử; làm ba phép cắn.
+3. **Phép cắn**, chỉ trên bản sao. Mục đích: kiểm xem kiểm thử có thật sự bắt được những vi phạm quan trọng nhất không.
+   - Chép `Backend\` sang một thư mục tạm **ngoài kho**, ví dụ `$env:TEMP\ct_review_backend\` (dùng `robocopy` hoặc `Copy-Item -Recurse`; có thể bỏ `env\` rồi dùng interpreter gốc `E:\CommissionTracker\Backend\env\Scripts\python.exe`).
+   - Làm **ít nhất năm** phép cắn do bạn tự chọn, mỗi phép một vi phạm khác loại, ví dụ:
+     - một Routers tự quyết một điều kiện nghiệp vụ;
+     - một workflow đọc thẳng bảng của workflow khác;
+     - một nhãn kết quả bị đổi;
+     - Main phát `READY` trước khi ráp xong một workflow;
+     - một giá trị ranh giới trong Configs bị đổi.
+   - Với mỗi phép: sửa gì, ở đâu; ca nào bắt được; hay không ca nào bắt được. **Một phép cắn không bị bắt là một phát hiện.**
+   - Xóa thư mục tạm khi xong.
 
-4. **BE-10.** Bỏ các chú thích; thêm ca `ValueError`; rà toàn bộ `Backend/`.
+4. **Kết thúc pha 1.**
+   - `git status --short`: phải giống hệt bước 1.
+   - Gửi báo cáo, rồi **dừng**. Không tự bắt đầu sửa gì, kể cả việc nhỏ.
 
-5. **`Backend.pyproj`:** nếu thêm tệp kiểm thử mới thì thêm mục `<Compile Include>` tương ứng (`CLAUDE.md` mục 5). Sửa bằng công cụ soạn thảo tệp trực tiếp, không bằng script.
+## BÁO CÁO PHA 1
 
-6. **Chạy toàn bộ:**
-   - `pytest` **3 lượt liên tiếp**; ghi số đạt mỗi lượt;
-   - trong `Desktop/`: `npm test` một lượt (mốc **79**; trước đó chạy `node node_modules\electron\install.js` nếu `npm ci` làm mất tệp chạy Electron, ENV-10);
-   - trong `UI/`: `npm run build` rồi `npm run e2e` một lượt (mốc **83**), không đặt `CT_WALKTHROUGH_RUNNER`; `UI/evidence` không đổi.
+Bằng tiếng Việt, ngắn gọn, theo `CLAUDE.md` mục 5, gồm:
 
-   Không cần `dist` hay `test:packaged` ở phiên này: bản đóng gói chính thức sẽ được dựng và kiểm lại ở chặng H.
+1. **Môi trường:** phiên bản Python; số đạt của `pytest`; `git status --short` đầu và cuối.
+2. **Bảng phát hiện.** Mỗi dòng một phát hiện:
 
-7. **Checkpoint** theo Giao thức 07:
-   - Main (`Backend.py`): EXPERIENCES cho BE-9; sửa các câu hiện trạng còn nói `app_version` là tùy chọn;
-   - mỗi workflow có kiểm thử mới: EVIDENCE của kiểm thử nâng cấp;
-   - `backup_data`: EXPERIENCES cho `compare_semver`;
-   - khối có NOTES quá 14 ngày (`CLAUDE.md` mục 5): chuyển thành EXPERIENCES hoặc xóa, ghi trong báo cáo.
+   | Mã | Mức | Phần (K1–K7) | Vị trí (tệp:dòng) | Điều bị vi phạm (trích dẫn skill hoặc hợp đồng) | Bằng chứng (lệnh, trích mã) | Đề xuất sửa | Ước lượng (nhỏ / vừa / lớn) |
+   |---|---|---|---|---|---|---|---|
 
-   **Giờ ghi:** chép **nguyên** giá trị `Get-Date -Format o` lấy ngay trước khi ghi (BE-8). **Nếu sửa checkpoint sau khi đã chạy toàn bộ, chạy lại `pytest` một lượt** và ghi điều đó trong báo cáo.
+   Mã đặt `R42-1`, `R42-2`… Mức:
+   - **cao:** sai hợp đồng hoặc sai dữ liệu người dùng, hoặc ranh giới cô lập bị phá;
+   - **trung bình:** sai skill nhưng hành vi bên ngoài vẫn đúng;
+   - **thấp:** checkpoint, tài liệu, đặt tên.
 
-## KẾ THỪA TỪ CHECKPOINT — vấn đề tồn đọng
+   Không có phát hiện ở một phần thì ghi "không có", kèm một câu nói đã kiểm những gì.
+3. **Ma trận K6:** số ô, số ô có ca, danh sách ô thiếu. Không cần liệt kê ca của từng ô đã đủ.
+4. **EVIDENCE (K7):** bảng từng mục EVIDENCE, khối nào, chạy lại đạt hay không.
+5. **Phép cắn:** bảng từng phép, kết quả.
+6. **Những gì bạn không kiểm được** và vì sao.
 
-- **DSK-30, ENV-10, UI-21, UI-22:** việc của layer khác; không làm.
-- **ENV-7:** không chạy `npm audit fix`.
-- Không đụng `apply_watermark`, `verify_watermark` (V4 trở đi).
+Không có phát hiện nào là kết quả hợp lệ, nếu bạn đã kiểm đủ. Đừng tạo phát hiện cho đủ số. Cũng đừng bỏ qua một điều vì nó "nhỏ".
 
 ## RÀNG BUỘC CẦN NHỚ TỪ HỢP ĐỒNG
 
-- Mỗi workflow backend chỉ tạo và nâng cấp **bảng của chính nó**, qua Adapters của nó, lúc khởi động. Không bảng nào tham chiếu bảng của workflow khác. Cơ sở dữ liệu khôi phục từ một `app_version` cũ hơn được nâng cấp bằng chính bước khởi động đó (`clause_a_common.mandatory_rules`).
-- Gặp phiên bản cấu trúc mới hơn bản build biết thì dừng khởi động, không in `READY` (`CLAUDE.md` mục 5).
-- `backup_data.app_version`: semantic version của bản đang chạy, do Main trao lúc khởi động.
-- Không lối vào, nhãn, mã lỗi hay `status` nào đổi.
+- Hợp đồng chỉ quản lý ranh giới (nguyên tắc hộp đen). Cách làm bên trong một workflow không phải phát hiện, trừ khi nó phá một luật của skill hay của hợp đồng.
+- Mỗi workflow backend chỉ tạo và nâng cấp bảng của chính nó (`clause_a_common.mandatory_rules`).
+- `apply_watermark`, `verify_watermark` và `clause_c_ai_service` ở `đang_chờ_triển_khai`, cố ý chưa có mã (V4 trở đi). Việc chúng không có mã không phải phát hiện.
 
-## CẢNH BÁO — điều KHÔNG được làm trong phiên này
+## CẢNH BÁO — điều KHÔNG được làm trong pha 1
 
-- Không thêm bước nâng cấp nào vào `_STORAGE_UPGRADES` của mã sản phẩm. Bước 2 chỉ tồn tại trong kiểm thử.
-- Không sửa `scaffold_backend`. Không đổi cách `ensure_storage()` chạy, trừ khi BE-11 (e) hỏng, và khi đó thì dừng lại báo, không tự sửa.
-- Không đổi cấu trúc bảng, điểm giao tiếp, nhãn hay mã lỗi.
-- Không thêm phụ thuộc mới vào `requirements.txt` hay `requirements-dev.txt`.
-- Không sửa tệp nào ngoài `Backend/`. Được **chạy** các lệnh của `Desktop/` và `UI/`.
-- Không sửa `.contracts/`, `CLAUDE.md`, `.plan/`, `.design/`. Không đọc, không ghi `.reviews/`.
-- Không tắt, gỡ hay đổi cấu hình phần mềm diệt virus. Không sửa registry, không cài bộ cài.
-- Không thêm `noqa`, `type: ignore`, `pragma` hay chú thích tắt kiểm tra nào khác. Không viết kiểm thử luôn đạt.
+- **Không sửa, không tạo, không xóa tệp nào trong kho**, kể cả checkpoint, kể cả lỗi chính tả.
+- Phép cắn chỉ làm trên bản sao ngoài kho. Không làm trên `E:\CommissionTracker\Backend\`.
+- Không đọc `.plan/open_issues.md`, `.plan/v1_roadmap.md` ở pha 1. Không đọc, không ghi `.reviews/`.
+- Không sửa `.contracts/`, `CLAUDE.md`, `.plan/`, `.design/`.
 - Không chạy `git commit`, `push`, `reset`, `checkout`, `restore`, `stash` hay lệnh nào đổi trạng thái kho. Chỉ được đọc.
-- ⚠ Không kiểm thử hay lần chạy nào được đụng `%APPDATA%\CommissionTracker` thật. Kiểm thử dùng thư mục tạm; Desktop luôn chạy kèm `--ct-test-data-dir`.
+- ⚠ Không kiểm thử hay lần chạy nào được đụng `%APPDATA%\CommissionTracker` thật.
+- Không tắt, gỡ hay đổi cấu hình phần mềm diệt virus. Không sửa registry, không cài bộ cài.
+- Không cài thêm gói nào, không thêm linter hay công cụ kiểm kiểu. Muốn dùng một công cụ chưa có thì ghi vào phần 6 của báo cáo.
 - Không dùng sub-agent. Không chạy song song hai lệnh kiểm thử.
 
-## TIÊU CHÍ HOÀN TẤT PHIÊN
+## TIÊU CHÍ HOÀN TẤT PHA 1
 
-Phiên xong khi **tất cả** những điều dưới đây đúng, trên máy Project Owner, với antivirus đang bật:
-
-1. **BE-11:**
-   - sáu workflow có bảng, mỗi workflow một kiểm thử đủ năm khẳng định (a)–(e);
-   - ba phép cắn bắt được, có ghi workflow;
-   - không thêm bước nâng cấp nào vào mã sản phẩm.
-2. **BE-9:** `app_version` bắt buộc; mọi chỗ gọi đã truyền; nhánh "không ráp" đã bỏ; ca `TypeError` thay cho ca cũ.
-3. **BE-10:** `Backend/` (trừ `env/`, `__pycache__/`) không còn `noqa`, `type: ignore`, `pragma`; có `__all__` ở các `services.py` cần; có ca `ValueError` của `compare_semver`.
-4. `pytest` đạt **3 lượt liên tiếp**: 564 cộng các ca mới.
-5. Desktop `npm test` đạt 79/79 một lượt; UI e2e đạt 83/83 một lượt, `UI/evidence` không đổi.
-6. **Checkpoint:** YAML hợp lệ; giờ ghi đúng BE-8; `UNSOLVED_PROBLEMS: []` ở mọi khối đã sửa.
-7. Mốc `%APPDATA%` giống đầu phiên.
-8. `git status --short` cuối phiên chỉ có tệp trong `Backend/`. Liệt kê trong báo cáo, kèm `git check-ignore -v` cho từng tệp mới (`core.ignorecase=true`).
-9. **Báo cáo cuối phiên** theo `CLAUDE.md` mục 5, kèm:
-   - với từng workflow của BE-11: bước 2 giả là gì, và kết quả năm khẳng định;
-   - kết quả khẳng định (e) nói riêng (hoàn tác có chạy đúng không);
-   - các phép cắn;
-   - số chỗ gọi `wire_workflows` đã sửa;
-   - bảng BE-10: từng dòng, đã làm gì;
-   - số đạt của ba lượt `pytest`, của Desktop `npm test` và UI e2e;
-   - các lệnh để chạy lại.
+1. Đã trả lời đủ K1 → K7.
+2. Đã làm ít nhất năm phép cắn trên bản sao ngoài kho, và đã xóa bản sao.
+3. `git status --short` cuối pha 1 giống hệt đầu phiên.
+4. Báo cáo có đủ sáu phần ở mục "BÁO CÁO PHA 1".
