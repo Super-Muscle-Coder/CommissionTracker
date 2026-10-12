@@ -288,7 +288,11 @@ Cách làm: Orchestrator soạn runbook cho Project Owner chạy tay, gộp vớ
      - không NOTES quá hạn;
      - EVIDENCE nào còn ghi thì còn chạy lại được.
 
-**Bắt đầu 2026-10-12.** Bước 1, phần 1 (câu hỏi 1 và 2): `.reviews/stage_h/h1_inventory.md`; chờ Project Owner duyệt bảng sổ tồn đọng và cách làm câu hỏi 3, 4.
+**Bắt đầu 2026-10-12.** Bước 1, phần 1 (câu hỏi 1 và 2): `.reviews/stage_h/h1_inventory.md`; Project Owner duyệt 2026-10-12:
+- bảng sổ tồn đọng (§2.2), đã ghi vào `.plan/open_issues.md`; mục mới UI-23, BE-12, H-3, H-6;
+- BE-12 (Starlette): nâng ngay trong chặng H nếu khả thi, không thì V2 nhưng giữ mục mở;
+- **câu hỏi 3, ổn định:** mỗi bộ kiểm thử 3 lượt liên tiếp trên máy Project Owner, trong lúc máy được dùng bình thường; lượt hỏng vẫn tính và phải báo;
+- **câu hỏi 4:** mỗi layer một phiên kiểm độc lập (`Backend/`, `Desktop/` theo WCA; `UI/` theo iWCA), không đọc audit cũ. **Pha 1 chỉ đọc:** phiên đọc mã, chạy kiểm thử và phép cắn trên bản sao, không sửa tệp nào, rồi gửi báo cáo đầy đủ mọi phát hiện và dừng. Orchestrator đọc báo cáo, chọn việc sửa. **Pha 2, vá:** việc nhỏ có thể giao lại cho chính phiên đó (đã có context của layer), sau khi Project Owner mang quyết định của Orchestrator về; việc lớn vào phiên vá mới. Pha 2 được audit như mọi phiên.
 
 **Cách làm (đề xuất, chốt khi tới chặng):**
 - **Bước 1, kiểm kê:** Orchestrator kiểm kê, không viết code. Mỗi câu hỏi trên ra một danh sách chỗ thiếu, kèm mức độ. Để công việc không tự chấm điểm chính nó, phần kiểm mã theo hai skill nên do một phiên kiểm độc lập làm, chưa từng thấy mã được viết ra sao, rồi Orchestrator đối chiếu.

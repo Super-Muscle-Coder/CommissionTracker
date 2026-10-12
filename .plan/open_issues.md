@@ -53,6 +53,8 @@ Mức độ:
 
 ### DSK-3 — Lần mở đầu tiên chờ khoảng 33–36 s (trung bình; là Q-C1 của audit phiên 13)
 
+> **ĐÃ ĐÓNG 2026-10-12, chặng H bước 1** (Project Owner duyệt 2026-10-12, `.reviews/stage_h/h1_inventory.md` §2.2): V1 chấp nhận khoảng chờ ở lần mở đầu sau mỗi lần cài; không ký số ở V1 (`.design/v1_scope.md` §3.4). Mở lại khi thương mại hóa.
+
 > **Thêm bằng chứng 2026-10-11** (runbook chặng G, mục K1): ở lần mở đầu của mỗi exe mới, log có **hai** tiến trình Main nối nhau. Bản thứ nhất (có dòng `Failed to find real location of …python.exe`) chạy khoảng 25 s, không hiện lên màn hình, rồi backend của nó thoát với mã 0 và nó ghi `FATAL: The backend stopped unexpectedly (exit code 0)`. Bản thứ hai chạy bình thường. Project Owner chỉ thấy phải chờ. Đọc là antivirus chạy thử exe trong môi trường cách ly (giả thuyết H1), lần này có log của cả hai bản. Hai backend không chồng thời gian lên nhau; khóa BE-3 vẫn chặn. Hướng xử lý vẫn là ký số (DSK-9). **Project Owner quyết 2026-10-11: không ký số ở V1; V1 chấp nhận khoảng chờ này** (`.design/v1_scope.md` §3.4).
 > **Project Owner xác nhận 2026-10-11:** khi mở ứng dụng, thấy hai phần mềm antivirus quét rồi mới cho khởi động. Log cho thấy việc quét chỉ kéo dài ở lần mở đầu của một exe mới; các lần mở sau cùng exe (19:46, 19:52) có backend READY trong khoảng 1 s, chỉ một tiến trình Main.
 
@@ -100,6 +102,8 @@ Mục Publisher trong danh sách gỡ cài đặt đang trống. **Project Owner
 
 ### DSK-8 — Lỗi sandbox mạng của Chromium với thư mục dữ liệu tạm (thấp — chỉ quan sát)
 
+> **Quyết 2026-10-12, chặng H bước 1** (Project Owner duyệt 2026-10-12, `.reviews/stage_h/h1_inventory.md` §2.2): đóng nếu lần chạy ENV-4 không gặp lại lỗi; nếu gặp thì giữ mở và xem lại.
+
 > **Phiên 14: 0 lần xuất hiện trong mọi lượt đo. Giữ ở mức chỉ quan sát.**
 
 `Failed to grant sandbox access to cache directory …\Temp\ct-startup-…\electron-user-data\…: Access is denied`. Lỗi này xuất hiện khi chạy với `--ct-test-data-dir` trong `%TEMP%`, và ứng dụng vẫn chạy.
@@ -115,6 +119,8 @@ Mục Publisher trong danh sách gỡ cài đặt đang trống. **Project Owner
 Phiên desktop sau thêm vào.
 
 ### DSK-9 — Đã chấp nhận ở V1, không làm ở phiên 14
+
+> **V2 trở đi, quyết 2026-10-12, chặng H bước 1** (Project Owner duyệt 2026-10-12, `.reviews/stage_h/h1_inventory.md` §2.2): Q4 (đua SIGINT lúc khởi động) và Q-C2 (điều hướng thay thế sau `ERR_ABORTED`) chưa từng xảy ra khi dùng thật. Ký số và biểu tượng đã có quyết định riêng (thương mại hóa; V3).
 
 - **Q4** (audit phiên 10): cuộc đua khi nhận SIGINT lúc đang khởi động.
 - **Q-C2** (audit phiên 13): điều hướng thay thế sau `ERR_ABORTED` nếu hỏng thì không ai báo.
@@ -153,6 +159,8 @@ Gộp vào phiên backend ngắn cùng BE-1 và BE-2.
 
 ### BE-4 — `data.db.lock` trong thư mục dữ liệu (thấp; Q15-1 của audit phiên 15) — cho plan chặng E và F
 
+> **ĐÃ ĐÓNG 2026-10-12, chặng H bước 1** (Project Owner duyệt 2026-10-12, `.reviews/stage_h/h1_inventory.md` §2.2): `backup_data` chép bằng backup API của SQLite nên chỉ chép `data.db` (phiên 32); `restore_data` chỉ di chuyển `data.db` (phiên 36).
+
 `backup_data` không sao lưu tệp này. `restore_data` không xóa hay di chuyển nó; chỉ di chuyển `data.db`. Xem `main-EXP-013` của Main backend.
 
 ### BE-5 — Backend áp dụng CT-2: `client_input` not blank (trung bình; Data Schema 7.0.0) — **plan phiên 18** (`.plan/backend_plan.md`, phát hành 2026-09-28)
@@ -171,6 +179,8 @@ Cùng cách làm với BE-5, cho `manage_commission` và `manage_watermark_profi
 
 ### DSK-11 — Desktop chưa diễn giải mã thoát 3 của backend (thấp; Q15-2) — không làm ở V1
 
+> **V2 trở đi, quyết 2026-10-12, chặng H bước 1** (Project Owner duyệt 2026-10-12, `.reviews/stage_h/h1_inventory.md` §2.2): muốn làm phải đưa cơ chế mã thoát vào hợp đồng trước.
+
 Desktop thử lại ba lần trên cổng khác, rồi báo một thông báo chung. Nếu muốn có thông báo riêng, việc đó thuộc phiên desktop sau V1.
 
 *Rà soát 2026-09-28:* **không rẻ như vẻ ngoài.** Mã thoát 3 là giá trị trong `Backend/configs/backend.yaml`, còn hợp đồng (Data Schema 6.2.0) ghi rõ "The mechanism belongs to the backend; no other layer relies on how it is done". Muốn desktop hiểu mã này thì phải đưa nó vào hợp đồng trước. Giữ nguyên: không làm ở V1.
@@ -187,6 +197,8 @@ Lúc lập plan (2026-09-30), Orchestrator thấy kiểm thử `test_method_is_f
 
 ### BE-8 — Thời điểm trong checkpoint `record_payment` sai khoảng một giờ (thấp; Q23-1 của audit phiên 23) — cho phiên backend kế tiếp
 
+> **Chặng H, phiên vá backend** (quyết 2026-10-12, Project Owner duyệt 2026-10-12, `.reviews/stage_h/h1_inventory.md` §2.2): còn sót đúng một dòng, `Backend/workflows/record_payment/services.py:301`, `recorded_at: 2026-09-30T23:40:00+07:00`. Sửa thành thời điểm thật nếu xác định được, hoặc ghi rõ là không xác định được; không đổi gì khác.
+
 Checkpoint ở đầu `record_payment/services.py` ghi `last_updated_at` và `recorded_at` của EVIDENCE BE-7 là `2026-09-30T23:40:00+07:00`, trong khi tệp được ghi lần cuối lúc 22:38:59 (+07:00). Sửa hai giá trị thành thời điểm thật. Không đổi gì khác.
 
 **Cùng loại, phiên 24** (audit phiên 24 §5.5): bốn khối checkpoint giao diện ghi 20:20–20:25, trong khi tệp được ghi 20:17–20:19. Lệch vài phút, không cần sửa riêng. **Quy ước cho mọi plan từ nay:** agent lấy giờ bằng lệnh (`Get-Date -Format o`) ngay trước khi ghi checkpoint, không ước lượng.
@@ -194,6 +206,8 @@ Checkpoint ở đầu `record_payment/services.py` ghi `last_updated_at` và `re
 **Phiên 25** (audit phiên 25 §5.3): giờ đã lấy bằng lệnh nhưng vẫn muộn hơn lúc ghi tệp từ 11 s tới khoảng 1 phút, có vẻ do làm tròn lên. Quy ước bổ sung: chép nguyên giá trị của lệnh, không làm tròn.
 
 ### DSK-16 — `test:packaged` hỏng từ phiên 16 mà không ai biết (trung bình, quy trình; audit phiên 26 §5.2)
+
+> **ĐÃ ĐÓNG 2026-10-12, chặng H bước 1** (Project Owner duyệt 2026-10-12, `.reviews/stage_h/h1_inventory.md` §2.2): đã thành quy ước trong plan; tiêu chí chặng G có `test:packaged`.
 
 `packaged_app.spec.ts` chờ câu trạng thái rỗng cũ của `client_list`; câu đó đổi ở phiên giao diện 16, còn `test:packaged` chỉ chạy ở phiên desktop (gần nhất là phiên 14). Agent phiên 26 sửa dòng chờ chữ, Orchestrator chấp nhận.
 
@@ -252,6 +266,8 @@ Chưa có thành phần này thì trong dùng thật danh sách nhắc việc đ
 
 ### DSK-20 — Bấm toast trong Action Center sau khi toast lui vào đó: chưa đo (thấp; V2; audit phiên 30 §5.7)
 
+> **V2 trở đi, quyết 2026-10-12, chặng H bước 1** (Project Owner duyệt 2026-10-12, `.reviews/stage_h/h1_inventory.md` §2.2): đặc tả V1 không đòi.
+
 Main bỏ tham chiếu tới `Notification` khi nhận `close`, mà agent đo được `close` sau khoảng 9,5 s, lúc toast lui vào Action Center. Bấm ở Action Center sau đó có tới tiến trình hay không: chưa đo. Đặc tả V1 không đòi. Xem lại ở V2, cùng việc đo trên bản cài sạch (ENV-8).
 
 ### DSK-21 — Cài bản mới đè lên bản cũ chưa được định nghĩa và chưa được kiểm (trung bình; thuộc V1, chặng G; Project Owner nêu 2026-10-05) — **Project Owner duyệt 2026-10-05**: năm tiêu chí dưới đây vào tiêu chí chặng G (`.plan/v1_roadmap.md`)
@@ -300,6 +316,8 @@ Phiên 35: một lần chạy `npm run probe` thoát với mã 3221225477 (vi ph
 
 ### DSK-24 — Bản sao lưu an toàn tích lũy (thấp; V2; audit phiên 35 §5.4)
 
+> **V2 trở đi, quyết 2026-10-12, chặng H bước 1** (Project Owner duyệt 2026-10-12, `.reviews/stage_h/h1_inventory.md` §2.2): đúng đặc tả V1; trang Khôi phục đã nói rõ.
+
 Mỗi lần `restore:prepare` thành công tạo thêm một bản sao lưu an toàn trong `safety-backups`; không có gì dọn. Đúng đặc tả V1. **V2:** dọn bản cũ (ví dụ chỉ giữ N bản gần nhất), kèm đặc tả và có thể cả sửa hợp đồng. Trang Khôi phục ở V1 nói rõ mỗi lần chuẩn bị tạo một bản an toàn.
 
 ## Layer desktop — sau audit phiên 36
@@ -342,6 +360,8 @@ Backend chết trong lúc trang đầu đang nạp: `onUnexpectedExit` gọi `fa
 
 ### DSK-30 — Kiểm thử Desktop chưa ổn định khi máy tải nặng (thấp; audit phiên 39 §5.1, §5.3) — chặng H câu hỏi 3, hoặc phiên desktop kế tiếp của chặng G
 
+> **Chặng H, phiên vá desktop** (quyết 2026-10-12, Project Owner duyệt 2026-10-12, `.reviews/stage_h/h1_inventory.md` §2.2): mục 3, 6, 7.
+
 > **Cập nhật 2026-10-11, phiên 40** (audit `.reviews/audits/desktop/audit_desktop_session40.md`). **Mục 1 và 2 ĐÃ ĐÓNG:** N7 chờ trang `data:` như R10 (Orchestrator đo trên Linux có tải: bỏ bước chờ thì hỏng 5/5, giữ thì đạt 5/5 và đạt ba lượt toàn bộ); ca 6 và 14 dùng `tests/fixtures/fake_backend_die_on_first_call.py`. **Mục 3 sửa lại:** log của ca "did not exit" vẫn mất, vì ca dùng `spawnMain` chỉ in log sau khi chờ thoát xong. Việc mới: ca dùng `spawnMain` in log của Main khi ca hỏng, kể cả khi hỏng vì hết giờ chờ. Phiên 40 gặp lại dạng này ở một lượt có tải bị bỏ (ca 1, 6, 14, A2, A4, A6; mỗi ca 40–80 s), kèm tiến trình python giả còn sống: nghiêng về máy nghẽn, có thể antivirus giữ python lúc khởi động. **Thêm mục 6:** `fake_backend_die_on_first_call.py` chỉ đọc một kết nối mỗi lúc; nếu Chromium mở sẵn một kết nối không gửi gì và không đóng, backend giả chờ mãi. Chưa thấy xảy ra. Sửa: theo dõi mọi kết nối cùng lúc (`selectors`). **Thêm mục 7:** ca 6 khẳng định thêm dòng stderr "fake backend: first call received" (phép cắn (a) không bắt được trên Linux, vì `opening the window` được ghi cả khi backend chết sớm).
 
 Phiên 39 không có ba lượt `npm test` có tải liền nhau đạt đủ 78/78; mọi ca hỏng là chỗ nhạy của kiểm thử, có từ trước. **Việc:**
@@ -353,11 +373,18 @@ Phiên 39 không có ba lượt `npm test` có tải liền nhau đạt đủ 78
 
 ### ENV-10 — `npm ci` làm mất tệp chạy Electron trên máy Project Owner (thấp; audit phiên 40 §5.5)
 
+> **ĐÃ ĐÓNG PHẦN V1 2026-10-12, chặng H bước 1.** Project Owner xem Quarantine và lịch sử của AVG, ReasonLabs (RAV) và Windows Security: không có mục nào liên quan tới `electron`. Ba giả thuyết đều bị loại (biến môi trường, `ignore-scripts`, antivirus cách ly). Cách làm tạm ghi vào `CLAUDE.md` mục 5 (dòng Node): sau `npm ci`, nếu thiếu `electron.exe` thì chạy `node node_modules\electron\install.js`. **Nguyên nhân gốc: V2 trở đi**, vì chỉ ảnh hưởng máy phát triển, không ảnh hưởng bộ cài.
+
+> **2026-10-12:** Project Owner kiểm trong Developer PowerShell của Visual Studio: `ELECTRON_SKIP_BINARY_DOWNLOAD` trống ở cả phiên, `User` và `Machine`. Loại giả thuyết biến môi trường. Kho không có `.npmrc`. Giả thuyết còn lại: bước cài sau (`postinstall`) của gói `electron` không chạy (`ignore-scripts` trong cấu hình npm của máy), hoặc antivirus cách ly `electron.exe` vừa giải nén. Việc: Project Owner chạy `npm config get ignore-scripts` trong `Desktop/` và xem lịch sử cách ly của AVG, ReasonLabs.
+> **2026-10-12, 14:00:** `npm config get ignore-scripts` trong `Desktop/` = `false`. Loại giả thuyết `ignore-scripts`. Còn lại: antivirus cách ly `electron.exe`; chờ Project Owner xem lịch sử cách ly. Nếu không thấy gì: ghi cách xử lý tạm vào `CLAUDE.md` mục 5 (sau `npm ci` trong `Desktop/`, chạy `node node_modules\electron\install.js`), nguyên nhân gốc để V2.
+
 Sau `npm ci` trong `Desktop/`, `node_modules/electron/dist` biến mất, và bước cài sau của gói `electron` không tải lại. Phiên 40 phải chạy `node node_modules\electron\install.js` (lấy từ bộ nhớ đệm) rồi mới chạy được `npm test`. Chưa rõ nguyên nhân (biến `ELECTRON_SKIP_BINARY_DOWNLOAD`, mạng, hay antivirus). **Việc:** Project Owner xem `echo $env:ELECTRON_SKIP_BINARY_DOWNLOAD`; tùy kết quả, Orchestrator ghi cách chạy vào `CLAUDE.md` mục 5 hoặc tìm tiếp nguyên nhân.
 
 ## Layer giao diện — sau audit phiên 37
 
 ### UI-22 — NOTES của khối `main` giao diện sắp hết hạn (thấp; audit phiên 37 §5.2)
+
+> **Chặng H, phiên vá giao diện** (quyết 2026-10-12, Project Owner duyệt 2026-10-12, `.reviews/stage_h/h1_inventory.md` §2.2). Máy quét 2026-10-12: ba NOTES ngày 2026-09-27 ở `UI/src/main.tsx` đã quá hạn; là chỗ quá hạn duy nhất trong 28 khối checkpoint.
 
 Khối checkpoint `main` (`UI/src/main.tsx`) còn sáu NOTES ghi ngày 2026-09-27 (ba), 09-28, 09-29, 10-07; ba NOTES ngày 09-27 hết hạn 14 ngày vào 2026-10-11 (`CLAUDE.md` mục 5). **Việc:** phiên giao diện kế tiếp, hoặc chặng H, xem lại từng NOTE: chuyển thành EXPERIENCES nếu còn giá trị, xóa nếu không.
 
@@ -384,6 +411,24 @@ Cả sáu workflow có bảng đều ở phiên bản cấu trúc 1; `_STORAGE_U
 > **ĐÃ ĐÓNG 2026-10-12** (phiên 41; audit §5.1). `app_version` là tham số từ khóa bắt buộc, `backup_data` luôn được ráp; 19 chỗ gọi (plan ghi nhầm 22). Ca cũ thay bằng ca khẳng định `TypeError`, routes không đổi, DB không có bảng; Orchestrator cắn bằng cách đặt lại giá trị mặc định và ca này bắt được.
 
 Phiên 32 cho `app_version` là tham số từ khóa tùy chọn, vì 20 chỗ gọi `wire_workflows(app, db, configs)` trong kiểm thử của các workflow khác không truyền nó, và agent không được sửa chúng. Quên truyền ở `main()` thì mất hai điểm giao tiếp mà không báo lỗi; kiểm thử tiến trình thật của `backup_data` chặn được điều đó. **Việc:** khi một phiên backend chạm lại các kiểm thử đó, cho chúng truyền `app_version`, rồi bỏ nhánh "không ráp".
+
+## Chặng H — phát hiện ở bước 1 (kiểm kê 2026-10-12, `.reviews/stage_h/h1_inventory.md`)
+
+### UI-23 — Ràng buộc "không có màn hình hồ sơ quyền sở hữu" chưa được kiểm bằng máy (cao; H-2)
+
+Hiện chỉ được kiểm bằng grep do agent tự chạy rồi ghi vào EVIDENCE của `UI/src/screens/navigation.ts`. Lộ trình chặng H đòi kiểm bằng máy. **Việc (phiên vá giao diện chặng H):** thêm vào `npm run check` một bước làm hỏng lệnh khi mã nguồn hay kiểm thử của `UI/` chứa `/watermark-profiles`, `/watermark-strengths`, `/artworks`, `/verifications`; kèm phép cắn (thêm một chuỗi như vậy thì `check` hỏng, bỏ đi thì đạt).
+
+### BE-12 — Starlette 1.0.0 trong bản đóng gói có năm lỗ hổng đã công bố (trung bình; H-4)
+
+`pip-audit -r Backend/requirements.txt` (2026-10-12): CVE-2026-48710 (sửa ở 1.0.1), CVE-2026-48818 và CVE-2026-48817 (1.1.0), CVE-2026-54282 (1.3.0), CVE-2026-54283 (1.3.1). Rủi ro thực tế rất thấp: backend chỉ nghe trên `127.0.0.1`; grep `Backend/` không thấy `StaticFiles`, `HTTPEndpoint`, `request.form`, `request.url`. **Project Owner quyết 2026-10-12:** nâng ngay trong chặng H nếu khả thi; nếu không khả thi (ví dụ FastAPI `0.136.1` không nhận Starlette đã vá, và nâng FastAPI kéo theo thay đổi lớn) thì dời sang V2, **giữ mục này mở** với lý do. Việc của phiên vá backend: nâng tối thiểu tới bản đã vá, cập nhật `requirements.txt`, chạy đủ kiểm thử backend; Desktop dựng lại gói và chạy `test:packaged` ở bước 3.
+
+### H-3 — Dung lượng bản cài chưa đo lại trên `1.0.0` (thấp)
+
+Đo một lần ở phiên 13 (371 MB, trần 400 MB). Đo lại trên bản đóng gói cuối ở chặng H bước 3.
+
+### H-6 — Phép cắn R1–R14 của `UI/` chưa chạy lại từ phiên 11–12 (trung bình)
+
+Giao cho phiên kiểm độc lập của `UI/` (chặng H, câu hỏi 4).
 
 ## Hợp đồng — chờ Project Owner duyệt
 
@@ -538,6 +583,8 @@ Phiên 13 chạy e2e, và tệp bằng chứng hiện ghi sai người chạy (`
 Orchestrator đã chứng minh việc đổi cờ đủ để e2e đạt 3/3 lần. Chi tiết: audit phiên 16 §3.
 
 ### UI-5 — Luật trống ở `client_input` chỉ có ở giao diện (cao; Q16-2)
+
+> **ĐÃ ĐÓNG 2026-10-12, chặng H bước 1** (Project Owner duyệt 2026-10-12, `.reviews/stage_h/h1_inventory.md` §2.2): phía backend (BE-5) đã đóng ở phiên 18; câu "BE-5 còn mở" bên dưới đã cũ.
 
 Xem CT-2, **đã duyệt 2026-09-28** (Data Schema 7.0.0). Phía giao diện: **đã đóng ở phiên 17**. Phía backend: BE-5, còn mở.
 
@@ -841,6 +888,8 @@ Không ảnh hưởng điều kiện của UI-18: e2e do agent khởi chạy, Pr
 
 ### UI-21 — Dọn sau khi sửa `.gitignore` gốc (thấp; audit phiên 34 §5.1, §5.3) — làm ở phiên giao diện kế tiếp
 
+> **Chặng H, phiên vá giao diện** (quyết 2026-10-12, Project Owner duyệt 2026-10-12, `.reviews/stage_h/h1_inventory.md` §2.2).
+
 `main-EXP-033` (`UI/src/main.tsx`) ghi rằng hai dòng phủ định của `UI/.gitignore` giải quyết việc `Backup*/` bỏ qua thư mục mới. Sau ENV-9 (mở rộng), `.gitignore` gốc không còn khớp thư mục lồng nhau, nên hai dòng đó thừa, và câu trong EXP thiếu thư mục `UI/evidence/walkthroughs/backup/`. **Việc:** viết lại EXP cho đúng (giữ id), và bỏ hai dòng thừa của `UI/.gitignore` sau khi kiểm `git check-ignore` vẫn không bỏ qua tệp nào.
 
 ## Môi trường và vận hành (không phải việc của coding agent)
@@ -851,7 +900,7 @@ Không ảnh hưởng điều kiện của UI-18: e2e do agent khởi chạy, Pr
 - **ENV-5 — ĐÃ LÀM 2026-09-28.** Kết quả và cách đọc ở `.reviews/runbooks/env4_env5_runbook.md`. Đóng DSK-2; xác nhận lại DSK-3. *Nội dung gốc:* (Project Owner) đo lại đợt C bằng công cụ đã sửa, theo các lệnh ở mục 7 của báo cáo phiên 14 (log nay được giữ ở `Desktop/startup-logs/`).
   - Đo với cả hai antivirus bật, rồi lần lượt tạm dừng AVG, rồi tạm dừng ReasonLabs.
   - Mục đích: xác nhận lại H1 bằng log được lưu, và biết bên nào tạo bản sao (Q14-1).
-- **ENV-4** (Project Owner): chạy tay trên máy bạn của Project Owner, là tiêu chí 1 của chặng C. **Còn mở**; quy trình chi tiết ở `.reviews/runbooks/env4_env5_runbook.md`. Đây là việc duy nhất còn lại của chặng C. Ghi lại thời gian chờ ở lần mở đầu.
+- **ENV-4** (Project Owner; **2026-10-12:** chạy song song với chặng H theo phần F của `.reviews/runbooks/g_install_runbook.md`, bộ cài `1.0.0`; Project Owner đang tìm máy; chặng H bước 3 chạy lại trên bản cuối): chạy tay trên máy bạn của Project Owner, là tiêu chí 1 của chặng C. **Còn mở**; quy trình chi tiết ở `.reviews/runbooks/env4_env5_runbook.md`. Đây là việc duy nhất còn lại của chặng C. Ghi lại thời gian chờ ở lần mở đầu.
 - **ENV-6** — **ĐÃ LÀM 2026-09-28.** Project Owner khởi tạo git và đẩy lên GitHub: `https://github.com/Super-Muscle-Coder/CommissionTracker` (public). Hai commit đầu: `9f5218a` (`.gitattributes` với `* text=auto`, `.gitignore` mẫu Visual Studio), `2c10b9a` (toàn bộ dự án). Orchestrator đã clone và kiểm: 298 tệp; hợp đồng 8.0.0; mã `UI/` và `Backend/` khớp đúng từng tệp với bản trên đĩa; không có thư mục build, môi trường ảo hay tệp lớn; không có thông tin bí mật. **Còn thiếu ba dòng trong `.gitignore` gốc**, vì `Backend/env/`, `Backend/.pytest_cache/` và `Desktop/startup-logs/*.json` hiện **không** bị bỏ qua: một lệnh `git add .` sau này sẽ đưa cả môi trường ảo Python lên kho. Cách làm: Project Owner thêm ba dòng `Backend/env/`, `.pytest_cache/`, `Desktop/startup-logs/` vào `.gitignore` gốc rồi commit. *Nội dung phát hiện ban đầu:* **dự án chưa có quản lý phiên bản.** Không có `.git` ở `E:\CommissionTracker` hay ở `E:\`. Mọi phiên coding agent sửa tệp trực tiếp, không có mốc để quay lại hay so sánh. Các tệp `.gitignore` trong `UI/` và `Desktop/` hiện chưa có tác dụng gì.
   - **Đề xuất:** khởi tạo git ở gốc dự án, kèm hai tệp đặt ngay từ đầu:
     - `.gitignore` chung (thư mục build, `node_modules`, môi trường ảo, cache, `startup-logs/`, kết quả kiểm thử);
@@ -859,10 +908,11 @@ Không ảnh hưởng điều kiện của UI-18: e2e do agent khởi chạy, Pr
   - Sau đó **mỗi phiên đã audit đạt là một commit** do Project Owner tạo.
   - DSK-10 được giải quyết luôn trong `.gitignore` chung.
   - Chờ Project Owner quyết. Orchestrator soạn sẵn hai tệp cấu hình và các lệnh khi được yêu cầu.
-- **ENV-8** (Project Owner; audit phiên 30 §5.5) — **Project Owner chọn gỡ hẳn rồi cài lại, 2026-10-05.** máy Project Owner có (1) bản cài cũ ngày 2026-09-28 với lối tắt Start Menu mang AUMID `com.commissiontracker.desktop`, và (2) bản cài lúc 20:57 ngày 2026-10-04 thiếu module ticker (báo `Cannot find module`). Cần gỡ hẳn hoặc cài lại từ bộ cài mới trong `Desktop\release`. Bản cài dùng thư mục dữ liệu thật; đó là dùng thật, không phải kiểm thử. Việc đo thông báo trên bản cài sạch gộp vào ENV-4 (máy khác, chưa có bản cài).
+- **ENV-8 — ĐÃ ĐÓNG 2026-10-12, chặng H bước 1** (Project Owner duyệt 2026-10-12, `.reviews/stage_h/h1_inventory.md` §2.2): runbook chặng G ngày 2026-10-11 cài lại từ đầu, sau B1 chỉ còn một bản; toast đo lại ở E1. *Nội dung gốc:* (Project Owner; audit phiên 30 §5.5) — **Project Owner chọn gỡ hẳn rồi cài lại, 2026-10-05.** máy Project Owner có (1) bản cài cũ ngày 2026-09-28 với lối tắt Start Menu mang AUMID `com.commissiontracker.desktop`, và (2) bản cài lúc 20:57 ngày 2026-10-04 thiếu module ticker (báo `Cannot find module`). Cần gỡ hẳn hoặc cài lại từ bộ cài mới trong `Desktop\release`. Bản cài dùng thư mục dữ liệu thật; đó là dùng thật, không phải kiểm thử. Việc đo thông báo trên bản cài sạch gộp vào ENV-4 (máy khác, chưa có bản cài).
 - **ENV-9** (Orchestrator; audit phiên 32 §5.1): dòng `Backup*/` của `.gitignore` gốc (mẫu Visual Studio) khớp `Backend/workflows/backup_data/` khi git không phân biệt hoa thường (Windows), nên cả workflow không vào commit. Agent phát hiện và báo. **Đã sửa 2026-10-07:** Orchestrator thêm `!Backend/workflows/backup_data/` vào cuối `.gitignore`, kiểm với `core.ignorecase=true`. Commit `.gitignore` phải đi trước commit CAS32. Từ nay audit đối chiếu danh sách tệp trên đĩa với danh sách tệp sẽ vào commit, không chỉ clone kho.
   - **Mở rộng 2026-10-07, audit phiên 34 §5.1:** cùng mẫu còn khớp `UI/src/logic/workflows/backup_data/`, `UI/src/screens/pages/backup/` (agent vá bằng `UI/.gitignore`) và `UI/evidence/walkthroughs/backup/` (agent không thấy). **Sửa tận gốc:** Orchestrator thay dòng `Backup*/` của `.gitignore` gốc bằng `/Backup*/`, `/Backend/Backup*/`, `/Desktop/Backup*/`, `/UI/Backup*/` (nơi Visual Studio ghi bản sao lưu khi nâng cấp), kiểm với `core.ignorecase=true`. Các dòng phủ định cũ nay thừa, vô hại. Commit `.gitignore` phải đi trước commit CAS34. Kiểm tệp sẽ vào commit theo **từng tệp**, kể cả `UI/evidence`.
 - **ENV-7** (Orchestrator, thấp; audit phiên 27 §5.5): `npm audit` báo lỗ hổng mới, chỉ ở công cụ phát triển.
+  - **ĐÃ ĐÓNG 2026-10-12, chặng H bước 1** (Project Owner duyệt 2026-10-12, `.reviews/stage_h/h1_inventory.md` §2.2): chạy lại trên `package-lock.json` của commit `9b647f4`: `npm audit --omit=dev` = 0 ở cả `UI/` và `Desktop/`; phần còn lại chỉ ở công cụ phát triển (UI 6 high, Desktop 8 moderate và 1 high), không vào bản đóng gói. Phụ thuộc lúc chạy của backend: xem BE-12.
   - UI: 5 lỗ hổng mức high, cùng một chuỗi `stylelint → globby → fast-glob → micromatch → braces` (GHSA-vfj7-8cjw-p6xm).
   - Desktop: 8 lỗ hổng mức high (ví dụ `http-cache-semantics`, GHSA-ch52-4w7c-c8xp).
   - `npm audit --omit=dev` ở cả hai layer: 0. `package-lock.json` không đổi từ phiên trước: đây là cảnh báo mới được công bố, không phải phụ thuộc mới.
