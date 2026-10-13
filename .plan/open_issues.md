@@ -517,6 +517,7 @@ Báo cáo pha 1 và đánh giá: `.reviews/audits/desktop/audit_desktop_session4
 | R43-19 | thấp | `Desktop/evidence/` thiếu trong sơ đồ `CLAUDE.md` mục 4 | Orchestrator sửa `CLAUDE.md` (2026-10-13) |
 | R43-20 | thấp | `tests/tools/toast_probe_main.cjs` và `tests/probe.cjs` không dọn thư mục tạm (agent đặt mã R43-14b) | pha 2 |
 | R43-21 | trung bình | `restore:prepare`, `restore:cancel`, `restore:status` không được tuần tự hóa; hai lần chuẩn bị chen nhau có thể ghi bản ghi lệch với tệp chờ duy nhất của `backup_data` (Orchestrator suy từ mã, chưa tái hiện; V1 không chạm tới nhờ giao diện chặn bấm đúp) | pha 2: hàng đợi trong Services, thêm ca |
+| R43-22 | trung bình | Thư mục `userData` của Electron không tạo được thì `requestSingleInstanceLock()` trả `false`, Main tưởng đang có bản khác chạy, tắt im lặng với mã 0, không hộp thoại (phát hiện ở pha 2 khi viết ca H-9; agent và Orchestrator đều tái hiện được, Orchestrator trên Linux). Không mất dữ liệu: backend chưa khởi động | **Project Owner chọn A (2026-10-13):** Main thử tạo `userData` trước khi xin khóa; hỏng thì `fatal()` với câu khởi động và `failure_exit_code` |
 
 Việc đã biết của Desktop, đề xuất gộp vào pha 2: DSK-30 mục 3, 6, 7; H-7; H-9; H-11.
 
