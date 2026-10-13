@@ -1,170 +1,277 @@
 # ===WCA-PLAN===
 # session_for: desktop
 # drafted_by: Orchestrator + Project Owner
-# drafted_at: 2026-10-11T13:10:00+07:00
-# contract: data_schema 10.0.1, api_contract 5.0.0 (approved)
+# drafted_at: 2026-10-13T10:25:41+07:00
+# contract: data_schema 10.0.1, api_contract 6.1.0 (approved)
 
 ## MỤC TIÊU PHIÊN NÀY
 
-Phiên 40 của dự án, phiên desktop thứ mười một, thuộc chặng G. Phiên ngắn, ba việc:
+Đây là phiên 43 của dự án và là phiên desktop thứ mười hai. Phiên thuộc **chặng H: rà soát lại toàn bộ V1**, và là **phiên kiểm độc lập** cho layer `Desktop/`.
 
-| Mã | Việc | Căn cứ |
-|---|---|---|
-| **G-VER** | Số phiên bản của ứng dụng thành **`1.0.0`** | `.plan/v1_roadmap.md`, chặng G, tiêu chí 1 (Project Owner quyết 2026-10-11) |
-| **DSK-30 (1)** | N7 của `native_dialogs.spec.ts` chờ trang `data:` nạp xong rồi mới `evaluate` | `.plan/open_issues.md`, DSK-30 mục 1 |
-| **DSK-30 (2)** | Ca 6 và ca 14 của `desktop_main.spec.ts` không phụ thuộc vào thứ tự thời gian | DSK-30 mục 2 |
+Bạn chưa từng thấy mã này được viết ra sao. Đó là lý do bạn được giao việc. Hãy đọc mã như một người kiểm, không phải người viết: không mặc định mã đúng, cũng không mặc định mã sai. Mọi kết luận phải dựa trên tệp, dòng và lệnh chạy được.
 
-Hợp đồng không đổi. Phiên này không cài bộ cài và không làm runbook cài đè (DSK-21): việc đó Project Owner chạy tay sau phiên này, với bộ cài `1.0.0` mà phiên này dựng.
+Phiên có **hai pha**:
+- **Pha 1 (plan này): chỉ đọc.** Bạn đọc mã, chạy kiểm thử, làm phép cắn trên **bản sao nằm ngoài kho**, và không sửa tệp nào trong kho. Cuối pha 1, bạn gửi báo cáo đầy đủ mọi phát hiện rồi **dừng và chờ**.
+- **Pha 2: vá.** Pha này chỉ bắt đầu khi Project Owner mang tới quyết định của Orchestrator, kèm plan pha 2 (plan đó sẽ ghi đè tệp này). Pha 2 gồm những phát hiện được chọn sửa, cộng vài việc đã biết của layer.
 
-**Điểm dừng:**
-- `npm run dist` ra `release\Commission Tracker Setup 1.0.0.exe`, và bản đóng gói báo đúng `1.0.0` cho cả Electron lẫn backend;
-- N7, ca 6, ca 14 đạt cả ba lượt có tải;
-- `test:packaged` và UI e2e đạt.
+**Điểm dừng pha 1:** báo cáo có đủ các phần ở mục "BÁO CÁO PHA 1", và `git status --short` không đổi so với đầu phiên.
 
-## ĐẶC TẢ ĐÃ CHỐT
+## CÂU HỎI CẦN TRẢ LỜI
 
-### G-VER — số phiên bản `1.0.0`
+Một câu hỏi lớn: **`Desktop/` có theo đúng WCA (`wca-implementation` v2.3), đúng hợp đồng và đúng quy ước của dự án không?** Câu hỏi này chia thành tám phần.
 
-- Sửa trường `version` của `Desktop/package.json` từ `0.1.0` thành `1.0.0`, và hai chỗ tương ứng ở đầu `Desktop/package-lock.json`, sao cho `npm ci` vẫn chạy đúng. Agent chọn cách sửa (tự sửa hai tệp, hoặc `npm version 1.0.0 --no-git-tag-version`; lệnh này không đụng tới git khi có cờ đó) và ghi lý do.
-- **Không sửa `UI/package.json`.** Trường đó không đi vào bản đóng gói, và phiên này không sửa `UI/`. Orchestrator sẽ xét lại ở chặng H.
-- **Lý do phải đủ ba số:** hợp đồng khai báo `backup_data.app_version` là "semantic version of the running build" (`data_schema.yaml`), và `backup_data` từ chối giá trị không đúng dạng `x.y.z`. Giá trị này đi từ `app.getVersion()` của Main qua biến `CT_APP_VERSION` sang backend.
-- **Kiểm thử ràng `package.json` với backend.** Phải có ít nhất một ca, chạy với backend thật, khẳng định `app_version` mà backend nhận được (ví dụ trong bản ghi do `create_backup` trả về) **bằng đúng** trường `version` đọc từ `package.json` lúc chạy kiểm thử, không phải một chuỗi gõ cứng. Nếu đã có ca như vậy thì chỉ ra; nếu chưa thì thêm. Có thể đặt trong `npm test`, trong `test:packaged`, hoặc cả hai. Với bản đóng gói thì nên có, vì đó là thứ họa sĩ cài.
-- **Chuỗi `'0.1.0'` trong dữ liệu mẫu của kiểm thử** (`restore_*.spec.ts`, `fake_backend_restore.py`) là dữ liệu giả của tệp sao lưu, không phải phiên bản của ứng dụng. Giữ nguyên, trừ khi một ca hỏng vì nó. Nếu có ca hỏng, ghi rõ ca nào và vì sao, rồi sửa ca đó cho đúng ý nghĩa (ví dụ đọc phiên bản từ `package.json`).
-- **Chữ trong checkpoint** nhắc `0.1.0` như hiện trạng (ví dụ dòng 22 của `src/main.ts`: "version của package.json (0.1.0)") thì sửa cho đúng. Các mục EVIDENCE cũ ghi tên bộ cài `0.1.0` là lịch sử, giữ nguyên.
+Phạm vi gồm:
+- Main: `src/main.ts`, `src/preload.ts`, `src/error_dialog.ts`;
+- workflow `restore_data`;
+- ba thành phần hạ tầng cắt ngang: `reminder_ticker`, `native_dialogs`, `restore_trigger`;
+- `configs/`;
+- kiểm thử trong `tests/`;
+- `packaging/`, `electron-builder.yml`, `Desktop.esproj`.
 
-### DSK-30 (1) — N7
+### K1 — Bố cục (`04-implement.md`, Bước 4.0; `CLAUDE.md` mục 4, "Bố cục `Desktop/`")
+- Bố cục thật khớp sơ đồ ở `CLAUDE.md` mục 4.
+- `restore_data` có đủ năm lớp. Configs của nó là `configs/restore_data.json`; chỉ Main đọc tệp này rồi trao giá trị cho workflow.
+- Hạ tầng cắt ngang không có năm lớp. Cách tổ chức bên trong của nó tự do, miễn không chứa quyết định nghiệp vụ (lý thuyết §5).
+- Nếu có `shared/`, nó phải thỏa `05-edge-cases.md` Bước 5.3.
+- `tests/fixtures/` không bao giờ được Main dùng khi chạy bình thường.
+- `Desktop.esproj` chỉ khác mẫu ở các thuộc tính lệnh mà `CLAUDE.md` mục 5 cho phép.
 
-- **Lỗi** (audit phiên 39 §5.3): N7 gọi `mainWindow.loadURL('data:…')` rồi `page.evaluate(...)` ngay. Khi máy tải, `evaluate` chạy lúc trang đang chuyển, nên hỏng với "Execution context was destroyed". Orchestrator đo trên Linux: 2/3 lượt có tải.
-- **Sửa** theo đúng cách R10 của `restore_data.spec.ts` đã dùng ở phiên 38: chờ chính trang `data:` nạp xong rồi mới `evaluate`. Agent đọc R10 và dùng cùng cách. Không nới thời gian chờ.
-- Rà toàn bộ spec của `Desktop/tests/` xem còn chỗ nào điều hướng rồi `evaluate` ngay mà không chờ. Liệt kê trong báo cáo, và sửa cùng cách.
+### K2 — Ranh giới giữa các lớp của `restore_data` (lý thuyết §4, câu hỏi tự kiểm của từng thành phần)
+Đọc từng lớp và trả lời đúng câu hỏi tự kiểm in nghiêng của lớp đó trong `wca_theory_compressed.md` §4:
+- Entities chỉ mô tả hình dạng.
+- Adapters chỉ làm một hành động kỹ thuật (đọc hay ghi tệp, gọi `http`, dùng công cụ quản lý vòng đời), không tự quyết trình tự. Dùng phép thử "công cụ hay quyết định".
+- Services là nơi duy nhất ra quyết định. Services không tự tạo Adapters, và không gọi thẳng `fs`, `fetch` hay `child_process`.
+- Routers chỉ kiểm định dạng (đúng những gì `type` mô tả) và chuyển giao.
 
-### DSK-30 (2) — ca 6 và ca 14
+Thêm một câu hỏi cho **toàn bộ** `src/`: có con số, chuỗi, đường dẫn, tên kênh hay thời gian chờ nào mang ý nghĩa mà bị gõ thẳng vào code thay vì nằm trong `configs/`? Mỗi giá trị như vậy là ranh giới hay nội bộ (lý thuyết §4, Configs)?
 
-- **Lỗi:** cả hai ca dùng `fake_backend_ready_then_die.py`, backend giả chết **2 giây sau READY**.
-  - Ca 6 khẳng định có dòng `opening the window`, tức giả định cửa sổ mở trước khi backend chết. Máy chậm thì giả định đó sai, dù ứng dụng xử lý đúng.
-  - Ca 14 cũng dựa vào cùng khoảng 2 giây đó.
-- **Sửa:** thêm một backend giả mới trong `tests/fixtures/`. Nó lắng nghe `http` trên cổng Main truyền qua `CT_PORT` (như `fake_backend_restore.py`), in READY, rồi **thoát với mã 3 ngay khi nhận lời gọi `http` đầu tiên**. Trang `probe` gọi `GET /clients` khi nạp, nên lúc backend chết thì chắc chắn cửa sổ đã mở và trang đã chạy.
-  - Không cần trả lời lời gọi đó; chọn cách nào do agent quyết, ghi lý do.
-  - Ca 6 và ca 14 dùng backend giả mới. Mọi khẳng định hiện có của hai ca giữ nguyên: đúng một dòng `FATAL:` với "exit code 3", đúng một dòng `error dialog text`, câu `running_summary`, mã thoát.
-- **Không đổi K1.** K1 cố ý cần lần nạp trang chưa xong lúc backend chết, nên giữ `fake_backend_ready_then_die.py` + `slow_first_load`. Nếu K1 hỏng khi có tải thì ghi lại nguyên nhân đọc từ log, không sửa trong phiên này.
-- **Không xóa `fake_backend_ready_then_die.py`**, vì K1 vẫn dùng nó.
+### K3 — Main (`src/main.ts`, `src/preload.ts`, `src/error_dialog.ts`)
 
-### DSK-30 (3) — ca 14 "did not exit within 60000 ms"
+**Vai trò của Main:**
+- Main chỉ đọc cấu hình, ráp nối và quản lý vòng đời. Main không có logic nghiệp vụ.
+- Main không bao giờ gọi một workflow lúc hệ thống đang chạy. Bên gọi là hạ tầng cắt ngang.
+- Main không đọc tệp hợp đồng lúc chạy.
 
-Không sửa gì. Nếu trong phiên có ca nào báo "process did not exit within …", **giữ nguyên log của ca đó** và chép trong báo cáo: hai mươi dòng cuối Main ghi ra, và thời điểm của dòng `FATAL:`. Mục đích: phân biệt máy chậm với một lần treo thật lúc thoát.
+**Thứ tự khởi động:**
+- Khớp `.design/03_classification.md`, phần desktop.
+- Khớp `trigger` của từng thành phần cắt ngang trong `api_contract.yaml`:
+  - `restore_trigger` chạy sau khi backend sẵn sàng và `restore_data` đã ráp, trước khi mở cửa sổ, và Main chờ nó;
+  - `reminder_ticker` chạy sau khi backend sẵn sàng;
+  - `native_dialogs` có trước khi mở cửa sổ.
 
-## VIỆC CẦN LÀM, THEO THỨ TỰ
+**Các luật bắt buộc về layer Python** (`data_schema.yaml`, `clause_a_common.mandatory_rules`):
+- chạy layer Python thành tiến trình con, trao giá trị khởi động bằng biến môi trường;
+- chọn cổng lúc chạy, chỉ trên `loopback_host`;
+- coi dòng `READY` là tín hiệu sẵn sàng;
+- dừng bằng cách đóng stdin, có hạn chờ;
+- mỗi lúc chỉ một backend dùng tệp dữ liệu.
+
+**Renderer** (`mandatory_rules`; `CLAUDE.md` mục 5, "Renderer, origin và CORS" và "Công nghệ theo layer", Desktop):
+- chỉ nạp từ `ui_origin`, không bao giờ từ `file://` hay `http(s)`;
+- trao đúng một giá trị khởi động, `backendBaseUrl`, qua đối tượng đóng băng `window.<renderer_bridge>`, cộng hàm `invoke`;
+- renderer không chạm được `ipcRenderer`;
+- `contextIsolation` và `sandbox` bật, `nodeIntegration` tắt;
+- `app://` đăng ký với `standard`, `secure`, `supportFetchAPI`, `corsEnabled` trước `ready`, phục vụ bằng `protocol.handle`;
+- ngoài các luật trên, ghi lại cách Main chặn renderer điều hướng hay mở cửa sổ mới, nếu có.
+
+**Công cụ quản lý vòng đời:** công cụ trao cho `restore_data` (`backend_controller`) là thứ duy nhất Main tự tạo để trao cho workflow như một tài nguyên (lý thuyết §4, Main).
+
+**Bản đóng gói:**
+- Main chọn bộ đường dẫn theo `app.isPackaged`;
+- chỉ nhận hai cờ kiểm thử `--ct-test-data-dir` và `--ct-test-no-dialog`, bỏ qua mọi cờ `--ct-test-*` khác (`CLAUDE.md` mục 5, "Đóng gói").
+
+**Luật chạy không cần dịch vụ AI** (`mandatory_rules`, câu cuối): ghi lại cách Main xử lý giá trị khởi động liên quan tới `clause_c_ai_service`. V1 cố ý không có layer này, nên việc không khởi động nó không phải phát hiện. Chỉ ghi phát hiện khi có điều trái hợp đồng.
+
+### K4 — Cô lập, quyền sở hữu dữ liệu, và hạ tầng cắt ngang (lý thuyết §4 workflow nghiệp vụ, §5; `06-self-check.md` Bước 6.1)
+- `restore_data` và ba thành phần cắt ngang không nhập (`import`) mã nội bộ của nhau. Hạ tầng cắt ngang chạm workflow **chỉ qua Routers**:
+  - `restore_trigger` qua Routers `in_process` của `restore_data`;
+  - `reminder_ticker` qua lối vào `http` của backend.
+- Desktop không đọc, không ghi bảng SQLite nào của backend. Đối chiếu việc `restore_data` thao tác trên tệp cơ sở dữ liệu với `description` của nó trong `data_schema.yaml` và với `.design/f_restore.md`: chỉ thao tác nguyên tệp, cùng tệp riêng của nó.
+- Dữ liệu nhận từ backend được mô tả bằng Entities của chính Desktop.
+- `input_expected` của `restore_data`: dữ liệu thật sự đọc vào đến từ đúng nguồn `from` đã khai (`end_user`, `backup_data`, `main`, `environment_config`).
+- Hạ tầng cắt ngang **không ra quyết định nghiệp vụ** (không lọc, không chọn, không tính theo ý nghĩa dữ liệu) và không giữ dữ liệu nghiệp vụ. Đối chiếu từng thành phần với `description` của nó trong `api_contract.yaml`, `clause_a_common.cross_cutting`.
+
+### K5 — Đối chiếu hợp đồng, cả hai chiều (`06-self-check.md` Bước 6.1; `02-contract.md` Bước 2.3, 2.4)
+
+**Chiều được gọi:** gồm ba lối vào `ipc` của `restore_data`, lối vào `in_process` `apply_pending_restore`, và hai lối vào `ipc` của `native_dialogs`.
+- Mỗi lối vào có **đúng một** chỗ xử lý, khớp `form`, `address`, `input` và **từng** nhãn trong `output`.
+- Ngược lại, không có kênh `ipc` nào mà hợp đồng không khai. Liệt kê mọi `ipcMain.handle`, `ipcMain.on` và mọi địa chỉ preload cho phép.
+- Phản hồi `ipc` đúng dạng `object { status, body }` của `endpoint_forms.ipc`.
+
+**Đầu vào từ renderer** (`external`), theo quy tắc trường thừa và sai dạng (`02-contract.md` Bước 2.3):
+- Ghi lại cách mỗi lối vào xử lý đầu vào thiếu, sai dạng, có trường thừa, hay không phải object.
+- Lối vào chỉ khai nhãn 200 mà gặp đầu vào sai thì làm gì?
+- Nếu luật của skill đòi từ chối mà hợp đồng không khai nhãn nào để từ chối, **đừng đề xuất trả một nhãn không khai báo**. Ghi phát hiện là "cần quyết định ở hợp đồng".
+
+**Chiều gọi đi:** tìm **mọi** lời gọi `http` từ Desktop sang backend, với mỗi lời gọi:
+- phương thức, đường dẫn, tên khóa trong thân khớp `api_contract.yaml`;
+- lối vào đó có khai `called_by` gồm bên gọi này không;
+- **mỗi** nhãn mà lối vào đó khai được xử lý tường minh, hoặc ánh xạ rõ sang một nhãn của chính Desktop; ghi rõ nhãn nào rơi vào nhánh "còn lại";
+- thân phản hồi được kiểm hình dạng trước khi dùng.
+
+**Phía dữ liệu:**
+- `output_guaranteed` của `restore_data` khớp Entities. Dữ liệu đi ra ranh giới mang đúng các trường của `type`, không lọt trường nội bộ.
+- `consumed_by`, `called_by` nhất quán với mã thật.
+- Mọi giá trị ranh giới trong `configs/desktop.json` (`boundary`) và `configs/restore_data.json` (`addresses`, `labels`, `error_codes`, `backend_requests`) truy được về đúng dòng trong hợp đồng.
+- Mọi mã lỗi dùng trong `Desktop/` có trong `clause_a_common.error_codes`.
+- `restore_data` ở `đã_hoàn_thiện`, nên phải có bằng chứng tương ứng (K7).
+
+### K6 — Ma trận, tự dựng
+Tự dựng, không dựa vào tài liệu nào khác. Ghi rõ ô nào không có ca.
+
+- **(a) Chiều được gọi:** với mỗi lối vào ở K5 và **mỗi** nhãn của nó, chỉ ra ít nhất một ca khẳng định đích danh nhãn đó qua đúng lối vào thật. Với `ipc`, ca phải đi qua `invoke` của renderer, không gọi thẳng hàm bên trong.
+- **(b) Chiều gọi đi:** với mỗi lối vào backend mà Desktop gọi và **mỗi** nhãn lối vào đó khai, chỉ ra ca cho backend trả đúng nhãn đó (backend thật hay backend giả trong `tests/fixtures/` đều được), và khẳng định Desktop phản ứng ra sao.
+- **(c) Tình huống bất thường cấp layer**, suy ra từ `mandatory_rules` và từ `.design/f_restore.md` §3. Ví dụ:
+  - backend không bao giờ in `READY`;
+  - backend chết ngay sau `READY` hoặc khi đang chạy;
+  - backend thoát mã khác 0;
+  - backend không thoát khi stdin đóng;
+  - thư mục dữ liệu không dùng được;
+  - mở bản ứng dụng thứ hai;
+  - máy tắt giữa từng bước của lần khôi phục.
+
+  Với mỗi tình huống: có ca hay không, ca nào. Phiên này không viết ca mới.
+
+### K7 — Checkpoint và bằng chứng (`07-checkpoint-protocol.md`; `06-self-check.md` Bước 6.5, 6.6)
+- Mọi khối checkpoint trong `Desktop/src/` (năm khối) đúng khuôn Giao thức 07: vị trí, khung, bốn mục, quy tắc ID, YAML hợp lệ.
+- Không còn `UNSOLVED_PROBLEMS`. Không có NOTES quá 14 ngày tính tới hôm nay (`CLAUDE.md` mục 5).
+- **Mỗi mục EVIDENCE**, xếp vào một trong ba loại:
+  1. **chạy lại được ở pha 1**, vì nằm trong `npm test`, `npm run lint` hay `npm run test:packaged`: ghi ca hay lệnh tương ứng và kết quả ở lượt chạy của bạn;
+  2. **không chạy lại ở pha 1**, vì cần dựng lại bộ cài, cần cài đặt, cần Project Owner chạy tay, cần công cụ đo trong `tests/tools/` hay `tests/packaged/measure_startup.cjs`, hoặc phụ thuộc trạng thái antivirus: ghi lý do;
+  3. **nêu một thứ không còn tồn tại** (ca đã đổi tên, lệnh không chạy được, con số đã khác): ghi rõ.
+- Nội dung checkpoint, comment trong mã và tệp cấu hình phải khớp mã và hợp đồng hiện tại. Một EXPERIENCES hay một comment mô tả hành vi, lối vào hay tệp không còn tồn tại là một phát hiện.
+
+### K8 — An toàn và độ tin cậy của kiểm thử (`CLAUDE.md` mục 5; tiêu chí ổn định của chặng H)
+- **Mọi** lần khởi chạy Electron trong `tests/`, `tests/packaged/` và `tests/tools/` đều truyền `--ct-test-data-dir`. Chỉ ra chỗ khởi chạy và cách truyền.
+- Không kiểm thử nào đọc hay ghi `%APPDATA%\CommissionTracker` thật, registry, hay thư mục ngoài thư mục tạm của chính nó.
+- Thư mục tạm của kiểm thử được dọn đúng chỗ, không dọn theo mẫu tên.
+- Ca không có khẳng định thật, hoặc luôn đạt bất kể mã sản phẩm.
+- Ca phụ thuộc thứ tự, thời gian ngủ cố định hay tiêu điểm cửa sổ, có thể hỏng khi máy bận. Ghi tệp và dòng. Hỏng ở lượt chạy của bạn thì ghi cả lỗi.
+
+## VIỆC CẦN LÀM, THEO THỨ TỰ (PHA 1)
 
 0. **Đọc tài liệu** theo `08-operating-protocol.md`, Phần 1:
-   - `CLAUDE.md`, mục 4, 5 và 6;
-   - hợp đồng: `data_schema.yaml`, phần `backup_data` (`app_version`) và `clause_d_desktop`; `api_contract.yaml`, phần `create_backup`;
-   - code:
-     - `Desktop/package.json`, `Desktop/package-lock.json` (đầu tệp), `Desktop/electron-builder.yml`;
-     - `Desktop/src/main.ts`: khối checkpoint, chỗ truyền `CT_APP_VERSION`;
-     - `Desktop/tests/helpers.ts`, `desktop_main.spec.ts`, `native_dialogs.spec.ts` (N7), `restore_data.spec.ts` (R10), `tests/packaged/`;
-     - `Desktop/tests/fixtures/`: `fake_backend_ready_then_die.py`, `fake_backend_restore.py`, `probe/`;
-   - `.plan/open_issues.md`: DSK-30, DSK-21, BE-8;
-   - plan này sau cùng.
+   - `CLAUDE.md`, toàn bộ;
+   - bộ skill `wca-implementation`: `wca_theory_compressed.md`, `SKILL.md`, `02-contract.md` (Bước 2.3, 2.4), `04-implement.md`, `05-edge-cases.md`, `06-self-check.md`, `07-checkpoint-protocol.md`, `08-operating-protocol.md`;
+   - hợp đồng:
+     - `.contracts/data_schema.yaml`: `clause_a_common` và `clause_d_desktop`, cộng các mục của `clause_b_backend` mà Desktop gọi tới hay nhận dữ liệu từ;
+     - `.contracts/api_contract.yaml`: `clause_a_common` (gồm `endpoint_forms` và `cross_cutting`), `clause_d_desktop`, cộng các lối vào backend mà Desktop gọi;
+     - changelog đầu mỗi tệp;
+   - `.design/03_classification.md`, `.design/f_restore.md`;
+   - toàn bộ `Desktop/` (trừ `node_modules/`, `dist/`, `release/`, `packaging/cache/`, `packaging/stage/`, `test-results/`, `startup-logs/`), cả mã lẫn kiểm thử, fixture và công cụ;
+   - plan này, sau cùng.
 
-   Xác nhận Data Schema **`10.0.1`** và API Contract **`5.0.0`**, cả hai `approved`. Sai thì dừng lại và báo.
+   **Để giữ tính độc lập, ở pha 1 không đọc `.plan/open_issues.md` và `.plan/v1_roadmap.md`.** Hai tệp đó ghi các phát hiện cũ, còn báo cáo pha 1 phải là cái nhìn của riêng bạn. Không đọc mã `Backend/` hay `UI/` để tìm phát hiện của layer đó. Chỉ đọc đúng chỗ cần để hiểu một lời gọi của Desktop, và ghi lại chỗ đã đọc.
+
+   Xác nhận Data Schema **`10.0.1`** và API Contract **`6.1.0`**, cả hai `approved`. Sai thì dừng lại và báo.
 
 1. **Môi trường và mốc.**
-   - Ghi phiên bản Node, npm, Electron, Python. Ghi trạng thái AVG và ReasonLabs theo lời Project Owner.
-   - **Hỏi Project Owner** đã chép bộ cài `release\Commission Tracker Setup 0.1.0.exe` ra ngoài `Desktop\` chưa (việc 5 sẽ xóa `release`). Chưa chép thì chờ Project Owner chép xong rồi mới đi tiếp. Agent không tự chép ra ngoài dự án.
+   - Ghi phiên bản Node, npm, Electron (theo `node_modules`), Python (`Backend\env\Scripts\python.exe --version`).
+   - Hỏi Project Owner hai điều: hôm nay đã có phiên coding agent nào chạy chưa (để ghi định danh phiên); trạng thái antivirus.
+   - Ghi `git status --short` (chỉ đọc). Kết quả này phải giống hệt lúc cuối pha 1.
+   - Chụp mốc, chỉ liệt kê tên và giờ sửa, không mở tệp: `%APPDATA%\CommissionTracker` và `%APPDATA%\Commission Tracker`.
+   - Kiểm hai điều kiện. **Không chạy `npm ci`.**
+     - `Desktop\node_modules\electron\dist\electron.exe` có. Nếu thiếu, làm theo `CLAUDE.md` mục 5 (ENV-10) rồi ghi lại.
+     - `UI\dist\index.html` có. Nếu thiếu, dừng lại và báo, không tự build `UI/`.
    - Trong `Desktop/`:
-     - `npm ci`;
-     - `npm run lint`;
-     - `npm test`: mốc **78**. Ghi số đạt, số hỏng, và tên ca hỏng nếu có.
-   - Chụp mốc `%APPDATA%\CommissionTracker` và `%APPDATA%\Commission Tracker`.
-   - Ghi `git status --short` (chỉ đọc).
+     - `npm run lint`: phải sạch;
+     - `npm test`, **một lượt**: mốc **79**. Khác thì ghi rõ số đạt, số hỏng, tên ca và lỗi, không dừng;
+     - `npm run test:packaged`, **một lượt**, trên `release\win-unpacked` hiện có: mốc **12**. **Không chạy `npm run dist`.** Bản đóng gói này dựng ngày 2026-10-11, trước khi backend đổi ở phiên 42. Hỏng ca nào thì ghi rõ, và ghi bạn có cho là do bản dựng cũ không, kèm lý do.
+   - Không chạy hai lệnh kiểm thử cùng lúc.
 
-2. **G-VER.** Đổi phiên bản; thêm hoặc chỉ ra ca ràng `package.json` với backend; chạy `npm ci` lại để chắc `package-lock.json` đúng.
+2. **Đọc và trả lời K1 → K8**, theo thứ tự đó. Ghi phát hiện ngay khi thấy, kèm tệp và dòng.
 
-3. **DSK-30 (1) và (2).** Sửa và thêm backend giả mới.
-   - **Phép cắn** (chỉ trên bản sao tạm, khôi phục ngay):
-     - (a) backend giả mới thoát **ngay sau READY**, không chờ lời gọi: ca 6 phải hỏng (mất `opening the window`, hoặc lời gọi của trang);
-     - (b) ca ràng phiên bản: trong bản sao, Main truyền `CT_APP_VERSION` là một chuỗi gõ cứng `0.1.0` thay cho `app.getVersion()`: ca đó phải hỏng;
-     - (c) N7: bỏ bước chờ trang `data:`, chạy N7 5 lượt trong lúc máy tải. Ghi số lượt hỏng. Không bắt được ổn định thì ghi rõ.
+3. **Phép cắn**, chỉ trên bản sao ngoài kho. Mục đích là kiểm xem kiểm thử có thật sự bắt được những vi phạm quan trọng nhất không.
 
-4. **Chạy có tải.**
-   - Script làm tải ngoài dự án, như phiên 39, với **4 tiến trình** vòng lặp bận. Dùng lại script cũ nếu còn, ghi đường dẫn.
-   - `npm test` **3 lượt liên tiếp có tải**, rồi 1 lượt không tải.
-   - **N7, ca 6, ca 14, K1, C1 phải đạt cả 4 lượt.**
-   - Ca khác hỏng khi có tải thì ghi tên ca, lỗi, và log theo DSK-30 (3). Ca 15, 16 của `show_inactive` đo tiêu điểm cửa sổ: hỏng khi Project Owner đang chuyển cửa sổ thì ghi lại, không tính là lỗi của phiên.
-   - Lượt không tải phải đạt **toàn bộ**.
+   **Dựng bản sao** ở `%TEMP%\ct_review_desktop\`. Giữ đúng cấu trúc anh em, vì `tests/helpers.ts` và `configs/desktop.json` tìm `Backend` và `UI\dist` theo đường dẫn tương đối:
+   - `Desktop\`, gồm cả `node_modules\`, bỏ `dist\`, `release\`, `packaging\cache\`, `packaging\stage\`, `test-results\`, `startup-logs\`;
+   - `Backend\`, gồm cả `env\`, bỏ `__pycache__\` và `.pytest_cache\`;
+   - `UI\dist\`.
 
-5. **Bản đóng gói:**
-   - xóa `packaging\stage` và `release` (sau khi Project Owner đã chép bộ cài `0.1.0` ra ngoài, việc 1);
-   - `npm run dist`: phải ra `release\Commission Tracker Setup 1.0.0.exe`;
-   - `npm run test:packaged`: mốc **11**, cộng ca mới nếu có; phải đạt toàn bộ;
-   - ghi kích thước và SHA-256 của bộ cài `1.0.0`. Runbook của chặng G dùng giá trị này để biết đúng tệp.
+   Dùng `robocopy` có `/XD` cho các thư mục bỏ. Không dùng liên kết tượng trưng hay junction trỏ về kho.
 
-   Nếu `dist` hỏng EXDEV, đặt `ELECTRON_BUILDER_CACHE` vào một thư mục tạm.
+   **Kiểm bản sao.** Chạy `%TEMP%\ct_review_desktop\Backend\env\Scripts\python.exe -c "import sys, fastapi; print(sys.prefix)"`.
+   - Nếu không chạy được, sửa **trong bản sao** hai chỗ cho trỏ thẳng tới interpreter thật `E:\CommissionTracker\Backend\env\Scripts\python.exe`: `BACKEND_PYTHON` trong `tests\helpers.ts` và `backend.from_source.interpreter` trong `configs\desktop.json`. Ghi lại việc này.
+   - Trước khi cắn, chạy trong bản sao đúng những tệp spec bạn sẽ dùng, để có mốc của bản sao.
 
-6. **UI:** trong `UI/`, `npm run build` rồi `npm run e2e` một lượt, không đặt `CT_WALKTHROUGH_RUNNER`. Phải đạt 83/83, và `UI/evidence` không đổi.
+   **Làm ít nhất năm phép cắn** do bạn tự chọn, mỗi phép một vi phạm khác loại, trong đó ít nhất một phép ở Main, một ở `restore_data`, một ở một thành phần cắt ngang. Ví dụ:
+   - một Routers của `restore_data` trả nhãn khác với hợp đồng cho một trường hợp đã khai;
+   - preload cho đi qua một địa chỉ `ipc` không khai báo;
+   - Main mở cửa sổ trước khi `restore_trigger` xong;
+   - Main dừng backend bằng cách giết tiến trình thay vì đóng stdin;
+   - `reminder_ticker` tự bỏ một thông báo (ra quyết định nghiệp vụ);
+   - một giá trị ranh giới trong `configs/desktop.json` bị đổi;
+   - `restore_data` bỏ bước sao lưu an toàn trước khi chuẩn bị.
 
-7. **Checkpoint** theo Giao thức 07:
-   - Main: EXPERIENCES cho G-VER (chỗ phiên bản đi từ `package.json` tới backend, ca ràng phiên bản) và DSK-30 (1), (2) (backend giả mới, N7); EVIDENCE gồm các phép cắn, bốn lượt `npm test`, kích thước và SHA-256 bộ cài;
-   - sửa các câu hiện trạng còn nói `0.1.0`.
+   Với mỗi phép, ghi: sửa gì, ở đâu; ca nào bắt được, hay không ca nào bắt được. **Một phép cắn không bị bắt là một phát hiện.**
 
-   **Giờ ghi:** chép **nguyên** giá trị `Get-Date -Format o` lấy ngay trước khi ghi (BE-8). **Nếu sửa checkpoint sau khi đã chạy toàn bộ, chạy lại `npm test` một lượt** và ghi điều đó trong báo cáo.
+   **Dọn bản sao khi xong:** xóa đúng `%TEMP%\ct_review_desktop\`, gọi đích danh. Không xóa theo mẫu tên. Không đụng thư mục tạm nào khác, kể cả thư mục `ct-desktop-test-*` mà kiểm thử để lại.
 
-## KẾ THỪA TỪ CHECKPOINT — vấn đề tồn đọng
+4. **Kết thúc pha 1.**
+   - `git status --short` phải giống hệt bước 1.
+   - Mốc `%APPDATA%` phải giống bước 1.
+   - Gửi báo cáo rồi **dừng**. Không tự bắt đầu sửa gì, kể cả việc nhỏ.
 
-- **DSK-30 mục 4, 5:** không làm (chặng H).
-- **DSK-21** (cài đè): không làm; Project Owner chạy runbook sau phiên này. Không đụng `electron-builder.yml` trừ khi việc đổi phiên bản đòi hỏi, và nếu có thì ghi lý do.
-- **BE-9, BE-10, BE-11:** việc của layer backend; không làm.
-- **UI-21, UI-22:** việc của layer giao diện; không làm.
-- **DSK-24, DSK-20** (V2), **DSK-9, DSK-11:** không làm.
-- **ENV-7:** không chạy `npm audit fix`.
-- Ứng dụng thoát với mã `3221225477`: nếu gặp lại thì ghi lại, không sửa.
+## BÁO CÁO PHA 1
+
+Viết bằng tiếng Việt, ngắn gọn, theo `CLAUDE.md` mục 5. Báo cáo gồm sáu phần:
+
+1. **Môi trường:**
+   - phiên bản Node, npm, Electron, Python, trạng thái antivirus;
+   - kết quả `lint`, `npm test`, `test:packaged`;
+   - `git status --short` và mốc `%APPDATA%`, đầu và cuối.
+2. **Bảng phát hiện.** Mỗi dòng một phát hiện:
+
+   | Mã | Mức | Phần (K1–K8) | Vị trí (tệp:dòng) | Điều bị vi phạm (trích dẫn skill, hợp đồng hoặc `CLAUDE.md`) | Bằng chứng (lệnh, trích mã) | Đề xuất sửa | Ước lượng (nhỏ / vừa / lớn) |
+   |---|---|---|---|---|---|---|---|
+
+   Mã đặt `R43-1`, `R43-2`… Ba mức:
+   - **cao:** sai hợp đồng, sai hay mất dữ liệu người dùng, ranh giới cô lập bị phá, hoặc kiểm thử có thể đụng dữ liệu thật;
+   - **trung bình:** sai skill nhưng hành vi bên ngoài vẫn đúng; hoặc thiếu ca cho một ô quan trọng;
+   - **thấp:** checkpoint, comment, tài liệu, đặt tên.
+
+   Phát hiện cần sửa hợp đồng thì ghi rõ "cần quyết định ở hợp đồng" ở cột đề xuất.
+
+   Phần nào không có phát hiện thì ghi "không có", kèm một câu nói đã kiểm những gì.
+3. **Ma trận K6:**
+   - (a), (b): số ô, số ô có ca, danh sách ô thiếu;
+   - (c): bảng từng tình huống, có ca hay không.
+4. **EVIDENCE (K7):** bảng từng mục, ghi khối nào, loại 1, 2 hay 3, và kết quả hoặc lý do.
+5. **Phép cắn:** bảng từng phép và kết quả. Ghi cả việc dựng bản sao và việc dọn.
+6. **Những gì bạn không kiểm được**, và vì sao.
+
+Không có phát hiện nào là kết quả hợp lệ, nếu bạn đã kiểm đủ. Đừng tạo phát hiện cho đủ số, và cũng đừng bỏ qua một điều vì nó "nhỏ".
 
 ## RÀNG BUỘC CẦN NHỚ TỪ HỢP ĐỒNG
 
-- `backup_data.app_version`: "semantic version of the running build, handed over at launch", `from: environment_config`. Main là bên trao giá trị này lúc khởi động backend.
-- `create_backup` trả `backup_archive_record` có `app_version`. Không lối vào, nhãn hay mã lỗi nào đổi.
-- Main chỉ đọc, ráp nối và quản lý vòng đời. Số phiên bản là giá trị cấu hình (`package.json`), không gõ thẳng vào code.
+- Hợp đồng chỉ quản lý ranh giới (nguyên tắc hộp đen). Cách làm bên trong một workflow không phải phát hiện, trừ khi nó phá một luật của skill, của hợp đồng hay của `CLAUDE.md`.
+- Desktop là bên được gọi qua `ipc` (renderer là `external`) và qua `in_process` (`restore_trigger`). Desktop là bên gọi qua `http` tới backend.
+- `clause_d_desktop` không có workflow nền tảng (`.design/03_classification.md`).
+- `clause_c_ai_service` và hai workflow watermark của backend ở `đang_chờ_triển_khai`, cố ý chưa có mã (V4 trở đi). Việc Desktop không khởi động dịch vụ AI không phải phát hiện.
+- API Contract 6.0.0 đã bỏ `native_dialogs.save_file`. 6.1.0 thêm luật tham số truy vấn thừa cho `http` (không liên quan tới `ipc`).
 
-## CẢNH BÁO — điều KHÔNG được làm trong phiên này
+## CẢNH BÁO — điều KHÔNG được làm trong pha 1
 
-- Không đổi nhãn, mã lỗi hay hành vi của lối vào nào. Không thêm lối vào `ipc`, không thêm cờ `--ct-test-*`, không thêm mã vào sản phẩm chỉ để phục vụ kiểm thử.
-- Không sửa `src/main.ts` ngoài phần checkpoint, trừ khi việc đổi phiên bản đòi hỏi; nếu có thì ghi lý do.
-- Không thay `_electron.launch`, không đổi bộ công cụ kiểm thử. Không tăng thời gian chờ sẵn có, không `retries`, không `skip`.
-- Không sửa tệp nào ngoài `Desktop/`. Được **chạy** các lệnh của `Backend/` và `UI/`. Script làm tải nằm ngoài dự án và không đưa vào kho.
-- Không xóa `release\` trước khi Project Owner xác nhận đã chép bộ cài `0.1.0` ra ngoài.
+- **Không sửa, không tạo, không xóa tệp nào trong kho**, kể cả checkpoint, kể cả lỗi chính tả. Các thư mục build mà git bỏ qua (`Desktop\dist\`, `test-results\`) được sinh lại khi chạy kiểm thử; đó không phải sửa kho.
+- Phép cắn chỉ làm trên bản sao ở `%TEMP%\ct_review_desktop\`, không bao giờ trên `E:\CommissionTracker\`. Không tạo junction hay liên kết tượng trưng.
+- Không chạy `npm ci`, `npm install`, `npm run dist`, `npm audit fix`. Không cài gói, linter hay công cụ nào. Muốn dùng một công cụ chưa có thì ghi vào phần 6 của báo cáo.
+- Không build `UI/`, không chạy kiểm thử của `Backend/` hay `UI/`.
+- Không chạy `npm start`, `npm run probe`, công cụ trong `tests/tools/` hay `tests/packaged/measure_startup.cjs`. Ứng dụng chỉ được chạy qua `npm test` và `npm run test:packaged`, ở kho hay ở bản sao.
+- Không đọc `.plan/open_issues.md`, `.plan/v1_roadmap.md` ở pha 1. Không đọc, không ghi `.reviews/`.
+- Không sửa `.contracts/`, `CLAUDE.md`, `.plan/`, `.design/`.
+- Không chạy `git commit`, `push`, `reset`, `checkout`, `restore`, `stash`, `clean`, `tag` hay lệnh nào đổi trạng thái kho. Chỉ được đọc.
+- ⚠ Không kiểm thử hay lần chạy nào được đụng `%APPDATA%\CommissionTracker` thật.
 - Không cài bộ cài, không gỡ bản đã cài, không sửa registry.
-- Không bật `nodeIntegration`, không tắt `contextIsolation` hay `sandbox`, không đưa `ipcRenderer` cho renderer.
-- Không sửa `.contracts/`, `CLAUDE.md`, `.plan/`, `.design/`. Không đọc, không ghi `.reviews/`.
 - Không tắt, gỡ hay đổi cấu hình phần mềm diệt virus.
-- Không tắt luật lint, không thêm `eslint-disable`, `@ts-ignore`, `@ts-expect-error` hay `@ts-nocheck`. Không viết kiểm thử luôn đạt.
-- Không chạy `git commit`, `push`, `reset`, `checkout`, `restore`, `stash`, `tag` hay lệnh nào đổi trạng thái kho. Chỉ được đọc.
-- ⚠ Không kiểm thử hay lần chạy nào được đụng `%APPDATA%\CommissionTracker` thật. Mọi lần chạy ứng dụng phải kèm `--ct-test-data-dir`.
-- Không dùng sub-agent. Không chạy song song hai lệnh kiểm thử hay hai bản ứng dụng. Script làm tải không phải bản ứng dụng, nên được chạy song song với kiểm thử.
+- Không dùng sub-agent. Không chạy song song hai lệnh kiểm thử hay hai bản ứng dụng.
+- Không tăng thời gian chờ, không thêm `retries` hay `skip`, kể cả trong bản sao, trừ khi đó chính là phép cắn và bạn ghi rõ.
+- Chỉ xóa đúng thư mục bạn tạo, gọi đích danh.
+- Phép cắn nào bị bộ phân loại quyền chặn thì ghi lại rồi đi tiếp, không tìm đường vòng.
 
-## TIÊU CHÍ HOÀN TẤT PHIÊN
+## TIÊU CHÍ HOÀN TẤT PHA 1
 
-Phiên xong khi **tất cả** những điều dưới đây đúng, trên máy Project Owner, với antivirus đang bật:
-
-1. **G-VER:**
-   - `package.json` và `package-lock.json` ghi `1.0.0`; `npm ci` chạy đúng;
-   - có ít nhất một ca chạy với backend thật khẳng định `app_version` bằng `version` đọc từ `package.json`;
-   - phép cắn (b) bắt được;
-   - bộ cài tên `Commission Tracker Setup 1.0.0.exe`, có kích thước và SHA-256 trong báo cáo.
-2. **DSK-30 (1):** N7 chờ trang `data:` như R10; danh sách các chỗ "điều hướng rồi `evaluate`" khác, kèm cách xử lý; phép cắn (c) đã làm.
-3. **DSK-30 (2):** backend giả mới; ca 6 và ca 14 dùng nó với khẳng định giữ nguyên; K1 không đổi; phép cắn (a) bắt được.
-4. **`npm test`:** 3 lượt liên tiếp có tải (4 tiến trình) và 1 lượt không tải. N7, ca 6, ca 14, K1, C1 đạt cả 4 lượt. Lượt không tải đạt toàn bộ.
-5. `npm run lint` sạch; `npm run dist` chạy từ trạng thái sạch; `npm run test:packaged` đạt toàn bộ.
-6. UI e2e đạt 83/83 một lượt; `UI/evidence` không đổi.
-7. **Checkpoint:** YAML hợp lệ; giờ ghi đúng BE-8; `UNSOLVED_PROBLEMS: []`.
-8. Mốc `%APPDATA%` giống đầu phiên.
-9. `git status --short` cuối phiên chỉ có tệp trong `Desktop/`. Liệt kê trong báo cáo, kèm `git check-ignore -v` cho từng tệp mới (`core.ignorecase=true`).
-10. **Báo cáo cuối phiên** theo `CLAUDE.md` mục 5, kèm:
-    - cách đổi phiên bản và ca ràng phiên bản;
-    - danh sách ca từng hỏng vì chuỗi `0.1.0`, nếu có;
-    - các chỗ "điều hướng rồi `evaluate`" đã rà;
-    - các phép cắn;
-    - số đạt của bốn lượt `npm test`, tên và nguyên nhân mọi ca hỏng;
-    - log theo DSK-30 (3), nếu có;
-    - kích thước và SHA-256 bộ cài `1.0.0`; kết quả `test:packaged` và UI e2e;
-    - các lệnh để chạy lại;
-    - danh sách ngoại lệ lint mới (phải rỗng).
+1. Đã trả lời đủ K1 → K8.
+2. Đã chạy `lint`, `npm test` và `test:packaged`, mỗi lệnh một lượt, và đã ghi kết quả, kể cả ca hỏng.
+3. Đã làm ít nhất năm phép cắn trên bản sao ngoài kho (ít nhất một ở Main, một ở `restore_data`, một ở hạ tầng cắt ngang), và đã xóa đúng thư mục bản sao.
+4. `git status --short` và mốc `%APPDATA%` cuối pha 1 giống hệt đầu phiên.
+5. Báo cáo có đủ sáu phần ở mục "BÁO CÁO PHA 1".
