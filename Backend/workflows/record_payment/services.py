@@ -2,8 +2,8 @@
 # workflow: record_payment
 # clause: clause_b_backend
 # component: services
-# last_updated_by: coding-agent@2026-10-11#3
-# last_updated_at: 2026-10-11T20:46:15.5976649+07:00
+# last_updated_by: coding-agent@2026-10-12#1
+# last_updated_at: 2026-10-12T19:32:29.9936045+07:00
 #
 # EXPERIENCES:
 #   - id: record_payment-EXP-001
@@ -125,6 +125,30 @@
 #       bị chuyển đổi: khoản đã ghi trước phiên 23 với method trống vẫn còn
 #       nguyên, vẫn được đọc, liệt kê, tính số dư, hủy bình thường; luật chỉ
 #       áp khi ghi.
+#   - id: record_payment-EXP-008
+#     content: >
+#       Chuỗi không mã hóa được UTF-8 (R42-1, phiên 42): record gọi
+#       _utf8_errors(payload) ở Routers trước khi kiểm định dạng và trả 400
+#       ERR_VALIDATION, loc chỉ đúng trường (main-EXP-018), kể cả khi
+#       commission_id không tồn tại (định dạng trước, tra đơn sau, như
+#       record_payment-EXP-007). Trường chưa có ràng buộc duy nhất là
+#       payment_input.note: trước phiên 42 một surrogate lẻ ở đó ra 500
+#       text/plain (UnicodeEncodeError khi ghi payment). Các trường khác
+#       (commission_id, method, currency, paid_at, direction, kind) đã bị từ
+#       chối. Các chữ số của paid_at dùng [0-9] chứ không \d (R42-2): Python đã
+#       từ chối chữ số khác ASCII ở datetime.fromisoformat, nên đây là hàng rào
+#       thứ hai, không đổi hành vi.
+#   - id: record_payment-EXP-009
+#     content: >
+#       _MAX_COMPUTED_INTEGER (2**53 - 1) nằm trong services.py, không trong
+#       Configs, và đó là ngoại lệ CÓ CHỦ Ý (R42-7, phiên 42). Nó là luật số
+#       nguyên tính ra của Data Schema (mandatory_rules: mọi số nguyên tại
+#       ranh giới và mọi tổng tính ra nằm trong -(2^53-1)..2^53-1), một hằng
+#       của hợp đồng không phải giá trị cấu hình: nó không thay đổi theo máy hay
+#       theo người dùng, và đổi nó là đổi hợp đồng. Cận của input (Routers) là
+#       _MAX_BOUNDARY_INTEGER, cũng do hợp đồng quy định; configs.yaml của
+#       workflow nói đúng một điều: không có giá trị riêng nào. Nếu hợp đồng đổi
+#       cận, sửa hai chỗ (routers.py và services.py) và view_income_report.
 #
 # UNSOLVED_PROBLEMS: []
 #
@@ -140,7 +164,9 @@
 #       error_body.
 #     how: >
 #       cd Backend; env\Scripts\python.exe -m pytest -s -v
-#       tests/test_backend_process.py -k payments (Python 3.13.12 của
+#       tests/test_backend_process.py::test_process_payments_balance_void_restart_ledger_and_storage_failure
+#       (chọn theo node ID: -k payments nay chọn thêm hai ca của claim khác;
+#       Python 3.13.12 của
 #       Backend/env; tiến trình con thật khởi động bằng CT_*, cổng trống ngẫu
 #       nhiên, DB trong thư mục tạm; ">>" là yêu cầu, "<<" là phản hồi thô).
 #       Đơn VND agreed 1000000. Lỗi lưu trữ: một kết nối sqlite3 khác giữ
@@ -263,8 +289,9 @@
 #     how: >
 #       cd Backend; env\Scripts\python.exe -m pytest -q workflows/record_payment
 #     result: >
-#       69 passed.
-#     recorded_at: 2026-09-24T21:55:00+07:00
+#       96 passed ngày 2026-10-12 (cả thư mục; 69 ở phiên 7, 84 ở phiên 23,
+#       85 trước phiên 42, thêm 10 ca chuỗi không mã hóa được UTF-8 và 1 ca id).
+#     recorded_at: 2026-10-12T19:32:29.9936045+07:00
 #   - claim: >
 #       Data Schema 9.0.0 (BE-7): POST /payments trả 400 ERR_VALIDATION khi
 #       payment_input.method trống theo formats.not_blank, loc [payment_input,
@@ -298,7 +325,7 @@
 #       bảng vẫn được GET /payments trả về với method "", get_balance 200, hủy
 #       200. %APPDATA%\CommissionTracker\data.db trước và sau giống hệt: 114688
 #       byte, ghi lúc 2026-09-28T21:09:42+07:00, SHA-256 B1996554...F390B.
-#     recorded_at: 2026-09-30T23:40:00+07:00
+#     recorded_at: 2026-09-30T22:38:59+07:00
 #   - claim: >
 #       Bước nâng cấp 2 (giả, chỉ trong kiểm thử) áp lên dữ liệu đã có đúng
 #       một lần, giữ nguyên dữ liệu, ghi phiên bản 2; một bước hỏng thì hoàn
@@ -314,15 +341,20 @@
 #       >= current": khởi động nâng cấp hỏng ngay, "table payment already
 #       exists", vì bước 1 chạy lại.
 #     recorded_at: 2026-10-11T20:46:15.5976649+07:00
+#   - claim: >
+#       Chuỗi có surrogate lẻ ở note (và ở mọi chuỗi khác của thân, cùng tên
+#       trường lạ) bị từ chối 400 ERR_VALIDATION với loc đúng trường, và không
+#       ghi gì.
+#     how: >
+#       cd Backend; env\Scripts\python.exe -m pytest -q workflows/record_payment
+#       -k cannot_encode (Python 3.13.12, Windows 11, SQLite thật). Phép cắn trên bản sao ngoài kho
+#       (script tạm, không thuộc dự án): thân _utf8_errors trả [] ngay.
+#     result: >
+#       11 passed (cả thư mục 96 passed). Khi cắn: 1 failed, đúng
+#       [value payment_input.note], 10 passed.
+#     recorded_at: 2026-10-12T19:32:29.9936045+07:00
 #
-# NOTES:
-#   - id: record_payment-NOTE-001
-#     written_at: 2026-09-30
-#     content: >
-#       Đề xuất theo Giai đoạn 6, Bước 6.6: record_payment chuyển
-#       đang_triển_khai -> đã_hoàn_thiện ở Data Schema 9.0.0 (BE-7 đã áp dụng,
-#       không còn UNSOLVED_PROBLEMS). Không tự sửa hợp đồng; Orchestrator xác
-#       nhận theo 08 Phần 5 rồi đề xuất Data Schema 9.0.1.
+# NOTES: []
 # ===WCA-CHECKPOINT-END===
 """Services of record_payment: every business decision of the workflow."""
 

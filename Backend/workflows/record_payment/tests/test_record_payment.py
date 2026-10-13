@@ -2,6 +2,7 @@
 file, wired exactly as the Main wires it (Backend.wire_workflows): the call
 to manage_commission is the real in_process get_commission_summary."""
 
+import json
 import sqlite3
 import threading
 import time
@@ -10,6 +11,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 import Backend
+from tests.utf8_boundary import assert_rejected, send, surrogate_cases
 from workflows.scaffold_backend import adapters as scaffold
 
 APP_VERSION = "1.0.0"
@@ -619,3 +621,35 @@ def test_programming_error_is_not_reported_as_storage_error(wired, monkeypatch):
     record(http, mid)
     with pytest.raises(KeyError):
         http.get(f"/payments?commission_id={mid}")
+
+
+# --- strings that UTF-8 cannot encode (R42-1) ---------------------------------
+# A JSON text may spell a lone surrogate ("\ud800"). Every string of the body,
+# and every field name, is refused as a format error: 400 + ERR_VALIDATION in
+# JSON, naming the field, and nothing is written. The commission id of the
+# cases is a placeholder, replaced by the id of a real commission in the test.
+
+PAYMENT_CASES = surrogate_cases(
+    {"commission_id": UNKNOWN_ID, "payment_input": payment_input(note="a note")}
+)
+
+
+@pytest.mark.parametrize(("payload", "loc"), PAYMENT_CASES)
+def test_record_refuses_a_string_utf8_cannot_encode_and_writes_nothing(wired, payload, loc):
+    http, *_ = wired
+    mid = new_commission(http)
+    record(http, mid)
+    before = http.get(f"/payments?commission_id={mid}").json()
+    real = json.loads(json.dumps(payload).replace(UNKNOWN_ID, mid))
+    assert_rejected(send(http, "POST", "/payments", real), loc)
+    assert http.get(f"/payments?commission_id={mid}").json() == before
+
+
+def test_a_path_or_query_id_utf8_cannot_encode_keeps_the_malformed_id_answers(wired):
+    # The URL carries the bytes ED A0 80 (a surrogate spelled in UTF-8): the
+    # server reads them as replacement characters, so the id is malformed.
+    http, *_ = wired
+    bad = "%ED%A0%80"
+    assert_error(http.get(f"/payments?commission_id={bad}"), 404, "ERR_NOT_FOUND")
+    assert_error(http.get(f"/payments/balance/{bad}"), 404, "ERR_NOT_FOUND")
+    assert_error(http.put(f"/payments/{bad}/void"), 404, "ERR_NOT_FOUND")

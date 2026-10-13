@@ -2,8 +2,8 @@
 # workflow: manage_client
 # clause: clause_b_backend
 # component: services
-# last_updated_by: coding-agent@2026-10-11#3
-# last_updated_at: 2026-10-11T20:46:15.5976649+07:00
+# last_updated_by: coding-agent@2026-10-12#1
+# last_updated_at: 2026-10-12T19:32:29.9936045+07:00
 #
 # EXPERIENCES:
 #   - id: manage_client-EXP-003
@@ -18,8 +18,8 @@
 #     content: >
 #       Nhãn 500 + ERR_STORAGE_IO (API Contract 2.0.0) có ở cả sáu điểm giao
 #       tiếp, theo quy ước chung main-EXP-005: _storage_io() trong adapters.py
-#       bọc insert, replace, fetch, fetch_summary, fetch_all_list_items (không
-#       bọc ensure_storage); Routers bắt StorageIOError; get_client_summary
+#       bọc insert, write_scope(), fetch, fetch_summary, fetch_all_list_items
+#       (không bọc ensure_storage); Routers bắt StorageIOError; get_client_summary
 #       raise label=500. details.reason là thông điệp gốc của SQLite (ví dụ
 #       "database is locked", "attempt to write a readonly database").
 #     derived_from: manage_client-EXP-001
@@ -80,6 +80,29 @@
 #       bên quyết định; giao diện hiện thông báo 400 chung khi bị từ chối. (2)
 #       Ký tự vô hình không phải khoảng trắng (ví dụ U+200B) vẫn qua luật này;
 #       hợp đồng không cấm.
+#   - id: manage_client-EXP-009
+#     content: >
+#       edit_client và set_client_archived đọc rồi ghi trong MỘT giao dịch
+#       (R42-3, phiên 42), theo khuôn main-EXP-006: ClientRepository.write_scope()
+#       yield ClientWriteScope có fetch và replace trên kết nối của giao dịch.
+#       Trước đó mỗi hàm đọc (một giao dịch) rồi ghi lại cả dòng, kể cả cột
+#       is_archived (giao dịch khác): một sửa và một lưu trữ chồng nhau thì bên
+#       ghi sau ghi lại giá trị đã đọc cũ, mất cờ lưu trữ (hoặc mất bản sửa) mà
+#       cả hai đều trả 200. Cách khác (cho replace chỉ ghi cột của hành động)
+#       không chọn vì edit và set_archived cùng đổi updated_at và một dòng ghi
+#       toàn bộ là cách đơn giản nhất mà đúng. Không có lời gọi in_process nào
+#       trong scope. Kiểm thử chen nhau tất định: móc vào lần đọc đầu của hành
+#       động, chạy hành động kia trên luồng khác, cho nó tối đa 1 giây; một giao
+#       dịch thì hành động kia chỉ có thể chờ.
+#   - id: manage_client-EXP-010
+#     content: >
+#       Chuỗi không mã hóa được UTF-8 (R42-1): create_client, edit_client và
+#       set_client_archived gọi _utf8_errors(payload) ở Routers trước khi kiểm
+#       định dạng và trả 400 ERR_VALIDATION, loc chỉ đúng trường (xem
+#       main-EXP-018). Trường duy nhất của workflow này chưa có ràng buộc là
+#       client_input.note: trước phiên 42 một surrogate lẻ ở đó làm
+#       UnicodeEncodeError tại adapters.insert/replace và ra 500 text/plain;
+#       display_name, channel, value có StringConstraints nên đã trả 400.
 #
 # UNSOLVED_PROBLEMS: []
 #
@@ -138,7 +161,8 @@
 #       failed.","details":{"reason":"database is locked"}}; POST /clients ->
 #       500, cùng thân; get_client_summary -> raised label=500
 #       error_body={'code': 'ERR_STORAGE_IO', 'message': 'Storage failed.',
-#       'details': {'reason': 'database is locked'}}. (2) 32 passed, gồm POST,
+#       'details': {'reason': 'database is locked'}}. (2) cả thư mục đạt (89
+#       passed ngày 2026-10-12), gồm POST,
 #       PUT, PUT archived -> 500 với reason chứa "readonly" và không ghi gì;
 #       GET /clients, GET /clients/{id} -> 500 "database is locked", nhả khóa
 #       thì GET -> 200; một KeyError giả lập trong Adapters vẫn nổi lên thành
@@ -184,8 +208,9 @@
 #       value.strip():", chạy pytest -q workflows/manage_client -k "blank or
 #       padding or padded", rồi khôi phục và chạy lại.
 #     result: >
-#       70 passed (34 ca cũ + 36 ca mới: 15 ca tạo, 15 ca sửa, 6 ca hợp lệ và
-#       biên). Khi tắt phép kiểm: 24 failed, 10 passed; 24 ca hỏng đúng là 4
+#       Phiên 18: 36 ca mới (15 ca tạo, 15 ca sửa, 6 ca hợp lệ và biên); số ca
+#       cả thư mục nay là 89 (xem claim của R42-1 và R42-3 bên dưới). Khi tắt
+#       phép kiểm (đo lại ngày 2026-10-12): 24 failed, 10 passed; 24 ca hỏng đúng là 4
 #       dạng chỉ khoảng trắng x 3 trường x tạo/sửa; 6 ca "" vẫn đạt vì
 #       min_length bắt trước. Khôi phục: 34 passed (cùng bộ lọc).
 #     recorded_at: 2026-09-28T21:30:00+07:00
@@ -193,9 +218,13 @@
 #       Trên tiến trình Backend.py thật, luật not blank chạy đúng qua HTTP và
 #       giá trị hợp lệ được lưu nguyên văn.
 #     how: >
-#       Script tạm của phiên (không nằm trong dự án) khởi động
+#       Bằng chứng MỘT LẦN, không chạy lại được: script tạm của phiên 18
+#       (không nằm trong dự án, đã mất) khởi động
 #       Backend\env\Scripts\python.exe Backend.py với CT_PORT trống, CT_DB_FILE_PATH
-#       trong %TEMP%\ct_s18_*, chờ READY, gọi bằng urllib, đóng stdin.
+#       trong %TEMP%\ct_s18_*, chờ READY, gọi bằng urllib, đóng stdin. Các khẳng
+#       định này được giữ trong dự án bằng kiểm thử not blank của
+#       workflows/manage_client (qua Routers thật) và tests/test_backend_process.py
+#       (tiến trình thật).
 #     result: >
 #       POST display_name "　 " -> 400 {"code":"ERR_VALIDATION","message":
 #       "Invalid client_input.","details":{"errors":[{"loc":["client_input",
@@ -211,15 +240,16 @@
 #       backend, cũng không làm hỏng desktop hay giao diện; không kiểm thử nào
 #       đụng %APPDATA%\CommissionTracker thật.
 #     how: >
-#       Windows 11, Python 3.13.12 (Backend/env), Node 24.14.1. (1) cd Backend;
-#       env\Scripts\python.exe -m pytest -q. (2) cd Desktop; npm test (backend
-#       thật). (3) cd UI; npm run e2e. (4) Băm SHA-256, kích thước, thời điểm
-#       sửa của mọi tệp trong %APPDATA%\CommissionTracker trước việc 1 và sau
-#       (1)-(3).
+#       Bằng chứng MỘT LẦN của phiên 18 (các lệnh (2)-(4) thuộc layer Desktop
+#       và UI). Windows 11, Python 3.13.12 (Backend/env), Node 24.14.1. (1) cd
+#       Backend; env\Scripts\python.exe -m pytest -q (số của cả layer nay ở
+#       EVIDENCE của Main). (2) cd Desktop; npm test (backend thật). (3) cd UI;
+#       npm run e2e. (4) Băm SHA-256, kích thước, thời điểm sửa của mọi tệp
+#       trong %APPDATA%\CommissionTracker trước việc 1 và sau (1)-(3).
 #     result: >
-#       (1) 445 passed (381 cũ + 64 mới), không sửa kiểm thử của workflow khác.
-#       (2) 14 passed. (3) 17 passed. (4) giống hệt: data.db 114688 byte,
-#       data.db.lock 0 byte, cùng băm và thời điểm.
+#       (1) cả layer đạt, không sửa kiểm thử của workflow khác. (2) 14 passed.
+#       (3) 17 passed. (4) giống hệt: data.db 114688 byte, data.db.lock 0 byte,
+#       cùng băm và thời điểm.
 #     recorded_at: 2026-09-28T22:05:00+07:00
 #   - claim: >
 #       Bước nâng cấp 2 (giả, chỉ trong kiểm thử) áp lên dữ liệu đã có đúng
@@ -235,15 +265,27 @@
 #       1 passed; (a)-(e) đều đạt. Phép cắn (a) trên workflow này, bỏ dòng
 #       UPDATE ... SET version: khẳng định (c) hỏng, "assert [1] == [2]".
 #     recorded_at: 2026-10-11T20:46:15.5976649+07:00
+#   - claim: >
+#       Chuỗi có surrogate lẻ ở note (create_client, edit_client) và tên trường
+#       lạ có surrogate (ba lối vào có thân) bị từ chối 400 ERR_VALIDATION với
+#       loc đúng trường, không ghi gì; một sửa và một lưu trữ chồng nhau thì
+#       cả hai còn (R42-3).
+#     how: >
+#       cd Backend; env\Scripts\python.exe -m pytest -q workflows/manage_client
+#       -k "cannot_encode or overlap or path_id_utf8" (Python 3.13.12, Windows
+#       11, SQLite thật; HTTP qua TestClient tới Routers thật). Phép cắn trên
+#       bản sao ngoài kho (script tạm, không thuộc dự án): (a) thân hàm
+#       _utf8_errors trả [] ngay; (b) khôi phục services.py và adapters.py của
+#       HEAD (đọc rồi ghi ở hai giao dịch).
+#     result: >
+#       18 passed (16 ca chuỗi + 2 ca chen nhau; cả thư mục 89 passed). Cắn (a):
+#       2 failed, đúng
+#       [value client_input.note] của tạo và của sửa; 14 ca khác vẫn đạt vì
+#       Pydantic đã từ chối chúng. Cắn (b): cả hai ca chen nhau hỏng (cờ lưu
+#       trữ mất, hoặc bản sửa mất, dù cả hai trả 200).
+#     recorded_at: 2026-10-12T19:32:29.9936045+07:00
 #
-# NOTES:
-#   - content: >
-#       Đề xuất (Giai đoạn 6, Bước 6.6): chuyển status của manage_client
-#       đang_triển_khai -> đã_hoàn_thiện. BE-5 đã áp dụng client_input của Data
-#       Schema 8.0.0 (not blank cho display_name, contacts[].channel,
-#       contacts[].value); bằng chứng ở EVIDENCE; không có UNSOLVED_PROBLEMS.
-#       Coding agent không tự sửa hợp đồng.
-#     written_at: 2026-09-28
+# NOTES: []
 # ===WCA-CHECKPOINT-END===
 """Services of manage_client: every business decision of the workflow."""
 
@@ -301,26 +343,35 @@ class ManageClientService:
 
     def edit(self, client_id: str, client_input: ClientInput) -> Client:
         # Editing replaces the editable fields; archive state and creation
-        # time are kept. Archived clients may be edited.
-        current = self.get(client_id)
-        edited = replace(
-            current,
-            display_name=client_input.display_name,
-            contacts=list(client_input.contacts),
-            note=client_input.note,
-            updated_at=_now(),
-        )
-        self._repo.replace(edited)
+        # time are kept. Archived clients may be edited. Reading the client and
+        # writing it back happen in one transaction (R42-3): an edit and an
+        # archive that overlap are applied one after the other, each on what
+        # the other left, so neither can write back a stale archive state.
+        with self._repo.write_scope() as scope:
+            current = scope.fetch(client_id)
+            if current is None:
+                raise ClientNotFoundError(client_id)
+            edited = replace(
+                current,
+                display_name=client_input.display_name,
+                contacts=list(client_input.contacts),
+                note=client_input.note,
+                updated_at=_now(),
+            )
+            scope.replace(edited)
         return edited
 
     def set_archived(self, client_id: str, is_archived: bool) -> Client:
         # Setting the flag to the value it already has is not an error and
-        # changes nothing (updated_at is kept).
-        current = self.get(client_id)
-        if current.is_archived == is_archived:
-            return current
-        changed = replace(current, is_archived=is_archived, updated_at=_now())
-        self._repo.replace(changed)
+        # changes nothing (updated_at is kept). One transaction, as for edit.
+        with self._repo.write_scope() as scope:
+            current = scope.fetch(client_id)
+            if current is None:
+                raise ClientNotFoundError(client_id)
+            if current.is_archived == is_archived:
+                return current
+            changed = replace(current, is_archived=is_archived, updated_at=_now())
+            scope.replace(changed)
         return changed
 
     def get_summary(self, client_id: str) -> ClientSummary:

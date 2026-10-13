@@ -2,8 +2,8 @@
 # workflow: manage_watermark_profile
 # clause: clause_b_backend
 # component: services
-# last_updated_by: coding-agent@2026-10-11#3
-# last_updated_at: 2026-10-11T20:46:15.5976649+07:00
+# last_updated_by: coding-agent@2026-10-12#1
+# last_updated_at: 2026-10-12T19:32:29.9936045+07:00
 #
 # EXPERIENCES:
 #   - id: manage_watermark_profile-EXP-001
@@ -78,6 +78,15 @@
 #       JavaScript (trim) coi U+FEFF là khoảng trắng (đo trên Python 3.13.12 và
 #       Node 24.14.1); backend là bên quyết định. (2) Ký tự vô hình không phải
 #       khoảng trắng (ví dụ U+200B) vẫn qua luật; hợp đồng không cấm.
+#   - id: manage_watermark_profile-EXP-007
+#     content: >
+#       Chuỗi không mã hóa được UTF-8 (R42-1, phiên 42): create_profile và
+#       edit_profile qua parse_profile_input gọi _utf8_errors(payload) ở Routers
+#       trước khi kiểm định dạng và trả 400 ERR_VALIDATION, loc chỉ đúng trường
+#       (main-EXP-018). Ba trường chưa có ràng buộc, nên trước phiên 42 một
+#       surrogate lẻ ở đó ra 500 text/plain: legal_name, contact,
+#       ownership_statement. display_name (StringConstraints) và
+#       default_strength (phải nằm trong strength_presets) đã bị từ chối.
 #
 # UNSOLVED_PROBLEMS: []
 #
@@ -161,8 +170,9 @@
 #     how: >
 #       cd Backend; env\Scripts\python.exe -m pytest -q workflows/manage_watermark_profile
 #     result: >
-#       33 passed.
-#     recorded_at: 2026-09-24T22:31:00+07:00
+#       63 passed ngày 2026-10-12 (cả thư mục; 33 ở phiên 8, 48 trước phiên
+#       42, thêm 14 ca chuỗi không mã hóa được UTF-8 và 1 ca id).
+#     recorded_at: 2026-10-12T19:32:29.9936045+07:00
 #   - claim: >
 #       create_profile và edit_profile trả 400 ERR_VALIDATION, details loc
 #       [profile_input, display_name], và không ghi gì, khi bút danh là "",
@@ -181,17 +191,22 @@
 #       value.strip():", chạy pytest -q workflows/manage_watermark_profile -k
 #       "blank or padding or padded", rồi khôi phục và chạy lại.
 #     result: >
-#       47 passed (33 ca cũ + 14 ca mới: 5 tạo, 5 sửa, 4 hợp lệ và biên). Khi
-#       tắt phép kiểm: 8 failed, 5 passed; 8 ca hỏng đúng là 4 dạng chỉ khoảng
+#       Phiên 18: 14 ca mới (5 tạo, 5 sửa, 4 hợp lệ và biên); số ca cả thư mục
+#       nay là 63. Khi tắt phép kiểm (đo lại 2026-10-12): 8 failed, 5 passed;
+#       8 ca hỏng đúng là 4 dạng chỉ khoảng
 #       trắng x tạo/sửa; 2 ca "" vẫn đạt vì min_length. Khôi phục: 13 passed.
 #     recorded_at: 2026-09-28T21:30:00+07:00
 #   - claim: >
 #       Trên tiến trình Backend.py thật, bút danh trống bị từ chối ở POST và
 #       PUT, bút danh hợp lệ có khoảng trắng hai đầu được lưu nguyên văn.
 #     how: >
-#       Script tạm của phiên (không nằm trong dự án) khởi động
+#       Bằng chứng MỘT LẦN, không chạy lại được: script tạm của phiên 18
+#       (không nằm trong dự án, đã mất) khởi động
 #       Backend\env\Scripts\python.exe Backend.py với CT_PORT trống, CT_DB_FILE_PATH
-#       trong %TEMP%\ct_s18_*, chờ READY, gọi bằng urllib, đóng stdin.
+#       trong %TEMP%\ct_s18_*, chờ READY, gọi bằng urllib, đóng stdin. Các khẳng
+#       định này được giữ trong dự án bằng kiểm thử not blank của
+#       workflows/manage_watermark_profile (qua Routers thật) và
+#       tests/test_backend_process.py (tiến trình thật).
 #     result: >
 #       POST display_name "   " -> 400 {"code":"ERR_VALIDATION","message":
 #       "Invalid profile_input.","details":{"errors":[{"loc":["profile_input",
@@ -205,13 +220,14 @@
 #       backend, cũng không làm hỏng desktop hay giao diện; không kiểm thử nào
 #       đụng %APPDATA%\CommissionTracker thật.
 #     how: >
-#       Windows 11, Python 3.13.12 (Backend/env), Node 24.14.1. (1) cd Backend;
-#       env\Scripts\python.exe -m pytest -q. (2) cd Desktop; npm test (backend
-#       thật). (3) cd UI; npm run e2e. (4) Băm SHA-256, kích thước, thời điểm
-#       sửa của mọi tệp trong %APPDATA%\CommissionTracker trước việc 1 và sau
-#       (1)-(3).
+#       Bằng chứng MỘT LẦN của phiên 18 (các lệnh (2)-(4) thuộc layer Desktop
+#       và UI). Windows 11, Python 3.13.12 (Backend/env), Node 24.14.1. (1) cd
+#       Backend; env\Scripts\python.exe -m pytest -q (số của cả layer nay ở
+#       EVIDENCE của Main). (2) cd Desktop; npm test (backend thật). (3) cd UI;
+#       npm run e2e. (4) Băm SHA-256, kích thước, thời điểm sửa của mọi tệp
+#       trong %APPDATA%\CommissionTracker trước việc 1 và sau (1)-(3).
 #     result: >
-#       (1) 445 passed (381 cũ + 64 mới), không sửa kiểm thử của workflow khác.
+#       (1) cả layer đạt, không sửa kiểm thử của workflow khác.
 #       (2) 14 passed. (3) 17 passed. (4) giống hệt: data.db 114688 byte,
 #       data.db.lock 0 byte, cùng băm và thời điểm.
 #     recorded_at: 2026-09-28T22:05:00+07:00
@@ -228,15 +244,21 @@
 #     result: >
 #       1 passed; (a)-(e) đều đạt.
 #     recorded_at: 2026-10-11T20:46:15.5976649+07:00
+#   - claim: >
+#       Chuỗi có surrogate lẻ ở legal_name, contact, ownership_statement (và ở
+#       mọi chuỗi khác của thân, cùng tên trường lạ) bị từ chối 400
+#       ERR_VALIDATION với loc đúng trường, không ghi gì, ở tạo và sửa.
+#     how: >
+#       cd Backend; env\Scripts\python.exe -m pytest -q
+#       workflows/manage_watermark_profile -k cannot_encode (Python 3.13.12,
+#       Windows 11, SQLite thật). Phép cắn trên bản sao ngoài kho (script tạm,
+#       không thuộc dự án): thân _utf8_errors trả [] ngay.
+#     result: >
+#       15 passed (cả thư mục 63 passed). Khi cắn: 6 failed (legal_name,
+#       contact, ownership_statement, mỗi cái ở tạo và sửa), 9 passed.
+#     recorded_at: 2026-10-12T19:32:29.9936045+07:00
 #
-# NOTES:
-#   - content: >
-#       Đề xuất (Giai đoạn 6, Bước 6.6): chuyển status của
-#       manage_watermark_profile đang_triển_khai -> đã_hoàn_thiện. BE-6 đã áp
-#       dụng profile_input của Data Schema 8.0.0 (display_name not blank);
-#       bằng chứng ở EVIDENCE; không có UNSOLVED_PROBLEMS. Coding agent không
-#       tự sửa hợp đồng.
-#     written_at: 2026-09-28
+# NOTES: []
 # ===WCA-CHECKPOINT-END===
 """Services of manage_watermark_profile: every business decision of the workflow."""
 

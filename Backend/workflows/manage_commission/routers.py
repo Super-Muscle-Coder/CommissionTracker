@@ -50,8 +50,9 @@ from .services import (
 # clause_a_common.formats.id: UUID v4, lowercase string.
 _ID_REGEX = r"^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
 _ID_PATTERN = re.compile(_ID_REGEX)
-# clause_a_common.formats.date: ISO 8601 calendar date, YYYY-MM-DD.
-_DATE_PATTERN = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+# clause_a_common.formats.date: ISO 8601 calendar date, YYYY-MM-DD. ASCII
+# digits only: \d would also accept the digits of other scripts.
+_DATE_PATTERN = re.compile(r"^[0-9]{4}-[0-9]{2}-[0-9]{2}$")
 # clause_a_common.mandatory_rules / types.money: every integer at the boundary
 # lies within -(2^53-1)..2^53-1 (what a JavaScript number holds exactly).
 _MAX_BOUNDARY_INTEGER = 2**53 - 1
@@ -140,6 +141,40 @@ def _validation_details(exc: ValidationError) -> dict:
             for e in exc.errors(include_url=False, include_context=False, include_input=False)
         ]
     }
+
+
+def _is_utf8_text(text: str) -> bool:
+    try:
+        text.encode("utf-8")
+    except UnicodeEncodeError:
+        return False
+    return True
+
+
+def _utf8_errors(payload: object) -> list[dict]:
+    # A JSON text may spell a lone surrogate ("\ud800"): it parses to a str, but
+    # no UTF-8 text (SQLite, a response body) can hold it. That is a format
+    # error of the input, refused at the boundary for every string and every
+    # field name of the body, whatever the field. Walked without recursion: the
+    # body may be nested as deep as the JSON parser allows.
+    errors: list[dict] = []
+    pending: list[tuple[object, tuple[str, ...]]] = [(payload, ())]
+    while pending:
+        value, loc = pending.pop()
+        if isinstance(value, str):
+            if not _is_utf8_text(value):
+                errors.append({"loc": list(loc), "msg": "must be text that UTF-8 can encode"})
+        elif isinstance(value, dict):
+            children = []
+            for key, item in value.items():
+                if _is_utf8_text(key):
+                    children.append((item, loc + (key,)))
+                else:
+                    errors.append({"loc": list(loc), "msg": "a field name must be text that UTF-8 can encode"})
+            pending.extend(reversed(children))
+        elif isinstance(value, list):
+            pending.extend(reversed([(item, loc + (str(i),)) for i, item in enumerate(value)]))
+    return errors
 
 
 def _is_id(value: object) -> bool:
@@ -254,6 +289,9 @@ def create_manage_commission_routers(service: ManageCommissionService):
     # create_commission — POST /commissions
     @router.post("/commissions")
     def create_commission(payload: Any = Body(default=None)) -> JSONResponse:
+        problems = _utf8_errors(payload)
+        if problems:
+            return _error_response(400, "ERR_VALIDATION", "Invalid commission_input.", {"errors": problems})
         try:
             body = parse_body(payload)
         except ValidationError as exc:
@@ -295,6 +333,9 @@ def create_manage_commission_routers(service: ManageCommissionService):
                 400, "ERR_VALIDATION", "commission_id must be a lowercase UUID v4.",
                 {"commission_id": commission_id},
             )
+        problems = _utf8_errors(payload)
+        if problems:
+            return _error_response(400, "ERR_VALIDATION", "Invalid commission_input.", {"errors": problems})
         try:
             body = parse_body(payload)
         except ValidationError as exc:

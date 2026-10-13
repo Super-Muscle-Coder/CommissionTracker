@@ -2,8 +2,8 @@
 # workflow: backup_data
 # clause: clause_b_backend
 # component: services
-# last_updated_by: coding-agent@2026-10-11#3
-# last_updated_at: 2026-10-11T20:46:15.5976649+07:00
+# last_updated_by: coding-agent@2026-10-12#1
+# last_updated_at: 2026-10-12T20:13:16.3642815+07:00
 #
 # EXPERIENCES:
 #   - id: backup_data-EXP-001
@@ -122,6 +122,21 @@
 #       None. Mọi chỗ gọi trong Services đã kiểm chuỗi bằng parse_semver trước,
 #       nên hành vi với giá trị hợp lệ không đổi; phép kiểm này thay cho hai
 #       chú thích bỏ qua kiểm kiểu trước đây.
+#   - id: backup_data-EXP-008
+#     content: >
+#       Phiên 42 (R42-1, R42-10). (1) Chuỗi không mã hóa được UTF-8: create_backup
+#       và prepare_restore gọi _utf8_errors(payload) ở Routers trước khi kiểm
+#       định dạng và trả 400 ERR_VALIDATION, loc chỉ đúng trường (main-EXP-018).
+#       destination_dir và archive_path vốn đã bị từ chối vì kiểu FilePath có
+#       StringConstraints(min_length=1) và Pydantic phải đọc UTF-8 để kiểm
+#       ràng buộc; kiểm tra vẫn có để luật không dựa vào tác dụng phụ đó, và
+#       phép cắn "chỉ bỏ walker" không làm ca hỏng (phải bỏ cả min_length).
+#       Một đường dẫn tuyệt đối cộng một surrogate lẻ vẫn tuyệt đối, nên ca
+#       kiểm thử nối surrogate vào cuối đường dẫn thật (đường dẫn dưới thư mục
+#       tạm, nên chọn ca theo id: surrogate_case). (2) _SEMVER dùng [0-9], không
+#       \d: "1٢.0.0" trước đây qua và đọc thành (12, 0, 0); manifest có
+#       app_version như vậy nay là không hợp lệ (khớp regex của Main,
+#       main-EXP-003).
 #
 # UNSOLVED_PROBLEMS: []
 #
@@ -130,7 +145,10 @@
 #       Việc 2: chụp DB qua SharedConnection hiện có là chạy được và nhất quán,
 #       và một luồng ghi chờ hết bản chụp.
 #     how: >
-#       Script ngoài mã dự án (thư mục scratchpad của phiên, measure_backup.py),
+#       Bằng chứng MỘT LẦN của phiên 32, không chạy lại được từ dự án: script
+#       ngoài mã dự án (thư mục scratchpad của phiên, measure_backup.py, đã
+#       mất; ca kiểm thử trong dự án giữ khẳng định "bản chụp nhất quán và
+#       writer chờ" là test_writes_during_a_backup_succeed_and_the_backup_is_a_consistent_database),
 #       import workflows.scaffold_backend.adapters của dự án, Python 3.13.12 của
 #       Backend/env, Windows 11: DB 61 599 744 byte (60000 dòng x 1 KB), chụp
 #       bằng src.backup(dest) trong "with db.read()", rồi chụp lại với
@@ -146,7 +164,9 @@
 #     recorded_at: 2026-10-07T10:29:51.1415583+07:00
 #   - claim: >
 #       create_backup và prepare_restore đúng hợp đồng qua HTTP, trên SQLite
-#       thật: 104 ca của workflow đạt. create_backup 25 ca (201 đủ năm trường,
+#       thật: mọi ca của workflow đạt (121 ngày 2026-10-12; phân loại dưới đây
+#       là của 104 ca lúc phiên 32, từ đó thêm ca của phiên 41 và của phiên 42).
+#       create_backup 25 ca (201 đủ năm trường,
 #       tên theo mẫu, size_bytes và sha256 khớp tệp trên đĩa, manifest và
 #       data.db trong zip đúng, DB sống không đổi; ba lần cùng một giây ra ba
 #       tên khác nhau và không ghi đè tệp có sẵn; pre_restore; 14 dạng yêu cầu
@@ -171,9 +191,9 @@
 #       tệp trong thư mục tạm của pytest). Số ca theo hàm kiểm thử:
 #       env\Scripts\python.exe -m pytest --collect-only -q workflows/backup_data
 #     result: >
-#       104 passed, 1 warning (DeprecationWarning của starlette.testclient)
-#       in 29,75 s.
-#     recorded_at: 2026-10-07T10:29:09.2410570+07:00
+#       121 passed (2026-10-12; 104 passed in 29,75 s ở phiên 32), cảnh báo
+#       của starlette.testclient.
+#     recorded_at: 2026-10-12T19:32:29.9936045+07:00
 #   - claim: >
 #       Khứ hồi trên hai tiến trình Backend.py thật: dữ liệu sao lưu rồi chuẩn
 #       bị khôi phục, chạy một backend thứ hai trên staged_db_path, trả lại đúng
@@ -211,28 +231,37 @@
 #       test_an_invalid_preparation_leaves_no_staging_file_even_after_a_valid_one
 #       và test_an_archive_made_by_a_newer_build_is_valid_but_not_compatible; (c)
 #       3 failed, 101 passed: data.db rác, hỏng một trang, và cắt đôi (cùng
-#       checksum). Khôi phục: 104 passed. Phép thử bổ sung không thành ca cố định
+#       checksum). Khôi phục: đạt hết (số ca trong thư mục ngày đó là 104; đo
+#       lại 2026-10-12 trên bản sao ngoài kho cho đúng ba kết quả trên).
+#       Phép thử bổ sung không thành ca cố định
 #       vì nó treo: bỏ progress=_stop_when_blocked thì kiểm thử khóa DB không
 #       kết thúc (đã thấy lúc phát triển, hơn 400 s phải dừng tay).
 #     recorded_at: 2026-10-07T10:29:09.2410570+07:00
 #   - claim: >
-#       Toàn bộ kiểm thử backend đạt 3 lần liên tiếp với workflow mới ráp nối
-#       (460 cũ + 104 mới); Desktop và giao diện vẫn đạt với backend mới.
+#       Toàn bộ kiểm thử backend đạt 3 lần liên tiếp với các sửa của phiên 42
+#       và starlette 1.3.1; Desktop và giao diện vẫn đạt với backend mới. Đây là
+#       mục "nhiều lượt liên tiếp" mới nhất của layer.
 #     how: >
 #       cd Backend; env\Scripts\python.exe -m pytest -q (3 lần liên tiếp). cd
-#       Desktop; npm test (Node v24.14.1, npm 11.11.0). cd UI; npm run e2e
-#       (không đặt CT_WALKTHROUGH_RUNNER); git status --short UI/evidence.
+#       Desktop; npm test (Node v24.14.1, npm 11.11.0). cd UI; npm run build
+#       rồi npm run e2e (không đặt CT_WALKTHROUGH_RUNNER); git status --short
+#       UI/evidence; băm SHA-256, kích thước, giờ ghi của hai tệp trong
+#       %APPDATA%\CommissionTracker trước và sau.
 #     result: >
-#       pytest: 564 passed, 1 warning in 414,99 s / 382,19 s / 460,99 s
-#       (09:52:02, 09:58:59, 10:05:23). Desktop npm test: 31 passed (3,9 phút).
-#       UI npm run e2e: 70 passed (5,0 phút); git status --short UI/evidence
-#       trống.
-#     recorded_at: 2026-10-07T10:29:09.2410570+07:00
+#       pytest: 814 passed, 2 warnings in 439,79 s / 469,17 s / 458,49 s
+#       (19:37, 19:45, 19:53 ngày 2026-10-12). Desktop npm test: 79 passed
+#       (5,8 phút). UI npm run build rồi npm run e2e: 83 passed (5,3 phút);
+#       git status --short UI/evidence trống. %APPDATA%\CommissionTracker: hai
+#       tệp, data.db 114688 byte ghi 2026-09-28T21:09:42.7922654+07:00 SHA-256
+#       B1996554...F390B và data.db.lock 0 byte, giống hệt trước và sau.
+#     recorded_at: 2026-10-12T20:13:16.3642815+07:00
 #   - claim: >
 #       Bản đóng gói (Python nhúng) sao lưu và chuẩn bị khôi phục được;
 #       %APPDATA% không bị đụng.
 #     how: >
-#       cd Desktop; xóa packaging\stage và release; npm run dist; npm run
+#       Bằng chứng MỘT LẦN của phiên 32 (lệnh của layer Desktop và đo tay trên
+#       bản đóng gói, không chạy ở Backend). cd Desktop; xóa packaging\stage và
+#       release; npm run dist; npm run
 #       test:packaged. Rồi chạy release\win-unpacked\Commission Tracker.exe
 #       --ct-test-data-dir=<thư mục tạm> --ct-test-no-dialog, đọc cổng trong log
 #       (stderr: "backend READY on port N"), POST /backups tới một thư mục tạm,
@@ -269,20 +298,27 @@
 #       Backend/env, Windows 11)
 #     result: >
 #       4 passed (ba ca tham số hóa của compare_semver cộng ca TypeError).
-#       Toàn bộ layer: 573 passed in 441.02s.
 #     recorded_at: 2026-10-11T20:46:15.5976649+07:00
+#   - claim: >
+#       app_version có chữ số khác ASCII không phải semantic version
+#       (parse_semver trả None); chuỗi có surrogate lẻ ở destination_dir và
+#       archive_path bị từ chối 400 ERR_VALIDATION với loc đúng trường, không
+#       tạo tệp nào.
+#     how: >
+#       cd Backend; env\Scripts\python.exe -m pytest -q workflows/backup_data
+#       -k "cannot_encode or ascii_digits" (Python 3.13.12, Windows 11, SQLite
+#       thật). Phép cắn trên bản sao ngoài kho (script tạm, không thuộc dự án):
+#       (a) trả [0-9] về \d trong _SEMVER của services.py; (b) bỏ thân
+#       _utf8_errors và bỏ StringConstraints của FilePath.
+#     result: >
+#       14 passed (cả thư mục 121 passed). Cắn (a): 3 failed
+#       (arabic-indic-major, -minor, -patch); các ca còn lại vẫn đạt vì
+#       [1-9] và 0 là chữ số ASCII. Cắn (b): 1 failed, đúng
+#       [value archive_path]; ca destination_dir không hỏng vì thư mục không
+#       tồn tại cũng cho 400 cùng loc (kiểm tra thứ hai, ở Services).
+#     recorded_at: 2026-10-12T19:32:29.9936045+07:00
 #
-# NOTES:
-#   - content: >
-#       Đề xuất: backup_data từ đang_chờ_triển_khai lên đã_hoàn_thiện (Data
-#       Schema 9.0.2 -> bản kế tiếp, Giai đoạn 6.6): đủ năm lớp (Entities,
-#       Adapters, Services, Routers, Configs), ráp nối ở Main, hai điểm giao tiếp
-#       đúng nhãn của API Contract 4.0.0, không UNSOLVED_PROBLEMS. Không tự sửa
-#       hợp đồng. Chặn việc commit: .gitignore gốc dòng 258 (Backup*/) khớp
-#       thư mục backup_data trên Windows (git bỏ qua hoa thường), nên cả
-#       Backend/workflows/backup_data/ bị bỏ qua; cần một ngoại lệ trong
-#       .gitignore trước khi Project Owner tạo commit.
-#     written_at: 2026-10-07
+# NOTES: []
 # ===WCA-CHECKPOINT-END===
 """Services of backup_data: every business decision of the workflow.
 
@@ -319,9 +355,10 @@ __all__ = ["StorageIOError"]  # the name imported only to be re-exported
 PURPOSES = ("manual", "pre_restore")
 
 # Semantic Versioning 2.0.0: major.minor.patch, optional pre-release, optional
-# build metadata. The same grammar the Main accepts for CT_APP_VERSION.
+# build metadata. The same grammar the Main accepts for CT_APP_VERSION. ASCII
+# digits only: \d would also accept the digits of other scripts.
 _SEMVER = re.compile(
-    r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)"
+    r"^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)"
     r"(?:-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$"
 )
 _SHA256_HEX = re.compile(r"^[0-9a-f]{64}$")

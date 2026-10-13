@@ -7,6 +7,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 import Backend
+from tests.utf8_boundary import assert_rejected, send, surrogate_cases
 from workflows.manage_watermark_profile import adapters as profile_adapters
 from workflows.manage_watermark_profile.adapters import ProfileRepository, StorageVersionError
 from workflows.manage_watermark_profile.services import (
@@ -359,3 +360,37 @@ def test_length_counts_the_pen_name_as_given_including_padding(wired):
     r = http.put(f"/watermark-profiles/{created['profile_id']}", json=profile_input(display_name=padded))
     assert_rejected_at(r, NAME_LOC)
     assert http.get(f"/watermark-profiles/{created['profile_id']}").json() == created
+
+
+# --- strings that UTF-8 cannot encode (R42-1) ---------------------------------
+# A JSON text may spell a lone surrogate ("\ud800"). Every string of the body,
+# and every field name, is refused as a format error: 400 + ERR_VALIDATION in
+# JSON, naming the field, and nothing is written.
+
+PROFILE_CASES = surrogate_cases(profile_input())
+
+
+@pytest.mark.parametrize(("payload", "loc"), PROFILE_CASES)
+def test_create_refuses_a_string_utf8_cannot_encode_and_writes_nothing(wired, payload, loc):
+    http, *_ = wired
+    create(http, display_name="Existing")
+    before = http.get("/watermark-profiles").json()
+    assert_rejected(send(http, "POST", "/watermark-profiles", payload), loc)
+    assert http.get("/watermark-profiles").json() == before
+
+
+@pytest.mark.parametrize(("payload", "loc"), PROFILE_CASES)
+def test_edit_refuses_a_string_utf8_cannot_encode_and_writes_nothing(wired, payload, loc):
+    http, *_ = wired
+    created = create(http)
+    assert_rejected(send(http, "PUT", f"/watermark-profiles/{created['profile_id']}", payload), loc)
+    assert http.get(f"/watermark-profiles/{created['profile_id']}").json() == created
+
+
+def test_a_path_id_utf8_cannot_encode_keeps_the_malformed_id_answers(wired):
+    # The URL carries the bytes ED A0 80 (a surrogate spelled in UTF-8): the
+    # server reads them as replacement characters, so the id is malformed.
+    http, *_ = wired
+    bad = "%ED%A0%80"
+    assert_error(http.get(f"/watermark-profiles/{bad}"), 404, "ERR_NOT_FOUND")
+    assert_error(http.put(f"/watermark-profiles/{bad}", json=profile_input()), 400, "ERR_VALIDATION")

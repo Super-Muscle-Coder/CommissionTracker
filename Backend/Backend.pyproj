@@ -30,6 +30,10 @@
     <Compile Include="tests\test_cors.py" />
     <Compile Include="tests\storage_upgrade.py" />
     <Compile Include="tests\test_database_ownership.py" />
+    <Compile Include="tests\test_kill_during_writes.py" />
+    <Compile Include="tests\test_query_parameters.py" />
+    <Compile Include="tests\test_workflow_isolation.py" />
+    <Compile Include="tests\utf8_boundary.py" />
     <Compile Include="workflows\__init__.py" />
     <Compile Include="workflows\backup_data\__init__.py" />
     <Compile Include="workflows\backup_data\adapters.py" />

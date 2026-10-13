@@ -92,6 +92,40 @@ def _validation_details(exc: ValidationError) -> dict:
     }
 
 
+def _is_utf8_text(text: str) -> bool:
+    try:
+        text.encode("utf-8")
+    except UnicodeEncodeError:
+        return False
+    return True
+
+
+def _utf8_errors(payload: object) -> list[dict]:
+    # A JSON text may spell a lone surrogate ("\ud800"): it parses to a str, but
+    # no UTF-8 text (SQLite, a response body) can hold it. That is a format
+    # error of the input, refused at the boundary for every string and every
+    # field name of the body, whatever the field. Walked without recursion: the
+    # body may be nested as deep as the JSON parser allows.
+    errors: list[dict] = []
+    pending: list[tuple[object, tuple[str, ...]]] = [(payload, ())]
+    while pending:
+        value, loc = pending.pop()
+        if isinstance(value, str):
+            if not _is_utf8_text(value):
+                errors.append({"loc": list(loc), "msg": "must be text that UTF-8 can encode"})
+        elif isinstance(value, dict):
+            children = []
+            for key, item in value.items():
+                if _is_utf8_text(key):
+                    children.append((item, loc + (key,)))
+                else:
+                    errors.append({"loc": list(loc), "msg": "a field name must be text that UTF-8 can encode"})
+            pending.extend(reversed(children))
+        elif isinstance(value, list):
+            pending.extend(reversed([(item, loc + (str(i),)) for i, item in enumerate(value)]))
+    return errors
+
+
 def _is_id(value: object) -> bool:
     return isinstance(value, str) and _ID_PATTERN.fullmatch(value) is not None
 
@@ -134,6 +168,9 @@ def create_manage_watermark_profile_routers(service: ManageWatermarkProfileServi
     strengths = service.strength_options()
 
     def parse_profile_input(payload: Any) -> ProfileInput | JSONResponse:
+        problems = _utf8_errors(payload)
+        if problems:
+            return _error_response(400, "ERR_VALIDATION", "Invalid profile_input.", {"errors": problems})
         try:
             body = _ProfileInputBody.model_validate(payload)
         except ValidationError as exc:

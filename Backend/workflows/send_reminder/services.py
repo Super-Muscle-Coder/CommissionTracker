@@ -2,8 +2,8 @@
 # workflow: send_reminder
 # clause: clause_b_backend
 # component: services
-# last_updated_by: coding-agent@2026-10-11#3
-# last_updated_at: 2026-10-11T20:46:15.5976649+07:00
+# last_updated_by: coding-agent@2026-10-12#1
+# last_updated_at: 2026-10-12T19:32:29.9936045+07:00
 #
 # EXPERIENCES:
 #   - id: send_reminder-EXP-001
@@ -81,6 +81,29 @@
 #       giao tiếp. Nó vẫn được giữ làm phòng thủ; kiểm thử của nó ghi mốc vượt
 #       cận thẳng vào reminder_settings của chính workflow.
 #     derived_from: send_reminder-EXP-002
+#   - id: send_reminder-EXP-007
+#     content: >
+#       Biên đầu vào (phiên 42): (1) at_time chỉ nhận chữ số 0-9 (R42-2).
+#       Pydantic hiểu \d là mọi chữ số Unicode, nên "0٩:30" và "09:3٠" từng được
+#       lưu và trả lại nguyên văn; regex là ^([01][0-9]|2[0-3]):[0-5][0-9]$.
+#       (2) edit_settings gọi _utf8_errors(payload) ở Routers (R42-1,
+#       main-EXP-018): thân của workflow này không có trường chữ tự do (at_time
+#       có pattern, unit là Literal), nên một surrogate lẻ vốn đã bị từ chối bởi
+#       ràng buộc của Pydantic; kiểm tra vẫn có để luật không dựa vào tác dụng
+#       phụ đó, và phép cắn "chỉ bỏ walker" không làm ca hỏng (phải bỏ cả
+#       pattern của at_time).
+#   - id: send_reminder-EXP-008
+#     content: >
+#       Ngày cố định trong kiểm thử và ngày hôm nay (R42-15, rà phiên 42): ca
+#       của workflow này dùng FakeClock +07:00 ở 2026-10-01 (hoặc giờ ghi trong
+#       ca), nên kết quả không đổi khi ngày thật trôi qua. Điều làm phép cắn B1
+#       (manage_commission từ chối deadline quá khứ) bị 14 ca ở đây bắt là các
+#       deadline cố định của chúng nay nằm trước ngày thật 2026-10-12: nếu chạy
+#       trước các ngày đó thì B1 lọt. Ca duy nhất theo ngày thật là
+#       test_process_reminders_... trong tests/test_backend_process.py, tính
+#       "hôm nay" từ datetime.now(); nó có thể lệch nếu chạy đúng lúc qua nửa
+#       đêm, không có cách chống ở V1. Khẳng định B1 nay nằm ở
+#       manage_commission-EXP-009.
 #
 # UNSOLVED_PROBLEMS: []
 #
@@ -161,8 +184,10 @@
 #     how: >
 #       cd Backend; env\Scripts\python.exe -m pytest -q workflows/send_reminder
 #     result: >
-#       67 passed (Python 3.13.12 của Backend/env, Windows 11).
-#     recorded_at: 2026-09-25T09:30:55+07:00
+#       79 passed ngày 2026-10-12 (Python 3.13.12 của Backend/env, Windows 11;
+#       67 ở phiên 7, 68 trước phiên 42, thêm 3 ca at_time chữ số khác ASCII và
+#       8 ca chuỗi không mã hóa được UTF-8).
+#     recorded_at: 2026-10-12T19:32:29.9936045+07:00
 #   - claim: >
 #       Bước nâng cấp 2 (giả, chỉ trong kiểm thử) áp lên dữ liệu đã có đúng
 #       một lần, giữ nguyên dữ liệu, ghi phiên bản 2; một bước hỏng thì hoàn
@@ -177,6 +202,22 @@
 #       1 passed; (a)-(e) đều đạt; dữ liệu cũ gồm cài đặt và một thông báo
 #       chưa xác nhận.
 #     recorded_at: 2026-10-11T20:46:15.5976649+07:00
+#   - claim: >
+#       at_time có chữ số của chữ viết khác ("0٩:30", "09:3٠", chữ số toàn
+#       độ rộng) bị từ chối 400 ERR_VALIDATION và không lưu gì; chuỗi có
+#       surrogate lẻ ở thân cũng 400 với loc đúng trường.
+#     how: >
+#       cd Backend; env\Scripts\python.exe -m pytest -q workflows/send_reminder
+#       -k "at_time or cannot_encode" (Python 3.13.12, Windows 11, SQLite
+#       thật). Phép cắn trên bản sao ngoài kho (script tạm, không thuộc dự
+#       án): (a) trả regex về ^([01]\d|2[0-3]):[0-5]\d$; (b) bỏ thân
+#       _utf8_errors và bỏ StringConstraints của at_time.
+#     result: >
+#       Chọn được 17 ca, đạt hết (cả thư mục 79 passed). Cắn (a): 2 failed
+#       ("Arabic-Indic digit in the hour" và "in the minute"); ca chữ số toàn
+#       độ rộng vẫn đạt khi có \d (đo: Pydantic từ chối nó cả với \d). Cắn (b): 1 failed, đúng
+#       [value reminder_settings_input.periodic.at_time], 7 passed.
+#     recorded_at: 2026-10-12T19:32:29.9936045+07:00
 #
 # NOTES: []
 # ===WCA-CHECKPOINT-END===

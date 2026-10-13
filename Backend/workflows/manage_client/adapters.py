@@ -135,44 +135,19 @@ class ClientRepository:
             )
             _write_contacts(conn, client.client_id, client.contacts)
 
-    def replace(self, client: Client) -> None:
+    @contextmanager
+    def write_scope(self) -> Iterator["ClientWriteScope"]:
+        """One read-write transaction. Every read and write made through the
+        yielded scope is atomic with respect to every other storage call of
+        the layer; an exception raised inside the block rolls everything
+        back. Nothing else (no call to another workflow) may run inside it.
+        """
         with _storage_io(), self._db.transaction() as conn:
-            conn.execute(
-                "UPDATE client SET display_name = ?, note = ?, is_archived = ?, updated_at = ? "
-                "WHERE client_id = ?",
-                (
-                    client.display_name,
-                    client.note,
-                    int(client.is_archived),
-                    client.updated_at.isoformat(),
-                    client.client_id,
-                ),
-            )
-            conn.execute("DELETE FROM client_contact WHERE client_id = ?", (client.client_id,))
-            _write_contacts(conn, client.client_id, client.contacts)
+            yield ClientWriteScope(conn)
 
     def fetch(self, client_id: str) -> Client | None:
         with _storage_io(), self._db.read() as conn:
-            row = conn.execute(
-                "SELECT client_id, display_name, note, is_archived, created_at, updated_at "
-                "FROM client WHERE client_id = ?",
-                (client_id,),
-            ).fetchone()
-            if row is None:
-                return None
-            contact_rows = conn.execute(
-                "SELECT channel, value FROM client_contact WHERE client_id = ? ORDER BY position",
-                (client_id,),
-            ).fetchall()
-        return Client(
-            client_id=row[0],
-            display_name=row[1],
-            contacts=[Contact(channel=c, value=v) for c, v in contact_rows],
-            note=row[2],
-            is_archived=bool(row[3]),
-            created_at=datetime.fromisoformat(row[4]),
-            updated_at=datetime.fromisoformat(row[5]),
-        )
+            return _select_client(conn, client_id)
 
     def fetch_summary(self, client_id: str) -> ClientSummary | None:
         with _storage_io(), self._db.read() as conn:
@@ -205,3 +180,51 @@ def _write_contacts(conn: sqlite3.Connection, client_id: str, contacts: list[Con
         "INSERT INTO client_contact (client_id, position, channel, value) VALUES (?, ?, ?, ?)",
         [(client_id, i, c.channel, c.value) for i, c in enumerate(contacts)],
     )
+
+
+def _select_client(conn: sqlite3.Connection, client_id: str) -> Client | None:
+    row = conn.execute(
+        "SELECT client_id, display_name, note, is_archived, created_at, updated_at "
+        "FROM client WHERE client_id = ?",
+        (client_id,),
+    ).fetchone()
+    if row is None:
+        return None
+    contact_rows = conn.execute(
+        "SELECT channel, value FROM client_contact WHERE client_id = ? ORDER BY position",
+        (client_id,),
+    ).fetchall()
+    return Client(
+        client_id=row[0],
+        display_name=row[1],
+        contacts=[Contact(channel=c, value=v) for c, v in contact_rows],
+        note=row[2],
+        is_archived=bool(row[3]),
+        created_at=datetime.fromisoformat(row[4]),
+        updated_at=datetime.fromisoformat(row[5]),
+    )
+
+
+class ClientWriteScope:
+    """Storage actions available inside ClientRepository.write_scope()."""
+
+    def __init__(self, conn: sqlite3.Connection) -> None:
+        self._conn = conn
+
+    def fetch(self, client_id: str) -> Client | None:
+        return _select_client(self._conn, client_id)
+
+    def replace(self, client: Client) -> None:
+        self._conn.execute(
+            "UPDATE client SET display_name = ?, note = ?, is_archived = ?, updated_at = ? "
+            "WHERE client_id = ?",
+            (
+                client.display_name,
+                client.note,
+                int(client.is_archived),
+                client.updated_at.isoformat(),
+                client.client_id,
+            ),
+        )
+        self._conn.execute("DELETE FROM client_contact WHERE client_id = ?", (client.client_id,))
+        _write_contacts(self._conn, client.client_id, client.contacts)

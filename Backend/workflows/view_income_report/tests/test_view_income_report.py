@@ -320,3 +320,49 @@ def test_programming_error_is_not_reported_as_storage_error(wired, monkeypatch):
     monkeypatch.setattr(services, "_paid_date", broken)
     with pytest.raises(KeyError):
         http.get("/reports/income?period_from=2026-09-01&period_to=2026-09-30")
+
+
+# --- the order of the two days is part of the type of period_to (R42-8) --------
+
+def test_inverted_period_is_refused_with_the_two_days_and_a_single_day_is_a_period(wired):
+    http, *_ = wired
+    r = http.get("/reports/income?period_from=2026-10-01&period_to=2026-09-30")
+    assert_error(r, 400, "ERR_VALIDATION")
+    body = r.json()
+    assert body["message"] == "period_from must not be after period_to."
+    assert body["details"] == {"period_from": "2026-10-01", "period_to": "2026-09-30"}
+    one_day = report(http, "2026-09-30", "2026-09-30")
+    assert (one_day["period_from"], one_day["period_to"]) == ("2026-09-30", "2026-09-30")
+
+
+def test_the_order_of_the_days_is_decided_before_storage_is_read(wired):
+    # With the database locked, a valid period is 500, an inverted one is
+    # still 400: the check is the Routers', it never reaches Services.
+    http, _, db_path = wired
+    locker = sqlite3.connect(db_path, isolation_level=None)
+    locker.execute("BEGIN EXCLUSIVE")
+    try:
+        assert_error(http.get("/reports/income?period_from=2026-09-01&period_to=2026-09-30"),
+                     500, "ERR_STORAGE_IO")
+        assert_error(http.get("/reports/income?period_from=2026-10-01&period_to=2026-09-30"),
+                     400, "ERR_VALIDATION")
+    finally:
+        locker.execute("ROLLBACK")
+        locker.close()
+
+
+# --- only ASCII digits make a date; no byte sequence gets past the format ---------
+
+@pytest.mark.parametrize(
+    "value",
+    ["٢٠٢٦-١٠-١٢", "2026-1٠-12", "２０２６-10-12",
+     "%ED%A0%80", "2026-10-12%ED%A0%80"],
+    ids=["arabic-indic", "one-arabic-indic-digit", "fullwidth", "lone-surrogate-in-utf8", "date-then-surrogate"],
+)
+@pytest.mark.parametrize("which", ["period_from", "period_to"])
+def test_a_date_with_digits_of_another_script_or_bytes_utf8_cannot_decode_is_400(wired, which, value):
+    http, *_ = wired
+    other = "period_to=2026-12-31" if which == "period_from" else "period_from=2026-01-01"
+    r = http.get(f"/reports/income?{which}={value}&{other}")
+    assert_error(r, 400, "ERR_VALIDATION")
+    assert [e["loc"] for e in r.json()["details"]["errors"]] == [[which]]

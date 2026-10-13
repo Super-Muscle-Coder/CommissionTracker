@@ -2,8 +2,8 @@
 # workflow: manage_commission
 # clause: clause_b_backend
 # component: services
-# last_updated_by: coding-agent@2026-10-11#3
-# last_updated_at: 2026-10-11T20:46:15.5976649+07:00
+# last_updated_by: coding-agent@2026-10-12#1
+# last_updated_at: 2026-10-12T19:32:29.9936045+07:00
 #
 # EXPERIENCES:
 #   - id: manage_commission-EXP-001
@@ -78,6 +78,24 @@
 #       là bên quyết định, giao diện hiện thông báo 400 chung. (2) Ký tự vô
 #       hình không phải khoảng trắng (ví dụ U+200B) vẫn qua luật; hợp đồng
 #       không cấm.
+#   - id: manage_commission-EXP-008
+#     content: >
+#       Chuỗi không mã hóa được UTF-8 (R42-1, phiên 42): create_commission và
+#       edit_commission gọi _utf8_errors(payload) ở Routers trước khi kiểm
+#       định dạng và trả 400 ERR_VALIDATION, loc chỉ đúng trường (main-EXP-018).
+#       Bốn trường chưa có ràng buộc, nên trước phiên 42 một surrogate lẻ ở đó
+#       ra 500 text/plain: description, commission_type, reference_links[0] và
+#       reference_links[1] trở đi. title, client_id, currency, deadline đã bị
+#       Pydantic từ chối (StringConstraints hoặc kiểm định dạng).
+#   - id: manage_commission-EXP-009
+#     content: >
+#       deadline ở quá khứ không phải lỗi: hợp đồng không cấm, và một đơn có thể
+#       được nhập sau khi đã giao (R42-15). Routers không quyết điều đó (04 Bước
+#       4.4: quyết định nghiệp vụ không ở Routers). Kiểm thử dùng ngày cố định
+#       xa (2001, 2999), không phụ thuộc ngày chạy. Ghi chú cho người sau:
+#       nhiều ca của send_reminder dùng ngày cố định đã trôi vào quá khứ; ca nào
+#       sẽ đổi kết quả khi ngày trôi qua thì xem checkpoint của send_reminder.
+#       Ngày dùng [0-9] chứ không \d (R42-2).
 #
 # UNSOLVED_PROBLEMS: []
 #
@@ -148,9 +166,9 @@
 #     how: >
 #       cd Backend; env\Scripts\python.exe -m pytest -q workflows/manage_client workflows/manage_commission
 #     result: >
-#       143 passed (manage_client 70 và manage_commission 73 cùng chạy; gồm cả
-#       các ca not blank của phiên 18).
-#     recorded_at: 2026-09-28T22:05:00+07:00
+#       187 passed ngày 2026-10-12 (manage_client 89 và manage_commission 98
+#       cùng chạy; gồm cả các ca not blank của phiên 18 và các ca của phiên 42).
+#     recorded_at: 2026-10-12T19:32:29.9936045+07:00
 #   - claim: >
 #       create_commission và edit_commission trả 400 ERR_VALIDATION, details
 #       loc [commission_input, title], và không ghi gì, khi title là "", "   ",
@@ -169,17 +187,22 @@
 #       workflows/manage_commission -k "blank or padding or padded", rồi khôi
 #       phục và chạy lại.
 #     result: >
-#       73 passed (59 ca cũ + 14 ca mới: 5 tạo, 5 sửa, 4 hợp lệ và biên). Khi
-#       tắt phép kiểm: 8 failed, 5 passed; 8 ca hỏng đúng là 4 dạng chỉ khoảng
+#       Phiên 18: 14 ca mới (5 tạo, 5 sửa, 4 hợp lệ và biên); số ca cả thư mục
+#       nay là 98. Khi tắt phép kiểm (đo lại 2026-10-12): 8 failed, 5 passed;
+#       8 ca hỏng đúng là 4 dạng chỉ khoảng
 #       trắng x tạo/sửa; 2 ca "" vẫn đạt vì min_length. Khôi phục: 13 passed.
 #     recorded_at: 2026-09-28T21:30:00+07:00
 #   - claim: >
 #       Trên tiến trình Backend.py thật, title trống bị từ chối ở POST và PUT,
 #       tiêu đề hợp lệ có khoảng trắng hai đầu được lưu nguyên văn.
 #     how: >
-#       Script tạm của phiên (không nằm trong dự án) khởi động
+#       Bằng chứng MỘT LẦN, không chạy lại được: script tạm của phiên 18
+#       (không nằm trong dự án, đã mất) khởi động
 #       Backend\env\Scripts\python.exe Backend.py với CT_PORT trống, CT_DB_FILE_PATH
-#       trong %TEMP%\ct_s18_*, chờ READY, gọi bằng urllib, đóng stdin.
+#       trong %TEMP%\ct_s18_*, chờ READY, gọi bằng urllib, đóng stdin. Các khẳng
+#       định này được giữ trong dự án bằng kiểm thử not blank của
+#       workflows/manage_commission (qua Routers thật) và
+#       tests/test_backend_process.py (tiến trình thật).
 #     result: >
 #       POST title " \t " -> 400 {"code":"ERR_VALIDATION","message":"Invalid
 #       commission_input.","details":{"errors":[{"loc":["commission_input",
@@ -193,13 +216,14 @@
 #       backend, cũng không làm hỏng desktop hay giao diện; không kiểm thử nào
 #       đụng %APPDATA%\CommissionTracker thật.
 #     how: >
-#       Windows 11, Python 3.13.12 (Backend/env), Node 24.14.1. (1) cd Backend;
-#       env\Scripts\python.exe -m pytest -q. (2) cd Desktop; npm test (backend
-#       thật). (3) cd UI; npm run e2e. (4) Băm SHA-256, kích thước, thời điểm
-#       sửa của mọi tệp trong %APPDATA%\CommissionTracker trước việc 1 và sau
-#       (1)-(3).
+#       Bằng chứng MỘT LẦN của phiên 18 (các lệnh (2)-(4) thuộc layer Desktop
+#       và UI). Windows 11, Python 3.13.12 (Backend/env), Node 24.14.1. (1) cd
+#       Backend; env\Scripts\python.exe -m pytest -q (số của cả layer nay ở
+#       EVIDENCE của Main). (2) cd Desktop; npm test (backend thật). (3) cd UI;
+#       npm run e2e. (4) Băm SHA-256, kích thước, thời điểm sửa của mọi tệp
+#       trong %APPDATA%\CommissionTracker trước việc 1 và sau (1)-(3).
 #     result: >
-#       (1) 445 passed (381 cũ + 64 mới), không sửa kiểm thử của workflow khác.
+#       (1) cả layer đạt, không sửa kiểm thử của workflow khác.
 #       (2) 14 passed. (3) 17 passed. (4) giống hệt: data.db 114688 byte,
 #       data.db.lock 0 byte, cùng băm và thời điểm.
 #     recorded_at: 2026-09-28T22:05:00+07:00
@@ -216,14 +240,26 @@
 #     result: >
 #       1 passed; (a)-(e) đều đạt.
 #     recorded_at: 2026-10-11T20:46:15.5976649+07:00
+#   - claim: >
+#       Chuỗi có surrogate lẻ ở description, commission_type, reference_links
+#       (và ở mọi chuỗi khác của thân, cùng tên trường lạ) bị từ chối 400
+#       ERR_VALIDATION với loc đúng trường, không ghi gì, ở tạo và sửa; deadline
+#       ở quá khứ vẫn được nhận (201, 200).
+#     how: >
+#       cd Backend; env\Scripts\python.exe -m pytest -q workflows/manage_commission
+#       -k "cannot_encode or deadline_in_the_past or path_id_utf8" (Python
+#       3.13.12, Windows 11, SQLite thật). Phép cắn trên bản sao ngoài kho
+#       (script tạm, không thuộc dự án): (a) thân _utf8_errors trả [] ngay;
+#       (b) create_commission trả 409 khi deadline < ngày hôm nay (B1 của pha 1).
+#     result: >
+#       24 passed (cả thư mục 98 passed). Cắn (a): 8 failed (description,
+#       commission_type, reference_links.0, reference_links.1, mỗi cái ở tạo và
+#       sửa), 15 passed. Cắn (b): test_a_deadline_in_the_past_is_accepted_on_create_and_edit
+#       hỏng; trước phiên 42 chỉ ca của send_reminder bắt được B1, vì các ngày
+#       cố định của chúng đã trôi vào quá khứ.
+#     recorded_at: 2026-10-12T19:32:29.9936045+07:00
 #
-# NOTES:
-#   - content: >
-#       Đề xuất (Giai đoạn 6, Bước 6.6): chuyển status của manage_commission
-#       đang_triển_khai -> đã_hoàn_thiện. BE-6 đã áp dụng commission_input của
-#       Data Schema 8.0.0 (title not blank); bằng chứng ở EVIDENCE; không có
-#       UNSOLVED_PROBLEMS. Coding agent không tự sửa hợp đồng.
-#     written_at: 2026-09-28
+# NOTES: []
 # ===WCA-CHECKPOINT-END===
 """Services of manage_commission: every business decision of the workflow."""
 

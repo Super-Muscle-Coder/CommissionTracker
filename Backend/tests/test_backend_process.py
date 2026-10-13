@@ -8,13 +8,13 @@ With -s, every HTTP exchange is printed raw (EVIDENCE).
 
 import os
 import queue
-import signal
 import socket
 import sqlite3
 import subprocess
 import sys
 import textwrap
 import threading
+import time
 from pathlib import Path
 
 import httpx
@@ -1565,3 +1565,49 @@ def test_process_reminders_settings_deadline_digest_restart_concurrency_and_stor
     code = backend2.close_stdin_and_wait()
     print(f"[run 2] stdin closed -> exit code {code}; stdout lines: {backend2.stdout}")
     assert code == 0 and backend2.stdout == [b"READY\n"]
+
+
+@pytest.mark.parametrize(
+    "broken",
+    [
+        {"CT_PORT": "²"},  # SUPERSCRIPT TWO: str.isdigit() is true, int() fails
+        {"CT_PORT": "٨٠٨٠"},  # Arabic-Indic digits spelling 8080
+        {"CT_PORT": "８０８０"},  # fullwidth digits spelling 8080
+        {"CT_APP_VERSION": "1٢.0.0"},  # an Arabic-Indic digit in the major number
+    ],
+    ids=["superscript-two", "arabic-indic-port", "fullwidth-port", "arabic-indic-version"],
+)
+def test_launch_values_with_digits_that_are_not_ascii_exit_with_code_2_without_ready(tmp_path, broken):
+    # Only the ASCII digits 0-9 are digits of a port or of a semantic version
+    # (R42-10): such a value is a malformed launch value like any other
+    # (main-EXP-003), exit code 2 and no READY, not a traceback with code 1.
+    env = launch_env(tmp_path / "data.db", free_port())
+    env.update(broken)
+    proc = subprocess.run(
+        [sys.executable, "Backend.py"], cwd=LAYER_ROOT, env=env,
+        stdin=subprocess.PIPE, capture_output=True, timeout=EXIT_TIMEOUT_S,
+    )
+    assert proc.returncode == 2, proc.stderr.decode(errors="replace")
+    assert b"READY" not in proc.stdout
+    assert b"Traceback" not in proc.stderr
+    assert not (tmp_path / "data.db").exists()
+
+
+def test_the_port_is_listening_the_moment_ready_is_read(tmp_path):
+    # READY is the readiness signal (clause_a_common.mandatory_rules): it may
+    # be printed only after the server is listening. One connection attempt
+    # with a short time-out and no retry, as soon as the line is read.
+    # On Windows a connection to a port that is not yet listening is not
+    # refused at once: the system sends its SYN again after about half a
+    # second. That is why the time-out is 0.2 s: a READY printed before the
+    # bind can only pass this test by the bind happening within the few
+    # milliseconds between printing and connecting (R42-5).
+    port = free_port()
+    backend = BackendProcess(launch_env(tmp_path / "data" / "data.db", port))
+    assert backend.wait_ready(), "READY not received"
+    started = time.monotonic()
+    with socket.create_connection(("127.0.0.1", port), timeout=0.2):
+        elapsed = time.monotonic() - started
+    print(f"\n  connect right after READY: {elapsed * 1000:.1f} ms")
+    assert elapsed < 0.2
+    assert backend.close_stdin_and_wait() == 0

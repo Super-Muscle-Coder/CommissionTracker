@@ -28,6 +28,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 import Backend
+from tests.utf8_boundary import assert_rejected, send, surrogate_case, surrogate_cases
 from tests.test_backend_process import BackendProcess, free_port, launch_env
 from workflows.backup_data import adapters as backup_adapters
 from workflows.backup_data.services import compare_semver, parse_semver
@@ -530,6 +531,19 @@ def test_semver_helpers_directly():
     assert compare_semver("1.0.0+a", "1.0.0+b") == 0
 
 
+@pytest.mark.parametrize(
+    "text",
+    ["1٢.0.0", "1.1٢.0", "1.0.1٩", "1.٠.0", "1.0.٩", "１.0.0", "1.0.0-١",
+     "².0.0"],
+    ids=["arabic-indic-major", "arabic-indic-minor", "arabic-indic-patch", "arabic-indic-zero-minor",
+         "arabic-indic-lone-patch", "fullwidth-major", "arabic-indic-prerelease", "superscript-two"],
+)
+def test_only_ascii_digits_make_a_semantic_version(text):
+    # R42-10: \d (and str.isdigit) are also true for the digits of other
+    # scripts; parse_semver("1٢.0.0") used to read (12, 0, 0).
+    assert parse_semver(text) is None
+
+
 @pytest.mark.parametrize("left, right", [("latest", "1.0.0"), ("1.0.0", "1.0"), ("v1.0.0", "")])
 def test_compare_semver_rejects_a_text_that_is_not_a_version(left, right):
     with pytest.raises(ValueError, match="not a semantic version"):
@@ -811,3 +825,34 @@ def test_an_archive_made_by_a_newer_build_is_valid_but_not_compatible(tmp_path):
         assert not (tmp_path / "older" / "restore-staging").exists() or not list((tmp_path / "older" / "restore-staging").iterdir())
     finally:
         stop_backend(older, http_older)
+
+
+# --- strings that UTF-8 cannot encode (R42-1) ---------------------------------
+# A JSON text may spell a lone surrogate ("\ud800"). Every string of the body,
+# and every field name, is refused as a format error: 400 + ERR_VALIDATION in
+# JSON, naming the field, and nothing is written. The path fields are the
+# important ones here: an absolute path followed by a surrogate is still an
+# absolute path, and the answer would echo it. The paths of the cases are only
+# known when the test runs, so a case is chosen by its id.
+
+CREATE_TEMPLATE = {"backup_request": {"destination_dir": "/dest", "purpose": "manual"}}
+PREPARE_TEMPLATE = {"archive_path": "/archive"}
+
+
+@pytest.mark.parametrize("case_id", [c.id for c in surrogate_cases(CREATE_TEMPLATE)])
+def test_create_backup_refuses_a_string_utf8_cannot_encode_and_writes_nothing(env, case_id):
+    valid = {"backup_request": {"destination_dir": str(env.dest), "purpose": "manual"}}
+    payload, loc = surrogate_case(valid, case_id)
+    folder = sorted(os.listdir(env.dest))
+    assert_rejected(send(env.http, "POST", "/backups", payload), loc)
+    assert sorted(os.listdir(env.dest)) == folder == []
+    assert env.staging_files() == []
+
+
+@pytest.mark.parametrize("case_id", [c.id for c in surrogate_cases(PREPARE_TEMPLATE)])
+def test_prepare_restore_refuses_a_string_utf8_cannot_encode_and_writes_nothing(env, case_id):
+    archive = backup(env).json()["archive_path"]
+    payload, loc = surrogate_case({"archive_path": archive}, case_id)
+    assert_rejected(send(env.http, "POST", "/backups/restore-preparations", payload), loc)
+    assert env.staging_files() == []
+    assert sorted(os.listdir(env.dest)) == [Path(archive).name]

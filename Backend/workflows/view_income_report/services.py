@@ -2,8 +2,8 @@
 # workflow: view_income_report
 # clause: clause_b_backend
 # component: services
-# last_updated_by: coding-agent@2026-09-27#5
-# last_updated_at: 2026-09-27T22:20:00+07:00
+# last_updated_by: coding-agent@2026-10-12#1
+# last_updated_at: 2026-10-12T19:32:29.9936045+07:00
 #
 # EXPERIENCES:
 #   - id: view_income_report-EXP-001
@@ -11,8 +11,10 @@
 #       Quyết định nghiệp vụ ở Services, chỉ dùng int. Ngày của một khoản là
 #       paid_at.date() của datetime đã đọc kèm độ lệch (ngày ghi trong
 #       paid_at, không quy đổi múi giờ); tháng là YYYY-MM của ngày đó. Kỳ gồm
-#       cả hai đầu; period_from sau period_to -> InvalidPeriodError (400), xét
-#       trước khi gọi ai. Theo đơn vị tiền của khoản: received_net =
+#       cả hai đầu; period_from sau period_to là 400 do Routers quyết (từ Data
+#       Schema 9.0.2 đó là một phần của type của period_to; từ phiên 42 Services
+#       không còn InvalidPeriodError và không xét thứ tự, xem EXP-006). Theo
+#       đơn vị tiền của khoản: received_net =
 #       incoming - refund trong kỳ (kể cả tip, kể cả đơn đã hủy); refunded =
 #       tổng refund trong kỳ (kể cả hoàn tip). outstanding theo đơn vị tiền
 #       của agreed_price: đơn đang nợ là mọi đơn trong commission_index trừ
@@ -42,9 +44,11 @@
 #       Entities của chính workflow này. Label 500 -> StorageIOError của
 #       view_income_report (reason có tiền tố tên workflow được gọi); label
 #       khác và lỗi khác nổi lên nguyên vẹn. Routers kiểm tra định dạng: hai
-#       tham số query bắt buộc, khớp YYYY-MM-DD và là ngày có thật (2026-02-30
-#       -> 400); tham số query thừa bị bỏ qua như các workflow khác. Main ráp
-#       nối ở Order 6, sau update_progress.
+#       tham số query bắt buộc, khớp YYYY-MM-DD (chữ số 0-9) và là ngày có thật
+#       (2026-02-30 -> 400); tham số query thừa bị bỏ qua: đó là luật của API
+#       Contract 6.1.0 (endpoint_forms.http, CT-10), áp cho mọi lối vào GET,
+#       không riêng workflow này; tests/test_query_parameters.py khóa luật ở cả
+#       17 lối vào. Main ráp nối ở Order 6, sau update_progress.
 #   - id: view_income_report-EXP-004
 #     content: >
 #       Luật số nguyên tính ra chỉ áp cho số có trong output (Orchestrator đã
@@ -60,6 +64,19 @@
 #       xác nhận): ba lời gọi in_process không nằm chung một giao dịch
 #       (main-EXP-008). Một khoản hay một đơn được ghi đúng giữa hai lời gọi có
 #       thể làm báo cáo lệch khoản đó; lần gọi sau luôn đúng.
+#   - id: view_income_report-EXP-006
+#     content: >
+#       Phiên 42 (R42-8, R42-9, R42-7). (1) Thứ tự ngày nằm ở Routers: từ Data
+#       Schema 9.0.2 period_to có type "date (on or after period_from)", nên
+#       kiểm tra là việc của Routers (04 Bước 4.4); thân 400 giữ nguyên
+#       ("period_from must not be after period_to." kèm details.period_from và
+#       details.period_to), kiểm trước khi gọi Services nên cả khi DB khóa vẫn
+#       400, không 500. (2) Mã chết _PeriodFormat extra="forbid" đã gỡ: model chỉ
+#       được dựng từ hai tham số đã biết, không có khóa thừa nào để từ chối;
+#       tham số thừa bị bỏ qua theo API Contract 6.1.0. (3) _MAX_COMPUTED_INTEGER
+#       (2**53 - 1) trong services.py không nằm trong Configs, và đó là ngoại lệ
+#       CÓ CHỦ Ý, như record_payment-EXP-009: nó là luật số nguyên tính ra của
+#       hợp đồng, không phải giá trị cấu hình, và đổi nó là đổi hợp đồng.
 #
 # UNSOLVED_PROBLEMS: []
 #
@@ -70,13 +87,16 @@
 #       hủy, đơn delivered còn nợ, đơn trả dư, khoản đã hủy); ngày theo độ
 #       lệch của chính paid_at; kỳ một ngày; đơn vị tiền chỉ có nợ có mặt với
 #       by_month []; không có gì -> currencies []; 400 cho thiếu tham số, sai
-#       định dạng, 2026-02-30, period_from sau period_to; lỗi lưu trữ thật ->
+#       định dạng, 2026-02-30, period_from sau period_to (nay do Routers quyết,
+#       xem EXP-006); lỗi lưu trữ thật ->
 #       500; kết quả giống hệt sau khởi động lại (trừ generated_at); hai đơn
 #       USD 2^53-1 -> 409.
 #     how: >
 #       cd Backend; env\Scripts\python.exe -m pytest -s -v
-#       tests/test_backend_process.py -k income (Python 3.13.12 của
-#       Backend/env, Windows 11; tiến trình con thật khởi động bằng CT_*, cổng
+#       tests/test_backend_process.py::test_process_income_report_totals_boundaries_restart_and_storage_failure
+#       tests/test_backend_process.py::test_process_income_report_out_of_range
+#       (theo node ID: -k income nay chọn thêm ca của claim sau; Python 3.13.12
+#       của Backend/env, Windows 11; tiến trình con thật khởi động bằng CT_*, cổng
 #       trống ngẫu nhiên, DB trong thư mục tạm; dữ liệu dựng qua các điểm
 #       giao tiếp http của manage_client, manage_commission, update_progress,
 #       record_payment; ">>" là yêu cầu, "<<" là phản hồi thô). Dữ liệu (hàm
@@ -169,8 +189,24 @@
 #     how: >
 #       cd Backend; env\Scripts\python.exe -m pytest -q workflows/view_income_report
 #     result: >
-#       29 passed.
-#     recorded_at: 2026-09-24T21:58:00+07:00
+#       41 passed ngày 2026-10-12 (29 ở phiên 6; thêm 12 ca của phiên 42: thứ
+#       tự ngày, quyết định trước khi đọc lưu trữ, chữ số khác ASCII và byte
+#       không phải UTF-8 ở hai tham số ngày).
+#     recorded_at: 2026-10-12T19:32:29.9936045+07:00
+#   - claim: >
+#       period_from sau period_to là 400 do Routers quyết, kể cả khi DB khóa
+#       (không đọc lưu trữ); kỳ một ngày hợp lệ; ngày có chữ số khác ASCII hoặc
+#       byte ED A0 80 trong tham số là 400 với loc đúng tham số.
+#     how: >
+#       cd Backend; env\Scripts\python.exe -m pytest -q
+#       workflows/view_income_report (Python 3.13.12, Windows 11, SQLite
+#       thật). Phép cắn trên bản sao ngoài kho (script tạm, không thuộc dự
+#       án): đổi "if end < start" ở Routers thành "if False and end < start".
+#     result: >
+#       41 passed. Khi cắn: 3 failed (ca "?period_from=2026-10-01&period_to=
+#       2026-09-30" trong test_malformed_or_inverted_period_is_400, ca thân 400
+#       và ca DB khóa), 38 passed.
+#     recorded_at: 2026-10-12T19:32:29.9936045+07:00
 #
 # NOTES: []
 # ===WCA-CHECKPOINT-END===
@@ -189,13 +225,6 @@ from .adapters import IncomeSources, StorageIOError
 from .entities import CurrencyTotals, IncomeReport, LedgerEntry, MonthTotal
 
 __all__ = ["StorageIOError"]  # the name imported only to be re-exported
-
-
-class InvalidPeriodError(Exception):
-    def __init__(self, period_from: date, period_to: date) -> None:
-        super().__init__(f"period_from {period_from} is after period_to {period_to}")
-        self.period_from = period_from
-        self.period_to = period_to
 
 
 class ReportOutOfRangeError(Exception):
@@ -237,9 +266,8 @@ class ViewIncomeReportService:
         self._sources = sources
 
     def report(self, period_from: date, period_to: date) -> IncomeReport:
-        # Both days are included; a period that ends before it starts is invalid.
-        if period_from > period_to:
-            raise InvalidPeriodError(period_from, period_to)
+        # Both days are included. period_to is not before period_from: that is
+        # part of the type of period_to (Data Schema 9.0.2), checked by the Routers.
 
         # The three reads are separate calls, not one transaction: a payment
         # written between them may be missing from, or extra in, one total.

@@ -11,6 +11,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 import Backend
+from tests.utf8_boundary import assert_rejected, send, surrogate_cases
 from workflows.scaffold_backend import adapters as scaffold
 
 APP_VERSION = "1.0.0"
@@ -449,3 +450,32 @@ def test_programming_error_is_not_reported_as_storage_error(wired, monkeypatch):
     monkeypatch.setattr(adapters, "_to_record", broken)
     with pytest.raises(KeyError):
         http.get(f"/commissions/{mid}/stage/history")
+
+
+# --- strings that UTF-8 cannot encode (R42-1) ---------------------------------
+# A JSON text may spell a lone surrogate ("\ud800"). Every string of the body,
+# and every field name, is refused as a format error: 400 + ERR_VALIDATION in
+# JSON, naming the field, and nothing is written.
+
+STAGE_CASES = surrogate_cases({"stage_change": {"to_stage": "sketch", "note": "a note"}})
+
+
+@pytest.mark.parametrize(("payload", "loc"), STAGE_CASES)
+def test_change_stage_refuses_a_string_utf8_cannot_encode_and_writes_nothing(wired, payload, loc):
+    http, *_ = wired
+    mid = new_commission(http)
+    moved(http, mid, "lineart", "kept")
+    before = (http.get(f"/commissions/{mid}/stage").json(), history(http, mid))
+    assert_rejected(send(http, "PUT", f"/commissions/{mid}/stage", payload), loc)
+    assert (http.get(f"/commissions/{mid}/stage").json(), history(http, mid)) == before
+
+
+def test_a_path_id_utf8_cannot_encode_keeps_the_malformed_id_answers(wired):
+    # The URL carries the bytes ED A0 80 (a surrogate spelled in UTF-8): the
+    # server reads them as replacement characters, so the id is malformed.
+    http, *_ = wired
+    bad = "%ED%A0%80"
+    assert_error(http.get(f"/commissions/{bad}/stage"), 404, "ERR_NOT_FOUND")
+    assert_error(http.get(f"/commissions/{bad}/stage/history"), 404, "ERR_NOT_FOUND")
+    assert_error(http.put(f"/commissions/{bad}/stage", json={"stage_change": {"to_stage": "sketch", "note": None}}),
+                 400, "ERR_VALIDATION")

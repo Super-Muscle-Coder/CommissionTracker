@@ -9,6 +9,8 @@ import pytest
 from fastapi.testclient import TestClient
 
 from Backend import LAYER_CONFIG_FILE, create_http_app, load_yaml
+from tests.utf8_boundary import assert_rejected, send, surrogate_cases
+from workflows.manage_client import adapters as client_adapters
 from workflows.manage_client.adapters import ClientRepository, StorageVersionError
 from workflows.manage_client.routers import create_manage_client_routers
 from workflows.manage_client.services import ManageClientService
@@ -346,6 +348,66 @@ def test_concurrent_creates_through_shared_connection(wired):
     assert len(http.get("/clients").json()) == 80
 
 
+def _overlap_after_the_first_read(monkeypatch, other_call):
+    """Make ``other_call`` run, on its own thread, right after the first read
+    of a client by the action under test, and give it up to a second to finish
+    before that action goes on. Deterministic: no timing decides who reads
+    first. If the action reads and writes in separate transactions, the other
+    call completes in between (the action then writes back what it read
+    earlier); if it holds one transaction, the other call can only wait for it
+    and runs after (R42-3)."""
+    state = {"armed": True, "thread": None}
+
+    def hooked(original):
+        def fetch(self, client_id):
+            found = original(self, client_id)
+            if state["armed"]:
+                state["armed"] = False
+                state["thread"] = threading.Thread(target=other_call)
+                state["thread"].start()
+                state["thread"].join(timeout=1.0)
+            return found
+        return fetch
+
+    for cls in (client_adapters.ClientRepository, client_adapters.ClientWriteScope):
+        monkeypatch.setattr(cls, "fetch", hooked(cls.fetch))
+    return state
+
+
+def test_an_edit_and_an_archive_that_overlap_both_survive(wired, monkeypatch):
+    http, *_ = wired
+    created = create(http, name="Mai", note="before")
+    cid = created["client_id"]
+    answers = []
+    state = _overlap_after_the_first_read(
+        monkeypatch, lambda: answers.append(http.put(f"/clients/{cid}/archived", json={"is_archived": True})))
+    r = http.put(f"/clients/{cid}", json={"client_input": client_input(name="Mai edited", note="after")})
+    state["thread"].join(timeout=10)
+    assert r.status_code == 200, r.text
+    assert [a.status_code for a in answers] == [200]
+    final = http.get(f"/clients/{cid}").json()
+    assert final["is_archived"] is True, "the archive answered 200 and was then lost"
+    assert final["display_name"] == "Mai edited" and final["note"] == "after"
+
+
+def test_an_archive_and_an_edit_that_overlap_both_survive(wired, monkeypatch):
+    http, *_ = wired
+    created = create(http, name="Mai", note="before")
+    cid = created["client_id"]
+    answers = []
+    state = _overlap_after_the_first_read(
+        monkeypatch,
+        lambda: answers.append(
+            http.put(f"/clients/{cid}", json={"client_input": client_input(name="Mai edited", note="after")})))
+    r = http.put(f"/clients/{cid}/archived", json={"is_archived": True})
+    state["thread"].join(timeout=10)
+    assert r.status_code == 200, r.text
+    assert [a.status_code for a in answers] == [200]
+    final = http.get(f"/clients/{cid}").json()
+    assert final["is_archived"] is True
+    assert final["display_name"] == "Mai edited" and final["note"] == "after", "the edit answered 200 and was then lost"
+
+
 # --- 500 ERR_STORAGE_IO: real SQLite failures, no mock -----------------------
 
 @pytest.fixture
@@ -518,4 +580,51 @@ def test_length_counts_the_value_as_given_including_padding(wired):
     created = create(http)
     assert_rejected_at(http.put(f"/clients/{created['client_id']}", json={"client_input": client_input(name=padded)}),
                        ["client_input", "display_name"])
+    assert http.get(f"/clients/{created['client_id']}").json() == created
+
+
+# --- strings that UTF-8 cannot encode (R42-1) ---------------------------------
+# A JSON text may spell a lone surrogate ("\ud800"). Every string of the body,
+# and every field name, is refused as a format error: 400 + ERR_VALIDATION in
+# JSON, naming the field, and nothing is written.
+
+CLIENT_PAYLOAD = {"client_input": client_input(name="Mai", note="a note")}
+CLIENT_CASES = surrogate_cases(CLIENT_PAYLOAD)
+
+
+@pytest.mark.parametrize(("payload", "loc"), CLIENT_CASES)
+def test_create_refuses_a_string_utf8_cannot_encode_and_writes_nothing(wired, payload, loc):
+    http, *_ = wired
+    create(http, name="Existing")
+    before = http.get("/clients").json()
+    assert_rejected(send(http, "POST", "/clients", payload), loc)
+    assert http.get("/clients").json() == before
+
+
+@pytest.mark.parametrize(("payload", "loc"), CLIENT_CASES)
+def test_edit_refuses_a_string_utf8_cannot_encode_and_writes_nothing(wired, payload, loc):
+    http, *_ = wired
+    created = create(http, name="Mai", note="kept")
+    assert_rejected(send(http, "PUT", f"/clients/{created['client_id']}", payload), loc)
+    assert http.get(f"/clients/{created['client_id']}").json() == created
+
+
+@pytest.mark.parametrize(("payload", "loc"), surrogate_cases({"is_archived": True}))
+def test_set_archived_refuses_a_field_name_utf8_cannot_encode(wired, payload, loc):
+    http, *_ = wired
+    created = create(http)
+    assert_rejected(send(http, "PUT", f"/clients/{created['client_id']}/archived", payload), loc)
+    assert http.get(f"/clients/{created['client_id']}").json() == created
+
+
+def test_a_path_id_utf8_cannot_encode_keeps_the_malformed_id_answers(wired):
+    # The URL carries the bytes ED A0 80 (a surrogate spelled in UTF-8): the
+    # server reads them as replacement characters, so the id is malformed.
+    http, *_ = wired
+    created = create(http)
+    bad = "%ED%A0%80"
+    assert_error(http.get(f"/clients/{bad}"), 404, "ERR_NOT_FOUND")
+    body = {"client_input": client_input()}
+    assert_error(http.put(f"/clients/{bad}", json=body), 400, "ERR_VALIDATION")
+    assert_error(http.put(f"/clients/{bad}/archived", json={"is_archived": True}), 400, "ERR_VALIDATION")
     assert http.get(f"/clients/{created['client_id']}").json() == created

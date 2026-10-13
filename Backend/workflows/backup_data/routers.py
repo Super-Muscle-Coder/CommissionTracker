@@ -76,6 +76,41 @@ def _validation_details(exc: ValidationError) -> dict:
     }
 
 
+def _is_utf8_text(text: str) -> bool:
+    try:
+        text.encode("utf-8")
+    except UnicodeEncodeError:
+        return False
+    return True
+
+
+def _utf8_errors(payload: object) -> list[dict]:
+    # A JSON text may spell a lone surrogate ("\ud800"): it parses to a str, but
+    # no UTF-8 text (a response body, the path echoed in an answer) can hold
+    # it. That is a format error of the input, refused at the boundary for
+    # every string and every field name of the body, whatever the field.
+    # Walked without recursion: the body may be nested as deep as the JSON
+    # parser allows.
+    errors: list[dict] = []
+    pending: list[tuple[object, tuple[str, ...]]] = [(payload, ())]
+    while pending:
+        value, loc = pending.pop()
+        if isinstance(value, str):
+            if not _is_utf8_text(value):
+                errors.append({"loc": list(loc), "msg": "must be text that UTF-8 can encode"})
+        elif isinstance(value, dict):
+            children = []
+            for key, item in value.items():
+                if _is_utf8_text(key):
+                    children.append((item, loc + (key,)))
+                else:
+                    errors.append({"loc": list(loc), "msg": "a field name must be text that UTF-8 can encode"})
+            pending.extend(reversed(children))
+        elif isinstance(value, list):
+            pending.extend(reversed([(item, loc + (str(i),)) for i, item in enumerate(value)]))
+    return errors
+
+
 def _storage_error_response(exc: StorageIOError) -> JSONResponse:
     return _error_response(500, "ERR_STORAGE_IO", "Storage failed.", {"reason": str(exc)})
 
@@ -110,6 +145,9 @@ def create_backup_data_routers(service: BackupDataService) -> APIRouter:
     # create_backup — POST /backups, JSON body {backup_request}
     @router.post("/backups")
     def create_backup(payload: Any = Body(default=None)) -> JSONResponse:
+        problems = _utf8_errors(payload)
+        if problems:
+            return _error_response(400, "ERR_VALIDATION", "Invalid backup request.", {"errors": problems})
         try:
             body = _CreateBody.model_validate(payload)
         except ValidationError as exc:
@@ -133,6 +171,9 @@ def create_backup_data_routers(service: BackupDataService) -> APIRouter:
     # prepare_restore — POST /backups/restore-preparations, JSON body {archive_path}
     @router.post("/backups/restore-preparations")
     def prepare_restore(payload: Any = Body(default=None)) -> JSONResponse:
+        problems = _utf8_errors(payload)
+        if problems:
+            return _error_response(400, "ERR_VALIDATION", "Invalid archive_path.", {"errors": problems})
         try:
             body = _PrepareBody.model_validate(payload)
         except ValidationError as exc:

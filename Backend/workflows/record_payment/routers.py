@@ -46,9 +46,10 @@ _CURRENCY_REGEX = r"^[A-Z]{3}$"
 # clause_a_common.formats.timestamp: ISO 8601 date and time with a UTC offset
 # ("Z" or +hh:mm / -hh:mm). The minutes of the offset are 00..59: Python
 # would otherwise read +07:60 as +08:00. An hour offset of 24 or more is
-# refused by datetime.fromisoformat.
+# refused by datetime.fromisoformat. ASCII digits only: \d would also accept
+# the digits of other scripts.
 _TIMESTAMP_PATTERN = re.compile(
-    r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:[0-5]\d)$"
+    r"^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}(:[0-9]{2}(\.[0-9]+)?)?(Z|[+-][0-9]{2}:[0-5][0-9])$"
 )
 # clause_a_common.mandatory_rules / types.money: every integer at the boundary
 # lies within -(2^53-1)..2^53-1 (what a JavaScript number holds exactly).
@@ -130,6 +131,40 @@ def _validation_details(exc: ValidationError) -> dict:
             for e in exc.errors(include_url=False, include_context=False, include_input=False)
         ]
     }
+
+
+def _is_utf8_text(text: str) -> bool:
+    try:
+        text.encode("utf-8")
+    except UnicodeEncodeError:
+        return False
+    return True
+
+
+def _utf8_errors(payload: object) -> list[dict]:
+    # A JSON text may spell a lone surrogate ("\ud800"): it parses to a str, but
+    # no UTF-8 text (SQLite, a response body) can hold it. That is a format
+    # error of the input, refused at the boundary for every string and every
+    # field name of the body, whatever the field. Walked without recursion: the
+    # body may be nested as deep as the JSON parser allows.
+    errors: list[dict] = []
+    pending: list[tuple[object, tuple[str, ...]]] = [(payload, ())]
+    while pending:
+        value, loc = pending.pop()
+        if isinstance(value, str):
+            if not _is_utf8_text(value):
+                errors.append({"loc": list(loc), "msg": "must be text that UTF-8 can encode"})
+        elif isinstance(value, dict):
+            children = []
+            for key, item in value.items():
+                if _is_utf8_text(key):
+                    children.append((item, loc + (key,)))
+                else:
+                    errors.append({"loc": list(loc), "msg": "a field name must be text that UTF-8 can encode"})
+            pending.extend(reversed(children))
+        elif isinstance(value, list):
+            pending.extend(reversed([(item, loc + (str(i),)) for i, item in enumerate(value)]))
+    return errors
 
 
 def _is_id(value: object) -> bool:
@@ -245,6 +280,9 @@ def create_record_payment_routers(service: RecordPaymentService):
     # record — POST /payments, JSON body {commission_id, payment_input}
     @router.post("/payments")
     def record(payload: Any = Body(default=None)) -> JSONResponse:
+        problems = _utf8_errors(payload)
+        if problems:
+            return _error_response(400, "ERR_VALIDATION", "Invalid payment request.", {"errors": problems})
         try:
             body = _RecordBody.model_validate(payload)
         except ValidationError as exc:

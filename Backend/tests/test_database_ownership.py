@@ -15,7 +15,7 @@ import time
 import httpx
 
 import Backend
-from tests.test_backend_process import EXIT_TIMEOUT_S, LAYER_ROOT, BackendProcess, free_port, launch_env
+from tests.test_backend_process import EXIT_TIMEOUT_S, BackendProcess, free_port, launch_env
 
 OWNERSHIP = Backend.load_yaml(Backend.LAYER_CONFIG_FILE)["database_ownership"]
 IN_USE_CODE = int(OWNERSHIP["database_in_use_exit_code"])

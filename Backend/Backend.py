@@ -2,8 +2,8 @@
 # workflow: main
 # clause: clause_b_backend
 # component: main
-# last_updated_by: coding-agent@2026-10-11#3
-# last_updated_at: 2026-10-11T20:46:15.5976649+07:00
+# last_updated_by: coding-agent@2026-10-12#1
+# last_updated_at: 2026-10-13T08:20:13.2639332+07:00
 #
 # EXPERIENCES:
 #   - id: main-EXP-001
@@ -49,7 +49,10 @@
 #       Main bắt ngoại lệ này rồi thoát mã 0. Lỗi bind cổng: uvicorn gọi
 #       sys.exit(1), không có READY. Giá trị khởi động thiếu hoặc sai định dạng:
 #       thoát với startup_failure_exit_code (2) trong configs/backend.yaml, không
-#       tạo tệp DB.
+#       tạo tệp DB. "Chữ số" ở đây chỉ là 0-9: str.isdigit() và \d của re đều
+#       đúng với "²" và chữ số của chữ viết khác, nên CT_PORT kiểm bằng
+#       isascii() và isdigit(), _SEMVER dùng [0-9] (R42-10, phiên 42). Trước
+#       đó CT_PORT="²" ra traceback mã 1, và "٨٠٨٠" chạy được.
 #     derived_from: scaffold_backend-EXP-004
 #   - id: main-EXP-004
 #     content: >
@@ -94,8 +97,9 @@
 #       lỗi (main-EXP-001). Vì một tiến trình chỉ có một kết nối và mọi khối
 #       giữ chung một RLock, các scope được xét lần lượt. Dữ liệu lấy từ
 #       workflow khác trước scope có thể cũ đi trong lúc chờ; ghi chú cụ thể ở
-#       checkpoint của workflow liên quan. Dùng ở record_payment-EXP-004 và
-#       update_progress-EXP-003.
+#       checkpoint của workflow liên quan. Dùng ở record_payment-EXP-004,
+#       update_progress-EXP-003 và manage_client-EXP-009 (edit_client,
+#       set_client_archived: R42-3).
 #   - id: main-EXP-008
 #     content: >
 #       Quy ước cho workflow không có lưu trữ (view_income_report là workflow
@@ -221,6 +225,11 @@
 #       Backend/env. Không tệp nào ngoài tests/ và workflows/*/tests/ được import
 #       pytest hay httpx; thêm phụ thuộc lúc chạy mới thì ghi vào
 #       requirements.txt, công cụ kiểm thử thì ghi vào requirements-dev.txt.
+#       Phiên bản khóa từ phiên 42 (BE-12): fastapi 0.136.1, starlette 1.3.1
+#       (trước đó 1.0.0, có năm CVE đã công bố; fastapi 0.136.1 chỉ đòi
+#       starlette>=0.46.0), pydantic 2.12.5, uvicorn 0.47.0, PyYAML 6.0.3.
+#       starlette 1.3.1 thêm một cảnh báo của starlette.testclient (khuyên
+#       dùng httpx2): cảnh báo của công cụ kiểm thử, không phải lỗi.
 #   - id: main-EXP-015
 #     content: >
 #       Ráp nối backup_data (phiên 32), Order 2 ngay sau manage_client, trong
@@ -250,9 +259,10 @@
 #       test_wiring_without_app_version_is_a_type_error_and_wires_nothing:
 #       app.routes không đổi, DB không có bảng nào). Vì vậy không còn trạng
 #       thái "backup_data lặng lẽ không được ráp". Mỗi tệp kiểm thử gọi hàm này
-#       khai báo APP_VERSION = "1.0.0" ở một chỗ. Có 19 chỗ gọi thật (không phải
-#       22 như plan ước): 17 chỗ trong kiểm thử được sửa, 1 chỗ của
-#       test_backup_data.py đã truyền sẵn, và main().
+#       khai báo APP_VERSION = "1.0.0" ở một chỗ. Số chỗ gọi thật đổi theo số
+#       kiểm thử nên đừng giữ một con số: ngày 2026-10-12 có 22 chỗ (main() và
+#       21 chỗ trong kiểm thử), đếm bằng grep "wire_workflows(" trừ dòng def,
+#       dòng chú thích và dòng docstring.
 #     derived_from: main-EXP-015
 #   - id: main-EXP-017
 #     content: >
@@ -272,6 +282,38 @@
 #       trong giao dịch BEGIN IMMEDIATE ... ROLLBACK của SharedConnection.
 #       Khi thêm bước nâng cấp thật đầu tiên vào một workflow, ca này cho thấy
 #       cần thay đổi gì: bỏ monkeypatch, giữ nguyên năm khẳng định.
+#   - id: main-EXP-018
+#     content: >
+#       Biên đầu vào của mọi workflow có thân JSON (R42-1, phiên 42): một văn
+#       bản JSON hợp lệ có thể viết một surrogate lẻ ("\ud800"); nó parse ra
+#       str nhưng không mã hóa được UTF-8, nên SQLite và thân phản hồi đều
+#       không giữ được nó. Trước phiên 42 các trường chữ tự do (note, description,
+#       commission_type, reference_links, legal_name, contact,
+#       ownership_statement) làm UnicodeEncodeError nổi lên thành 500 text/plain
+#       không có error_body và không có header CORS. Quy ước: Routers của mỗi
+#       workflow có thân JSON gọi _utf8_errors(payload) trước model_validate và
+#       trả 400 + ERR_VALIDATION, details.errors[].loc chỉ đúng trường (hoặc
+#       đối tượng chứa tên trường). Mỗi workflow giữ bản riêng (không có
+#       shared/, 05 Bước 5.3). Hàm duyệt không đệ quy. Tham số đường dẫn và
+#       tham số truy vấn không cần: máy chủ đọc byte ED A0 80 thành ký tự thay
+#       thế, nên mã định danh sai dạng và giữ cách xử lý sẵn có (404 hoặc 400
+#       theo từng lối vào). Trường có StringConstraints (min_length, pattern)
+#       vốn đã bị Pydantic từ chối, vì kiểm ràng buộc buộc nó đọc UTF-8; vì vậy
+#       backup_data và send_reminder không có trường tự do, và phép cắn "chỉ bỏ
+#       walker" không làm ca của hai workflow đó hỏng (phải bỏ cả ràng buộc).
+#       Walker vẫn giữ để luật không dựa vào tác dụng phụ đó.
+#   - id: main-EXP-019
+#     content: >
+#       Ba ca cấp layer canh luật mà trước đó không máy nào canh (phiên 42):
+#       tests/test_workflow_isolation.py (mỗi workflow chỉ chạm bảng của mình,
+#       đọc từ chính _STORAGE_UPGRADES; không SQL ngoài adapters.py; không import
+#       chéo workflow hay Main), tests/test_query_parameters.py (tham số truy vấn
+#       không khai báo bị bỏ qua, API Contract 6.1.0, cho cả 17 lối vào GET) và
+#       tests/test_kill_during_writes.py (H-10). Ca READY trong
+#       test_backend_process.py có giới hạn đã đo: trên Windows kết nối tới cổng
+#       chưa lắng nghe không bị từ chối ngay mà SYN được gửi lại sau khoảng 0,5
+#       s, nên ca chỉ bắt được READY đi trước lắng nghe từ ~0,2 s trở lên (B5b),
+#       không bắt được READY đi trước vài mili giây (B5).
 #
 # UNSOLVED_PROBLEMS: []
 #
@@ -301,20 +343,29 @@
 #       CT_PORT is missing". SIGINT cho "exit code 0". Tổng: 10 passed.
 #     recorded_at: 2026-09-25T09:29:28+07:00
 #   - claim: >
-#       Toàn bộ kiểm thử của layer đạt với interpreter của dự án, với tám
-#       workflow đã ráp nối: scaffold_backend, manage_client, manage_commission,
-#       record_payment, update_progress và manage_watermark_profile (Order 4),
-#       view_income_report và send_reminder (Order 6), và với bước giành quyền
-#       tệp dữ liệu của Main (Data Schema 6.2.0).
+#       Toàn bộ kiểm thử của layer đạt với interpreter của dự án, với chín
+#       workflow đã ráp nối (scaffold_backend, manage_client, backup_data,
+#       manage_commission, record_payment, update_progress,
+#       manage_watermark_profile, view_income_report, send_reminder), với bước
+#       giành quyền tệp dữ liệu của Main (Data Schema 6.2.0) và với starlette
+#       1.3.1. Đây là mục duy nhất giữ con số của cả layer; các khối khác chỉ
+#       ghi số ca của workflow mình.
 #     how: >
 #       cd Backend; env\Scripts\python.exe -m pytest -q (Python 3.13.12 của
-#       Backend/env, Windows 11; môi trường cài bằng requirements-dev.txt)
+#       Backend/env, Windows 11; môi trường cài bằng requirements-dev.txt;
+#       fastapi 0.136.1, starlette 1.3.1, pydantic 2.12.5, uvicorn 0.47.0;
+#       pip check sạch)
 #     result: >
-#       Phiên 15, trước khi sửa: 375 passed in 351.40s. Sau khi sửa: 381
-#       passed, 1 warning (DeprecationWarning của starlette.testclient về
-#       anyio.abc.BlockingPortal, không liên quan code dự án) in 407.44s (375
-#       kiểm thử cũ + 6 kiểm thử trong tests/test_database_ownership.py).
-#     recorded_at: 2026-09-27T22:08:30+07:00
+#       814 passed, 2 warnings (cả hai là cảnh báo của starlette.testclient:
+#       httpx thay vì httpx2, và anyio.abc.BlockingPortal; không liên quan code
+#       dự án). Con số chia theo thư mục: tests/ 178, manage_client 89,
+#       manage_commission 98, update_progress 44, record_payment 96,
+#       view_income_report 41, manage_watermark_profile 63, send_reminder 79,
+#       backup_data 121, scaffold_backend 5. Ba lượt liên tiếp, đều 814
+#       passed: 439,79 s, 469,17 s, 458,49 s (ngày 2026-10-12, 19:37-20:00).
+#       Desktop npm test 79 passed và UI npm run e2e 83 passed với backend này
+#       (xem EVIDENCE của backup_data, mục "nhiều lượt liên tiếp").
+#     recorded_at: 2026-10-12T20:13:16.3642815+07:00
 #   - claim: >
 #       Backend trả CORS cho ui_origin và không cho origin nào khác
 #       (clause_a_common.mandatory_rules, Data Schema 6.0.1): GET và phản hồi
@@ -370,10 +421,13 @@
 #       cắn: tạm thay lời gọi take_database_ownership trong main() bằng
 #       DatabaseOwnership(os.open(os.devnull, os.O_RDONLY), "") rồi chạy
 #       "tests/test_database_ownership.py::test_second_backend_on_same_file_exits_with_own_code",
-#       sau đó khôi phục. Số đo độ trễ nhả khóa: script đo (không thuộc dự án)
-#       khởi động Backend.py thật 20 lần cho mỗi kiểu dừng (đóng stdin; kill()
-#       = TerminateProcess), rồi từ tiến trình đo thử msvcrt.locking LK_NBLCK
-#       trên data.db.lock mỗi 1 ms, bấm giờ từ lúc wait() trả về.
+#       sau đó khôi phục. Số đo độ trễ nhả khóa là bằng chứng MỘT LẦN, không
+#       chạy lại được từ dự án: script đo (không thuộc dự án, đã mất) khởi động
+#       Backend.py thật 20 lần cho mỗi kiểu dừng (đóng stdin; kill() =
+#       TerminateProcess), rồi từ tiến trình đo thử msvcrt.locking LK_NBLCK
+#       trên data.db.lock mỗi 1 ms, bấm giờ từ lúc wait() trả về. Khẳng định
+#       "quyền được nhả khi dừng sạch và khi bị giết" thì có ca giữ trong dự án:
+#       ca 3 và ca 4 của tests/test_database_ownership.py.
 #     result: >
 #       6 passed in 19.73s. Ca 1: backend thứ hai "exited after 2.72 s (retry
 #       window 2.00 s)", exit code 3, stdout b'', stderr "ERROR backend.main:
@@ -404,7 +458,10 @@
 #       requirements-dev.txt. cd Desktop; node packaging/prepare_runtime.mjs,
 #       trước và sau khi tách, rồi tổng Length của mọi tệp trong
 #       packaging\stage\python\Lib\site-packages (Get-ChildItem -Recurse -File
-#       -Force | Measure-Object Length -Sum) và danh sách thư mục ở đó.
+#       -Force | Measure-Object Length -Sum) và danh sách thư mục ở đó. Phần
+#       prepare_runtime và số đo kích thước gói là bằng chứng MỘT LẦN của
+#       phiên 15, thuộc layer Desktop (cd Desktop; node packaging/prepare_runtime.mjs
+#       chạy lại được); Select-String và pip chạy lại được từ Backend.
 #     result: >
 #       Select-String: không dòng nào. pip: mọi gói "Requirement already
 #       satisfied", không gói nào được cài. prepare_runtime: "smoke test
@@ -419,7 +476,10 @@
 #       bản đóng gói và giao diện; fixture tắt/bật của giao diện bật lại backend
 #       trên cùng tệp mà không vướng khóa.
 #     how: >
-#       cd Desktop; npm test. npm run dist (ELECTRON_BUILDER_CACHE đặt vào một
+#       Bằng chứng MỘT LẦN của phiên 15 (lệnh của layer Desktop và UI, không
+#       chạy ở Backend; nay chạy lại bằng npm test, npm run dist, npm run
+#       test:packaged, npm run e2e ở từng layer, và ca switchable_backend của
+#       UI). cd Desktop; npm test. npm run dist (ELECTRON_BUILDER_CACHE đặt vào một
 #       thư mục tạm vì sandbox của phiên agent, như phiên 14; lần đầu EXDEV,
 #       lần hai EPERM khi đổi tên thư mục 7zip vừa giải nén trong cache mới,
 #       lần ba đạt), rồi npm run test:packaged. cd UI; npm run e2e. Rồi chạy
@@ -462,9 +522,58 @@
 #       bước 1 chạy lại), nên chưa tới (a). Cắn (c): khẳng định (e) hỏng,
 #       "assert not True" cho has_column(stage_change, upgrade_probe), tức tác
 #       dụng của câu đúng còn lại sau khi câu sai làm khởi động thất bại.
-#       Toàn bộ layer: 573 passed (564 cũ + 6 ca nâng cấp + 3 ca
-#       compare_semver) in 441.02s.
+#       Phiên 42 chạy lại đủ ba phép cắn này trên bản sao ngoài kho: cho đúng
+#       ba kết quả trên.
 #     recorded_at: 2026-10-11T20:46:15.5976649+07:00
+#   - claim: >
+#       Ba luật của layer mà trước phiên 42 không máy nào canh nay có ca và
+#       phép cắn: mỗi workflow chỉ chạm bảng của mình và không import mã của
+#       workflow khác; tham số truy vấn không khai báo bị bỏ qua ở cả 17 lối vào
+#       GET; READY chỉ in sau khi đã lắng nghe; CT_PORT
+#       và CT_APP_VERSION có chữ số không phải ASCII thoát mã 2.
+#     how: >
+#       cd Backend; env\Scripts\python.exe -m pytest -q
+#       tests/test_workflow_isolation.py tests/test_query_parameters.py
+#       tests/test_backend_process.py::test_the_port_is_listening_the_moment_ready_is_read
+#       tests/test_backend_process.py::test_launch_values_with_digits_that_are_not_ascii_exit_with_code_2_without_ready
+#       Phép cắn trên bản sao ngoài kho (script tạm, không thuộc dự án): (1)
+#       thêm câu SELECT ... FROM commission vào record_payment/adapters.py;
+#       (2) thêm import workflows.manage_commission vào record_payment/services.py;
+#       (3) thêm một câu SELECT vào update_progress/services.py; (4) list_clients
+#       trả 400 khi có tham số truy vấn; (5) in READY trước await
+#       super().startup, không trễ (B5) và trễ 0,5 s (B5b); (6) bỏ isascii ở
+#       CT_PORT, và đổi [0-9] về \d ở _SEMVER của Backend.py.
+#     result: >
+#       Số ca: isolation 56, query_parameters 69, READY 1, chữ số 4.
+#       Cắn (1): test_adapters_touch_only_tables_of_their_own_workflow[record_payment]
+#       hỏng. (2): test_no_workflow_imports_another_workflows_code_or_the_main[record_payment]
+#       hỏng. (3): test_services_routers_and_entities_hold_no_sql[update_progress-services.py]
+#       hỏng. (4): 4 ca của /clients hỏng, 65 đạt. (5) B5 (không trễ): KHÔNG
+#       bắt được, 2 lần chạy đều đạt, vì giữa lúc in READY và lúc bind chỉ vài
+#       mili giây; B5b: ca READY hỏng. (6): ba ca CT_PORT hỏng, ca
+#       CT_APP_VERSION hỏng. Đo ca READY thật: kết nối
+#       ngay sau READY mất 2,7 ms.
+#     recorded_at: 2026-10-12T19:31:15.9600200+07:00
+#   - claim: >
+#       Backend bị giết giữa lúc ghi (kill, stdin không đóng) rồi khởi động lại
+#       trên cùng tệp: integrity_check "ok", mọi khách hàng đã trả 201 còn
+#       nguyên, không khách hàng thiếu liên hệ, không liên hệ mồ côi, READY và
+#       trả lời được. Tệp -journal có thể còn lại sau khi bị giết; nó chỉ là
+#       journal nóng khi 8 byte đầu là chuỗi nhận dạng SQLite
+#       d9 d5 05 f9 20 a1 63 d7.
+#     how: >
+#       cd Backend; env\Scripts\python.exe -m pytest -q
+#       tests/test_kill_during_writes.py (chạy riêng 10 lần liên tiếp). Phép
+#       cắn trên bản sao ngoài kho (script tạm): manage_client insert tách hai
+#       giao dịch, có ngủ 0,03 s giữa chúng.
+#     result: >
+#       10 lần chạy riêng: 10 đạt (3,2 đến 5,3 s mỗi lần). Phép cắn: hỏng cả hai
+#       lần chạy, ở khẳng định số liên hệ của GET /clients/{id} ("contacts": []).
+#       Quan sát từ Orchestrator (Linux): -journal còn lại với 8 byte đầu bằng 0
+#       là journal đã vô hiệu, vô hại; khẳng định cũ "không có tệp -journal"
+#       sai ý và hỏng 3/4 lượt toàn bộ. Trên Windows chưa gặp, nhưng khẳng định
+#       nay đúng ở cả hai nơi.
+#     recorded_at: 2026-10-13T08:20:13.2639332+07:00
 #
 # NOTES: []
 # ===WCA-CHECKPOINT-END===
@@ -550,8 +659,9 @@ WORKFLOW_CONFIG_FILES = {
     "send_reminder": LAYER_ROOT / "workflows" / "send_reminder" / "configs.yaml",
 }
 
+# ASCII digits only: \d would also accept the digits of other scripts.
 _SEMVER = re.compile(
-    r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)"
+    r"^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)"
     r"(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$"
 )
 
@@ -586,7 +696,8 @@ def read_launch_values(environ, names: dict, loopback_host: str) -> LaunchValues
         return value
 
     raw_port = required("port")
-    if not raw_port.isdigit() or not 1 <= int(raw_port) <= 65535:
+    # str.isdigit() is true for "²" and for the digits of other scripts: ASCII only.
+    if not (raw_port.isascii() and raw_port.isdigit()) or not 1 <= int(raw_port) <= 65535:
         raise LaunchValueError(f"{names['port']} must be an integer in 1..65535, got {raw_port!r}")
 
     db_file_path = required("db_file_path")

@@ -2,8 +2,8 @@
 # workflow: update_progress
 # clause: clause_b_backend
 # component: services
-# last_updated_by: coding-agent@2026-10-11#3
-# last_updated_at: 2026-10-11T20:46:15.5976649+07:00
+# last_updated_by: coding-agent@2026-10-12#1
+# last_updated_at: 2026-10-12T19:32:29.9936045+07:00
 #
 # EXPERIENCES:
 #   - id: update_progress-EXP-001
@@ -61,6 +61,14 @@
 #       đứng trước 404 của đơn không tồn tại. Services vẫn tra kind và trả
 #       UnknownStageError (400) nếu thiếu. commission_id sai định dạng: PUT ->
 #       400; GET -> 404. list_stages chỉ đọc Configs, không có nhãn 500.
+#   - id: update_progress-EXP-005
+#     content: >
+#       Chuỗi không mã hóa được UTF-8 (R42-1, phiên 42): change_stage gọi
+#       _utf8_errors(payload) ở Routers sau khi kiểm commission_id và trước khi
+#       kiểm định dạng, trả 400 ERR_VALIDATION, loc chỉ đúng trường (main-EXP-018).
+#       Trường chưa có ràng buộc duy nhất là stage_change.note: trước phiên 42
+#       một surrogate lẻ ở đó ra 500 text/plain (UnicodeEncodeError khi ghi
+#       stage_change). to_stage đã bị từ chối vì phải nằm trong catalog.
 #
 # UNSOLVED_PROBLEMS: []
 #
@@ -132,8 +140,9 @@
 #     how: >
 #       cd Backend; env\Scripts\python.exe -m pytest -q workflows/update_progress
 #     result: >
-#       38 passed.
-#     recorded_at: 2026-09-24T21:05:00+07:00
+#       44 passed (ngày 2026-10-12; 38 ở phiên 7, thêm 5 ca chuỗi không mã hóa
+#       được UTF-8 và 1 ca id đường dẫn).
+#     recorded_at: 2026-10-12T19:32:29.9936045+07:00
 #   - claim: >
 #       Bước nâng cấp 2 (giả, chỉ trong kiểm thử) áp lên dữ liệu đã có đúng
 #       một lần, giữ nguyên dữ liệu, ghi phiên bản 2; một bước hỏng thì hoàn
@@ -149,6 +158,19 @@
 #       một giao dịch riêng: khẳng định (e) hỏng, "assert not True" cho cột
 #       upgrade_probe còn lại sau khởi động thất bại.
 #     recorded_at: 2026-10-11T20:46:15.5976649+07:00
+#   - claim: >
+#       Chuỗi có surrogate lẻ ở note (và tên trường lạ có surrogate) bị từ chối
+#       400 ERR_VALIDATION với loc đúng trường; trạng thái và lịch sử của đơn
+#       không đổi.
+#     how: >
+#       cd Backend; env\Scripts\python.exe -m pytest -q workflows/update_progress
+#       -k "cannot_encode or path_id_utf8" (Python 3.13.12, Windows 11, SQLite
+#       thật). Phép cắn trên bản sao ngoài kho (script tạm, không thuộc dự án):
+#       thân _utf8_errors trả [] ngay.
+#     result: >
+#       5 passed (4 ca chuỗi + 1 ca id; cả thư mục 44 passed). Khi cắn: 1
+#       failed, đúng [value stage_change.note], 4 passed.
+#     recorded_at: 2026-10-12T19:32:29.9936045+07:00
 #
 # NOTES: []
 # ===WCA-CHECKPOINT-END===

@@ -3,16 +3,18 @@
 Endpoint (api_contract.yaml, clause_b_backend.view_income_report):
   get_income_report  http  GET /reports/income?period_from=...&period_to=...
 
-Labels: 200 income_report; 400 ERR_VALIDATION (a period bound missing or not
-a real YYYY-MM-DD date — checked here — or period_from after period_to —
-decided by Services); 409 ERR_OUT_OF_RANGE (a total cannot be represented,
-decided by Services); 500 ERR_STORAGE_IO (StorageIOError from the Adapters).
-No other exception is turned into 500.
+Labels: 200 income_report; 400 ERR_VALIDATION (a period bound missing, not a
+real YYYY-MM-DD date, or period_from after period_to — all three are the
+type of period_from / period_to, Data Schema 9.0.2, and are checked here);
+409 ERR_OUT_OF_RANGE (a total cannot be represented, decided by Services);
+500 ERR_STORAGE_IO (StorageIOError from the Adapters). No other exception is
+turned into 500.
 
 Only format checks and boundary conversions happen here. Query parameters
 are declared as plain optional strings so FastAPI never answers with its own
-422. The Pydantic model below exists only for format checks; it is not an
-Entity.
+422. A query parameter that is not an input of this entry is ignored
+(API Contract 6.1.0, endpoint_forms.http). The Pydantic model below exists
+only for format checks; it is not an Entity.
 """
 
 import re
@@ -23,16 +25,19 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, ValidationError, field_validator
 
 from .entities import CurrencyTotals, IncomeReport
-from .services import InvalidPeriodError, ReportOutOfRangeError, StorageIOError, ViewIncomeReportService
+from .services import ReportOutOfRangeError, StorageIOError, ViewIncomeReportService
 
-# clause_a_common.formats.date: ISO 8601 calendar date.
-_DATE_PATTERN = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+# clause_a_common.formats.date: ISO 8601 calendar date. ASCII digits only: \d
+# would also accept the digits of other scripts.
+_DATE_PATTERN = re.compile(r"^[0-9]{4}-[0-9]{2}-[0-9]{2}$")
 
 
 # --- format model (input_expected.period_from, period_to) --------------------
 
 class _PeriodFormat(BaseModel):
-    model_config = ConfigDict(extra="forbid", strict=True)
+    # Built from the two known parameters only (the endpoint passes nothing
+    # else), so no extra="forbid": there is no extra key to refuse.
+    model_config = ConfigDict(strict=True)
     period_from: str
     period_to: str
 
@@ -93,15 +98,18 @@ def create_view_income_report_routers(service: ViewIncomeReportService) -> APIRo
             period = _PeriodFormat.model_validate(given)
         except ValidationError as exc:
             return _error_response(400, "ERR_VALIDATION", "Invalid report period.", _validation_details(exc))
-        try:
-            report = service.report(date.fromisoformat(period.period_from), date.fromisoformat(period.period_to))
-        except InvalidPeriodError as exc:
+        start = date.fromisoformat(period.period_from)
+        end = date.fromisoformat(period.period_to)
+        # type of period_to: a date on or after period_from (Data Schema 9.0.2).
+        if end < start:
             return _error_response(
                 400,
                 "ERR_VALIDATION",
                 "period_from must not be after period_to.",
-                {"period_from": exc.period_from.isoformat(), "period_to": exc.period_to.isoformat()},
+                {"period_from": start.isoformat(), "period_to": end.isoformat()},
             )
+        try:
+            report = service.report(start, end)
         except ReportOutOfRangeError as exc:
             return _error_response(
                 409,

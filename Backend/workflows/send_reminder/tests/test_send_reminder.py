@@ -20,6 +20,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 import Backend
+from tests.utf8_boundary import assert_rejected, send, surrogate_cases
 from workflows.scaffold_backend import adapters as scaffold
 from workflows.send_reminder.adapters import ReminderRepository, StorageVersionError
 
@@ -190,6 +191,10 @@ def _mutations():
         ("at_time 9:00", m(("periodic", "at_time"), "9:00")),
         ("at_time 09:60", m(("periodic", "at_time"), "09:60")),
         ("at_time seconds", m(("periodic", "at_time"), "09:00:00")),
+        # R42-2: only the ASCII digits 0-9 are digits of HH:MM.
+        ("at_time Arabic-Indic digit in the hour", m(("periodic", "at_time"), "0٩:30")),
+        ("at_time Arabic-Indic digit in the minute", m(("periodic", "at_time"), "09:3٠")),
+        ("at_time fullwidth digits", m(("periodic", "at_time"), "０９:30")),
         ("enabled string", m(("periodic", "enabled"), "true")),
         ("lead_times empty", m(("deadline", "lead_times"), [])),
         ("six lead_times", m(("deadline", "lead_times"), [{"amount": i, "unit": "hours"} for i in range(1, 7)])),
@@ -223,6 +228,20 @@ def test_invalid_settings_are_400_and_nothing_is_saved(wired, name, mutate):
 def test_malformed_body_is_400(wired, payload):
     http, *_ = wired
     assert_error(http.put("/reminders/settings", json=payload), 400, "ERR_VALIDATION")
+
+
+# A JSON text may spell a lone surrogate ("\ud800") (R42-1). Every string of
+# the body, and every field name, is refused as a format error: 400 +
+# ERR_VALIDATION in JSON, naming the field, and nothing is saved.
+SETTINGS_CASES = surrogate_cases({"reminder_settings_input": settings(
+    periodic={"enabled": True, "every": 2, "unit": "weeks", "weekday": 3, "at_time": "09:30"})})
+
+
+@pytest.mark.parametrize(("payload", "loc"), SETTINGS_CASES)
+def test_edit_settings_refuses_a_string_utf8_cannot_encode_and_saves_nothing(wired, payload, loc):
+    http, *_ = wired
+    assert_rejected(send(http, "PUT", "/reminders/settings", payload), loc)
+    assert http.get("/reminders/settings").json()["updated_at"] is None
 
 
 def test_valid_save_is_returned_and_kept(wired):
