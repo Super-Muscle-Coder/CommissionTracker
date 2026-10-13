@@ -197,6 +197,8 @@ Lúc lập plan (2026-09-30), Orchestrator thấy kiểm thử `test_method_is_f
 
 ### BE-8 — Thời điểm trong checkpoint `record_payment` sai khoảng một giờ (thấp; Q23-1 của audit phiên 23) — cho phiên backend kế tiếp
 
+> **ĐÃ ĐÓNG 2026-10-13, phiên 42** (audit pha 2 §3.3, pha 2b §4). `recorded_at` của EVIDENCE BE-7 thành `2026-09-30T22:38:59+07:00`; không đổi gì khác trong mục đó.
+
 > **Chặng H, phiên vá backend** (quyết 2026-10-12, Project Owner duyệt 2026-10-12, `.reviews/stage_h/h1_inventory.md` §2.2): còn sót đúng một dòng, `Backend/workflows/record_payment/services.py:301`, `recorded_at: 2026-09-30T23:40:00+07:00`. Sửa thành thời điểm thật nếu xác định được, hoặc ghi rõ là không xác định được; không đổi gì khác.
 
 Checkpoint ở đầu `record_payment/services.py` ghi `last_updated_at` và `recorded_at` của EVIDENCE BE-7 là `2026-09-30T23:40:00+07:00`, trong khi tệp được ghi lần cuối lúc 22:38:59 (+07:00). Sửa hai giá trị thành thời điểm thật. Không đổi gì khác.
@@ -420,6 +422,8 @@ Hiện chỉ được kiểm bằng grep do agent tự chạy rồi ghi vào EVI
 
 ### BE-12 — Starlette 1.0.0 trong bản đóng gói có năm lỗ hổng đã công bố (trung bình; H-4)
 
+> **ĐÃ ĐÓNG 2026-10-13, phiên 42, phần backend** (audit pha 2 §3.3, pha 2b §4). `requirements.txt` có `starlette==1.3.1`; `pip check` sạch; 814 kiểm thử đạt trên Windows và Linux. **Còn lại:** bộ cài `1.0.0` hiện có vẫn mang Starlette 1.0.0. Dựng lại bộ cài và chạy `test:packaged` ở chặng H bước 3.
+
 `pip-audit -r Backend/requirements.txt` (2026-10-12): CVE-2026-48710 (sửa ở 1.0.1), CVE-2026-48818 và CVE-2026-48817 (1.1.0), CVE-2026-54282 (1.3.0), CVE-2026-54283 (1.3.1). Rủi ro thực tế rất thấp: backend chỉ nghe trên `127.0.0.1`; grep `Backend/` không thấy `StaticFiles`, `HTTPEndpoint`, `request.form`, `request.url`. **Project Owner quyết 2026-10-12:** nâng ngay trong chặng H nếu khả thi; nếu không khả thi (ví dụ FastAPI `0.136.1` không nhận Starlette đã vá, và nâng FastAPI kéo theo thay đổi lớn) thì dời sang V2, **giữ mục này mở** với lý do. Việc của phiên vá backend: nâng tối thiểu tới bản đã vá, cập nhật `requirements.txt`, chạy đủ kiểm thử backend; Desktop dựng lại gói và chạy `test:packaged` ở bước 3.
 
 ### H-3 — Dung lượng bản cài chưa đo lại trên `1.0.0` (thấp)
@@ -440,6 +444,8 @@ Việc (phiên desktop chặng H): `--ct-test-data-dir` trỏ vào một tệp, 
 
 ### H-10 — Chưa có ca giết backend giữa lúc ghi (thấp; §4)
 
+> **ĐÃ ĐÓNG 2026-10-13, phiên 42** (audit pha 2b). `Backend/tests/test_kill_during_writes.py`: bốn luồng ghi, giết tiến trình, khởi động lại. Ca riêng 10/10 lần, toàn bộ 3/3 lượt ở cả Windows và Linux. Phép cắn tách `insert` thành hai giao dịch bị bắt (có ngủ thì 3/3, không ngủ 4/6, vì bản chất xác suất).
+
 Việc (phiên backend chặng H): một luồng ghi liên tục qua `http`, giết tiến trình giữa chừng, khởi động lại. Khẳng định: `PRAGMA integrity_check` = `ok`; mỗi bản ghi hoặc đủ hoặc không có; backend lên lại bình thường.
 
 ### H-11 — Chưa có ca cho trạng thái sót lại khi tắt máy giữa lúc khôi phục (trung bình; §4)
@@ -454,7 +460,9 @@ Desktop chưa hiện thực `dialog:save-file` (checkpoint `native_dialogs`, phi
 
 ## Chặng H — phiên kiểm độc lập backend (phiên 42)
 
-Báo cáo pha 1 và đánh giá: `.reviews/audits/backend/audit_backend_session42_phase1.md`. Pha 2: `.plan/backend_plan.md` (2026-10-12).
+Báo cáo pha 1 và đánh giá: `.reviews/audits/backend/audit_backend_session42_phase1.md`. Pha 2: `.plan/backend_plan.md` (2026-10-12). **Pha 2 audit 2026-10-12** (`.reviews/audits/backend/audit_backend_session42_phase2.md`): mọi việc làm đúng; ca H-10 không ổn định trên Linux do khẳng định cuối (tồn tại tệp `-journal` thay vì journal nóng), giờ checkpoint dùng lại một giá trị; **pha 2b** sửa hai chỗ đó trước khi commit.
+
+> **ĐÃ ĐÓNG 2026-10-13, phiên 42** (pha 2b đạt, `.reviews/audits/backend/audit_backend_session42_phase2b.md`): mọi mục trong bảng dưới đây, trừ R42-6 (V2 trở đi). Backend có 814 kiểm thử.
 
 | Mã | Mức | Nội dung | Quyết định |
 |---|---|---|---|
@@ -473,6 +481,10 @@ Báo cáo pha 1 và đánh giá: `.reviews/audits/backend/audit_backend_session4
 | R42-13 | thấp | Số liệu cũ trong EVIDENCE | pha 2 |
 | R42-14 | thấp | Hai import không dùng trong kiểm thử | pha 2 |
 | R42-15 | thấp | Không ca nào của `manage_commission` bắt Routers từ chối `deadline` quá khứ | pha 2 |
+
+### BE-13 — Chữ mô tả journal đầu bằng 0 trong ca H-10 chưa đúng (thấp; audit phiên 42 pha 2b §3.2)
+
+Comment của `Backend/tests/test_kill_during_writes.py` và EVIDENCE H-10 trong khối Main gọi journal có 8 byte đầu bằng 0 là "đã vô hiệu" (chữ của Orchestrator ở audit pha 2). Quan sát ở pha 2b cho thấy tệp đó có ngay lúc bị giết: đó là journal **chưa từng có hiệu lực**, vì SQLite chỉ ghi chuỗi nhận dạng ngay trước khi sửa tệp dữ liệu. Tệp còn tới cuối ca vì backend thứ hai chỉ đọc. Kết luận "vô hại" không đổi. **Việc:** sửa câu ở hai chỗ đó khi một phiên backend chạm lại tệp; không mở phiên riêng. Không có phiên backend nào trước khi phát hành thì để V2.
 
 ### CT-10 — Tham số truy vấn không khai báo (R42-9) — **ĐÃ DUYỆT VÀ GHI 2026-10-12**
 
