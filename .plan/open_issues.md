@@ -362,6 +362,8 @@ Backend chết trong lúc trang đầu đang nạp: `onUnexpectedExit` gọi `fa
 
 ### DSK-30 — Kiểm thử Desktop chưa ổn định khi máy tải nặng (thấp; audit phiên 39 §5.1, §5.3) — chặng H câu hỏi 3, hoặc phiên desktop kế tiếp của chặng G
 
+> **Cập nhật 2026-10-13, phiên 43** (`.reviews/audits/desktop/audit_desktop_session43_phase2.md`). **Mục 3, 6, 7 ĐÃ ĐÓNG:** ca hỏng in log mọi lần `spawnMain` và kết thúc tiến trình của chính nó (`settleSpawnedRuns`); `fake_backend_die_on_first_call.py` dùng `selectors`; ca 6 khẳng định `fake backend: first call received`, phép cắn thoát ngay sau `READY` bị bắt. **Mục 4 ĐÃ ĐÓNG:** ca 15 và 16 đạt cả bốn lượt `npm test` lúc Project Owner dùng máy; quy ước giữ nguyên: hỏng vì chuyển cửa sổ thì ghi riêng, không `skip`. **Mục 5** chưa quyết; Orchestrator đề xuất để V2.
+
 > **Chặng H, phiên vá desktop** (quyết 2026-10-12, Project Owner duyệt 2026-10-12, `.reviews/stage_h/h1_inventory.md` §2.2): mục 3, 6, 7.
 
 > **Cập nhật 2026-10-11, phiên 40** (audit `.reviews/audits/desktop/audit_desktop_session40.md`). **Mục 1 và 2 ĐÃ ĐÓNG:** N7 chờ trang `data:` như R10 (Orchestrator đo trên Linux có tải: bỏ bước chờ thì hỏng 5/5, giữ thì đạt 5/5 và đạt ba lượt toàn bộ); ca 6 và 14 dùng `tests/fixtures/fake_backend_die_on_first_call.py`. **Mục 3 sửa lại:** log của ca "did not exit" vẫn mất, vì ca dùng `spawnMain` chỉ in log sau khi chờ thoát xong. Việc mới: ca dùng `spawnMain` in log của Main khi ca hỏng, kể cả khi hỏng vì hết giờ chờ. Phiên 40 gặp lại dạng này ở một lượt có tải bị bỏ (ca 1, 6, 14, A2, A4, A6; mỗi ca 40–80 s), kèm tiến trình python giả còn sống: nghiêng về máy nghẽn, có thể antivirus giữ python lúc khởi động. **Thêm mục 6:** `fake_backend_die_on_first_call.py` chỉ đọc một kết nối mỗi lúc; nếu Chromium mở sẵn một kết nối không gửi gì và không đóng, backend giả chờ mãi. Chưa thấy xảy ra. Sửa: theo dõi mọi kết nối cùng lúc (`selectors`). **Thêm mục 7:** ca 6 khẳng định thêm dòng stderr "fake backend: first call received" (phép cắn (a) không bắt được trên Linux, vì `opening the window` được ghi cả khi backend chết sớm).
@@ -436,9 +438,13 @@ Giao cho phiên kiểm độc lập của `UI/` (chặng H, câu hỏi 4).
 
 ### H-7 — Ba ô chưa có ca: `restore_data` gọi sang backend (thấp; `.reviews/stage_h/h1_q3_matrix.md` §3)
 
+> **ĐÃ ĐÓNG 2026-10-13, phiên 43.** R16 (`create_backup` 400 → 424), R17 (`create_backup` thân sai hình dạng → 424), R18 (`prepare_restore` 400 → 503), ba chế độ mới trong `fake_backend_restore.py`; khớp ánh xạ, không đổi mã. Orchestrator cắn: 400 ánh xạ thành 404 thì R18 hỏng.
+
 `create_backup` trả 400, `create_backup` trả thân sai hình dạng (mã đã trả 424), `prepare_restore` trả 400 (mã đã trả 503). Việc (phiên desktop chặng H): thêm ba chế độ vào `Desktop/tests/fixtures/fake_backend_restore.py` và ba ca kiểm thử.
 
 ### H-9 — Chưa có ca khởi động cả ứng dụng khi thư mục dữ liệu không dùng được (trung bình; §4)
+
+> **ĐÃ ĐÓNG 2026-10-13, phiên 43.** Ca làm lộ R43-22 (tắt im lặng mã 0 khi `userData` không tạo được), đã sửa theo hướng A. H9a, H9b, H9c: mã thoát 1, một `FATAL`, câu khởi động, không treo, không sót python. Hộp thoại thật trước `ready` chưa được nhìn thấy: DSK-31.
 
 Việc (phiên desktop chặng H): `--ct-test-data-dir` trỏ vào một tệp, hoặc một thư mục không ghi được. Khẳng định: hộp thoại lỗi tiếng Việt, mã thoát khác 0, không treo, không sót tiến trình python.
 
@@ -450,9 +456,13 @@ Việc (phiên backend chặng H): một luồng ghi liên tục qua `http`, gi�
 
 ### H-11 — Chưa có ca cho trạng thái sót lại khi tắt máy giữa lúc khôi phục (trung bình; §4)
 
+> **ĐÃ ĐÓNG 2026-10-13, phiên 43.** H11a (sau bước 4): `restored`, dữ liệu của bản sao lưu; `restore-previous` thêm một tệp rỗng do backend tạo lúc khởi động (vô hại). H11b (sau bước 5): `discarded`, dữ liệu của bản sao lưu, tệp cũ ở `restore-previous`. Khớp suy luận; chặng F không có lỗi. Câu "Dữ liệu không thay đổi" ở H11b: DSK-32 (V2).
+
 Suy luận từ `.design/f_restore.md` §3 là an toàn, nhưng chưa có ca. Việc (phiên desktop chặng H): dựng trạng thái sau bước 4 (bản ghi đang chờ, tệp chờ còn, `db_file_path` trống) → khẳng định `restored`, đúng dữ liệu bản sao lưu; dựng trạng thái sau bước 5 (bản ghi đang chờ, tệp chờ đã ở `db_file_path`) → khẳng định `discarded`, dữ liệu bản sao lưu, tệp cũ còn ở `restore-previous`. Kết quả khác suy luận thì là lỗi thật của chặng F: dừng và báo.
 
 ### CT-9 — `native_dialogs.save_file` được khai trong API Contract nhưng không tồn tại (trung bình; H-8, §3) — **ĐÃ DUYỆT VÀ GHI 2026-10-12** (hướng A)
+
+> **Phần còn lại ĐÃ ĐÓNG 2026-10-13, phiên 43** (R43-12): comment và checkpoint `native_dialogs`, `packaged_app.spec.ts` nói đúng 6.0.0.
 
 > Project Owner chọn hướng A ngày 2026-10-12. Orchestrator ghi API Contract **6.0.0**: bỏ `clause_a_common.cross_cutting.native_dialogs.entries.save_file`, kèm changelog; sửa bảng §1 và đoạn `native_dialogs` của `.design/ui_decomposition.md`, `CLAUDE.md` mục 6. **Việc còn lại cho phiên desktop chặng H (pha 2):** chú thích và checkpoint của `Desktop/src/cross_cutting/native_dialogs/native_dialogs.ts` còn nói `save_file` "vẫn nằm trong hợp đồng"; sửa cho đúng 6.0.0. Ca N2 (preload từ chối `dialog:save-file`) vẫn đúng: nay đó là một địa chỉ không khai báo. Mọi tệp ghi phiên bản API Contract trong `Desktop/`, `UI/` (Configs, chú thích) được rà ở phiên kiểm độc lập của từng layer.
 
@@ -494,6 +504,8 @@ Project Owner chọn ghi luật "bỏ qua" (hướng B). API Contract 6.0.0 → 
 
 Báo cáo pha 1 và đánh giá: `.reviews/audits/desktop/audit_desktop_session43_phase1.md` (2026-10-13, pha 1 đạt). Không có phát hiện mức cao. **Project Owner duyệt 2026-10-13:** quyết định cho từng mục như bảng dưới; CT-11 và CT-12 theo hướng A (API Contract 6.2.0); pha 2 làm trong cùng phiên 43, gồm cả việc đã biết của Desktop.
 
+> **ĐÃ ĐÓNG 2026-10-13, phiên 43** (pha 2 đạt, `.reviews/audits/desktop/audit_desktop_session43_phase2.md`): mọi mục trong bảng dưới đây (sửa, chấp nhận, hoặc Orchestrator đã làm), kể cả R43-22. Desktop có 95 kiểm thử. Mở DSK-31, DSK-32.
+
 | Mã | Mức | Nội dung | Đề xuất |
 |---|---|---|---|
 | R43-1 | trung bình | Không ca nào khẳng định `sandbox`, `nodeIntegration` của cửa sổ chính (cắn `sandbox: false` không bị bắt; `contextIsolation` được kiểm gián tiếp) | pha 2: khẳng định `getLastWebPreferences()` |
@@ -520,6 +532,15 @@ Báo cáo pha 1 và đánh giá: `.reviews/audits/desktop/audit_desktop_session4
 | R43-22 | trung bình | Thư mục `userData` của Electron không tạo được thì `requestSingleInstanceLock()` trả `false`, Main tưởng đang có bản khác chạy, tắt im lặng với mã 0, không hộp thoại (phát hiện ở pha 2 khi viết ca H-9; agent và Orchestrator đều tái hiện được, Orchestrator trên Linux). Không mất dữ liệu: backend chưa khởi động | **Project Owner chọn A (2026-10-13):** Main thử tạo `userData` trước khi xin khóa; hỏng thì `fatal()` với câu khởi động và `failure_exit_code` |
 
 Việc đã biết của Desktop, đề xuất gộp vào pha 2: DSK-30 mục 3, 6, 7; H-7; H-9; H-11.
+
+### DSK-31 — Việc nhỏ của Desktop sau phiên 43 (thấp; audit phiên 43 pha 2 §4.1, §4.3)
+
+1. **Hộp thoại R43-22 trên Windows:** ở chặng H bước 3, trên bản đóng gói dựng lại, Project Owner chạy `Commission Tracker.exe --ct-test-data-dir=<đường dẫn tới một tệp có sẵn>` và nhìn thấy hộp thoại lỗi khởi động tiếng Việt (hộp thoại nay hiện trước sự kiện `ready`; kiểm thử chỉ chạy với `--ct-test-no-dialog`).
+2. **NOTES của Main:** mục (2) của NOTE thứ hai (bản cài ngày 2026-10-04) lỗi thời; hai NOTE hết hạn ngày 2026-10-19. Phiên desktop kế tiếp chạm Main thì dọn.
+
+### DSK-32 — Câu của kết quả `discarded` khi máy tắt sau bước 5 (thấp; V2; audit phiên 43 pha 2 §4.2)
+
+Máy tắt đúng giữa bước 5 và 6 của khôi phục thì lần mở sau ra `discarded` với câu "Dữ liệu không thay đổi", trong khi dữ liệu lúc đó đã là của bản sao lưu. Không rủi ro dữ liệu; chỉ là câu thiếu thông tin. Để V2 (trải nghiệm dùng).
 
 ### CT-11 — Lối vào `ipc` từ chối đầu vào sai bằng cách nào (R43-10) — **ĐÃ DUYỆT VÀ GHI 2026-10-13** (hướng A)
 
