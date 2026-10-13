@@ -48,17 +48,18 @@ test('N1. pure checks: only the main window with the ui_origin origin; only {} o
   for (const bad of [{ x: 1 }, 'abc', null, [], 0, true]) expect(argumentRefusal(bad), JSON.stringify(bad)).not.toBeNull()
 })
 
-test('N1b. pure check of open_file: {} / no argument / null filters mean no filter; a list of { name, extensions } passes; the rest is refused', () => {
+test('N1b. pure check of open_file (API Contract 6.2.0, R43-11): exactly { filters } with filters null or a list of { name, extensions } passes; no argument, {} and the rest are refused', () => {
   const filters = [
     { name: 'Backups', extensions: ['ctbackup'] },
     { name: 'All', extensions: ['*'] },
   ]
-  expect(openFileArgument(undefined)).toEqual({ ok: true, filters: null })
-  expect(openFileArgument({})).toEqual({ ok: true, filters: null })
   expect(openFileArgument({ filters: null })).toEqual({ ok: true, filters: null })
   expect(openFileArgument({ filters: [] })).toEqual({ ok: true, filters: [] })
   expect(openFileArgument({ filters })).toEqual({ ok: true, filters })
   const bad: unknown[] = [
+    undefined,
+    {},
+    { filters: undefined },
     null,
     'abc',
     [],
@@ -82,7 +83,7 @@ test('N1b. pure check of open_file: {} / no argument / null filters mean no filt
 // --- N2-N9: the whole Main -----------------------------------------------------------
 
 type Reply = { ok: true; value: unknown } | { ok: false; message: string }
-type Kind = 'object' | 'none' | 'extra_key' | 'string' | 'null' | 'array'
+type Kind = 'object' | 'none' | 'extra_key' | 'string' | 'null' | 'array' | 'filters_null'
 
 /** Calls invoke(address, argument) in the page and reports the answer or the rejection. */
 async function invokeIn(page: Page, address: unknown, kind: Kind): Promise<Reply> {
@@ -93,6 +94,7 @@ async function invokeIn(page: Page, address: unknown, kind: Kind): Promise<Reply
         let value: unknown
         if (kind === 'none') value = await bridge.invoke(address)
         else if (kind === 'object') value = await bridge.invoke(address, {})
+        else if (kind === 'filters_null') value = await bridge.invoke(address, { filters: null })
         else if (kind === 'extra_key') value = await bridge.invoke(address, { x: 1 })
         else if (kind === 'string') value = await bridge.invoke(address, 'abc')
         else if (kind === 'null') value = await bridge.invoke(address, null)
@@ -161,8 +163,8 @@ test.describe.serial('the real Main with the probe page', () => {
 
   test('N2. an address the Main has not implemented: the promise is rejected and nothing reaches the Main', async () => {
     // A spy on the Main side: if the preload relayed the call, this handler would run.
-    // (dialog:save-file is the contract's one dialog entry still not implemented;
-    // since session 35 dialog:open-file is implemented and no longer in this list.)
+    // (dialog:save-file is not a declared address: API Contract 6.0.0 removed the
+    // save_file entry. dialog:open-file is implemented and so is not in this list.)
     await app.evaluate(({ ipcMain }) => {
       const g = globalThis as unknown as { __spyCalls: string[] }
       g.__spyCalls = []
@@ -306,14 +308,13 @@ test.describe.serial('the real Main with the probe page', () => {
     const before = (await dialogCalls(app)).length
     const chosen = path.join(dataDir, 'chosen file.ctbackup')
     await stubDialog(app, { answer: { canceled: false, filePaths: [chosen] } })
-    expect(await invokeIn(page, OPEN_FILE, 'object')).toEqual({ ok: true, value: { status: 200, body: { canceled: false, path: chosen } } })
+    expect(await invokeIn(page, OPEN_FILE, 'filters_null')).toEqual({ ok: true, value: { status: 200, body: { canceled: false, path: chosen } } })
     expect(await callsSince(before)).toEqual([{ windowId: mainWindowId, options: { properties: ['openFile'], title: OPEN_FILE_TITLE } }])
     expect(OPEN_FILE_TITLE).toBe('Chọn tệp')
     expect(log.text).toContain(`native_dialogs: ${OPEN_FILE} -> chosen ${chosen}`)
 
     await stubDialog(app, { answer: { canceled: true, filePaths: [] } })
-    expect(await invokeIn(page, OPEN_FILE, 'object')).toEqual({ ok: true, value: { status: 200, body: { canceled: true, path: null } } })
-    expect(await invokeIn(page, OPEN_FILE, 'none')).toEqual({ ok: true, value: { status: 200, body: { canceled: true, path: null } } })
+    expect(await invokeIn(page, OPEN_FILE, 'filters_null')).toEqual({ ok: true, value: { status: 200, body: { canceled: true, path: null } } })
     expect(log.text).toContain(`native_dialogs: ${OPEN_FILE} -> canceled`)
   })
 
@@ -358,6 +359,9 @@ test.describe.serial('the real Main with the probe page', () => {
       { filters: [{ name: 'Backups', extensions: 'ctbackup' }] },
       { filters: [{ name: 'Backups', extensions: [1] }] },
       { x: 1 },
+      // API Contract 6.2.0 (R43-11): the argument is exactly { filters }.
+      {},
+      { filters: null, x: 1 },
     ]
     for (const argument of wrong) {
       const reply = await page.evaluate(
@@ -373,16 +377,18 @@ test.describe.serial('the real Main with the probe page', () => {
       )
       expect(reply, JSON.stringify(argument)).toEqual({ ok: false, message: expect.stringMatching(/call refused/) })
     }
+    // No argument at all is refused too.
+    expect(await invokeIn(page, OPEN_FILE, 'none')).toEqual({ ok: false, message: expect.stringMatching(/call refused/) })
     expect((await dialogCalls(app)).length).toBe(before)
-    expect(log.lines(new RegExp(`native_dialogs: ${OPEN_FILE} refused`))).toHaveLength(wrong.length)
+    expect(log.lines(new RegExp(`native_dialogs: ${OPEN_FILE} refused`))).toHaveLength(wrong.length + 1)
   })
 
   test('N13. open_file: the dialog throws -> the promise is rejected, the failure is logged, the app answers the next call', async () => {
     await stubDialog(app, { throwMessage: 'boom from the file dialog' })
-    expect(await invokeIn(page, OPEN_FILE, 'object')).toEqual({ ok: false, message: expect.stringMatching(/boom from the file dialog/) })
+    expect(await invokeIn(page, OPEN_FILE, 'filters_null')).toEqual({ ok: false, message: expect.stringMatching(/boom from the file dialog/) })
     expect(log.text).toContain(`native_dialogs: ${OPEN_FILE} failed: boom from the file dialog`)
     await stubDialog(app, { answer: { canceled: true, filePaths: [] } })
-    expect(await invokeIn(page, OPEN_FILE, 'object')).toEqual({ ok: true, value: { status: 200, body: { canceled: true, path: null } } })
+    expect(await invokeIn(page, OPEN_FILE, 'filters_null')).toEqual({ ok: true, value: { status: 200, body: { canceled: true, path: null } } })
     expect(log.text).not.toMatch(/FATAL/)
   })
 })

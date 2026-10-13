@@ -58,9 +58,19 @@ test('R1a. Routers, pure checks: archive_path is exactly one absolute path; stat
   expect(senderProblem(ok, UI_ORIGIN)).toBeNull()
   expect(senderProblem({ ...ok, senderIsMainWindow: false }, UI_ORIGIN)).toMatch(/not the main window/)
   expect(senderProblem({ ...ok, frameUrl: null }, UI_ORIGIN)).toMatch(/unknown/)
-  for (const url of ['data:text/html,x', 'about:blank', 'http://commission-tracker/', 'app://other-host/', 'not a url']) {
+  // Includes origins that START with the ui_origin (R43-3): host "commission-tracker.evil" and
+  // "commission-tracker:8080" are not "commission-tracker".
+  for (const url of ['data:text/html,x', 'about:blank', 'http://commission-tracker/', 'app://other-host/', 'app://commission-tracker.evil/', 'app://commission-tracker.evil/index.html', 'app://commission-tracker:8080/', 'not a url']) {
     expect(senderProblem({ ...ok, frameUrl: url }, UI_ORIGIN), url).not.toBeNull()
   }
+})
+
+test('R1c. the three ipc addresses in restore_data.json are the strings of API Contract 6.2.0 (clause_d_desktop.restore_data), not only whatever the configuration says (R43-8)', () => {
+  expect([restoreConfig.addresses.request_restore, restoreConfig.addresses.get_restore_status, restoreConfig.addresses.cancel_restore]).toEqual([
+    'restore:prepare',
+    'restore:status',
+    'restore:cancel',
+  ])
 })
 
 /** A TCP port nobody listens on. */
@@ -568,5 +578,127 @@ test('R15. 424 when create_backup answers 500: the safety folder was made, nothi
     expect(fs.existsSync(path.join(dbFolder, restoreConfig.files.pending_file_name))).toBe(false)
     expect(await answer(page, STATUS, {})).toEqual({ status: 200, body: { pending: null } })
     expect(log.lines(/fake backend: POST \/backups -> 500/)).toHaveLength(1)
+  })
+})
+
+// --- H-7: the three cells of the outgoing direction that had no case ------------------------------
+
+test('R16. 424 when create_backup answers 400: the safety folder was made, nothing pending (H-7)', async () => {
+  await withFakeBackend('create400', async (page, dbFolder, log) => {
+    const reply = await answer(page, PREPARE, { archive_path: SOME_ARCHIVE })
+    expect(reply.status).toBe(424)
+    expect(reply.body).toMatchObject({ code: 'ERR_STORAGE_IO', details: { reason: expect.stringMatching(/answered 400 to create_backup/) } })
+    expect(fs.statSync(path.join(dbFolder, restoreConfig.files.safety_folder_name)).isDirectory()).toBe(true)
+    expect(fs.existsSync(path.join(dbFolder, restoreConfig.files.pending_file_name))).toBe(false)
+    expect(await answer(page, STATUS, {})).toEqual({ status: 200, body: { pending: null } })
+    expect(log.lines(/fake backend: POST \/backups -> 400/)).toHaveLength(1)
+  })
+})
+
+test('R17. 424 when create_backup answers 201 with an object of the wrong shape: nothing pending (H-7)', async () => {
+  await withFakeBackend('createbad', async (page, dbFolder, log) => {
+    const reply = await answer(page, PREPARE, { archive_path: SOME_ARCHIVE })
+    expect(reply.status).toBe(424)
+    expect(reply.body).toMatchObject({ code: 'ERR_STORAGE_IO', details: { reason: expect.stringMatching(/unexpected shape/) } })
+    expect(fs.existsSync(path.join(dbFolder, restoreConfig.files.pending_file_name))).toBe(false)
+    expect(await answer(page, STATUS, {})).toEqual({ status: 200, body: { pending: null } })
+    expect(log.lines(/fake backend: POST \/backups -> 201/)).toHaveLength(1)
+  })
+})
+
+test('R18. 503 when prepare_restore answers 400: nothing pending, no safety backup (no call to create_backup, no safety folder) (H-7)', async () => {
+  await withFakeBackend('prepare400', async (page, dbFolder, log) => {
+    const reply = await answer(page, PREPARE, { archive_path: SOME_ARCHIVE })
+    expect(reply.status).toBe(503)
+    expect(reply.body).toMatchObject({ code: 'ERR_SERVICE_UNAVAILABLE', details: { reason: expect.stringMatching(/answered 400 to prepare_restore/) } })
+    expect(await answer(page, STATUS, {})).toEqual({ status: 200, body: { pending: null } })
+    expect(fs.existsSync(path.join(dbFolder, restoreConfig.files.pending_file_name))).toBe(false)
+    expect(fs.existsSync(path.join(dbFolder, restoreConfig.files.safety_folder_name))).toBe(false)
+    expect(log.lines(/fake backend: POST \/backups -> /)).toEqual([])
+  })
+})
+
+// --- R43-21: the calls of restore_data run one after another --------------------------------------
+// The fake backend (switch stageslow) writes a real staging file and answers its FIRST
+// preparation one second late. Without a queue in the Services a second call started
+// meanwhile overtakes it; with the queue it starts only when the first has finished.
+
+interface BridgeWindow {
+  [name: string]: unknown
+  __order?: string[]
+  __first?: Promise<unknown>
+}
+
+test('R19. two restore:prepare sent together, the first slowed by the backend: they run one after the other, both answer, the record matches the staging file the backend made last (R43-21)', async () => {
+  await withFakeBackend('stageslow', async (page, dbFolder, log) => {
+    const first = path.join(os.tmpdir(), 'queue-first.ctbackup')
+    const second = path.join(os.tmpdir(), 'queue-second.ctbackup')
+    const sent = await page.evaluate(
+      async ({ name, address, first, second }) => {
+        const bridge = (window as unknown as Record<string, { invoke: (a: string, b: unknown) => Promise<{ status: number; body: Record<string, unknown> }> }>)[name]
+        const order: string[] = []
+        const one = bridge.invoke(address, { archive_path: first }).then((r) => (order.push('first'), r))
+        const two = bridge.invoke(address, { archive_path: second }).then((r) => (order.push('second'), r))
+        const replies = await Promise.all([one, two])
+        return { replies, order }
+      },
+      { name: BRIDGE, address: PREPARE, first, second },
+    )
+    // Both calls have an answer, in the order they were sent.
+    expect(sent.replies.map((r) => r.status)).toEqual([200, 200])
+    expect(sent.replies.map((r) => r.body.archive_path)).toEqual([first, second])
+    expect(sent.order).toEqual(['first', 'second'])
+
+    // The backend saw them one after the other: the second started only after the first answered.
+    const text = log.text
+    const answeringFirst = text.indexOf('fake backend: preparation #1 answering')
+    const startedSecond = text.indexOf('fake backend: preparation #2 started')
+    expect(answeringFirst).toBeGreaterThanOrEqual(0)
+    expect(startedSecond).toBeGreaterThan(answeringFirst)
+
+    // The record is the second request's and the staging file is the second request's.
+    const stagingFile = path.join(dbFolder, 'restore-staging', 'data.db')
+    const staged = fs.readFileSync(stagingFile, 'utf8')
+    expect(staged).toBe(`staged-for:${second}`)
+    const status = await answer(page, STATUS, {})
+    expect((status.body.pending as PendingRestoreRecord).archive_path).toBe(second)
+    const stored = JSON.parse(fs.readFileSync(path.join(dbFolder, restoreConfig.files.pending_file_name), 'utf8')) as Record<string, string>
+    expect(stored.archive_path).toBe(second)
+    expect(stored.staged_db_path).toBe(stagingFile)
+  })
+})
+
+test('R20. restore:cancel sent while a restore:prepare is running: cancel answers after prepare is done, and nothing is pending at the end (R43-21)', async () => {
+  await withFakeBackend('stageslow', async (page, dbFolder, log) => {
+    const archive = path.join(os.tmpdir(), 'queue-cancel.ctbackup')
+    await page.evaluate(
+      ({ name, address, archive }) => {
+        const bridge = (window as unknown as Record<string, { invoke: (a: string, b: unknown) => Promise<unknown> }>)[name]
+        const w = window as unknown as BridgeWindow
+        w.__order = []
+        w.__first = bridge.invoke(address, { archive_path: archive }).then((r) => (w.__order?.push('prepare'), r))
+      },
+      { name: BRIDGE, address: PREPARE, archive },
+    )
+    // The backend has the preparation in hand (and holds it for a second): now cancel.
+    await log.waitFor(/fake backend: preparation #1 started/, 30_000)
+    const canceled = await page.evaluate(
+      async ({ name, address }) => {
+        const bridge = (window as unknown as Record<string, { invoke: (a: string, b: unknown) => Promise<unknown> }>)[name]
+        const w = window as unknown as BridgeWindow
+        const reply = await bridge.invoke(address, {})
+        w.__order?.push('cancel')
+        return reply
+      },
+      { name: BRIDGE, address: CANCEL },
+    )
+    const prepared = (await page.evaluate(() => (window as unknown as BridgeWindow).__first)) as { status: number }
+    const order = await page.evaluate(() => (window as unknown as BridgeWindow).__order)
+    expect(prepared.status).toBe(200)
+    expect(order).toEqual(['prepare', 'cancel'])
+    // cancel found the record that prepare wrote, and removed it.
+    expect(canceled).toEqual({ status: 200, body: { canceled: true } })
+    expect(fs.existsSync(path.join(dbFolder, restoreConfig.files.pending_file_name))).toBe(false)
+    expect(await answer(page, STATUS, {})).toEqual({ status: 200, body: { pending: null } })
   })
 })

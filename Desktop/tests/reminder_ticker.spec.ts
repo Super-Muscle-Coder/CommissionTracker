@@ -98,15 +98,20 @@ test('A4. the Application User Model ID in desktop.json is the appId of electron
 interface LocalServer {
   baseUrl: string
   calls: () => number
+  /** "<METHOD> <path>" of every request, in order. */
+  requests: () => string[]
   close: () => Promise<void>
 }
 
-/** A server whose POST /reminders/checks answers after delayMs with `body`. */
+/** A server that answers any request after delayMs with `body`, and records
+ * what was asked ("<METHOD> <path>"). */
 async function localServer(delayMs: number, body: unknown): Promise<LocalServer> {
   let calls = 0
+  const requests: string[] = []
   const server = http.createServer((req, res) => {
     req.resume()
     calls++
+    requests.push(`${req.method} ${req.url}`)
     setTimeout(() => {
       res.writeHead(200, { 'content-type': 'application/json' })
       res.end(JSON.stringify(body))
@@ -117,6 +122,7 @@ async function localServer(delayMs: number, body: unknown): Promise<LocalServer>
   return {
     baseUrl: `http://127.0.0.1:${port}`,
     calls: () => calls,
+    requests: () => requests,
     close: () =>
       new Promise<void>((resolve) => {
         server.closeAllConnections()
@@ -130,7 +136,7 @@ test('B1. a call that gets no answer in time is logged as failed and tried again
   const lines: string[] = []
   const ticker = new ReminderTicker({
     backendBaseUrl: server.baseUrl,
-    config: { interval_ms: 250, request_timeout_ms: 300, toast: TEXT },
+    config: { interval_ms: 250, request_timeout_ms: 300, check_due: config.reminder_ticker.check_due, toast: TEXT },
     showToast: () => lines.push('TOAST'),
     log: (m) => lines.push(m),
   })
@@ -153,7 +159,7 @@ test('B2. stop() while a call is running: its answer is dropped, no toast, and s
   const lines: string[] = []
   const ticker = new ReminderTicker({
     backendBaseUrl: server.baseUrl,
-    config: { interval_ms: 60_000, request_timeout_ms: 10_000, toast: TEXT },
+    config: { interval_ms: 60_000, request_timeout_ms: 10_000, check_due: config.reminder_ticker.check_due, toast: TEXT },
     showToast: (t) => toasts.push(t),
     log: (m) => lines.push(m),
   })
@@ -171,6 +177,58 @@ test('B2. stop() while a call is running: its answer is dropped, no toast, and s
   expect(lines.some((l) => /reminder toast:/.test(l))).toBe(false)
   expect(lines.at(-1)).toBe('reminder ticker stopped')
   expect(server.calls()).toBe(1)
+})
+
+test('B3. the ticker shows every element it is given, also an id it showed before (it filters nothing; R43-5)', async () => {
+  // The same notification_id comes back at every check: the backend decides
+  // what is due, and the ticker does not remember what it has shown.
+  const server = await localServer(0, [deadlineElement({ notification_id: 'same-id' })])
+  const toasts: Toast[] = []
+  const lines: string[] = []
+  const ticker = new ReminderTicker({
+    backendBaseUrl: server.baseUrl,
+    config: { interval_ms: 100, request_timeout_ms: 5000, check_due: config.reminder_ticker.check_due, toast: TEXT },
+    showToast: (t) => toasts.push(t),
+    log: (m) => lines.push(m),
+  })
+  try {
+    ticker.start()
+    const deadline = Date.now() + 15_000
+    while (toasts.length < 2 && Date.now() < deadline) await sleep(50)
+  } finally {
+    await ticker.stop()
+    await server.close()
+  }
+  console.log(lines.join('\n'))
+  expect(toasts.length).toBeGreaterThanOrEqual(2)
+  expect(new Set(toasts.map((t) => t.notificationId))).toEqual(new Set(['same-id']))
+  expect(lines.filter((l) => /reminder toast: /.test(l)).length).toBe(toasts.length)
+})
+
+test('B4. the method and path of check_due come from the configuration the Main hands over (R43-6)', async () => {
+  const run = async (checkDue: { method: string; path: string }): Promise<string[]> => {
+    const server = await localServer(0, [])
+    const ticker = new ReminderTicker({
+      backendBaseUrl: server.baseUrl,
+      config: { interval_ms: 60_000, request_timeout_ms: 5000, check_due: checkDue, toast: TEXT },
+      showToast: () => undefined,
+      log: () => undefined,
+    })
+    try {
+      ticker.start()
+      const deadline = Date.now() + 15_000
+      while (server.calls() < 1 && Date.now() < deadline) await sleep(25)
+    } finally {
+      await ticker.stop()
+      await server.close()
+    }
+    return server.requests()
+  }
+  // The real configuration, and the value of the contract (send_reminder.check_due).
+  expect(config.reminder_ticker.check_due).toEqual({ method: 'POST', path: '/reminders/checks' })
+  expect(await run(config.reminder_ticker.check_due)).toEqual(['POST /reminders/checks'])
+  // A different value in the configuration gives a different call: nothing is typed in the code.
+  expect(await run({ method: 'PUT', path: '/other/checks' })).toEqual(['PUT /other/checks'])
 })
 
 // --- (C) the Main with a fake backend ---------------------------------------------

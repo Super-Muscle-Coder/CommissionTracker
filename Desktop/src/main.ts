@@ -2,8 +2,8 @@
 // workflow: main
 // clause: clause_d_desktop
 // component: main
-// last_updated_by: coding-agent@2026-10-11#1
-// last_updated_at: 2026-10-11T14:45:43.5442513+07:00
+// last_updated_by: coding-agent@2026-10-13#1
+// last_updated_at: 2026-10-13T15:44:33.3887418+07:00
 //
 // EXPERIENCES:
 //   - id: main-EXP-001
@@ -571,8 +571,7 @@
 //       khi trang gọi ngay lúc nạp. Đóng gói: electron-builder.yml files thêm
 //       dist/workflows/**/*.js và configs/restore_data.json (bài học main-EXP-027: thêm
 //       thư mục dist mới cho Main thì phải thêm vào files); app.asar liệt kê được cả bốn
-//       tệp của workflow; P10 chạy đường chuẩn bị thật trong gói. Main chưa có
-//       backend_controller, restore_trigger: để phiên 36.
+//       tệp của workflow; P10 chạy đường chuẩn bị thật trong gói.
 //   - id: main-EXP-032
 //     content: >
 //       Trang thử cho Project Owner (npm run probe, tests/fixtures/probe) có thêm bốn nút:
@@ -717,6 +716,54 @@
 //       finished", nên khi backend chết thì cửa sổ đã mở và trang đã nạp xong, bất kể máy chậm cỡ nào (GET
 //       /clients của trang probe cũng chỉ đến sau khi trang chạy). Hai ca giữ nguyên mọi khẳng định. K1 không
 //       đổi và vẫn dùng fake_backend_ready_then_die.py (cần lần nạp chưa xong lúc backend chết).
+//   - id: main-EXP-043
+//     content: >
+//       R43-22 và H-9 (phiên 43, pha 2). Đo ở pha 2: --ct-test-data-dir trỏ vào một TỆP (hoặc vào một đường dẫn có
+//       thư mục cha là tệp) làm Main thoát mã 0, không hộp thoại, chỉ một dòng log "another instance is already
+//       running": userData là <data>/electron-user-data không tạo được nên Chromium không tạo được tệp khóa, và
+//       app.requestSingleInstanceLock() trả false cho MỌI lý do không lấy được khóa, không chỉ khi có bản khác
+//       chạy. Cách sửa (Project Owner duyệt hướng A, 2026-10-13): trước khi xin khóa, Main tạo thư mục userData
+//       (mkdirSync recursive), cả khi chạy từ mã nguồn lẫn bản đóng gói, có hay không cờ --ct-test-data-dir. Không
+//       tạo được thì fatal() với câu khởi động: đúng một dòng "FATAL: The folder for the application's own data
+//       could not be made: <đường dẫn> (<lỗi>)", hộp thoại (hoặc dòng "error dialog text:" khi có
+//       --ct-test-no-dialog), mã thoát failure_exit_code, không khởi động backend. Thư mục tạo được mà khóa
+//       vẫn false thì như cũ: bản khác đang chạy, thoát im lặng (ca 9). CÁCH CHỌN THỨ TỰ KHAI BÁO: khối "tạo
+//       userData rồi xin khóa" được DỜI xuống sau hàm fatal() (sau khai báo shutdownStarted, fatalReported, backend),
+//       thay vì viết nhánh dừng sớm riêng. Lý do: fatal() là nơi duy nhất giữ ba điều (một FATAL, chữ qua
+//       buildErrorDialog, mã thoát) nên dùng lại nó thì không có đường dừng thứ hai để lệch nhau; khối vẫn
+//       trước whenReady, trước registerSchemesAsPrivileged không cần khóa, trước app.on('second-instance') và
+//       trước mọi việc khởi động backend (backend chỉ chạy trong startLayer, sau whenReady). Hệ quả đã kiểm:
+//       registerSchemesAsPrivileged nay chạy trước khi xin khóa (bản thứ hai cũng đăng ký scheme rồi thoát;
+//       vô hại, trước 'ready'). shutdown() khi chưa có tiến trình: backend.stop() không làm gì rồi app.exit.
+//       H9a, H9b (thư mục dữ liệu là tệp; cha là tệp) đạt: mã 1, câu startup_summary, 1,7-2,9 s, không python.
+//       H9c (thư mục dữ liệu dùng được nhưng <data>/CommissionTracker là tệp) vốn đã đạt: mã 1, backend thoát mã 2
+//       ba lần, 7,6 s.
+//   - id: main-EXP-044
+//     content: >
+//       R43-4 (CT-12) và R43-10/R43-11 (CT-11) (phiên 43, pha 2). API Contract 6.2.0 khai trong `meaning` của
+//       ERR_RESTORE_FAILED: details có đúng reason, rollback_reason, rollback_stage ('start' | 'move_failed_aside' |
+//       'move_back') và previous_database_path; chỉ apply_pending_restore trả mã này. Main đọc hai khóa
+//       rollback_stage và previous_database_path, nên src/error_dialog.ts tự khai kiểu RollbackStage (không còn
+//       import từ src/workflows/restore_data/entities: hai phía của cùng hợp đồng, không chia sẻ mã); khóa sai
+//       kiểu hay thiếu vẫn cho câu khởi động, không bao giờ nói sai chỗ dữ liệu (U5, U6). Hành vi không đổi: U1-U3
+//       và A5 đạt như cũ. Cách một lối vào ipc từ chối: trích đúng API Contract 6.2.0, endpoint_forms.ipc, "A call
+//       that does not come from the main frame of the window at shared_values.ui_origin, or whose address is not a
+//       declared ipc entry, gets no reply object: invoke rejects (its promise is rejected). A call whose argument
+//       is not the object the entry's input describes (...) is answered with the entry's format-error label (400)
+//       when the entry declares one; otherwise it too gets no reply object and invoke rejects." Chi tiết ở
+//       native_dialogs-EXP-007. Các câu "API Contract 5.0.0" trong checkpoint ghi phiên bản lúc luật ra đời và
+//       được giữ nguyên.
+//   - id: main-EXP-045
+//     content: >
+//       R43-1 (phiên 43, pha 2). Ca 1b của desktop_main.spec.ts khẳng định điều Electron báo cho cửa sổ chính thật
+//       (BrowserWindow.getAllWindows() trong Main, webContents.getLastWebPreferences()): sandbox true,
+//       contextIsolation true, nodeIntegration false, và chỉ một cửa sổ. Trước đó không ca nào khẳng định điều
+//       này cho cửa sổ chính (hai cửa sổ thứ hai do ca tự dựng thì có cờ riêng). Phép cắn sandbox: false làm 1b
+//       hỏng. Quy ước cho mọi spec dùng spawnMain (DSK-30 mục 3): khi ca hỏng, kể cả vì hết giờ chờ thoát,
+//       helpers.ts in log của Main của mọi lần chạy ca đó rồi kết thúc tiến trình còn chạy; ca đạt không in gì
+//       thêm. fake_backend_die_on_first_call.py theo dõi mọi kết nối cùng lúc bằng selectors (DSK-30 mục 6), và ca
+//       6 khẳng định thêm dòng "fake backend: first call received" (mục 7; phép cắn: backend thoát ngay sau
+//       READY thì ca 6 hỏng).
 // UNSOLVED_PROBLEMS: []
 //
 // EVIDENCE:
@@ -764,28 +811,6 @@
 //       (Insecure Content-Security-Policy)" của trang thử; không có lỗi CORS,
 //       Private Network hay Local Network.
 //     recorded_at: 2026-09-26T21:45:30+07:00
-//   - claim: >
-//       Mười bốn ca của npm test đạt trên Windows khi AVG và ReasonLabs bật:
-//       mười một ca chạy Main từ mã nguồn (tests/desktop_main.spec.ts, dùng
-//       processTree và stillAlive mới) và ba ca của buildTree
-//       (tests/process_tree.spec.ts, không cần Electron). Sau cả bộ không còn
-//       python.exe nào chạy Backend.py hay fake_backend_*.
-//     how: >
-//       cd Desktop; npm test (build rồi playwright test; workers 1;
-//       tests/packaged/ bị bỏ qua qua testIgnore).
-//     result: >
-//       14 passed (1.6m), chạy trên mã nguồn cuối của phiên 14 lúc 20:58.
-//       Log vòng đời mới (main-EXP-016) không làm hỏng ca nào; không sửa
-//       kiểm thử cũ. Ca 1 tới 9 cho kết quả như phiên 10 (ca 3: "did not
-//       write READY within 30000 ms; terminating it"; ca 7: đóng sau hơn 10000
-//       ms, "did not exit within 10000 ms; terminating it"). Ca 10: "FATAL: The
-//       interface files were not found: index.html is missing in <thư mục tạm
-//       rỗng>.", backend exited with code 0, app thoát mã 1, không có "opening
-//       the window". Ca 11: "first load of app://commission-tracker/index.html
-//       was aborted (ERR_ABORTED, -3); continuing", không có FATAL, trang
-//       #loaded hiện, đóng thoát mã 0. Sau cả bộ: "python processes of this
-//       project after the suite: []".
-//     recorded_at: 2026-09-27T20:58:40+07:00
 //   - claim: >
 //       DSK-1: ca kiểm thử buildTree với PID tái sử dụng hỏng trên logic cũ
 //       (chỉ theo ParentProcessId) và đạt trên logic mới (CreationDate).
@@ -1022,47 +1047,6 @@
 //       và chạy được); đây không phải một lượt quét.
 //     recorded_at: 2026-09-27T15:05:02+07:00
 //   - claim: >
-//       npm run test:packaged đạt P1-P6 trên release\win-unpacked.
-//     how: >
-//       cd Desktop; npm run dist; npm run test:packaged
-//       (playwright.packaged.config.ts, tests/packaged/packaged_app.spec.ts;
-//       mọi ca có --ct-test-data-dir tạm và --ct-test-no-dialog).
-//     result: >
-//       Phiên 14: 6 passed (34.3s) trên build lúc 20:56 và 6 passed (36.8s)
-//       trên build cuối lúc 21:06 (mã nguồn cuối, dist đạt ngay lần đầu),
-//       AVG và ReasonLabs đang bật (AVGSvc, 4 rsAppUI, rsEngineSvc), với buildTree/stillAlive
-//       mới (DSK-1); P5 lần này: backend biến mất sau 976 ms, cây lúc chạy
-//       [Main, ba Commission Tracker.exe con, python.exe cha là Main,
-//       conhost.exe cha là python.exe]. Phần còn lại như phiên 13. Phiên 13:
-//       6 passed (52.1s) trên build cuối; lượt trước trên cùng mã nguồn (build
-//       hỏng ở bước NSIS nhưng win-unpacked đã dựng xong) cũng 6 passed. P1:
-//       isPackaged true, resourcesPath đúng, trang client_list của giao diện
-//       thật với "Chưa có khách hàng nào đang hoạt động.", index.html phục vụ
-//       qua app:// trùng tệp resources\ui\index.html, backend là
-//       <win-unpacked>\resources\python\python.exe
-//       <win-unpacked>\resources\backend\Backend.py (ExecutablePath và
-//       CommandLine), data.db trong thư mục tạm, Menu.getApplicationMenu() là
-//       null. P2 (Q2, lần đo preflight đầu tiên trên Windows), netLog: [OPTIONS
-//       /clients, Origin app://commission-tracker,
-//       Access-Control-Request-Method POST, 200, Access-Control-Allow-Origin
-//       app://commission-tracker], [POST /clients, 201, cùng Allow-Origin],
-//       [GET /clients, 200, cùng Allow-Origin]; renderer đọc được khách hàng
-//       vừa tạo. P3: hai dòng "ignoring test flag --ct-test-renderer-root=...
-//       in the packaged app" và "... --ct-test-backend-script=...", một lần thử
-//       backend với python.exe và Backend.py trong gói, "serving the interface
-//       from <win-unpacked>\resources\ui", log không chứa đường dẫn backend giả
-//       hay thư mục giao diện giả. P4: đóng cửa sổ, "closing its standard
-//       input", backend exited with code 0, Electron thoát mã 0, không còn
-//       python.exe nào trong win-unpacked. P5: cây lúc chạy [Commission
-//       Tracker.exe (Main), ba tiến trình con Commission Tracker.exe,
-//       python.exe (cha là Main), conhost.exe (cha là python.exe)]; sau
-//       taskkill /F lên Main, backend biến mất sau 279 ms (lượt trước 1649 ms),
-//       cả cây không còn. P6: bỏ khỏi PATH C:\Python314, ...\Python\Python313,
-//       ...\Python\Python311; PYTHONHOME và PYTHONPATH trỏ vào thư mục không
-//       tồn tại (Electron thấy đúng hai giá trị này); P1 vẫn đạt. Sau cả bộ:
-//       "python processes of the package after the suite: []".
-//     recorded_at: 2026-09-27T20:57:00+07:00
-//   - claim: >
 //       Cài và gỡ im lặng bằng bộ cài thật: cài vào thư mục chỉ định,
 //       Publisher = TGN (DSK-7), gỡ sạch, không đụng %APPDATA%.
 //     how: >
@@ -1200,43 +1184,6 @@
 //       cảnh báo của AVG; nhờ Project Owner xác nhận (xem báo cáo cuối phiên).
 //     recorded_at: 2026-10-02T16:14:19.0645803+07:00
 //   - claim: >
-//       Phiên 26, chạy toàn bộ với AVG và ReasonLabs bật: lint, npm test, npm
-//       run dist từ trạng thái sạch, npm run test:packaged, UI npm run e2e;
-//       mốc %APPDATA% không đổi.
-//     how: >
-//       cd Desktop; npm run lint; npm test; xóa packaging\stage và release rồi
-//       npm run dist (ELECTRON_BUILDER_CACHE trỏ vào thư mục tạm: sandbox của
-//       agent chặn đổi tên trong %LOCALAPPDATA%\electron-builder\Cache, EXDEV,
-//       như phiên 14); npm run test:packaged; node tests/packaged/
-//       measure_startup.cjs 3 release/win-unpacked A. cd UI; npm run e2e
-//       (CT_WALKTHROUGH_RUNNER không đặt); git status --short UI/evidence.
-//       Mốc %APPDATA%: PowerShell liệt kê mọi tệp của %APPDATA%\CommissionTracker
-//       và %APPDATA%\Commission Tracker với kích thước, LastWriteTimeUtc,
-//       SHA-256, chụp đầu phiên (15:56:45) và cuối phiên (16:26:40), so từng dòng.
-//     result: >
-//       lint sạch (lần đầu có một lỗi no-irregular-whitespace ở
-//       measure_startup.cjs do ký tự BOM gõ thẳng vào mã; đã đổi sang
-//       String.fromCharCode(0xfeff)). npm test 17 passed (1.9m: 14 ca cũ, ca
-//       12 ngôn ngữ, ca 13 và 14 hộp thoại), sau bộ không còn python.exe của
-//       dự án. npm run dist: thoát mã 0 sau 121 s, exe SHA-256 9dd525bc29325b16
-//       8b2083d6f9cc74d80dd9413b578261402871beadb86d7e88. test:packaged: lần
-//       đầu 5/6 hỏng (P1, P2, P4, P5, P6) vì packaged_app.spec.ts còn chờ câu
-//       "Chưa có khách hàng nào đang hoạt động.", trong khi client_list của
-//       giao diện (từ phiên 16) hiện "Chưa có khách hàng nào." khi rỗng; lỗi có
-//       sẵn từ trước, không do ngôn ngữ ứng dụng; sửa một dòng chờ chữ trong
-//       tests/packaged/packaged_app.spec.ts rồi 6 passed (38,0 s), sau bộ không
-//       còn python.exe của gói. measure_startup.cjs 3 lượt: mã thoát 0, không
-//       FATAL, không bản Main thứ hai; dòng log đầu 115/89/81 ms, READY
-//       767/723/718, cửa sổ 942/917/889; ảnh chụp cuối ở +6151, +6098, +6132
-//       ms (Main thoát ở +1557, +1502, +1568): tiến trình theo dõi sống tới
-//       cuối. UI npm run e2e: 59 passed (3,4m); git status --short UI/evidence
-//       trống. Mốc %APPDATA%: 70 dòng ở cả hai lần, 0 khác biệt (data.db
-//       114688 byte, ghi 2026-09-28T14:09:42.7922654Z, SHA-256 B1996554...390B;
-//       mọi lần chạy đều có --ct-test-data-dir tạm). Các kết quả trên là của
-//       mã nguồn trước lần sửa cuối của khối checkpoint này (chỉ là chú thích,
-//       nhưng làm dist\main.js và app.asar đổi như đã ghi ở main-EXP-017).
-//     recorded_at: 2026-10-02T16:26:47.6226621+07:00
-//   - claim: >
 //       Phiên 30, môi trường: Node, npm, Electron, Python, antivirus.
 //     how: >
 //       Từ Desktop: node --version; npm --version; npx electron --version;
@@ -1333,27 +1280,6 @@
 //       nguồn trước lần sửa cuối của khối checkpoint này.
 //     recorded_at: 2026-10-05T11:16:31.4746772+07:00
 //   - claim: >
-//       Phiên 35, chạy toàn bộ với AVG và ReasonLabs bật: lint, npm test ba lượt liên tiếp,
-//       dist từ trạng thái sạch, test:packaged, UI npm run e2e, UI/evidence không đổi.
-//     how: >
-//       cd Desktop; npm run lint; npm test (ba lần liên tiếp); xóa packaging\stage và release;
-//       ELECTRON_BUILDER_CACHE trỏ vào %TEMP%\ct-eb-cache; npm run dist; npm run test:packaged.
-//       cd UI; npm run build; npm run e2e (CT_WALKTHROUGH_RUNNER không đặt; một lượt);
-//       git status --short evidence. Môi trường: Node v24.14.1, npm 11.11.0, Electron v44.4.5,
-//       Python 3.13.12; Reason Cybersecurity 266240 và AVG Antivirus 266240 (bật), Windows
-//       Defender 393472 (tắt); AVGSvc, rsEngineSvc, bốn rsAppUI đang chạy.
-//     result: >
-//       Mốc đầu phiên (09:21-09:26, trên mã cũ): npm ci, lint sạch, npm test 40 passed (4,3
-//       phút), UI build đạt, git status trống. Cuối phiên: lint sạch, không ngoại lệ eslint
-//       mới. npm test: 62 passed ở cả ba lượt (09:37:41-09:42:21; 09:42:21-09:46:58;
-//       09:46:58-09:51:37), sau bộ không còn python.exe của dự án (40 ca cũ, N1b, N10-N14 mới
-//       ở native_dialogs, 16 ca của restore_data). npm run dist: thoát mã 0 (09:51:50-09:53:54,
-//       không gặp EXDEV khi đặt cache vào thư mục tạm), app.asar liệt kê ở EVIDENCE của
-//       restore_data. test:packaged: 10 passed (1,2 phút; P1-P10). UI npm run e2e: 75 passed
-//       (5,9 phút); git status --short evidence trống. Các số là của mã nguồn trước lần sửa
-//       cuối của các khối checkpoint (chỉ đổi chú thích).
-//     recorded_at: 2026-10-08T14:59:36.1924815+07:00
-//   - claim: >
 //       Không test hay lần chạy nào của phiên đụng thư mục dữ liệu thật
 //       %APPDATA%\CommissionTracker.
 //     how: >
@@ -1368,37 +1294,6 @@
 //       114688 byte, ghi 2026-09-28T14:09:42.7922654Z, SHA-256 B1996554...390B, và
 //       data.db.lock; không đổi.
 //     recorded_at: 2026-10-08T14:59:36.1924815+07:00
-//   - claim: >
-//       Phiên 36: backend_controller dừng rồi khởi động lại trên cùng cổng không gây FATAL; thứ tự mới
-//       của startLayer; lối vào ipc vẫn đúng năm địa chỉ.
-//     how: >
-//       Số liệu đầy đủ ở EVIDENCE của restore_data (đo việc 2, A1-A6, bốn phép cắn, chạy toàn bộ, khứ
-//       hồi thật của Project Owner) và của restore_trigger. Riêng Main: tests/restore_apply.spec.ts A2
-//       (hai dòng "backend READY on port P" cùng P, dòng "backend_controller: starting the backend again
-//       on port P", không FATAL, không "stopped unexpectedly"), A4 và A5 (khởi động thoát trước READY là
-//       kết quả "failed", không FATAL ở A4), A1 (restore_trigger trước "opening the window"); ca 1 của
-//       desktop_main.spec.ts và N14 của native_dialogs.spec.ts vẫn đạt (bridge hai khóa, năm địa chỉ).
-//     result: >
-//       npm test 69 passed ba lượt liên tiếp, test:packaged 11 passed (P11 đạt), dist từ trạng thái sạch
-//       thoát mã 0, UI e2e 75 passed, UI/evidence không đổi, lint sạch không ngoại lệ mới. Mốc
-//       %APPDATA% 69 dòng, 0 khác biệt.
-//     recorded_at: 2026-10-08T19:09:25.3415976+07:00
-//   - claim: >
-//       Phiên 38 (desktop, DSK-26, DSK-27, dọn NOTES): môi trường và mốc đầu phiên, với antivirus bật.
-//     how: >
-//       node -v; npm -v; electron package.json; Backend\env\Scripts\python.exe --version; Get-Service (AVG
-//       Antivirus, AVG Firewall, AVG Tools, Reason Security Engine/EDR/EPP đang chạy; Windows Defender
-//       WinDefend dừng); cd Desktop; npm ci; npm run lint; npm test; chụp %APPDATA%\CommissionTracker và
-//       %APPDATA%\Commission Tracker (đường dẫn, kích thước, LastWriteTimeUtc, SHA-256).
-//     result: >
-//       Node v24.14.1, npm 11.11.0, Electron 44.4.5, Python 3.13.12; 12 luồng logic, 8 lõi. npm ci và lint
-//       sạch (16:22:31-16:23:11). Mốc npm test (16:23-16:29): 68 passed, 1 failed (A5). A5 hỏng do CHÍNH
-//       PHIÊN: tôi sửa configs/desktop.json (đổi khóa restore_failed_summary) trong lúc lượt chạy đang diễn
-//       ra, Main cũ đọc thấy khóa mất nên hộp thoại ghi "undefined"; không có mốc sạch 69/69 đo lại trước
-//       khi sửa, nhưng 68 ca còn lại (kể cả mọi ca không liên quan tới DSK-26) đạt. Bài học: không sửa
-//       configs/ khi một lượt kiểm thử đang chạy, vì Main đọc configs/ lúc chạy, không đọc từ dist/.
-//       Mốc %APPDATA% 2 thư mục: 2 và 67 dòng.
-//     recorded_at: 2026-10-09T20:40:59.3234784+07:00
 //   - claim: >
 //       DSK-27, đo trước khi sửa: dòng log đầu bị mất khi gắn bộ gom log sau _electron.launch; chưa tái hiện
 //       được việc mất dòng "backend started".
@@ -1438,30 +1333,6 @@
 //       standard input, thiếu FATAL); P3, P7, P8 dùng spawn nên đã đủ dòng.
 //     recorded_at: 2026-10-09T20:40:59.3234784+07:00
 //   - claim: >
-//       Chạy toàn bộ phiên 38 với antivirus bật: lint, npm test ba lượt có tải và một lượt không tải, dist
-//       từ trạng thái sạch, test:packaged, UI e2e, mốc %APPDATA%.
-//     how: >
-//       cd Desktop; npm run lint; npm test chạy bốn lần liên tiếp bằng PowerShell (script ngoài dự án
-//       run_suite.ps1): ba lần trong lúc node load.js 11 tiến trình chạy, một lần sau khi dừng tải; xóa
-//       packaging\stage và release; ELECTRON_BUILDER_CACHE=%TEMP%\ct-eb-cache; npm run dist; liệt kê app.asar
-//       bằng require('@electron/asar').listPackage; npm run test:packaged. cd UI; npm run build; npm run e2e
-//       (CT_WALKTHROUGH_RUNNER không đặt; một lượt); git status --short UI/evidence.
-//     result: >
-//       Lượt có tải đầu tiên (trước khi sửa R10): 74 chạy, 72 passed, 2 failed (ca 14 của desktop_main, R10 của
-//       restore_data), 2 không chạy do serial. R10 là chỗ đua của kiểm thử (page.evaluate lúc trang data: chưa
-//       nạp xong, "Execution context was destroyed"), đã sửa bằng chờ nội dung trang, không nới thời gian chờ;
-//       ca 14 là lỗi thật của Main, xem NOTES. Sau khi sửa, ba lượt có tải: 76 passed (7,4 phút); 76 passed (9,5
-//       phút); 75 passed, 1 failed (9,7 phút; lại ca 14, cùng nguyên nhân hai lần fatal). Một lượt không tải: 76
-//       passed (4,8 phút, 20:27:19-20:32:13). Như vậy KHÔNG đạt tiêu chí "ba lượt có tải liên tiếp" vì ca 14;
-//       Project Owner chọn không sửa Main trong phiên này. npm run dist thoát mã 0 (20:32:38-20:33:44);
-//       app.asar có dist\error_dialog.js, configs\desktop.json, configs\restore_data.json, workflows\restore_data\*.js.
-//       test:packaged: 11 passed (20:33:51-20:34:56). UI npm run build đạt, npm run e2e: 83 passed (5,4 phút);
-//       git status --short UI/evidence trống. Mốc %APPDATA% cuối phiên (20:40:59): 2 và 67 dòng, 0 dòng khác
-//       mốc đầu phiên. Các số của npm test là của mã nguồn trước lần sửa cuối của các khối checkpoint (chỉ đổi
-//       chú thích) cộng một lượt chạy lại ghi trong báo cáo.
-//     recorded_at: 2026-10-09T20:40:59.3234784+07:00
-//
-//   - claim: >
 //       Phiên 39, DSK-28 đo trước khi sửa: lỗi hai hộp thoại tái hiện ổn định không cần máy tải.
 //     how: >
 //       Spec tạm tests/measure_dsk28.spec.ts (đã xóa): spawnMain với fake_backend_ready_then_die.py (chết 2 giây
@@ -1485,45 +1356,6 @@
 //       giống bản gốc.
 //     recorded_at: 2026-10-10T20:58:00.0655716+07:00
 //   - claim: >
-//       Phiên 39: ca 6, 14, K1, C1 và U1-U6, A5 đạt; npm test không tải, lint, dist, test:packaged, UI e2e.
-//     how: >
-//       cd Desktop; npm ci; npm run lint; npm test (mốc 09:29, 76 ca; sau phiên 78 ca: thêm K1 và C1); đếm
-//       thư mục ct-desktop-* trong %TEMP% quanh lượt đạt; xóa packaging\stage và release; ELECTRON_BUILDER_CACHE đặt
-//       vào %TEMP%\ct-eb-cache; npm run dist; listPackage của @electron/asar; npm run test:packaged; cd UI;
-//       npm run build; npm run e2e (CT_WALKTHROUGH_RUNNER không đặt); git status --short UI/evidence; chụp
-//       %APPDATA%\CommissionTracker và %APPDATA%\Commission Tracker.
-//     result: >
-//       Node v24.14.1, npm 11.11.0, Electron 44.4.5, Python 3.13.12; AVG và ReasonLabs bật. Mốc đầu phiên: lint
-//       sạch, npm test 76 passed (5,9 phút). Không tải sau khi sửa: 78 passed (5,6 phút), ct-desktop-* trước 2130,
-//       sau 2130. dist thoát mã 0 (20:48-20:49), app.asar có dist\error_dialog.js, dist\main.js, configs\desktop.json;
-//       test:packaged 11 passed. UI build đạt, e2e 83 passed (6,2 phút), UI/evidence không đổi. Mốc %APPDATA% đầu
-//       và cuối phiên giống nhau: 2 tệp 114688 byte; 67 tệp 8046479 byte. Số liệu npm test của phiên là của mã
-//       trước lần sửa cuối của khối checkpoint (chỉ đổi chú thích); chạy lại một lượt sau khi sửa ghi ở báo cáo.
-//     recorded_at: 2026-10-10T20:58:00.0655716+07:00
-//   - claim: >
-//       Phiên 39, npm test có tải: kết quả các bộ ba lượt và nguyên nhân các ca hỏng.
-//     how: >
-//       Tải: script ngoài dự án (scratchpad\burn.cjs) chạy N tiến trình vòng lặp bận, N = 11 (số luồng logic trừ
-//       một, như phiên 38), 7 (số lõi vật lý trừ một, đúng chữ của plan) và 4; npm test chạy tuần tự trong lúc
-//       tải. Một tiến trình "python -" mồ côi do chính lệnh heredoc rỗng của phiên (09:37-11:11) quay 100% một lõi
-//       trong các lượt đầu; đã dừng.
-//     result: >
-//       11 tiến trình (kèm tiến trình mồ côi): lượt 1 71 passed, 7 failed (ca 6 và 14 "process did not exit within
-//       60000 ms", A3b, A4, A6 hết 120 s, ca 15 và 16 của show_inactive); ca 6, 14 và K1 chạy lại 3 lượt có tải:
-//       8 passed, 1 failed (ca 14, cùng nguyên nhân). 7 tiến trình (kèm tiến trình mồ côi): bỏ dở ở 52/78 với D2 và
-//       A4 hết 120 s. Sau khi dừng tiến trình mồ côi, 4 tiến trình: lượt 11:37 76 passed, 2 failed (24,1 phút; ca 6
-//       vì backend giả chết trước khi cửa sổ mở, ca 14 "process did not exit within 60000 ms"); buổi chiều: 78
-//       passed (11,9 phút), một lượt bị bỏ vì máy treo (nhiều ca hết 120 s, không rõ nguyên nhân), rồi 78 passed
-//       (5,7) và 78 passed (5,7), nên không liền kề lượt đầu. 7 tiến trình:
-//       78 passed (10,5); 78 passed (5,3); 74 passed, 4 failed (19,8 phút; A2, A4, A6, ca 15, đều hết 120 s). 4
-//       tiến trình, bộ cuối: lượt 1 76 passed, 2 failed (ca 15 và 16 của show_inactive, 35,2 phút), bỏ phần còn
-//       lại. KHÔNG có một bộ ba lượt có tải liền kề đạt 78/78; mọi ca hỏng là hết giờ hay đo tiêu điểm
-//       (show_inactive phụ thuộc người dùng chuyển cửa sổ), không phải lỗi logic của fatal(). Ca 6, 14, K1,
-//       C1, L1 đạt trong mọi lượt có tải trừ lượt 24,1 phút và các lượt bị bỏ. Ca 6 hỏng ở mức tải nặng vì khẳng định "opening
-//       the window" giả định cửa sổ mở trước khi backend giả chết sau 2 giây.
-//     recorded_at: 2026-10-10T20:58:00.0655716+07:00
-//
-//   - claim: >
 //       Phiên 40, ba phép cắn: ca 6, ca ràng phiên bản V1 và N7 bắt được đúng lỗi chúng sinh ra để bắt.
 //     how: >
 //       Mỗi phép trên chính tệp, bản gốc chép vào scratchpad và khôi phục bằng Copy-Item, kiểm bằng Get-FileHash
@@ -1538,43 +1370,6 @@
 //       1,4-1,8 giây; phần còn lại là beforeAll khởi động): KHÔNG bắt được lỗi "Execution context was
 //       destroyed" trên máy này với bốn tiến trình bận; Orchestrator đo 2/3 lượt trên Linux. Sửa N7 theo đúng
 //       cách R10 là sửa theo thiết kế, không có bằng chứng tái hiện ở đây.
-//     recorded_at: 2026-10-11T14:45:43.5442513+07:00
-//   - claim: >
-//       Phiên 40, mốc đầu phiên và môi trường.
-//     how: >
-//       node --version; npm --version; node -p "require('electron/package.json').version";
-//       ..\Backend\env\Scripts\python.exe --version; hỏi Project Owner về antivirus và bộ cài 0.1.0; Get-FileHash
-//       bản chép E:\installer\Commission Tracker Setup 0.1.0.exe so với release\; cd Desktop; npm ci;
-//       node node_modules\electron\install.js; npm run lint; npm test; chụp số tệp, tổng byte và tệp mới nhất của
-//       %APPDATA%\CommissionTracker và %APPDATA%\Commission Tracker; git status --short.
-//     result: >
-//       Node v24.14.1, npm 11.11.0, Electron 44.4.5, Python 3.13.12. AVG và ReasonLabs bật (lời Project Owner).
-//       Bộ cài 0.1.0 (116851159 byte, SHA-256 9430d080...a01d0) đã được Project Owner chép ra
-//       E:\installer\, trùng từng byte với release\ trước khi xóa. lint sạch; npm test 78 passed (5,9 phút,
-//       13:05:44-13:11:43); git status sạch. Mốc %APPDATA% đầu phiên: CommissionTracker 2 tệp 114688 byte, mới
-//       nhất 2026-09-28T21:09:42; Commission Tracker 67 tệp 8046479 byte, mới nhất 2026-10-05T10:45:16.
-//     recorded_at: 2026-10-11T14:45:43.5442513+07:00
-//   - claim: >
-//       Phiên 40, bốn lượt npm test (ba có tải bốn tiến trình bận, một không tải); N7, ca 6, ca 14, K1, C1 và V1
-//       đạt cả bốn lượt.
-//     how: >
-//       Tải: scratchpad\burn.js, bốn tiến trình node vòng lặp bận chạy song song trong lúc test (12 luồng logic).
-//       Mỗi lượt: npm test chạy từ shell của công cụ (PowerShell, nền), tuần tự, chuyển ra tệp; đếm dòng ok/x.
-//     result: >
-//       Lượt 1 có tải: 79 passed (9,5 phút, 14:03:39-14:13:16). Lượt 2 có tải: 79 passed (6,2 phút,
-//       14:13:46-14:20:00). Lượt 3 có tải: 79 passed (5,9 phút, 14:20:01-14:25:59). Lượt không tải: 79 passed
-//       (5,8 phút, 14:25:59-14:31:54). 79 = 78 của mốc + V1. Ghi thật: một lượt có tải ĐẦU TIÊN (13:23-14:01, bỏ
-//       dở lượt hai) chạy từ một tiến trình PowerShell ẩn (Start-Process -WindowStyle Hidden) cho 73 passed, 6
-//       failed: ca 1 (#done vẫn ẩn sau 60 s), ca 6 và 14 ("process did not exit within 60000 ms"; không có log vì
-//       ca chỉ in log sau khi chờ thoát xong, và hai tiến trình python giả còn sống đến afterAll), A2, A4, A6 (hết
-//       120 s); các ca chạy 40-80 giây mỗi ca. Tôi dừng lượt đó, dựng lại tái hiện ngoài Playwright
-//       (scratchpad\repro6.cjs, spawn thẳng electron.exe, bốn tiến trình bận): ca 6 thoát mã 1 sau 1,4-2,0 giây,
-//       ba lần liền, log đúng thứ tự (opening the window, first load finished, ticker, lời gọi đầu tiên, FATAL).
-//       Chạy lại ca 1, 6, 14 dưới tải từ shell thường: đạt (6,2 + 2,1 + 1,6 giây); từ launcher PowerShell ẩn,
-//       không tải và có tải: đạt cả hai. Lượt có tải ban đầu KHÔNG tái hiện được; nguyên nhân không xác định. Trùng
-//       thời điểm: một lệnh Get-ChildItem -Recurse -Depth 3 của chính phiên này quét E:\, %TEMP%, %USERPROFILE%
-//       chạy nền 13:2x-13:34 cùng lúc với lượt đó (antivirus bật). Cùng dạng "did not exit within 60000 ms" ở ca
-//       6 và 14 đã ghi ở EVIDENCE phiên 39; khi hỏng, các tiến trình python giả của ca còn sống. Không sửa gì.
 //     recorded_at: 2026-10-11T14:45:43.5442513+07:00
 //   - claim: >
 //       Phiên 40, bộ cài 1.0.0, test:packaged và UI e2e.
@@ -1593,14 +1388,77 @@
 //       2026-10-05T10:45:16: giống mốc đầu phiên.
 //     recorded_at: 2026-10-11T14:45:43.5442513+07:00
 //
+//   - claim: >
+//       Mốc hiện tại, cuối phiên 43 pha 2 (chạy ở máy Project Owner đang dùng bình thường, RAV và AVG bật): môi
+//       trường, lint, npm test ba lượt liên tiếp, UI e2e; số ca Desktop sau pha 2 là 95 (mốc pha 1: 79).
+//     how: >
+//       cd Desktop; npm run lint; npm test ba lần liên tiếp (log ở scratchpad p2r1-p2r3); cd UI; npm run build;
+//       npm run e2e (CT_WALKTHROUGH_RUNNER không đặt; một lượt); git status --short UI. Môi trường: Node
+//       v24.14.1, npm 11.11.0, Electron 44.4.5, Python 3.13.12; antivirus: Project Owner báo RAV và AVG đều bật.
+//       Không chạy npm run dist và test:packaged ở pha 2 (kế hoạch): bản đóng gói chưa mang các sửa của pha 2.
+//     result: >
+//       lint sạch. Một lượt trước ba lượt chính thức: 94 passed, 1 failed (N13, 12,5 phút): tôi đổi open_file đòi
+//       { filters } nhưng sót N13 vẫn gửi {} (lỗi của ca, không phải của sản phẩm); sửa N13 rồi chạy lại ba lượt.
+//       Ba lượt chính thức: 95 passed ở cả ba, 14,5 phút (14:59:41-15:14:18, máy bận), 10,0 phút (15:14:18-15:24:25)
+//       và 10,1 phút (15:24:25-15:34:37); ca 15 và 16 của show_inactive đạt cả ba lượt; sau bộ không còn
+//       python.exe của dự án. 79 ca cũ + 16 ca mới: 1b, R1c, R16-R20, U7, U8, B3, B4, H9a, H9b, H9c, H11a, H11b.
+//       UI npm run build đạt; npm run e2e: 83 passed (7,7 phút, 15:34:57-15:43:15); UI/evidence không đổi (git
+//       status --short trống ngoài Desktop/). test:packaged: lần chạy gần nhất 12 passed ở phiên 40, bản dựng
+//       2026-10-11; chưa chạy lại.
+//     recorded_at: 2026-10-13T15:44:33.3887418+07:00
+//   - claim: >
+//       Phép cắn của pha 2, trên bản sao %TEMP%\ct_review_desktop (dựng bằng robocopy, không junction, đã xóa đúng
+//       thư mục đó): mọi phép đều bị ca mới hoặc ca đã sửa bắt.
+//     how: >
+//       Mỗi phép: sửa một chuỗi duy nhất trong bản sao, npm run build, chạy các ca liên quan, khôi phục từng byte
+//       (băm SHA-256 giống hệt) rồi build lại. M2: main.ts sandbox true thành false (ca 1b). D2: services.ts gán
+//       moves.asidePath trước lần đổi tên bước 4 (restore_undo.spec.ts). D3: routers.ts !== thành startsWith
+//       (R1a). X1: reminder_ticker bỏ phần tử có notification_id đã thấy (B1-B4). C1: restore_data.json
+//       restore:prepare thành restore:prepare2 (R1*, R12). T1: reminder_ticker gõ lại /reminders/checks và POST
+//       (B1-B4). N1b: openFileArgument nhận không đối số (N1b). Q: services.ts bỏ hàng đợi (const run = job())
+//       (R19, R20, --repeat-each=3). R22: main.ts bỏ mkdirSync userData (H9a, H9b, H9c). D30: fake backend
+//       thoát ngay sau READY (ca 6).
+//     result: >
+//       M2: 1b hỏng (1 failed). D2: U7 hỏng (1 failed, 7 passed). D3: R1a hỏng. X1: B3 hỏng sau hạn 15 s của
+//       vòng chờ (1 failed, 3 passed). C1: R1c và R12 hỏng (2 failed, 11 passed). T1: B4 hỏng (khẳng định đường
+//       dẫn khác của cấu hình). N1b: N1b hỏng. Q: R19 và R20 hỏng 3/3 lần (6 failed). R22: H9a và H9b hỏng
+//       (2 failed), H9c vẫn đạt. D30: ca 6 hỏng. Không phép nào bị bộ phân loại quyền chặn. Hai phép (T1, Q) có
+//       lỗi biên dịch phụ (tham số không dùng) nhưng tsc vẫn phát JS và ca chạy.
+//     recorded_at: 2026-10-13T15:44:33.3887418+07:00
+//   - claim: >
+//       H-9: thư mục dữ liệu không dùng được (tệp thay thư mục, cha là tệp, thư mục cơ sở dữ liệu là tệp) làm
+//       Main dừng đúng như mọi lỗi khởi động. R43-22: trước sửa, hai ca đầu thoát mã 0 im lặng.
+//     how: >
+//       tests/desktop_main.spec.ts H9a, H9b, H9c với spawnMain và --ct-test-no-dialog; trước khi sửa Main chạy
+//       H9a, H9b, H9c để đo (log nằm ở báo cáo pha 2).
+//     result: >
+//       Trước sửa: H9a, H9b thoát mã 0 sau 1,7 s, dòng "another instance is already running; exiting without
+//       starting the backend", không FATAL, không hộp thoại; H9c mã 1 sau 7,6 s (backend thoát mã 2 ba lần).
+//       Sau sửa: H9a và H9b mã 1 sau 1,7-2,9 s, một dòng FATAL nêu đường dẫn và lỗi, "error dialog text" bắt
+//       đầu bằng startup_summary, không "opening the window", không python.exe; H9c như cũ; ca 9 (bản thứ hai)
+//       đạt như cũ.
+//     recorded_at: 2026-10-13T15:44:33.3887418+07:00
+//   - claim: >
+//       Không test, công cụ hay lần chạy nào của pha 2 đụng %APPDATA%\CommissionTracker thật; mốc đầu và cuối
+//       phiên giống hệt.
+//     how: >
+//       Danh sách (đường dẫn|kích thước|LastWriteTime) của mọi tệp trong %APPDATA%\CommissionTracker và
+//       %APPDATA%\Commission Tracker chụp đầu pha 1 và cuối pha 2, so từng dòng và băm SHA-256 của danh sách.
+//       Hai công cụ ở việc 18 (tests/probe.cjs, tests/tools/toast_probe_main.cjs) được đọc trước: chúng chỉ
+//       dùng thư mục tạm.
+//     result: >
+//       95 dòng ở mỗi mốc, 0 dòng khác nhau, băm 312C73CD7734A7ABA7DB1D8F9791E7149711203AAB34051B64DDD9C514E34A40
+//       ở cả hai mốc. Công cụ toast chạy hai lần (hiện hai toast thật; lần đầu EPERM khi xóa thư mục tạm, sửa
+//       bằng tiến trình dọn tách rời, lần hai thư mục đã được xóa); probe.cjs chạy một lần, đã xóa thư mục tạm
+//       của nó.
+//     recorded_at: 2026-10-13T15:44:33.3887418+07:00
+//
 // NOTES:
 //   - content: >
 //       Phiên 30: hai cờ kiểm thử mới trong desktop.json test_flags, cả hai chỉ
 //       bản chạy từ mã nguồn (bản đóng gói bỏ qua và ghi log, nằm trong
 //       packaged.ignored_test_flags): --ct-test-show-inactive (không giá trị) và
-//       --ct-test-reminder-interval-ms=<số nguyên dương>. Bước giao diện của DSK-18
-//       (thêm cờ vào launchArgs của công cụ kiểm thử UI và main_layout.spec.ts) là
-//       việc của phiên giao diện sau (UI-18), không làm ở phiên desktop này.
+//       --ct-test-reminder-interval-ms=<số nguyên dương>.
 //     written_at: 2026-10-05
 //   - content: >
 //       Cho phiên sau: (1) máy Project Owner có bản Commission Tracker đã cài (lối
@@ -1674,7 +1532,7 @@ interface DesktopConfig {
     non_fatal_first_load_errors: string[]
   }
   preload: { arguments: { bridge_name: string; backend_base_url: string; ipc_addresses: string } }
-  native_dialogs: { pick_folder: { address: string; title: string }; open_file: { address: string; title: string } }
+  native_dialogs: { labels: { ok: number }; pick_folder: { address: string; title: string }; open_file: { address: string; title: string } }
   app: { locale: string; app_user_model_id: string }
   reminder_ticker: ReminderTickerConfig
   restore_trigger: RestoreTriggerText
@@ -2093,13 +1951,8 @@ function main(): void {
     app.setPath('userData', path.join(settings.dataDir, 'electron-user-data'))
   }
 
-  // a. One instance only: two instances would mean two backends writing the
-  //    same SQLite file.
-  if (!app.requestSingleInstanceLock()) {
-    log('another instance is already running; exiting without starting the backend')
-    app.quit()
-    return
-  }
+  // a. (below, after fatal(): the user-data folder, then the single-instance
+  //    lock; R43-22.)
 
   // b. Before 'ready': the renderer's scheme.
   protocol.registerSchemesAsPrivileged([
@@ -2236,6 +2089,26 @@ function main(): void {
     void shutdown(config.main.failure_exit_code)
   }
 
+  // a. One instance only: two instances would mean two backends writing the
+  //    same SQLite file. The lock lives in userData, so that folder is made first
+  //    (R43-22): when it cannot be made, requestSingleInstanceLock() answers false
+  //    too, and that used to be taken for "another instance is running" (a silent
+  //    exit with code 0). Here, after the declarations fatal() uses, an unusable
+  //    folder stops the app like any other start-up failure; only a lock that is
+  //    refused although the folder exists means another instance.
+  const userDataFolder = app.getPath('userData')
+  try {
+    fs.mkdirSync(userDataFolder, { recursive: true })
+  } catch (err) {
+    fatal(`The folder for the application's own data could not be made: ${userDataFolder} (${err instanceof Error ? err.message : String(err)})`)
+    return
+  }
+  if (!app.requestSingleInstanceLock()) {
+    log('another instance is already running; exiting without starting the backend')
+    app.quit()
+    return
+  }
+
   app.on('second-instance', (_event, argv, workingDirectory) => {
     log(
       `second-instance: another launch asked for this instance ` +
@@ -2310,6 +2183,7 @@ function main(): void {
       uiOrigin,
       pickFolder: config.native_dialogs.pick_folder,
       openFile: config.native_dialogs.open_file,
+      labels: config.native_dialogs.labels,
       getMainWindow: () => mainWindow,
       log: (message) => log(message),
     })

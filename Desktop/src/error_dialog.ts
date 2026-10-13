@@ -5,7 +5,12 @@
  * can load it. Wording is in configs/desktop.json (main.error_dialog).
  */
 
-import type { RollbackStage } from './workflows/restore_data/entities'
+/** The three values of `details.rollback_stage` of ERR_RESTORE_FAILED, as
+ * API Contract 6.2.0 declares them in the `meaning` of that code (clause_a_common.error_codes).
+ * Declared here, by the Main, because the Main reads the key; restore_data's own
+ * RollbackStage in its Entities is the workflow's side of the same contract and
+ * is not shared (WCA: two sides, one contract, no shared code). */
+export type RollbackStage = 'start' | 'move_failed_aside' | 'move_back'
 
 /** configs/desktop.json main.error_dialog. */
 export interface ErrorDialogText {

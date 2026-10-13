@@ -2,8 +2,8 @@
 // workflow: reminder_ticker
 // clause: clause_d_desktop
 // component: cross_cutting
-// last_updated_by: coding-agent@2026-10-07#2
-// last_updated_at: 2026-10-07T15:33:24.1521449+07:00
+// last_updated_by: coding-agent@2026-10-13#1
+// last_updated_at: 2026-10-13T15:46:14.2359083+07:00
 //
 // EXPERIENCES:
 //   - id: reminder_ticker-EXP-001
@@ -45,6 +45,16 @@
 //       kind lạ, thiếu notification_id, trường bắt buộc theo kind là null, ngày
 //       sai dạng hay lead không nguyên bị coi là sai hình dạng (hợp đồng chỉ nói
 //       amount: integer; mã chấp nhận mọi số nguyên, kể cả không dương).
+//   - id: reminder_ticker-EXP-004
+//     content: >
+//       Phiên 43, pha 2 (R43-6, R43-5). (a) Phương thức và đường dẫn của send_reminder.check_due (POST
+//       /reminders/checks) là giá trị ranh giới, nên nằm ở configs/desktop.json, mục reminder_ticker.check_due
+//       { method, path }; Main trao cho ticker cùng phần còn lại của cấu hình, ticker không còn hằng CHECK_PATH.
+//       Hành vi không đổi. Ca B4: máy chủ cục bộ ghi "<METHOD> <path>" của mọi yêu cầu; cấu hình thật cho
+//       "POST /reminders/checks", một cấu hình khác cho đúng lời gọi khác. (b) Ticker không nhớ thông báo đã
+//       hiện: cùng một notification_id ở hai lần kiểm cho hai toast (ca B3), vì việc quyết định cái gì đến hạn
+//       là của backend (hợp đồng: "decides nothing about what is due"; lý thuyết WCA §5: hạ tầng cắt ngang
+//       không lọc).
 //
 // UNSOLVED_PROBLEMS: []
 //
@@ -113,6 +123,17 @@
 //       D2 đạt ở cả ba lượt npm test của phiên 33 (40 passed mỗi lượt). Không thử cố
 //       tình làm chậm máy để tái hiện lỗi cũ.
 //     recorded_at: 2026-10-07T15:33:24.1521449+07:00
+//   - claim: >
+//       Pha 2 của phiên 43: ticker hiện mọi phần tử kể cả id trùng (B3), và method, path của check_due lấy từ
+//       cấu hình (B4).
+//     how: >
+//       cd Desktop; npx playwright test tests/reminder_ticker.spec.ts -g "B[0-9]"; phép cắn trên bản sao: (X1)
+//       bỏ phần tử có notification_id đã thấy; (T1) gõ lại POST /reminders/checks trong ticker.
+//     result: >
+//       B3: hai lần kiểm trả cùng "same-id", hai toast; B4: "POST /reminders/checks" từ cấu hình thật, "PUT
+//       /other/checks" từ cấu hình khác. X1 làm B3 hỏng, T1 làm B4 hỏng. npm test ba lượt 95 passed (EVIDENCE
+//       của main).
+//     recorded_at: 2026-10-13T15:46:14.2359083+07:00
 //
 // NOTES:
 //   - content: >
@@ -141,6 +162,10 @@ import { buildToastText, readNotification, type ToastTextConfig } from './toast_
 export interface ReminderTickerConfig {
   interval_ms: number
   request_timeout_ms: number
+  /** send_reminder.check_due (API Contract, clause_b_backend): the one backend
+   * entry the ticker calls, POST /reminders/checks. A boundary value, so it comes
+   * from configs/desktop.json through the Main. */
+  check_due: { method: string; path: string }
   toast: ToastTextConfig
 }
 
@@ -157,8 +182,6 @@ export interface ReminderTickerOptions {
   showToast: (toast: Toast) => void
   log: (message: string) => void
 }
-
-const CHECK_PATH = '/reminders/checks'
 
 export class ReminderTicker {
   private timer: NodeJS.Timeout | null = null
@@ -214,7 +237,8 @@ export class ReminderTicker {
       controller.abort()
     }, this.options.config.request_timeout_ms)
     try {
-      const response = await fetch(`${this.options.backendBaseUrl}${CHECK_PATH}`, { method: 'POST', signal: controller.signal })
+      const { method, path } = this.options.config.check_due
+      const response = await fetch(`${this.options.backendBaseUrl}${path}`, { method, signal: controller.signal })
       const text = await response.text()
       if (this.stopped) return
       if (response.status !== 200) {

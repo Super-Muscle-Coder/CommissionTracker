@@ -2,8 +2,8 @@
 // workflow: restore_data
 // clause: clause_d_desktop
 // component: services
-// last_updated_by: coding-agent@2026-10-09#2
-// last_updated_at: 2026-10-09T20:40:59.3234784+07:00
+// last_updated_by: coding-agent@2026-10-13#1
+// last_updated_at: 2026-10-13T15:45:40.6267467+07:00
 //
 // EXPERIENCES:
 //   - id: restore_data-EXP-001
@@ -17,8 +17,9 @@
 //       (loadRestoreDataConfig), rồi tạo Adapters, Services, Routers và gọi
 //       registerRestoreDataRouters SAU khi backend READY và TRƯỚC khi tạo cửa sổ.
 //       Main tiêm ipcMain vào Routers, nên routers.ts chỉ import kiểu của
-//       electron và kiểm thử nạp nó được không cần Electron. Ba địa chỉ, bảy nhãn và
-//       năm mã lỗi trong restore_data.json là giá trị ranh giới của API Contract
+//       electron và kiểm thử nạp nó được không cần Electron. Ba địa chỉ, tám nhãn (200, 400,
+//       404, 409, 424, 500 cho lỗi lưu trữ, 503 và 500 cho ERR_RESTORE_FAILED) và sáu mã lỗi
+//       trong restore_data.json là giá trị ranh giới của API Contract
 //       5.0.0 (clause_d_desktop.restore_data); giá trị nội bộ: safety-backups,
 //       restore-pending.json, hậu tố .tmp, hạn chờ http 30000 ms (đo ở
 //       restore_data-EVIDENCE: mỗi lời gọi 12-90 ms). Kiểm khung gửi (cửa sổ chính,
@@ -147,12 +148,53 @@
 //       hỏng thì start. Mỗi lần đổi tên chỉ thử một lần (không vòng thử lại: phiên 36 đo 0/20 hỏng). Khi hoàn
 //       tác cũng hỏng, applyPending xóa bản ghi rồi trả 500 ERR_RESTORE_FAILED; details giữ reason và
 //       rollback_reason như cũ, thêm rollback_stage và previous_database_path: ở stage start là db_file_path (tệp
-//       cũ đã về chỗ cũ), ở hai stage kia là đường dẫn tệp cũ trong restore-previous (moves.asidePath). Hợp đồng
-//       không quy định hình dạng details; RollbackStage nằm ở entities.ts. Main chọn câu theo rollback_stage
-//       (main-EXP-037). Không làm gì để chặn lần mở sau tạo cơ sở dữ liệu rỗng ở 9c (V1 chấp nhận, câu thông
+//       cũ đã về chỗ cũ), ở hai stage kia là đường dẫn tệp cũ trong restore-previous (moves.asidePath). Từ API
+//       Contract 6.2.0 (CT-12, 2026-10-13) hình dạng này nằm trong `meaning` của ERR_RESTORE_FAILED (clause_a_common.
+//       error_codes): reason, rollback_reason, rollback_stage ('start' | 'move_failed_aside' | 'move_back'),
+//       previous_database_path; giá trị gửi đi không đổi. RollbackStage ở entities.ts là phía workflow của cùng
+//       hợp đồng; Main khai kiểu của riêng nó ở src/error_dialog.ts và không còn nhập gì từ thư mục này. Main chọn
+//       câu theo rollback_stage (main-EXP-037). Không làm gì để chặn lần mở sau tạo cơ sở dữ liệu rỗng ở 9c (V1 chấp nhận, câu thông
 //       báo là biện pháp duy nhất). Cách dựng ba ca ở tests/restore_undo.spec.ts: lớp ScriptedAdapters kế thừa
 //       RestoreDataAdapters và làm moveFile hỏng ở lần gọi thứ N (lần 3 là 8a, lần 4 là 8b), controller không bao
 //       giờ khởi động được, tệp thật trong thư mục tạm; lần 1 và 2 là hai lần đổi tên của bước 4 và 5.
+//   - id: restore_data-EXP-011
+//     content: >
+//       R43-21 (phiên 43, pha 2): bốn lối vào của Services (prepare, status, cancel, applyPending) chạy NỐI TIẾP
+//       qua một hàng đợi trong Services (serialized(): this.queue là một Promise luôn được thực hiện; mỗi lời
+//       gọi là queue.then(job), nên lời gọi trước hỏng cũng không chặn lời sau). Lý do: cả bốn dùng chung một
+//       bản ghi đang chờ, một tệp chờ duy nhất của backup_data và một tệp dữ liệu; hai prepare chen nhau ở các
+//       điểm await có thể để bản ghi mô tả một tệp chờ mà prepare sau đã thay. Không thêm nhãn, không từ chối
+//       lời gọi thứ hai, không thêm lối vào: lời gọi chỉ chờ lượt. Hàm công việc không được gọi một lối vào
+//       khác (sẽ tự chờ chính nó); các hàm riêng discard, removeRecord, swapIn, undo không gọi lối vào nào.
+//       Không dùng khóa nhiều tiến trình: một Main, một Services. Hai ca tất định dùng
+//       tests/fixtures/fake_backend_restore.py ở chế độ stageslow (ghi tệp chờ thật, trả lời lần chuẩn bị đầu
+//       chậm 1 s): R19 (hai prepare cùng gửi: backend thấy lần 2 bắt đầu SAU khi lần 1 trả lời, bản ghi và tệp
+//       chờ cùng là của lần 2) và R20 (cancel gửi giữa lúc prepare: trả lời sau prepare, canceled true, không
+//       còn gì đang chờ).
+//   - id: restore_data-EXP-012
+//     content: >
+//       R43-2 và H-11 (phiên 43, pha 2). (a) U7, U8 của tests/restore_undo.spec.ts dựng hai lần đổi tên đầu hỏng
+//       (ScriptedAdapters, lần gọi 1 là bước 4, lần 2 là bước 5; backend giả luôn khởi động được): bước 4
+//       hỏng thì rolled_back, db_file_path giữ dữ liệu cũ, không tệp nào dời, chỉ một lần đổi tên, bản ghi đã
+//       xóa; bước 5 hỏng thì tệp cũ được đưa từ restore-previous về db_file_path, ba lần đổi tên, bản ghi đã
+//       xóa. (b) H-11 (tests/restore_apply.spec.ts H11a, H11b), trạng thái do tay dựng từ một vòng khứ hồi
+//       thật rồi chạy Main thật: SAU BƯỚC 4 (data.db đã ở restore-previous, db_file_path trống, bản ghi và tệp
+//       chờ còn) kết quả restored, dữ liệu là của bản sao lưu (Khach A, B), tệp cũ giữ A, B, C; restore-previous
+//       có HAI tệp: tệp đã dời tay và một tệp data-<giờ>.db thứ hai, là cơ sở dữ liệu rỗng mà backend tự tạo ở
+//       db_file_path khi khởi động (backend lên trước restore_trigger) rồi bị dời sang. SAU BƯỚC 5 (tệp chờ đã ở
+//       db_file_path, bản ghi còn) kết quả discarded, dữ liệu là của bản sao lưu, tệp cũ còn ở restore-previous,
+//       bản ghi đã xóa; chữ hộp thoại nguyên văn: "Lần khôi phục đang chờ không còn dùng được nên đã bị bỏ. Dữ
+//       liệu không thay đổi." rồi dòng trống, rồi "Chi tiết: the staged database file is gone (<đường dẫn tệp
+//       chờ>)". Cả hai khớp suy luận của f_restore.md mục 3. Điều nên biết (không sửa): ở H11b câu "Dữ liệu
+//       không thay đổi" đúng với dữ liệu đang chạy nhưng người dùng không được biết rằng việc khôi phục thực ra
+//       đã hoàn tất trước khi máy tắt.
+//   - id: restore_data-EXP-013
+//     content: >
+//       R43-7: bước sync (handle.sync() trong Adapters.writePendingRecord, để bản ghi đang chờ xuống đĩa trước khi
+//       đổi tên) KHÔNG kiểm được bằng kiểm thử thường: cần cắt điện giữa lệnh ghi và lệnh đổi tên, hoặc
+//       một trình giả lập đĩa; phép cắn bỏ handle.sync() không bị bắt bởi bất kỳ ca nào (23/23 đạt, pha 1).
+//       Chấp nhận: hậu quả xấu nhất là bản ghi rỗng hoặc dở dang sau khi mất điện, và applyPending đã coi đó là
+//       bản ghi đọc không được (discarded, dữ liệu không đổi).
 // UNSOLVED_PROBLEMS: []
 //
 // EVIDENCE:
@@ -314,34 +356,6 @@
 //       đóng bằng đường fatal). Khôi phục cả bốn thì 7 passed.
 //     recorded_at: 2026-10-08T19:09:25.3415976+07:00
 //   - claim: >
-//       Chạy toàn bộ phiên 36 với AVG và ReasonLabs bật: lint, npm test ba lượt liên tiếp, dist từ
-//       trạng thái sạch, test:packaged, UI npm run e2e, UI/evidence không đổi.
-//     how: >
-//       cd Desktop; npm run lint; npm test (ba lần liên tiếp); xóa packaging\stage và release;
-//       ELECTRON_BUILDER_CACHE trỏ vào %TEMP%\ct-eb-cache; npm run dist; liệt kê app.asar bằng
-//       require('@electron/asar').listPackage; npm run test:packaged. cd UI; npm run build; npm run e2e
-//       (CT_WALKTHROUGH_RUNNER không đặt; một lượt); git status --short evidence. Môi trường: Node
-//       v24.14.1, npm 11.11.0, Electron v44.4.5, Python 3.13.12; Reason Cybersecurity 266240 và AVG
-//       Antivirus 266240 (bật), Windows Defender 393472 (tắt); AVGSvc, rsEngineSvc, bốn rsAppUI chạy.
-//     result: >
-//       Mốc đầu phiên (15:58:49-16:03:43): npm ci (lần đầu hỏng EPERM vì trang thử của Project Owner còn
-//       mở giữ node_modules\electron\dist\d3dcompiler_47.dll; chạy lại sau khi anh đóng thì đạt), lint
-//       sạch, npm test 62 passed (4,7 phút), UI build đạt, git status trống. Cuối phiên: lint sạch,
-//       không ngoại lệ eslint mới. npm test: 69 passed ở cả ba lượt (16:23:41-16:29:45, 5,9 phút;
-//       16:29:59-16:35:56; 16:35:56-16:41:54), sau bộ không còn python.exe của dự án (62 ca cũ và 7
-//       ca của restore_apply). npm run dist: thoát mã 0 (16:42:10-16:44:05). app.asar có
-//       configs\desktop.json, configs\restore_data.json, dist\main.js, preload.js,
-//       cross_cutting\native_dialogs\{native_dialogs,request_checks}.js,
-//       cross_cutting\reminder_ticker\{reminder_ticker,toast_text}.js,
-//       cross_cutting\restore_trigger\restore_trigger.js,
-//       workflows\restore_data\{adapters,entities,routers,services}.js, package.json. test:packaged: 11
-//       passed (16:44:25-16:45:50, 1,4 phút; P1-P10 và P11: chuẩn bị ở lần chạy thứ nhất, lần chạy thứ
-//       hai cùng thư mục dữ liệu có đúng Khach A, một tệp data-*.db trong restore-previous, không còn
-//       bản ghi, restore:status null, không FATAL). UI npm run e2e: 75 passed (5,4 phút,
-//       16:45:57-16:51:33); git status --short evidence trống. Các số là của mã nguồn trước lần sửa cuối
-//       của các khối checkpoint (chỉ đổi chú thích).
-//     recorded_at: 2026-10-08T19:09:25.3415976+07:00
-//   - claim: >
 //       Project Owner chạy khứ hồi thật với hộp thoại thật (việc 9), 2026-10-08, thư mục dữ liệu cố
 //       định C:\ct-owner-restore, tệp sao lưu trong C:\ct-owner-backup.
 //     how: >
@@ -403,6 +417,25 @@
 //       "move_failed_aside"); (b): U3, U4, U6 hỏng; (c): U2 hỏng (bản ghi còn); sau khôi phục 6 passed. Ba
 //       lượt có tải và một lượt không tải của npm test đều chạy các ca này (xem EVIDENCE của Main).
 //     recorded_at: 2026-10-09T20:40:59.3234784+07:00
+//
+//   - claim: >
+//       Pha 2 của phiên 43 (restore_data): hàng đợi tuần tự (R43-21), hỏng ở bước 4 và 5 (R43-2), ba ô chiều gọi
+//       đi (H-7), hai trạng thái sót lại khi tắt máy (H-11), địa chỉ nguyên văn (R43-8), origin trùng tiền tố (R43-3).
+//     how: >
+//       cd Desktop; npx playwright test tests/restore_data.spec.ts tests/restore_undo.spec.ts
+//       tests/restore_apply.spec.ts; ba lượt npm test đầy đủ ở EVIDENCE của main. Phép cắn trên bản sao: bỏ hàng
+//       đợi, gán asidePath sớm, startsWith thay cho !==, restore:prepare2 trong restore_data.json.
+//     result: >
+//       R16 (create_backup 400) 424 ERR_STORAGE_IO, thư mục an toàn có, không bản ghi; R17 (create_backup 201 sai
+//       hình dạng) 424, không bản ghi; R18 (prepare_restore 400) 503 ERR_SERVICE_UNAVAILABLE, không lời gọi
+//       POST /backups, không thư mục an toàn: cả ba khớp ánh xạ hiện có, không đổi ánh xạ. R19: lần 2 bắt đầu
+//       sau khi lần 1 trả lời, hai câu trả lời đúng thứ tự, bản ghi và tệp chờ là của lần 2; R20: cancel trả lời
+//       sau prepare, canceled true, không còn gì đang chờ; bỏ hàng đợi thì cả hai hỏng 3/3. U7 (bước 4 hỏng) và U8
+//       (bước 5 hỏng): rolled_back, dữ liệu cũ ở db_file_path, bản ghi xóa; gán asidePath sớm thì U7 hỏng. H11a:
+//       restored, dữ liệu A, B, restore-previous có hai tệp (tệp dời tay và cơ sở dữ liệu rỗng do backend tạo).
+//       H11b: discarded, dữ liệu A, B, tệp cũ còn ở restore-previous; chữ hộp thoại ở restore_data-EXP-012.
+//       restore:prepare2 làm R1c hỏng (và R12); app://commission-tracker.evil/ nằm trong R1a.
+//     recorded_at: 2026-10-13T15:45:40.6267467+07:00
 //
 // NOTES:
 //   - content: >
@@ -498,9 +531,32 @@ export class RestoreDataService {
     return this.error(this.config.labels.service_unavailable, this.config.error_codes.service_unavailable, 'The backend could not prepare the archive.', { reason })
   }
 
+  /** The end of the line of calls: a promise that is always fulfilled, whatever
+   * the last call did, so one failed call never blocks the next one. */
+  private queue: Promise<void> = Promise.resolve()
+
+  /** Runs `job` after every earlier call has finished (R43-21). The four entries
+   * share one pending record, one staging file of backup_data and one database
+   * file; two calls interleaving at their awaits could leave the record describing
+   * a staging file that a later prepare has already replaced. Nothing is refused
+   * and no label is added: a call just waits for its turn. A job must never call
+   * another serialized entry (it would wait for itself). */
+  private serialized<T>(job: () => Promise<T>): Promise<T> {
+    const run = this.queue.then(job)
+    this.queue = run.then(
+      () => undefined,
+      () => undefined,
+    )
+    return run
+  }
+
   /** restore:prepare. Every answer other than the success one means that
    * nothing is pending. */
-  async prepare(archivePath: string): Promise<RestoreReply> {
+  prepare(archivePath: string): Promise<RestoreReply> {
+    return this.serialized(() => this.runPrepare(archivePath))
+  }
+
+  private async runPrepare(archivePath: string): Promise<RestoreReply> {
     const { labels, error_codes: codes } = this.config
 
     // 1. A new request replaces every earlier one, and a failed request leaves
@@ -548,7 +604,11 @@ export class RestoreDataService {
 
   /** restore:status. An unreadable record is an error here; cleaning it up is
    * phase 2's job. */
-  async status(): Promise<RestoreReply> {
+  status(): Promise<RestoreReply> {
+    return this.serialized(() => this.runStatus())
+  }
+
+  private async runStatus(): Promise<RestoreReply> {
     const read = await this.adapters.readPendingRecord()
     if (read.kind === 'unreadable') return this.storageError(this.config.labels.storage_io, 'The pending restore could not be read.', read.reason)
     const body: RestoreStatus = { pending: read.kind === 'record' ? publicRecord(read.record) : null }
@@ -557,7 +617,11 @@ export class RestoreDataService {
 
   /** restore:cancel: removes the record only. The staging file (backup_data's)
    * and the safety backup are left alone. */
-  async cancel(): Promise<RestoreReply> {
+  cancel(): Promise<RestoreReply> {
+    return this.serialized(() => this.runCancel())
+  }
+
+  private async runCancel(): Promise<RestoreReply> {
     const removed = await this.adapters.deletePendingRecord()
     if (removed.kind === 'failed') return this.storageError(this.config.labels.storage_io, 'The pending restore could not be removed.', removed.reason)
     const body: RestoreCancellation = { canceled: removed.kind === 'deleted' }
@@ -594,7 +658,11 @@ export class RestoreDataService {
   }
 
   /** apply_pending_restore (in_process; called by restore_trigger). */
-  async applyPending(): Promise<ApplyReply> {
+  applyPending(): Promise<ApplyReply> {
+    return this.serialized(() => this.runApplyPending())
+  }
+
+  private async runApplyPending(): Promise<ApplyReply> {
     // 1. Nothing pending.
     const read = await this.adapters.readPendingRecord()
     if (read.kind === 'none') return this.outcome('none', null, null)

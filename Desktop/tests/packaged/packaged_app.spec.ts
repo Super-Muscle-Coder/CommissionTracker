@@ -542,7 +542,7 @@ test('P9. desktop session 33: the packaged bridge has invoke; dialog:pick-folder
     expect(await invoke(address, {})).toEqual({ ok: true, value: { status: 200, body: { canceled: false, path: chosen } } })
     await stub({ canceled: true, filePaths: [] })
     expect(await invoke(address, {})).toEqual({ ok: true, value: { status: 200, body: { canceled: true, path: null } } })
-    // dialog:open-file is implemented since session 35; dialog:save-file is the one dialog entry that is not.
+    // dialog:save-file is not a declared address: API Contract 6.0.0 removed the save_file entry (CT-9). The preload refuses it.
     expect(await invoke('dialog:save-file', {})).toEqual({ ok: false, message: expect.stringMatching(/ipc address not implemented/) })
     expect(l.log.text).not.toMatch(/FATAL/)
     await closeWindow(l, tree)

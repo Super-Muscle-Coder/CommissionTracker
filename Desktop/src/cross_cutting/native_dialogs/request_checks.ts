@@ -44,17 +44,18 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
-/** open_file takes { filters }, where filters is null or a list of
- * { name, extensions }. {} and no argument mean "no filter", as for
- * pick_folder. Any other shape is refused (the contract has no 400 label for
- * this entry). */
+/** open_file takes exactly { filters }, where filters is null (no filter) or a
+ * list of { name, extensions } (API Contract 6.2.0, open_file input; endpoint_forms.ipc:
+ * a missing or extra key is a malformed argument). The entry declares no 400
+ * label, so any other shape is refused: invoke rejects. */
 export function openFileArgument(argument: unknown): OpenFileArgument {
-  if (argument === undefined) return { ok: true, filters: null }
+  if (argument === undefined) return { ok: false, reason: 'the argument is missing (expected { filters })' }
   if (!isPlainObject(argument)) return { ok: false, reason: 'the argument is not an object' }
   const keys = Object.keys(argument)
   if (keys.some((key) => key !== 'filters')) return { ok: false, reason: 'the argument has a key other than filters' }
+  if (!keys.includes('filters')) return { ok: false, reason: 'the argument has no filters key' }
   const filters = argument.filters
-  if (filters === undefined || filters === null) return { ok: true, filters: null }
+  if (filters === null) return { ok: true, filters: null }
   if (!Array.isArray(filters)) return { ok: false, reason: 'filters is not null or a list' }
   for (const filter of filters as unknown[]) {
     if (!isPlainObject(filter)) return { ok: false, reason: 'a filter is not an object' }

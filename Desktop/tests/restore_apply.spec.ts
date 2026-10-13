@@ -7,6 +7,9 @@
 //   A4  rolled back: the staged file is not a database, so the backend exits before READY
 //   A5  rolling back fails too: a fake backend that starts once and never again
 //   A6  two starts after one prepare: restored, then none
+//   H11a/H11b  (H-11, phase 2 of session 43) the machine stopped between the steps of
+//          phase 2: the state after step 4 (data.db moved aside, nothing in its place) and
+//          after step 5 (the staged file already in place); the next start decides what to do
 // backend_controller has no entry of its own (no ipc, no test hook): A2 (stop and start
 // again on the same port, no FATAL), A4 and A5 (a start that exits before READY) drive it.
 // Every run uses a temporary data folder and no dialogs; the user's real
@@ -365,6 +368,94 @@ test('A6. two starts after one prepare: the first applies it ("restored"), the s
       noFatal(third.log)
     } finally {
       await stopRun(third)
+    }
+  } finally {
+    fs.rmSync(dataDir, { recursive: true, force: true })
+    fs.rmSync(archiveDir, { recursive: true, force: true })
+  }
+})
+
+// --- H-11: what is left when the machine stops in the middle of phase 2 -------------------------------
+// The two states are built on a temporary data folder from a real round trip (run 1 prepares
+// "A, B" while the live data is "A, B, C"), by doing by hand what steps 4 and 5 do, then the real
+// Main starts. Nothing here is asserted from reasoning alone: what the Main did is measured, and
+// the dialog text and the files are printed.
+
+/** What a person would be told, and what is on disk, after the start. */
+function describeStart(run: Run, dataDir: string): string {
+  const lines = run.log.lines(/restore dialog text: /)
+  return [
+    `restore dialog text lines: ${JSON.stringify(lines.map((l) => l.slice(l.indexOf('restore dialog text: ') + 'restore dialog text: '.length)))}`,
+    `restore-previous: ${JSON.stringify(listFolder(previousFolderOf(dataDir)))}`,
+    `restore-staging: ${JSON.stringify(listFolder(path.dirname(stagedFileOf(dataDir))))}`,
+    `data folder: ${JSON.stringify(listFolder(dbFolderOf(dataDir)))}`,
+  ].join('\n')
+}
+
+test('H11a. after step 4 (data.db already in restore-previous, nothing at db_file_path, record and staged file still there): "restored", and the data is that of the backup', async () => {
+  const dataDir = tempDataDir()
+  const archiveDir = tempFolder('ct-apply-archives-')
+  try {
+    await runOnePrepare(dataDir, archiveDir)
+    // What step 4 does: the live database goes to restore-previous under its own name.
+    const aside = path.join(previousFolderOf(dataDir), 'data-20261013-100000.db')
+    fs.mkdirSync(previousFolderOf(dataDir), { recursive: true })
+    fs.renameSync(dbFileOf(dataDir), aside)
+    expect(fs.existsSync(dbFileOf(dataDir))).toBe(false)
+    expect(fs.existsSync(pendingFileOf(dataDir))).toBe(true)
+    expect(fs.existsSync(stagedFileOf(dataDir))).toBe(true)
+    const stagedBefore = clientNamesIn(stagedFileOf(dataDir))
+    expect(stagedBefore).toEqual(['Khach A', 'Khach B'])
+
+    const run = await startRun(dataDir)
+    try {
+      await log_waitFor(run.log, /restore_data: apply -> /)
+      console.log(`H11a ${describeStart(run, dataDir)}`)
+      console.log(`H11a main log:\n${run.log.text}`)
+      expect(run.log.lines(/restore_data: apply -> restored/)).toHaveLength(1)
+      expect(await clientNames(run)).toEqual(['Khach A', 'Khach B'])
+      expect(dialogText(run.log).content).toContain(DIALOG.restored)
+      expect(fs.existsSync(pendingFileOf(dataDir))).toBe(false)
+      // The data that was set aside by the interrupted run is still there, with A, B and C.
+      expect(clientNamesIn(aside)).toEqual(['Khach A', 'Khach B', 'Khach C'])
+      noFatal(run.log)
+    } finally {
+      await stopRun(run)
+    }
+  } finally {
+    fs.rmSync(dataDir, { recursive: true, force: true })
+    fs.rmSync(archiveDir, { recursive: true, force: true })
+  }
+})
+
+test('H11b. after step 5 (the staged file already at db_file_path, record still there): "discarded", the data is that of the backup, the previous file stays in restore-previous', async () => {
+  const dataDir = tempDataDir()
+  const archiveDir = tempFolder('ct-apply-archives-')
+  try {
+    await runOnePrepare(dataDir, archiveDir)
+    // What steps 4 and 5 do: live data aside, staged file in its place.
+    const aside = path.join(previousFolderOf(dataDir), 'data-20261013-100000.db')
+    fs.mkdirSync(previousFolderOf(dataDir), { recursive: true })
+    fs.renameSync(dbFileOf(dataDir), aside)
+    fs.renameSync(stagedFileOf(dataDir), dbFileOf(dataDir))
+    expect(fs.existsSync(stagedFileOf(dataDir))).toBe(false)
+    expect(fs.existsSync(pendingFileOf(dataDir))).toBe(true)
+
+    const run = await startRun(dataDir)
+    try {
+      await log_waitFor(run.log, /restore_data: apply -> /)
+      console.log(`H11b ${describeStart(run, dataDir)}`)
+      console.log(`H11b main log:\n${run.log.text}`)
+      expect(run.log.lines(/restore_data: apply -> discarded/)).toHaveLength(1)
+      expect(await clientNames(run)).toEqual(['Khach A', 'Khach B'])
+      const text = dialogText(run.log).content
+      console.log(`H11b dialog text, verbatim:\n${text}`)
+      expect(fs.existsSync(pendingFileOf(dataDir))).toBe(false)
+      expect(listFolder(previousFolderOf(dataDir))).toEqual([path.basename(aside)])
+      expect(clientNamesIn(aside)).toEqual(['Khach A', 'Khach B', 'Khach C'])
+      noFatal(run.log)
+    } finally {
+      await stopRun(run)
     }
   } finally {
     fs.rmSync(dataDir, { recursive: true, force: true })

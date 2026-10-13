@@ -6,6 +6,9 @@
 //          9c (8b: the previous file cannot be put back). Each: label, code,
 //          rollback_stage, previous_database_path, the record is gone, where each file is,
 //          and the sentence that the Main would show (Services -> Routers -> dialog).
+//   U7-U8  (R43-2, phase 2 of session 43) the first two renames fail: step 4 (the live
+//          database cannot be moved aside) and step 5 (the staged file cannot be moved
+//          in). Each: rolled_back, db_file_path keeps the previous data, the record is gone.
 //   U4-U6  The Main's choice of sentence (src/error_dialog.ts) with the real desktop.json:
 //          each stage gives its own sentence with the right paths; a missing or unknown
 //          stage gives the start-up sentence, which claims nothing about the data.
@@ -197,9 +200,79 @@ test('U3 (9c). the previous file cannot be put back (8b): stage move_back, db_fi
   }
 })
 
+// --- hỏng ở bước 4 hoặc 5 (R43-2): f_restore.md section 3, step 8 "step 4, 5 or 6 failed" ---------
+
+/** A backend that starts on the file it is given (the put-back works), and records how often. */
+const startsFine = (): BackendController & { starts: number } => {
+  const controller = {
+    starts: 0,
+    stop: async (): Promise<void> => undefined,
+    start: async (): Promise<BackendStartResult> => {
+      controller.starts++
+      return { kind: 'ready' as const }
+    },
+  }
+  return controller
+}
+
+async function applyAndGetOutcome(s: Setup): Promise<unknown> {
+  const entry = registerRestoreDataRouters({
+    ipc: { handle: () => undefined },
+    service: s.service,
+    config: restoreConfig,
+    uiOrigin: config.boundary.ui_origin,
+    getMainWindow: () => null,
+    log: () => undefined,
+  })
+  return entry.applyPendingRestore()
+}
+
+/** Setup with a backend that starts, and the rename of the given call number failing. */
+async function setupStartsFine(failMoveCall: number): Promise<Setup & { controller: ReturnType<typeof startsFine> }> {
+  const s = await setup(failMoveCall)
+  const controller = startsFine()
+  const adapters = new ScriptedAdapters({ config: restoreConfig, dbFilePath: s.dbFilePath, backendBaseUrl: 'http://127.0.0.1:9', backendController: controller })
+  adapters.failMoveCall = failMoveCall
+  return { ...s, adapters, controller, service: new RestoreDataService(adapters, restoreConfig) }
+}
+
+test('U7. step 4 fails (the live database cannot be moved aside): rolled_back, db_file_path still holds the previous data, nothing was moved, the record is gone', async () => {
+  const s = await setupStartsFine(1)
+  try {
+    const outcome = await applyAndGetOutcome(s)
+    expect(outcome).toMatchObject({ outcome: 'rolled_back', reason: expect.stringMatching(/live database could not be moved aside.*scripted failure of rename #1/) })
+    expect(read(s.dbFilePath)).toBe('OLD DATABASE')
+    // Nothing moved: the staged file is still where backup_data put it, and nothing is in restore-previous.
+    expect(read(path.join(path.dirname(s.dbFilePath), 'restore-staging', 'data.db'))).toBe('STAGED DATABASE')
+    expect(previousFiles(s)).toEqual([])
+    expect(s.adapters.moveCalls).toBe(1) // no put-back rename: there was nothing to put back
+    expect(await s.adapters.readPendingRecord()).toEqual({ kind: 'none' })
+    expect(s.controller.starts).toBe(1) // the backend was started again on the previous data
+  } finally {
+    fs.rmSync(s.folder, { recursive: true, force: true })
+  }
+})
+
+test('U8. step 5 fails (the staged file cannot be moved into db_file_path): rolled_back, the previous database is put back from restore-previous, the record is gone', async () => {
+  const s = await setupStartsFine(2)
+  try {
+    const outcome = await applyAndGetOutcome(s)
+    expect(outcome).toMatchObject({ outcome: 'rolled_back', reason: expect.stringMatching(/staged database could not be moved into place.*scripted failure of rename #2/) })
+    expect(read(s.dbFilePath)).toBe('OLD DATABASE')
+    // The staged file never moved in, so there is no -failed file; the previous database went aside and came back.
+    expect(read(path.join(path.dirname(s.dbFilePath), 'restore-staging', 'data.db'))).toBe('STAGED DATABASE')
+    expect(previousFiles(s)).toEqual([])
+    expect(s.adapters.moveCalls).toBe(3) // aside, the failed move in, and the put-back of the previous file
+    expect(await s.adapters.readPendingRecord()).toEqual({ kind: 'none' })
+    expect(s.controller.starts).toBe(1)
+  } finally {
+    fs.rmSync(s.folder, { recursive: true, force: true })
+  }
+})
+
 // --- the Main's choice of sentence ------------------------------------------------------
 
-const OLD = 'C:\\Users\\An\\AppData\\Roaming\\CommissionTracker\\restore-previous\\data-20261009-101500.db'
+const OLD ='C:\\Users\\An\\AppData\\Roaming\\CommissionTracker\\restore-previous\\data-20261009-101500.db'
 const LIVE = 'C:\\Users\\An\\AppData\\Roaming\\CommissionTracker\\data.db'
 const DETAIL = 'ERR_RESTORE_FAILED (500): the technical text'
 

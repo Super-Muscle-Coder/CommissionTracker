@@ -2,8 +2,8 @@
 // workflow: restore_trigger
 // clause: clause_d_desktop
 // component: cross_cutting
-// last_updated_by: coding-agent@2026-10-08#2
-// last_updated_at: 2026-10-08T19:09:25.3415976+07:00
+// last_updated_by: coding-agent@2026-10-13#1
+// last_updated_at: 2026-10-13T14:43:12.2760190+07:00
 //
 // EXPERIENCES:
 //   - id: restore_trigger-EXP-001
@@ -35,7 +35,8 @@
 //       không tự lên trên cùng (chỉ thấy trên thanh tác vụ), và Windows rút gọn đường dẫn dài giữa
 //       chừng bằng "..." (restore_data-EXP-009 và NOTES của restore_data). Lỗi ERR_RESTORE_FAILED
 //       (InProcessCallError) do Main bắt, gọi fatal với phase restore_failed: câu tiếng Việt
-//       main.error_dialog.restore_failed_summary nói dữ liệu cũ đã được đưa về chỗ cũ.
+//       main.error_dialog.restore_failed_summaries (từ phiên 38: ba câu, khóa start, move_failed_aside,
+//       move_back, chọn theo details.rollback_stage; chỉ câu start nói dữ liệu cũ đã được đưa về chỗ cũ).
 //
 // UNSOLVED_PROBLEMS: []
 //

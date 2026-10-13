@@ -121,6 +121,27 @@ test('1. success path with the real backend: READY, bridge, origin, GET /clients
   expect(stillAlive(tree)).toEqual([])
 })
 
+test('1b. the web preferences of the main window: sandbox and contextIsolation on, nodeIntegration off (CLAUDE.md section 5; R43-1)', async () => {
+  const { app, log } = await launchMain(mainArgs({ dataDir: tempDataDir(), rendererRoot: PROBE_ROOT }))
+  const page = await app.firstWindow()
+  await expect(page.locator('#done')).toBeVisible({ timeout: 60_000 })
+  // What Electron reports for the window the Main really created, not what the
+  // page can see of itself.
+  const windows = await app.evaluate(({ BrowserWindow }) =>
+    BrowserWindow.getAllWindows().map((w) => {
+      const p = w.webContents.getLastWebPreferences()
+      return { sandbox: p?.sandbox, contextIsolation: p?.contextIsolation, nodeIntegration: p?.nodeIntegration }
+    }),
+  )
+  console.log(`MEASURED web preferences of the windows: ${JSON.stringify(windows)}`)
+  expect(windows).toEqual([{ sandbox: true, contextIsolation: true, nodeIntegration: false }])
+  const backend = await backendTree(log)
+  const electronProcess = app.process()
+  await app.close()
+  expect(await waitForExit(electronProcess)).toBe(0)
+  expect(stillAlive(backend.tree)).toEqual([])
+})
+
 test('2. backend exits with code 2 on every attempt: all attempts, error, exit != 0, no window', async () => {
   const run = spawnMain(mainArgs({ dataDir: tempDataDir(), rendererRoot: PROBE_ROOT, fakeBackend: 'fake_backend_exit_2.py' }))
   const code = await waitForExit(run.child)
@@ -194,6 +215,10 @@ test('6. backend dies after READY: error, app exits', async () => {
   console.log(run.log.text)
   expect(code).toBe(FAILURE_EXIT_CODE)
   expect(run.log.text).toMatch(/opening the window/)
+  // DSK-30 item 7: the backend really received the page's first call before it died, so
+  // "the window is open and the page is running" is a fact and not an assumption about
+  // timing (the window opens also when the backend dies early).
+  expect(run.log.lines(/fake backend: first call received/)).toHaveLength(1)
   expect(run.log.lines(/FATAL: The backend stopped unexpectedly \(exit code 3\)\. The app will close\./)).toHaveLength(1)
   // No restart in V1.
   expect(run.log.lines(/backend start attempt/)).toHaveLength(1)
@@ -473,4 +498,52 @@ test('L1. the log of a launchMain run starts at the first line (DSK-27): "main s
   } finally {
     await app.close()
   }
+})
+
+// --- H-9: the data folder cannot be used ---------------------------------------------------------
+// --ct-test-data-dir stands for %APPDATA%: the database is <dir>/CommissionTracker/data.db. A file
+// where that folder (or one above it) must be makes it impossible for the backend to make its
+// storage. Measured, not assumed: the Main must stop with the start-up sentence and the failure
+// exit code, in time, and leave no python process.
+
+async function expectUnusableDataFolderStops(dataDir: string): Promise<void> {
+  const started = Date.now()
+  const run = spawnMain(mainArgs({ dataDir, rendererRoot: PROBE_ROOT }))
+  const code = await waitForExit(run.child, 60_000)
+  const tookMs = Date.now() - started
+  console.log(`H-9: exit code ${String(code)} after ${tookMs} ms; log:\n${run.log.text}`)
+  expect(code).toBe(FAILURE_EXIT_CODE)
+  expect(tookMs).toBeLessThan(60_000)
+  expect(run.log.lines(/FATAL: /)).toHaveLength(1)
+  const dialog = run.log.lines(/error dialog text: /)
+  expect(dialog).toHaveLength(1)
+  const box = JSON.parse(dialog[0].slice(dialog[0].indexOf('error dialog text: ') + 'error dialog text: '.length)) as { title: string; content: string }
+  expect(box.title).toBe(config.main.error_dialog_title)
+  expect(box.content.startsWith(config.main.error_dialog.startup_summary)).toBe(true)
+  expect(box.content).toContain(config.main.error_dialog.detail_label)
+  expect(run.log.text).not.toContain('opening the window')
+  expect(projectPythonProcesses()).toEqual([])
+}
+
+test('H9a. the data folder is a file: the start-up sentence, the failure exit code, in time, no python process left', async () => {
+  const holder = tempFolder('ct-desktop-datafile-')
+  const dataFile = path.join(holder, 'data-dir-is-a-file')
+  fs.writeFileSync(dataFile, 'this is a file where the data folder should be')
+  await expectUnusableDataFolderStops(dataFile)
+})
+
+test('H9b. the parent of the data folder is a file: the start-up sentence, the failure exit code, in time, no python process left', async () => {
+  const holder = tempFolder('ct-desktop-datafile-')
+  const parentFile = path.join(holder, 'parent-is-a-file')
+  fs.writeFileSync(parentFile, 'this is a file where the parent folder should be')
+  await expectUnusableDataFolderStops(path.join(parentFile, 'data'))
+})
+
+test('H9c. the data folder is usable but the folder of the database (<data>/CommissionTracker) is a file: the start-up sentence, the failure exit code, in time, no python process left', async () => {
+  // Here the single-instance lock (keyed on userData, <data>/electron-user-data) can be taken,
+  // so the Main goes on to the backend, which cannot make its storage folder.
+  const dataDir = tempDataDir()
+  const dbFolder = path.join(dataDir, ...config.boundary.db_file_relative_to_app_data.split('/').slice(0, -1))
+  fs.writeFileSync(dbFolder, 'this is a file where the database folder should be')
+  await expectUnusableDataFolderStops(dataDir)
 })

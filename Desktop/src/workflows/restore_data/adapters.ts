@@ -5,8 +5,13 @@
  * - Two http calls to backup_data (the backend), by the addresses of
  *   api_contract.yaml clause_b_backend.backup_data.
  * - Folder and file operations on restore_data's own files, next to the live
- *   database file. The live database file and backup_data's staging file are
- *   never touched (05-edge-cases.md, Step 5.6; f_restore.md section 2).
+ *   database file: the pending record, the safety backup folder and, in phase 2
+ *   (apply), the restore-previous folder. In phase 1 (prepare) the live database
+ *   file and backup_data's staging file are never touched (f_restore.md section
+ *   2). In phase 2 they are: moveFile renames the live database file aside and
+ *   the staged file into its place, and renames them back on a rollback
+ *   (f_restore.md section 3); nothing is ever overwritten or deleted.
+ * - The lifecycle tool backend_controller (stop, start), handed over by the Main.
  * - The clock.
  *
  * An I/O failure, a refused connection, a timeout or a reply of an unexpected

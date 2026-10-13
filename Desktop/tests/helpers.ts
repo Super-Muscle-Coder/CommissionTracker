@@ -61,6 +61,21 @@ function settleFolders(scope: 'test' | 'file', passed: boolean): void {
   }
 }
 
+/** Runs started by spawnMain during the case that is running. */
+const spawnedByCase: Array<{ child: ChildProcess; log: LogCollector }> = []
+
+/** For a failed case (whatever the reason: an assertion, or a wait that timed out): the
+ * Main's log of each run it spawned, then the runs still alive are ended so that a hang
+ * does not leak into the next case (DSK-30 item 3). A passed case prints nothing here. */
+function settleSpawnedRuns(passed: boolean): void {
+  const runs = spawnedByCase.splice(0)
+  if (passed) return
+  runs.forEach((run, index) => {
+    console.log(`Main log of spawned run ${index + 1}/${runs.length} (the case failed; the process ${run.child.exitCode === null ? 'was still running' : `had exited with code ${String(run.child.exitCode)}`}):\n${run.log.text}`)
+    if (run.child.exitCode === null) run.child.kill()
+  })
+}
+
 /** Call once at the top level of a spec file: removes the folders of each passed case
  * after it, and the ones made in beforeAll when the whole file passed. */
 export function removeTempFoldersOfPassedCases(): void {
@@ -72,6 +87,7 @@ export function removeTempFoldersOfPassedCases(): void {
     const info = test.info()
     const passed = info.status === info.expectedStatus
     if (!passed) failedInFile = true
+    settleSpawnedRuns(passed)
     settleFolders('test', passed)
   })
   test.afterAll(() => {
@@ -169,6 +185,7 @@ export function spawnMain(args: string[]): SpawnedMain {
   const child = spawn(ELECTRON_BINARY, args, { cwd: LAYER_ROOT, stdio: ['ignore', 'pipe', 'pipe'] })
   const log = new LogCollector().attach(child)
   const exited = new Promise<number | null>((resolve) => child.once('exit', (code) => resolve(code)))
+  spawnedByCase.push({ child, log })
   return { child, log, exited }
 }
 

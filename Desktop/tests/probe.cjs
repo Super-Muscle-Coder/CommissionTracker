@@ -39,5 +39,14 @@ console.log(`probe: ${optionIndex >= 0 ? 'kept' : 'temporary'} data folder ${dat
 const child = spawn(electronBinary, args, { cwd: layerRoot, stdio: 'inherit' })
 child.on('exit', (code) => {
   console.log(`probe: app exited with code ${code}`)
+  // A folder this tool made is removed with the run; a folder the person gave (--data-dir) is kept.
+  if (optionIndex < 0) {
+    try {
+      fs.rmSync(dataDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 })
+      console.log(`probe: removed the temporary data folder ${dataDir}`)
+    } catch (err) {
+      console.log(`probe: the temporary data folder ${dataDir} was not removed (${err.message})`)
+    }
+  }
   process.exitCode = code === null ? 1 : code
 })

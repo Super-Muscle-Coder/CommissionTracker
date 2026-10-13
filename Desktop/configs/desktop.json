@@ -46,6 +46,7 @@
     }
   },
   "native_dialogs": {
+    "labels": { "ok": 200 },
     "pick_folder": {
       "address": "dialog:pick-folder",
       "title": "Chọn thư mục"
@@ -62,6 +63,7 @@
   "reminder_ticker": {
     "interval_ms": 60000,
     "request_timeout_ms": 10000,
+    "check_due": { "method": "POST", "path": "/reminders/checks" },
     "toast": {
       "deadline_title": "Sắp tới hạn giao: {title}",
       "deadline_body": "Hạn giao {date} · nhắc trước {amount} {unit}",

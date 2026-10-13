@@ -2,8 +2,8 @@
 // workflow: native_dialogs
 // clause: clause_d_desktop
 // component: cross_cutting
-// last_updated_by: coding-agent@2026-10-08#1
-// last_updated_at: 2026-10-08T14:59:36.1924815+07:00
+// last_updated_by: coding-agent@2026-10-13#1
+// last_updated_at: 2026-10-13T15:46:15.5635456+07:00
 //
 // EXPERIENCES:
 //   - id: native_dialogs-EXP-001
@@ -19,9 +19,10 @@
 //       native_dialogs.pick_folder và native_dialogs.open_file), hàm lấy cửa sổ chính
 //       và hàm log. Hai lối vào hiện thực: pick_folder (dialog:pick-folder, phiên 33) và
 //       open_file (dialog:open-file, phiên 35, cho khôi phục ở chặng F). save_file
-//       (dialog:save-file, chưa ai cần) vẫn nằm trong hợp đồng, chưa hiện thực: ca N2
-//       khẳng định preload từ chối dialog:save-file (từ phiên 35; trước đó danh sách
-//       gồm cả dialog:open-file) cùng các địa chỉ lạ khác.
+//       (dialog:save-file) đã bị bỏ khỏi hợp đồng ở API Contract 6.0.0 (CT-9, 2026-10-12): được khai từ
+//       1.0.0 nhưng chưa từng hiện thực và V1 không trang nào cần. Nay dialog:save-file là một địa chỉ
+//       KHÔNG KHAI BÁO: ca N2 khẳng định preload từ chối nó (từ phiên 35; trước đó danh sách gồm cả
+//       dialog:open-file) cùng các địa chỉ lạ khác.
 //   - id: native_dialogs-EXP-002
 //     content: >
 //       Hành vi (đặc tả đã chốt của plan phiên 33; API Contract 4.0.0
@@ -108,6 +109,23 @@
 //       có trước dòng đầu của trang; không có cờ kiểm thử mới và không đổi mã Main.
 //       Nếu trình xử lý ipc chưa đăng ký lúc đó, Electron từ chối "No handler
 //       registered for 'dialog:pick-folder'".
+//   - id: native_dialogs-EXP-007
+//     content: >
+//       Phiên 43, pha 2 (R43-10, R43-11, R43-9; CT-11). Cách một lối vào ipc từ chối lời gọi nay được ghi trong
+//       API Contract 6.2.0, clause_a_common.endpoint_forms.ipc: "A call that does not come from the main frame
+//       of the window at shared_values.ui_origin, or whose address is not a declared ipc entry, gets no reply
+//       object: invoke rejects (its promise is rejected). A call whose argument is not the object the entry's
+//       input describes (not an object, a missing or extra key, a value of the wrong type; for input none,
+//       anything other than no argument or an empty object) is answered with the entry's format-error label
+//       (400) when the entry declares one; otherwise it too gets no reply object and invoke rejects." Cả hai
+//       lối vào của native_dialogs chỉ khai 200, nên mọi lời gọi sai đều là Promise bị từ chối ("call refused
+//       (...)"), đúng như mã đã làm từ phiên 33; không nhãn nào được thêm. Thay đổi hành vi duy nhất: open_file
+//       (input { filters }) đòi ĐÚNG một khóa filters, là null hoặc danh sách { name, extensions }; không đối
+//       số, {}, hay khóa lạ đều bị từ chối (trước đó {} và không đối số nghĩa là không lọc; EXP-005 viết theo
+//       hành vi cũ). Giao diện luôn gửi { filters } (UI restore_data/adapters.ts), nên không bên gọi nào bị
+//       ảnh hưởng. Ca N1b, N10 (chọn và hủy với { filters: null }), N12 (thêm {}, { filters: null, x: 1 },
+//       không đối số) theo hành vi mới. Nhãn 200 của cả hai lối vào nay là native_dialogs.labels.ok trong
+//       desktop.json (trước đó gõ thẳng ba chỗ); Main trao cho registerNativeDialogs.
 //
 // UNSOLVED_PROBLEMS: []
 //
@@ -227,12 +245,25 @@
 //       for 'dialog:pick-folder'" (Expected ok true, Received ok false), 1 failed; bộ phân
 //       loại quyền không chặn. Khôi phục thì 15 passed.
 //     recorded_at: 2026-10-08T14:59:36.1924815+07:00
+//   - claim: >
+//       Pha 2 của phiên 43: open_file đòi đúng { filters } (R43-11, API Contract 6.2.0), nhãn 200 từ cấu hình
+//       (R43-9), dialog:save-file là địa chỉ không khai báo (R43-12).
+//     how: >
+//       cd Desktop; npx playwright test tests/native_dialogs.spec.ts; phép cắn trên bản sao: openFileArgument
+//       nhận không đối số.
+//     result: >
+//       15 passed (25,8 s). N1b: chỉ { filters: null } và { filters: [...] } qua; undefined, {}, { filters:
+//       undefined } và các hình dạng sai bị từ chối. N10, N13 gửi { filters: null }. N12: {}, { filters: null,
+//       x: 1 } và không đối số đều bị từ chối "call refused", số lời gọi hộp thoại không tăng, tám dòng log
+//       refused. Phép cắn làm N1b hỏng. (Lượt đầu của npm test pha 2 hỏng N13 vì ca còn gửi {}: lỗi của ca,
+//       đã sửa.)
+//     recorded_at: 2026-10-13T15:46:15.5635456+07:00
 //
 // NOTES:
 //   - content: >
 //       Cho phiên giao diện của chặng F: window.commissionTracker.invoke('dialog:open-file',
 //       { filters: [ { name, extensions } ] | null }) trả { status: 200, body: { canceled,
-//       path } } (đối số { } cũng được); Promise bị từ chối khi đối số sai hình dạng, khung
+//       path } } (từ API Contract 6.2.0 khóa filters phải có mặt; { } bị từ chối); Promise bị từ chối khi đối số sai hình dạng, khung
 //       gửi sai hay hộp thoại lỗi. extensions viết không có dấu chấm ('ctbackup').
 //     written_at: 2026-10-08
 //   - content: >
@@ -250,12 +281,13 @@
  * only: it calls no workflow and keeps nothing. A path it hands back reaches a
  * workflow later as end_user input, through that workflow's own endpoint.
  *
- * Two entries are implemented: pick_folder (dialog:pick-folder) and open_file
- * (dialog:open-file); save_file stays in the contract until a page needs it.
+ * Two entries exist, and both are implemented: pick_folder (dialog:pick-folder)
+ * and open_file (dialog:open-file). A save_file entry was declared until API
+ * Contract 6.0.0 removed it; dialog:save-file is now an undeclared address.
  *
  * The Main registers it before the window opens and passes in the window
  * (so the dialog is modal to it), the interface origin, the addresses and the
- * dialog titles, and the log function.
+ * dialog titles, the result label and the log function.
  */
 
 import { dialog, ipcMain, type BrowserWindow, type IpcMainInvokeEvent } from 'electron'
@@ -266,14 +298,17 @@ export interface NativeDialogsOptions {
   uiOrigin: string
   pickFolder: { address: string; title: string }
   openFile: { address: string; title: string }
+  /** configs/desktop.json native_dialogs.labels: the result label of both
+   * entries (api_contract.yaml pick_folder, open_file: 200). */
+  labels: { ok: number }
   /** The Main's window; null once it is closed. */
   getMainWindow: () => BrowserWindow | null
   log: (message: string) => void
 }
 
-/** api_contract.yaml pick_folder and open_file, label 200. */
+/** api_contract.yaml pick_folder and open_file: the single label and its body. */
 export interface DialogReply {
-  status: 200
+  status: number
   body: { canceled: boolean; path: string | null }
 }
 
@@ -311,10 +346,10 @@ export function registerNativeDialogs(options: NativeDialogsOptions): void {
       }
       if (result.canceled || result.filePaths.length === 0) {
         options.log(`native_dialogs: ${address} -> canceled`)
-        return { status: 200, body: { canceled: true, path: null } }
+        return { status: options.labels.ok, body: { canceled: true, path: null } }
       }
       options.log(`native_dialogs: ${address} -> chosen ${result.filePaths[0]}`)
-      return { status: 200, body: { canceled: false, path: result.filePaths[0] } }
+      return { status: options.labels.ok, body: { canceled: false, path: result.filePaths[0] } }
     })
   }
 
