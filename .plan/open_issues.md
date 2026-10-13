@@ -490,6 +490,52 @@ Comment của `Backend/tests/test_kill_during_writes.py` và EVIDENCE H-10 trong
 
 Project Owner chọn ghi luật "bỏ qua" (hướng B). API Contract 6.0.0 → **6.1.0**, `clause_a_common.endpoint_forms.http`: tham số truy vấn không phải input của lối vào thì bị bỏ qua. Mở rộng, không phá vỡ. Lý do: 16 trong 17 lối vào `GET` không khai 400, nên luật từ chối của `02-contract.md` Bước 2.3 không áp được; muốn từ chối phải thêm 400 vào 16 lối vào (phá vỡ) cho một lợi ích nhỏ. Đính chính của Orchestrator ở audit phiên 42 pha 1 §4.
 
+## Chặng H — phiên kiểm độc lập desktop (phiên 43)
+
+Báo cáo pha 1 và đánh giá: `.reviews/audits/desktop/audit_desktop_session43_phase1.md` (2026-10-13, pha 1 đạt). Không có phát hiện mức cao. **Project Owner duyệt 2026-10-13:** quyết định cho từng mục như bảng dưới; CT-11 và CT-12 theo hướng A (API Contract 6.2.0); pha 2 làm trong cùng phiên 43, gồm cả việc đã biết của Desktop.
+
+| Mã | Mức | Nội dung | Đề xuất |
+|---|---|---|---|
+| R43-1 | trung bình | Không ca nào khẳng định `sandbox`, `nodeIntegration` của cửa sổ chính (cắn `sandbox: false` không bị bắt; `contextIsolation` được kiểm gián tiếp) | pha 2: khẳng định `getLastWebPreferences()` |
+| R43-2 | trung bình | Hỏng ở bước 4 và 5 của pha 2 khôi phục (`f_restore.md` §3 bước 8) không có ca; cắn gán `asidePath` sớm không bị bắt | pha 2: ca cho bước 4 và 5 |
+| R43-3 | trung bình | Kiểm origin ở Routers của `restore_data` chưa có ca origin có tiền tố trùng `ui_origin` | pha 2: thêm `app://commission-tracker.evil/` vào R1a |
+| R43-4 | trung bình | Main đọc `details.rollback_stage`, `details.previous_database_path` của `ERR_RESTORE_FAILED` (không khai trong hợp đồng); `error_dialog.ts` nhập kiểu từ Entities của `restore_data` | CT-12 |
+| R43-5 | trung bình | Không ca nào khẳng định `reminder_ticker` hiện mọi thông báo, kể cả trùng id (cắn bỏ trùng không bị bắt) | pha 2: thêm ca |
+| R43-6 | trung bình | `reminder_ticker` gõ thẳng `POST /reminders/checks` | pha 2: vào `desktop.json` |
+| R43-7 | thấp | Không ca nào khẳng định bước `sync` khi ghi bản ghi đang chờ | chấp nhận: cần cắt điện; ghi vào checkpoint |
+| R43-8 | thấp | Ca R1–R15 lấy địa chỉ `ipc` từ chính `restore_data.json` (đổi giá trị ranh giới chỉ A2 hỏng) | pha 2: so với chuỗi nguyên văn của hợp đồng |
+| R43-9 | thấp | Nhãn `200` gõ thẳng trong `native_dialogs` | pha 2: vào Configs |
+| R43-10 | trung bình | Bốn lối vào `ipc` chỉ khai 200; đầu vào sai thì `invoke` bị từ chối, không có `{ status, body }` | CT-11 |
+| R43-11 | thấp | `open_file` nhận đối số thiếu `filters` | theo CT-11; hướng A thì pha 2 siết |
+| R43-12 | thấp | Comment `native_dialogs` còn nói `save_file` trong hợp đồng (việc còn lại của CT-9) | pha 2 |
+| R43-13 | thấp | Comment Adapters `restore_data` lỗi thời; `EXP-001` đếm sai nhãn và mã lỗi | pha 2 |
+| R43-14 | thấp | `restore_trigger-EXP-003` nhắc khóa cũ `restore_failed_summary` | pha 2 |
+| R43-15 | thấp | `main-EXP-031` và một NOTE lỗi thời | pha 2 |
+| R43-16 | thấp | 10 mục EVIDENCE mang số ca cũ | pha 2: gộp thành mục mốc hiện tại |
+| R43-17 | thấp | D1, D2, P8 hiện toast Windows thật | chấp nhận |
+| R43-18 | thấp | Ngủ cố định, ca phụ thuộc tiêu điểm, `describe.serial` | chấp nhận ở đây; xử lý theo DSK-30 mục 4 (bộ đo ổn định) |
+| R43-19 | thấp | `Desktop/evidence/` thiếu trong sơ đồ `CLAUDE.md` mục 4 | Orchestrator sửa `CLAUDE.md` (2026-10-13) |
+| R43-20 | thấp | `tests/tools/toast_probe_main.cjs` và `tests/probe.cjs` không dọn thư mục tạm (agent đặt mã R43-14b) | pha 2 |
+| R43-21 | trung bình | `restore:prepare`, `restore:cancel`, `restore:status` không được tuần tự hóa; hai lần chuẩn bị chen nhau có thể ghi bản ghi lệch với tệp chờ duy nhất của `backup_data` (Orchestrator suy từ mã, chưa tái hiện; V1 không chạm tới nhờ giao diện chặn bấm đúp) | pha 2: hàng đợi trong Services, thêm ca |
+
+Việc đã biết của Desktop, đề xuất gộp vào pha 2: DSK-30 mục 3, 6, 7; H-7; H-9; H-11.
+
+### CT-11 — Lối vào `ipc` từ chối đầu vào sai bằng cách nào (R43-10) — **ĐÃ DUYỆT VÀ GHI 2026-10-13** (hướng A)
+
+> Orchestrator ghi API Contract **6.2.0**: câu mới cuối `clause_a_common.endpoint_forms.ipc`, kèm changelog. Lời gọi từ khung hay origin khác, hoặc tới địa chỉ không khai báo: không có đối tượng trả lời, `invoke` bị từ chối. Đối số sai dạng: trả 400 nếu lối vào khai 400, nếu không thì `invoke` bị từ chối. Mã hiện tại đã làm đúng như vậy, trừ `open_file` nhận đối số thiếu `filters` (R43-11, pha 2 siết).
+
+`restore:status`, `restore:cancel`, `dialog:open-file`, `dialog:pick-folder` chỉ khai nhãn 200. Khi khung gửi hay đối số sai, `invoke` bị từ chối (Promise reject), không có `{ status, body }`; hành vi hợp lý nhưng không được ghi ở đâu. Cùng loại với CT-10 nhưng cho `ipc`.
+- **Hướng A (Orchestrator đề xuất):** ghi vào `clause_a_common.endpoint_forms.ipc`: lời gọi bị từ chối vì đối số sai dạng, hay vì không đến từ khung chính ở `ui_origin`, thì không có đối tượng trả lời, `invoke` bị từ chối; lối vào nào khai 400 thì vẫn trả 400. Mở rộng: API Contract 6.1.0 → **6.2.0**, không đổi mã. R43-11: pha 2 siết `open_file` đòi `filters` có mặt (giao diện luôn gửi `{ filters }`).
+- **Hướng B:** khai 400 cho bốn lối vào. Phá vỡ (**7.0.0**): giao diện và Desktop phải đổi hành vi; lợi ích nhỏ.
+
+### CT-12 — Hình dạng `details` của `ERR_RESTORE_FAILED` (R43-4) — **ĐÃ DUYỆT VÀ GHI 2026-10-13** (hướng A, ghi trong `meaning`)
+
+> **Đính chính của Orchestrator:** hướng A lúc đầu nói thêm trường `details` cho nhãn lỗi trong khuôn hợp đồng. Khuôn nhãn của `02-contract.md` (skill v2.3) chỉ có `code`, nên làm vậy là sửa khuôn của skill. Project Owner chọn ghi trong khuôn hiện tại: hình dạng `details` (`reason`, `rollback_reason`, `rollback_stage`, `previous_database_path`) và nghĩa của ba giá trị `rollback_stage` nằm trong `meaning` của `ERR_RESTORE_FAILED` (chỉ `apply_pending_restore` trả mã này). API Contract **6.2.0**, gộp với CT-11. Pha 2: Main tự khai kiểu của khóa nó đọc, không nhập `RollbackStage` từ Entities của `restore_data`.
+
+Main chọn câu báo lỗi theo hai khóa `details.rollback_stage` và `details.previous_database_path` của `apply_pending_restore` 500, nhưng hợp đồng chỉ khai `details: object|null`. Phụ thuộc mềm: thiếu hay sai khóa thì Main dùng câu chung, không nói sai về chỗ dữ liệu.
+- **Hướng A (Orchestrator đề xuất):** cho nhãn lỗi một trường `details` tùy chọn trong khuôn hợp đồng, rồi khai `details` của `apply_pending_restore` 500. Mở rộng, gộp vào **6.2.0**. Pha 2: Main tự khai kiểu của hai khóa, không nhập từ Entities của `restore_data`.
+- **Hướng B:** giữ như hiện tại, ghi lý do vào checkpoint Main; pha 2 chỉ bỏ việc nhập kiểu từ Entities.
+
 ## Hợp đồng — chờ Project Owner duyệt
 
 ### CT-8 — `restore_data` lên `đã_hoàn_thiện` (đề xuất 2026-10-08, audit phiên 36 §6) — **ĐÃ DUYỆT VÀ GHI 2026-10-09** (Data Schema 10.0.1). Project Owner đặt điều kiện: duyệt nếu hai ca hỏng ở lượt chạy lại (N14, D2) không nghiêm trọng; Orchestrator đánh giá không nghiêm trọng (audit phiên 36 §5.7: chỗ đua của công cụ kiểm thử, chức năng đúng; DSK-27). DSK-26 làm sai một cam kết trong `description` của `restore_data` ("never ends up without a working database") ở một trường hợp chưa từng xảy ra, nên phải đóng trong chặng F

@@ -90,9 +90,36 @@
 #            relies on changes. Affected code: none. Found in backend session
 #            42 (independent review, R42-9); approved by the Project Owner on
 #            2026-10-12 (open_issues CT-10).
+#   v6.2.0 — [Clause A, SỬA] endpoint_forms.ipc: how an ipc entry refuses a
+#            call. A call from another frame or origin, or to an undeclared
+#            address, gets no reply object: invoke rejects. A malformed
+#            argument gets the entry's 400 when it declares one, otherwise
+#            invoke rejects too. Four entries (restore:status,
+#            restore:cancel, dialog:open-file, dialog:pick-folder) declare
+#            only 200, so the rule of 02-contract.md step 2.3 had no label
+#            to refuse with; the desktop already rejected such calls, and
+#            the contract did not say so. Extension: nothing a caller that
+#            sends valid input relies on changes; adding 400 to the four
+#            entries instead would have been breaking for no gain. Affected
+#            code: none (desktop: open_file must require the filters key,
+#            which its input already lists — R43-11). Found in desktop
+#            session 43 (independent review, R43-10); approved by the
+#            Project Owner on 2026-10-13 (open_issues CT-11).
+#   v6.2.0 — [Clause A, SỬA] error_codes.ERR_RESTORE_FAILED.meaning: the
+#            shape of details declared (reason, rollback_reason,
+#            rollback_stage, previous_database_path) and what each
+#            rollback_stage means. The desktop Main picks its error-dialog
+#            sentence by rollback_stage and shows previous_database_path,
+#            while the contract only said details: object|null. Written in
+#            the meaning, because the label frame of 02-contract.md has
+#            only `code` and only apply_pending_restore answers this code.
+#            Extension: fields declared in an output; the values sent do
+#            not change. Comment of apply_pending_restore 500 fitted.
+#            Found in desktop session 43 (R43-4); approved by the Project
+#            Owner on 2026-10-13 (open_issues CT-12).
 # =============================================================================
 
-api_version: 6.1.0
+api_version: 6.2.0
 contract_state: approved
 
 # -----------------------------------------------------------------------------
@@ -104,7 +131,7 @@ clause_a_common:
   endpoint_forms:
     http: "HTTP/1.1 on shared_values.loopback_host, port handed over at launch. address is '<METHOD> <path>'. A path segment written {name} carries the input of that name. Remaining inputs travel as query parameters named after the input (GET; such inputs are never objects), or as a JSON body whose keys are the input names (POST, PUT). The result label is the HTTP status code; the response body is the referenced output, or error_body. A query parameter whose name is not an input of the endpoint is ignored: it is not an error and it reaches no workflow (the only exception to the rule that a receiver refuses extra input, 02-contract.md step 2.3; most GET endpoints declare no format-error label to refuse it with)."
     in_process: "A direct call to a Routers function of another workflow in the same process. address is the function name. The function takes one keyword argument per input name and returns the referenced output. A non-2xx result label is raised as an error carrying that label and error_body."
-    ipc: "An Electron IPC channel handled in the desktop main process. The renderer invokes it as invoke(address, argument) on the renderer bridge (data_schema.yaml shared_values.renderer_bridge); the desktop preload script relays the call to ipcRenderer.invoke, and the renderer has no direct access to ipcRenderer. address is the channel name. The single argument is an object whose keys are the input names. The reply is object { status: integer (the result label), body: the referenced output or error_body }."
+    ipc: "An Electron IPC channel handled in the desktop main process. The renderer invokes it as invoke(address, argument) on the renderer bridge (data_schema.yaml shared_values.renderer_bridge); the desktop preload script relays the call to ipcRenderer.invoke, and the renderer has no direct access to ipcRenderer. address is the channel name. The single argument is an object whose keys are the input names. The reply is object { status: integer (the result label), body: the referenced output or error_body }. A call that does not come from the main frame of the window at shared_values.ui_origin, or whose address is not a declared ipc entry, gets no reply object: invoke rejects (its promise is rejected). A call whose argument is not the object the entry's input describes (not an object, a missing or extra key, a value of the wrong type; for input none, anything other than no argument or an empty object) is answered with the entry's format-error label (400) when the entry declares one; otherwise it too gets no reply object and invoke rejects."
 
   error_codes:
     - code: ERR_VALIDATION
@@ -132,7 +159,7 @@ clause_a_common:
     - code: ERR_INCOMPATIBLE_BACKUP
       meaning: "The archive is corrupt, not a Commission Tracker backup, or was made by a newer app_version"
     - code: ERR_RESTORE_FAILED
-      meaning: "Applying a pending restore failed and the previous database was put back; or putting it back failed too (the app stops)"
+      meaning: "Applying a pending restore failed and the previous database was put back; or putting it back failed too (the app stops). details: object { reason: string, rollback_reason: string, rollback_stage: 'start' | 'move_failed_aside' | 'move_back', previous_database_path: file_path } (restore_data.apply_pending_restore is the only endpoint answering this code). rollback_stage names the job of the put-back that failed: start — the previous database is back at db_file_path (previous_database_path) but the backend did not start on it; move_failed_aside — the restored file could not be moved out of db_file_path, and the previous database is still at previous_database_path in the restore-previous folder; move_back — the previous database could not be moved back, it is at previous_database_path and db_file_path may be empty."
 
   error_body: "object { code: string (one of error_codes), message: string (human readable, English), details: object|null }"
 
@@ -693,4 +720,4 @@ clause_d_desktop:
         input: none
         output:
           200: { ref: restore_outcome }
-          500: { code: ERR_RESTORE_FAILED }        # the put-back database could not be started; the desktop Main stops with its start-up failure dialog
+          500: { code: ERR_RESTORE_FAILED }        # putting back the previous database failed (details: see error_codes); the desktop Main stops with its start-up failure dialog
