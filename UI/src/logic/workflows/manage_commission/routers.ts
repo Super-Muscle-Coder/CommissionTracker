@@ -148,8 +148,14 @@ export function createManageCommissionRouters(services: ManageCommissionServices
       return services.saveCommission(target, read.input)
     },
 
-    // Page commission_form, after a save refused because of the chosen
-    // client (404, 409): the clients offered again. keptClientId: the
+    // Page commission_form, after a save: are the clients offered again? (The
+    // decision is Services'.)
+    shouldReloadClients(saved: ViewResult<SavedCommissionView>): boolean {
+      return services.shouldReloadClients(saved)
+    },
+
+    // Page commission_form, after a save refused by the backend: the clients
+    // offered again. keptClientId: the
     // commission's own client (edit mode), else null; chosenClientId: the
     // client of the draft.
     reloadClientChoices(keptClientId: string | null, chosenClientId: string): Promise<ViewResult<ClientChoicesView>> {

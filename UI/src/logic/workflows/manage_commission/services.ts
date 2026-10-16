@@ -2,8 +2,8 @@
 // workflow: manage_commission
 // clause: external
 // component: services
-// last_updated_by: coding-agent@2026-09-29#2
-// last_updated_at: 2026-09-29T17:45:00+07:00
+// last_updated_by: coding-agent@2026-10-16#1
+// last_updated_at: 2026-10-16T15:40:26.6969443+07:00
 //
 // EXPERIENCES:
 //   - id: manage_commission-EXP-001
@@ -127,6 +127,14 @@
 //       danh sách mà đã lưu trữ vẫn là "<tên> (đã lưu trữ)". Chỉ đổi clientChoices;
 //       kiểm thử services "the commission's client no longer listed …" khẳng định
 //       nhãn mới. Không gây ra được trên hệ thống thật (không có thao tác xóa khách).
+//   - id: manage_commission-EXP-009
+//     content: >
+//       Phiên 44 pha 2. (1) R44-14: Services thêm shouldReloadClients(saved) (Routers chuyển tiếp): trả true đúng khi kết quả
+//       lưu là rejected với origin system (400, 404, 409, 500), theo mục commission_form của D2 đã sửa 2026-10-16; false với
+//       ok, unreachable, contract_violation và rejected origin input. Trước đó quyết định nằm ở use_commission_form.ts. Hàm
+//       thuần. (2) R44-6: routers.test.ts thêm bảng trường chữ tự do (tiêu đề, loại tranh, mô tả, liên kết tham khảo) x bảy
+//       giá trị có chữ số, emoji, ký tự đặc biệt: Routers chỉ kiểm điều type viết (khách chọn, tiêu đề không rỗng và tối đa
+//       200 ký tự, số tiền, đơn vị tiền, ngày). Liên kết tham khảo là mỗi dòng một liên kết nên mỗi giá trị là một dòng.
 //
 // UNSOLVED_PROBLEMS: []
 //
@@ -202,6 +210,16 @@
 //       "the commission's client no longer listed …" khẳng định nhãn mới). Chạy thật:
 //       ba kịch bản D2 đạt 5/5 lần e2e phiên 20 (EVIDENCE của screens).
 //     recorded_at: 2026-09-29T11:22:10+07:00
+//   - claim: >
+//       R44-6 và R44-14 cho manage_commission: ca bảng trường chữ tự do, ca Services của shouldReloadClients.
+//     how: >
+//       Trong UI/: npx vitest run src/logic/workflows/manage_commission. Phép cắn trên bản sao: (a) thêm ||
+//       /[0-9]/.test(title) vào điều kiện "required" của tiêu đề trong routers.ts; (b) trong shouldReloadClients cho
+//       unreachable cũng trả true.
+//     result: >
+//       28 ca bảng và 8 ca shouldReloadClients đạt. (a) "3 failed" ở routers.test.ts. (b) "1 failed" ở services.test.ts; ca
+//       dựng trang commission_form (cùng lệnh) vẫn đạt, nên chỗ bắt là ca Services. Khôi phục: pass.
+//     recorded_at: 2026-10-16T15:40:26.6969443+07:00
 //
 // NOTES: []
 // ===WCA-CHECKPOINT-END===
@@ -515,6 +533,26 @@ export function createManageCommissionServices(
     // offered again (list_clients), keeping the chosen one while it is offered.
     async reloadClientChoices(keptClientId: string | null, chosenClientId: string): Promise<ViewResult<ClientChoicesView>> {
       return toView(await adapters.listClients(), 'listClients', (clients) => clientChoices(clients, keptClientId, chosenClientId))
+    },
+
+    // Presentation decision (R44-14, session 44; ui_decomposition.md, D2
+    // commission_form, "Gửi"): after a save the form offers the clients again
+    // exactly when the backend refused it (rejected, origin 'system': 400, 404,
+    // 409, 500); the chosen client may be the cause (archived or gone meanwhile).
+    // Not after ok (the page moves on), unreachable or contract_violation (no
+    // verdict from the backend), nor after a refusal by the form's own check
+    // (rejected, origin 'input': nothing was sent). Pure.
+    shouldReloadClients(saved: ViewResult<SavedCommissionView>): boolean {
+      switch (saved.kind) {
+        case 'rejected':
+          return saved.origin === 'system'
+        case 'ok':
+        case 'unreachable':
+        case 'contract_violation':
+          return false
+        default:
+          return assertNever(saved)
+      }
     },
 
     // The fixed rejection function for Routers (i3-logic.md, Step I3.4):

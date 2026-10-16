@@ -46,6 +46,7 @@ import {
   D5_PERIODS,
   electronBinary,
   KEPT_FILE,
+  isOwnDataDir,
   launchArgs,
   makeDataDir,
   portFromLog,
@@ -88,7 +89,13 @@ if (!fs.existsSync(path.join(UI_ROOT, 'dist', 'index.html'))) {
 function readKeptFolder() {
   if (!fs.existsSync(KEPT_FILE)) return null
   const { dataDir: kept } = JSON.parse(fs.readFileSync(KEPT_FILE, 'utf8'))
-  return typeof kept === 'string' ? kept : null
+  // R44-16: the path comes from a file, so it is deleted (here or at the end) only when it is a folder this tool made.
+  if (!isOwnDataDir(kept)) {
+    console.warn(`walkthrough:app: the kept-folder file names a path this tool did not make; nothing is deleted or reopened: ${String(kept)}`)
+    fs.rmSync(KEPT_FILE, { force: true })
+    return null
+  }
+  return kept
 }
 
 let dataDir

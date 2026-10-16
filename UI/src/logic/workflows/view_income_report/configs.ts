@@ -5,7 +5,7 @@
  */
 export const VIEW_INCOME_REPORT_CONFIGS = {
   // [CONTRACT] Versions of the supreme contract these values realize.
-  contract: { apiContract: '4.0.0', dataSchema: '9.0.2' },
+  contract: { apiContract: '6.2.0', dataSchema: '10.0.1' },
 
   // The one endpoint this workflow calls (.design/ui_decomposition.md, "Chặng
   // D5", table of calls), as declared in api_contract.yaml 4.0.0. labels: every

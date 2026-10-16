@@ -168,7 +168,7 @@ describe('label tables of Configs match api_contract.yaml 4.0.0 line by line', (
   })
 
   it('Configs name Data Schema 8.0.1 and API Contract 4.0.0', () => {
-    expect(UPDATE_PROGRESS_CONFIGS.contract).toEqual({ apiContract: '4.0.0', dataSchema: '8.0.1' })
+    expect(UPDATE_PROGRESS_CONFIGS.contract).toEqual({ apiContract: '6.2.0', dataSchema: '10.0.1' })
   })
 })
 

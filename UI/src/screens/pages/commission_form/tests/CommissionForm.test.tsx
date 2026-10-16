@@ -412,6 +412,36 @@ describe('page commission_form — saving (saveCommission)', () => {
     expect(select('Khách hàng').value).toBe(AN)
   })
 
+  // R44-7 (session 44): the two other results of offering the clients again.
+  it.each([
+    [
+      'rejected',
+      { kind: 'rejected', origin: 'system', code: 'ERR_STORAGE_IO', message: 'Không đọc được danh sách khách hàng trên máy.', fieldErrors: {} } as Reloaded,
+      'Không tải lại được danh sách khách hàng',
+      'Không đọc được danh sách khách hàng trên máy.',
+    ],
+    [
+      'contract_violation',
+      { kind: 'contract_violation', message: 'Ứng dụng nhận được một phản hồi không mong đợi.' } as Reloaded,
+      'Có lỗi không mong đợi',
+      'Ứng dụng nhận được một phản hồi không mong đợi.',
+    ],
+  ])('the clients cannot be offered again (%s) → said in its own alert, the save alert stays; the draft and the clients as they were', async (_, reload, title, message) => {
+    renderWith(CREATE, [{ kind: 'ok', view: CREATE_VIEW }], [rejected('ERR_CONFLICT', 'Khách hàng đã chọn đã được lưu trữ. Hãy chọn khách khác.')], [reload])
+    await screen.findByLabelText('Tiêu đề')
+    fireEvent.change(select('Khách hàng'), { target: { value: AN } })
+    type('Tiêu đề', 'Chân dung')
+    press('Lưu')
+    await waitFor(() => expect(screen.getAllByRole('alert')).toHaveLength(2))
+    const [save, again] = screen.getAllByRole('alert')
+    expect(save.textContent).toContain('Khách hàng đã chọn đã được lưu trữ.')
+    expect(again.textContent).toContain(title)
+    expect(again.textContent).toContain(message)
+    expect(select('Khách hàng').value).toBe(AN)
+    expect(optionTexts('Khách hàng')).toEqual(['Chọn khách hàng', 'An', 'Ánh'])
+    expect(field('Tiêu đề').value).toBe('Chân dung')
+  })
+
   it('unreachable → the message, the draft kept; "Lưu" again sends the same draft', async () => {
     const { saveCommission, navigate } = renderWith(
       CREATE,

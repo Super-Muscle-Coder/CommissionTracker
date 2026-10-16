@@ -2,8 +2,8 @@
 // workflow: send_reminder
 // clause: external
 // component: services
-// last_updated_by: coding-agent@2026-10-03#2
-// last_updated_at: 2026-10-03T22:34:16.6621162+07:00
+// last_updated_by: coding-agent@2026-10-16#1
+// last_updated_at: 2026-10-16T15:40:28.3347144+07:00
 //
 // EXPERIENCES:
 //   - id: send_reminder-EXP-001
@@ -172,6 +172,15 @@
 //       chạy riêng 10/10 đạt ("5 passed" mỗi lần); 10 lượt e2e đầy đủ đều 70 passed (xem EVIDENCE của main). Kịch bản,
 //       bước và ảnh bằng chứng của reminder_list không đổi; mã trong UI/src không gọi POST /reminders/checks.
 //     recorded_at: 2026-10-03T22:34:16.6621162+07:00
+//   - claim: >
+//       R44-9: Configs ghi API Contract 6.2.0 và Data Schema 10.0.1; kiểm thử so khớp. send_reminder không có trường chữ tự do
+//       (R44-6 không áp dụng).
+//     how: >
+//       Trong UI/: npx vitest run src/logic/workflows/send_reminder (tests/adapters.test.ts, ca "Configs name Data Schema …
+//       and API Contract …").
+//     result: >
+//       Đạt trong npm run check. Bảng nhãn của bốn lời gọi khớp api_contract.yaml như trước.
+//     recorded_at: 2026-10-16T15:40:28.3347144+07:00
 //
 // NOTES: []
 // ===WCA-CHECKPOINT-END===

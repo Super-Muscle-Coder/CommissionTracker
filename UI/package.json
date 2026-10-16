@@ -1,7 +1,7 @@
 {
   "name": "commission-tracker-ui",
   "private": true,
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Commission Tracker — interface layer (React renderer, organized by iWCA)",
   "type": "module",
   "scripts": {
@@ -13,7 +13,8 @@
     "lint:contrast": "node scripts/check_contrast.mjs",
     "test": "vitest run",
     "lint:e2e": "node scripts/check_e2e_status.mjs",
-    "check": "npm run typecheck && npm run lint && npm run lint:style && npm run lint:contrast && npm run lint:layer && npm run lint:e2e && npm run test",
+    "lint:scope": "node scripts/check_no_watermark_paths.mjs",
+    "check": "npm run typecheck && npm run lint && npm run lint:style && npm run lint:contrast && npm run lint:layer && npm run lint:e2e && npm run lint:scope && npm run test",
     "e2e": "npm run build && playwright test -c tests/e2e/playwright.config.ts",
     "walkthrough:app": "npm run build && node tests/tools/walkthrough_app.mjs",
     "walkthrough:backend": "node tests/tools/walkthrough_backend.mjs"

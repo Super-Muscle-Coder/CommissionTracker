@@ -2,8 +2,8 @@
 // workflow: scaffold_ui
 // clause: external
 // component: adapters
-// last_updated_by: coding-agent@2026-10-07#3
-// last_updated_at: 2026-10-07T20:44:38.4471702+07:00
+// last_updated_by: coding-agent@2026-10-16#1
+// last_updated_at: 2026-10-16T15:40:25.9302233+07:00
 //
 // EXPERIENCES:
 //   - id: scaffold_ui-EXP-001
@@ -32,6 +32,16 @@
 //       biết địa chỉ trả gì), không hạn chờ (hộp thoại chờ người dùng), không bắt lỗi (Promise bị từ chối đi thẳng lên). Kiểu IpcInvoke và
 //       IpcBridge nằm ở logic/shared/resources.ts (R2, như HttpClient). Chỉ Main đọc invoke từ bridge (R12) rồi trao vào đây; lời gọi là
 //       invoke(address, argument) không có this, vì preload của Desktop là hàm thường (đã kiểm Desktop/src/preload.ts).
+//   - id: scaffold_ui-EXP-004
+//     content: >
+//       R44-3 (phiên 44 pha 2): ipc_bridge chỉ chuyển tới invoke đúng năm địa chỉ mà giao diện gọi, ghi ở
+//       SCAFFOLD_UI_CONFIGS.ipcAddresses với nhãn [CONTRACT]: dialog:open-file, dialog:pick-folder (API Contract 6.2.0,
+//       clause_a_common.cross_cutting.native_dialogs) và restore:prepare, restore:status, restore:cancel
+//       (clause_d_desktop.restore_data). createIpcBridge(invoke, allowedAddresses) nhận danh sách từ Main (R14). Địa chỉ ngoài
+//       danh sách trả Promise.reject(new Error(…)) và KHÔNG gọi invoke, đúng cách Desktop từ chối một địa chỉ không khai báo
+//       (API Contract 6.2.0, endpoint_forms.ipc: "whose address is not a declared ipc entry, gets no reply object: invoke
+//       rejects"). Không thêm loại kết quả hay mã lỗi: Adapters của bên gọi đã coi Promise bị từ chối là lời gọi hỏng. Thêm
+//       một địa chỉ ipc mới thì thêm vào danh sách sau khi hợp đồng khai báo nó.
 //
 // UNSOLVED_PROBLEMS: []
 //
@@ -79,6 +89,19 @@
 //       (hàm thay thế nhận 3/3 lời gọi, số cửa sổ giữ 1); khi hàm thay thế ném lỗi thì Promise bị từ chối với message nguyên văn "Error
 //       invoking remote method 'dialog:pick-folder': Error: boom from the stub", và lời gọi sau vẫn chạy. Trong e2e: 5 bước backup đạt.
 //     recorded_at: 2026-10-07T20:44:38.4471702+07:00
+//   - claim: >
+//       R44-3: địa chỉ ipc ngoài danh sách bị từ chối mà invoke không được gọi; năm địa chỉ hợp đồng vẫn đi qua; danh sách
+//       khớp nguyên văn hợp đồng.
+//     how: >
+//       Trong UI/: npx vitest run src/logic/workflows/scaffold_ui (tests/adapters.test.ts, ba ca mới của createIpcBridge: danh
+//       sách bằng năm địa chỉ gõ tay trong kiểm thử; mỗi địa chỉ trong năm đi qua; sáu địa chỉ lạ gồm dialog:save-file và
+//       restore:start bị từ chối). Phép cắn B8 trên bản sao: ipc.call('dialog:save-file', {}) thay cho ipc.call(address, {})
+//       trong backup_data/adapters.ts.
+//     result: >
+//       Ba ca mới đạt trong npm run check. Phép cắn B8: "Tests 1 failed | 96 passed (97)" ở src/logic/workflows/backup_data,
+//       ca có sẵn "calls dialog:pick-folder with an empty object as the one argument" (backup_data/tests/adapters.test.ts) bắt
+//       được. Với ipc_bridge thật, địa chỉ đó cũng bị từ chối (ca mới của scaffold_ui). Khôi phục: pass.
+//     recorded_at: 2026-10-16T15:40:25.9302233+07:00
 //
 // NOTES: []
 // ===WCA-CHECKPOINT-END===
@@ -96,15 +119,25 @@ import type { HttpClient, HttpMethod, HttpRequestOptions, IpcBridge, IpcInvoke, 
 
 /**
  * The ipc_bridge resource, built from the invoke function Main read from the
- * renderer bridge (R12): passes the call to invoke as it is and answers its
- * Promise as it is. Nothing else: no shape check (that is the job of the
- * Adapters of the workflow that calls, which know what the address answers), no
- * time limit (a dialog waits for the person), no catch (a rejected Promise goes
- * up to those Adapters).
+ * renderer bridge (R12): passes a call to an address of the contract to invoke
+ * as it is and answers its Promise as it is. Nothing else: no shape check (that
+ * is the job of the Adapters of the workflow that calls, which know what the
+ * address answers), no time limit (a dialog waits for the person), no catch (a
+ * rejected Promise goes up to those Adapters).
+ *
+ * An address outside allowedAddresses (SCAFFOLD_UI_CONFIGS.ipcAddresses) never
+ * reaches invoke: the call answers a rejected Promise, the way the desktop
+ * answers an address it does not declare (API Contract 6.2.0,
+ * endpoint_forms.ipc: "whose address is not a declared ipc entry, gets no reply
+ * object: invoke rejects"). No new result kind and no new error code: the
+ * Adapters of the caller already treat a rejected Promise as a failed call.
  */
-export function createIpcBridge(invoke: IpcInvoke): IpcBridge {
+export function createIpcBridge(invoke: IpcInvoke, allowedAddresses: readonly string[]): IpcBridge {
   return {
     call(address: string, argument: unknown): Promise<unknown> {
+      if (!allowedAddresses.includes(address)) {
+        return Promise.reject(new Error(`ipc_bridge: "${address}" is not an ipc address the contract declares for the interface`))
+      }
       return invoke(address, argument)
     },
   }

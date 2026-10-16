@@ -2,8 +2,8 @@
 // workflow: backup_data
 // clause: external
 // component: services
-// last_updated_by: coding-agent@2026-10-07#3
-// last_updated_at: 2026-10-07T20:44:38.4471702+07:00
+// last_updated_by: coding-agent@2026-10-16#1
+// last_updated_at: 2026-10-16T15:40:29.0901163+07:00
 //
 // EXPERIENCES:
 //   - id: backup_data-EXP-001
@@ -48,7 +48,7 @@
 //       Trong UI/: npm run check (vitest chạy src/logic/workflows/backup_data/tests/{adapters,services,routers}.test.ts, ipc_bridge giả,
 //       http_client giả).
 //     result: >
-//       npm run check exit 0, "Test Files 39 passed (39)", "Tests 1679 passed (1679)" (mốc 1555). Gồm: pickFolder hợp lệ 2 ca, 20 ca
+//       npm run check exit 0 (các kiểm thử của phân khu này nằm trong tổng số hiện tại, xem EVIDENCE của main). Gồm: pickFolder hợp lệ 2 ca, 20 ca
 //       lệch hợp đồng → contract_violation, Promise bị từ chối (Error và không phải Error) → unreachable; createBackup: 201, 400, 500,
 //       unreachable, nhãn 200/404/409/503 → contract_violation, thiếu từng trong năm trường, 12 ca sai kiểu (size_bytes âm, 1.5, 2^53,
 //       created_at không offset…), 400 mang mã khác → contract_violation, trường thừa bị bỏ; Services: hủy không gửi gì, hộp thoại hỏng
@@ -56,15 +56,26 @@
 //       onCreating đúng thứ tự pick → creating → create, mọi mã lỗi khai báo có câu (đi từ bảng nhãn của Configs).
 //     recorded_at: 2026-10-07T20:44:38.4471702+07:00
 //   - claim: >
-//       Chạy thật: tệp tạo từ giao diện qua được prepare_restore (is_valid và is_compatible đều true); bản thứ hai vào cùng thư mục
-//       cho tên khác; hủy không tạo tệp; thư mục không tồn tại cho 400 đúng câu; backend tắt cho "không tới được".
+//       Chạy thật, trang `backup`, các bước S1–S5 của src/screens/pages/backup/walkthrough.yaml: tệp tạo từ giao diện qua được
+//       prepare_restore (is_valid và is_compatible đều true); bản thứ hai vào cùng thư mục cho tên khác; hủy không tạo tệp; thư mục
+//       không tồn tại cho 400 đúng câu; backend tắt cho "không tới được".
 //     how: >
-//       Trong UI/ (Desktop đã build): npx playwright test -c tests/e2e/playwright.config.ts backup_walkthrough (10 lần liên tiếp), và
-//       trong npm run e2e. Hộp thoại được thay bằng tests/tools/folder_dialog_stub.mjs; thư mục chọn là thư mục tạm ct-ui-backup-*.
+//       Trong UI/ (Desktop đã build): npx playwright test -c tests/e2e/playwright.config.ts backup_walkthrough (bước S1–S5; 10 lần
+//       liên tiếp), và trong npm run e2e. Hộp thoại được thay bằng tests/tools/folder_dialog_stub.mjs; thư mục chọn là thư mục tạm ct-ui-backup-*.
 //     result: >
-//       Spec riêng 10/10 lần "5 passed" (mỗi lần dưới 15 giây). Trong npm run e2e: 5 lượt liên tiếp có runner, mỗi lượt "75 passed"
-//       (mốc 70), và một lượt không đặt biến cũng "75 passed". Xem EVIDENCE của main và screens.
+//       Spec riêng 10/10 lần "5 passed" (S1–S5, mỗi lần dưới 15 giây); S1–S5 cũng đạt trong npm run e2e. Số lượt và số ca e2e hiện
+//       tại: xem EVIDENCE của main.
 //     recorded_at: 2026-10-07T20:44:38.4471702+07:00
+//   - claim: >
+//       R44-9 và R44-12: Configs ghi API Contract 6.2.0 và Data Schema 10.0.1; EVIDENCE chạy thật của khối này ghi trang
+//       backup và bước S1–S5.
+//     how: >
+//       Trong UI/: npx vitest run src/logic/workflows/backup_data (tests/services.test.ts, ca "the contract versions and the
+//       fixed purpose"; tests/adapters.test.ts).
+//     result: >
+//       Đạt trong npm run check. Hai mục EVIDENCE cũ của khối đã sửa lời: bỏ số liệu cũ ("1679", "75 passed") và ghi trang
+//       backup, bước S1–S5 của src/screens/pages/backup/walkthrough.yaml.
+//     recorded_at: 2026-10-16T15:40:29.0901163+07:00
 //
 // NOTES: []
 // ===WCA-CHECKPOINT-END===

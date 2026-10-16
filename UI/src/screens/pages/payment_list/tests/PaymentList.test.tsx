@@ -316,6 +316,28 @@ describe('page payment_list: voiding a payment (§7.2, principle 5)', () => {
     expect(loadPaymentList.mock.calls.length).toBe(_ === '500' ? 2 : 1)
   })
 
+  // R44-7 (session 44): after a refused voiding (500) the list is read again
+  // quietly; when that reading fails by "not reachable" or by a violated
+  // contract, it changes nothing on screen and says nothing more.
+  it.each([
+    ['unreachable', { kind: 'unreachable', message: 'Không kết nối được tới phần xử lý.' } as Loaded],
+    ['contract_violation', { kind: 'contract_violation', message: 'Ứng dụng nhận được một phản hồi không mong đợi.' } as Loaded],
+  ])('void_payment 500, then the quiet reading is %s → the list as it was, only the one alert', async (_, secondReading) => {
+    const { loadPaymentList } = renderWith([LIST_OK, secondReading], [NEEDS, rejectedVoid('ERR_STORAGE_IO', 'Không ghi được dữ liệu thanh toán trên máy.')])
+    await screen.findByLabelText('Số dư đơn hàng')
+    const before = rowTexts()
+    fireEvent.click(voidButtons()[0])
+    fireEvent.click(await within(await screen.findByRole('group', { name: 'Xác nhận hủy khoản' })).findByRole('button', { name: 'Xác nhận' }))
+    const alert = await screen.findByRole('alert')
+    expect(alert.textContent).toContain('Chưa hủy được khoản này')
+    await waitFor(() => expect(loadPaymentList).toHaveBeenCalledTimes(2))
+    await act(async () => {})
+    expect(rowTexts()).toEqual(before)
+    expect(screen.getAllByRole('alert')).toHaveLength(1)
+    expect(screen.getByLabelText('Số dư đơn hàng')).toBeTruthy()
+    expect(voidButtons()).toHaveLength(2)
+  })
+
   it('asking again after a result clears the old result', async () => {
     renderWith([LIST_OK, AFTER_VOID], [NEEDS, rejectedVoid('ERR_CONFLICT', 'Khoản này đã được hủy trước đó.'), NEEDS])
     await screen.findByLabelText('Số dư đơn hàng')

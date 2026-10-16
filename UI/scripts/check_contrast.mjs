@@ -21,6 +21,22 @@
 //
 // A component that puts a text colour, or an interactive part, on a new
 // background adds its pair here.
+//
+// UNLISTED TOKENS (R44-4). The pair lists above are typed by hand, so a
+// component that switched to a colour token no pair mentions was never
+// measured (a Caption in --color-action-text-disabled, about 3.2:1, passed).
+// The check therefore also reads every CSS file of the kit and, for each
+// declaration of `color` (text) and of `border*` / `outline*` (non-text) that
+// uses a --color-* token, requires the token to be the foreground of a pair of
+// the matching group above. Why this way: deriving the pairs from the CSS
+// would need the background a rule paints, which depends on the parent; the
+// token-level rule needs no such guess and still stops a token nobody measured.
+// Limit: it holds the token, not the background it lands on (the pinned CSS
+// declarations of the non-text pairs hold the places that matter).
+//
+// A declaration that must use an unlisted token is named in EXEMPT: file,
+// rule, token and the reason. An exemption is for one rule of one file, never
+// for a token everywhere, and an exemption that matches nothing fails too.
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -180,6 +196,37 @@ function checkCss([file, selector, property, value]) {
   return null
 }
 
+// Declarations allowed to use a colour token that has no pair. [CSS file under
+// src/kit, the selectors of the rule joined by ', ', token, reason]. WCAG 2.1
+// 1.4.3 and 1.4.11 exempt inactive components, and 1.4.11 asks contrast only of
+// the parts a user needs to see to operate a control, so the decorative
+// borders of panels and lists, and a button border equal to its own fill, are
+// not measured (ui_decomposition.md section 7.1).
+const EXEMPT = [
+  ['components/Button/Button.module.css', '.primary:disabled, .secondary:disabled', '--color-action-text-disabled', 'text of a disabled button: an inactive component is exempt (WCAG 2.1 1.4.3)'],
+  ['components/ConfirmPanel/ConfirmPanel.module.css', '.confirm:disabled, .cancel:disabled', '--color-action-text-disabled', 'text of a disabled button: an inactive component is exempt (WCAG 2.1 1.4.3)'],
+  ['components/AppFrame/AppFrame.module.css', '.header', '--color-border', 'decorative border of a panel, list or divider: not a part needed to operate a control (header note)'],
+  ['components/AppFrame/AppFrame.module.css', '.nav', '--color-border', 'decorative border of a panel, list or divider: not a part needed to operate a control (header note)'],
+  ['components/Button/Button.module.css', '.primary', '--color-action', 'border of the primary button, equal to its own fill: it adds no edge that needs contrast'],
+  ['components/Button/Button.module.css', '.primary:hover:not(:disabled)', '--color-action-hover', 'border of the primary button, equal to its own fill: it adds no edge that needs contrast'],
+  ['components/Button/Button.module.css', '.secondary', '--color-border', 'border of a secondary button: the button is found by its text and fill; kept out of the non-text group (header note)'],
+  ['components/Button/Button.module.css', '.primary:disabled, .secondary:disabled', '--color-action-disabled', 'border of a disabled button: an inactive component is exempt (WCAG 2.1 1.4.11)'],
+  ['components/ConfirmPanel/ConfirmPanel.module.css', '.panel', '--color-border-danger', 'decorative border of a notice panel: its text carries the message'],
+  ['components/ConfirmPanel/ConfirmPanel.module.css', '.confirm', '--color-action', 'border of the primary button, equal to its own fill: it adds no edge that needs contrast'],
+  ['components/ConfirmPanel/ConfirmPanel.module.css', '.confirm:hover:not(:disabled)', '--color-action-hover', 'border of the primary button, equal to its own fill: it adds no edge that needs contrast'],
+  ['components/ConfirmPanel/ConfirmPanel.module.css', '.cancel', '--color-border', 'border of a secondary button: the button is found by its text and fill; kept out of the non-text group (header note)'],
+  ['components/ConfirmPanel/ConfirmPanel.module.css', '.confirm:disabled, .cancel:disabled', '--color-action-disabled', 'border of a disabled button: an inactive component is exempt (WCAG 2.1 1.4.11)'],
+  ['components/DescriptionList/DescriptionList.module.css', '.list', '--color-border', 'decorative border of a panel, list or divider: not a part needed to operate a control (header note)'],
+  ['components/DescriptionList/DescriptionList.module.css', '.entry + .entry', '--color-border', 'decorative border of a panel, list or divider: not a part needed to operate a control (header note)'],
+  ['components/EmptyState/EmptyState.module.css', '.empty', '--color-border', 'decorative border of a panel, list or divider: not a part needed to operate a control (header note)'],
+  ['components/EmptyState/EmptyState.module.css', '.action', '--color-border', 'border of a secondary button: the button is found by its text and fill; kept out of the non-text group (header note)'],
+  ['components/FatalMessage/FatalMessage.module.css', '.panel', '--color-border-danger', 'decorative border of a notice panel: its text carries the message'],
+  ['components/InlineAlert/InlineAlert.module.css', '.alert', '--color-border-danger', 'decorative border of a notice panel: its text carries the message'],
+  ['components/ItemList/ItemList.module.css', '.list', '--color-border', 'decorative border of a panel, list or divider: not a part needed to operate a control (header note)'],
+  ['components/ItemList/ItemList.module.css', '.item + .item', '--color-border', 'decorative border of a panel, list or divider: not a part needed to operate a control (header note)'],
+  ['components/SuccessNotice/SuccessNotice.module.css', '.notice', '--color-border-success', 'decorative border of a notice panel: its text carries the message'],
+]
+
 const PAIRS = [
   ...TEXT_PAIRS.map(([fg, bg, usedBy]) => ({ group: 'text', fg, bg, usedBy, css: [] })),
   ...NON_TEXT_PAIRS.map(([fg, bg, usedBy, css]) => ({ group: 'non-text', fg, bg, usedBy, css })),
@@ -241,12 +288,57 @@ for (const { group, fg: fgToken, bg: bgToken, usedBy, css } of PAIRS) {
   }
 }
 
+// --- unlisted tokens (R44-4) --------------------------------------------------
+const KIT_ROOT = path.join(LAYER_ROOT, 'src', 'kit')
+function kitCssFiles(dir) {
+  const out = []
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name)
+    if (entry.isDirectory()) out.push(...kitCssFiles(full))
+    else if (entry.name.endsWith('.css') && full !== TOKENS) out.push(full)
+  }
+  return out
+}
+
+const textTokens = new Set(TEXT_PAIRS.map(([fg]) => fg))
+const partTokens = new Set(NON_TEXT_PAIRS.map(([fg]) => fg))
+const groupOf = (property) => (property === 'color' ? 'text' : /^(border|outline)(-[a-z]+)*$/.test(property) ? 'non-text' : null)
+const usedExemptions = new Set()
+let declarationsChecked = 0
+for (const file of kitCssFiles(KIT_ROOT)) {
+  const rel = path.relative(KIT_ROOT, file).split(path.sep).join('/')
+  const css = fs.readFileSync(file, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')
+  for (const m of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+    const selectors = m[1].split(',').map((s) => s.trim()).join(', ')
+    for (const d of m[2].matchAll(/([a-z-]+)\s*:\s*([^;]+);?/g)) {
+      const group = groupOf(d[1])
+      if (group === null) continue
+      for (const t of d[2].matchAll(/var\(\s*(--color-[a-z0-9-]+)\s*\)/g)) {
+        declarationsChecked += 1
+        const token = t[1]
+        if ((group === 'text' ? textTokens : partTokens).has(token)) continue
+        const exemption = EXEMPT.findIndex(([f, s, k]) => f === rel && s === selectors && k === token)
+        if (exemption !== -1) {
+          usedExemptions.add(exemption)
+          continue
+        }
+        failures.push(
+          `unlisted ${rel} ${selectors} { ${d[1]}: ${d[2].trim()} }: ${token} is the foreground of no ${group} pair; add its pair to ${group === 'text' ? 'TEXT_PAIRS' : 'NON_TEXT_PAIRS'}, or list an exemption with a reason`,
+        )
+      }
+    }
+  }
+}
+EXEMPT.forEach(([file, selectors, token], index) => {
+  if (!usedExemptions.has(index)) failures.push(`stale exemption ${file} ${selectors} ${token}: no declaration matches it any more; remove it`)
+})
+
 const count = (group) => PAIRS.filter((p) => p.group === group).length
 if (failures.length > 0) {
   for (const f of failures) console.error(f)
-  console.error(`check_contrast: ${failures.length} of ${PAIRS.length} pair(s) fail (text >= ${MINIMUM.text}:1, non-text >= ${MINIMUM['non-text']}:1).`)
+  console.error(`check_contrast: ${failures.length} failure(s) (${PAIRS.length} pairs checked; text >= ${MINIMUM.text}:1, non-text >= ${MINIMUM['non-text']}:1).`)
   process.exit(1)
 }
 console.log(
-  `check_contrast: ${count('text')} text pairs >= ${MINIMUM.text}:1 and ${count('non-text')} non-text pairs >= ${MINIMUM['non-text']}:1 checked, all pass.`,
+  `check_contrast: ${count('text')} text pairs >= ${MINIMUM.text}:1 and ${count('non-text')} non-text pairs >= ${MINIMUM['non-text']}:1 checked, all pass; ${declarationsChecked} colour declarations of the kit CSS have a pair or one of ${EXEMPT.length} exemptions.`,
 )

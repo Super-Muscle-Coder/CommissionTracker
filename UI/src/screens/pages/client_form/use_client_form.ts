@@ -127,15 +127,16 @@ export function useClientForm(params: PageParams['client_form'], onSaved: (view:
   }, [open])
 
   // hold: edits of the draft. Adding or removing a row shifts the rows, so
-  // the field errors of the last save (keyed by row) no longer match: they are dropped.
+  // the field errors of the last save (keyed by row) no longer match; what is
+  // left of that result is Services' decision (afterContactRowsChange).
   const setContact = (row: number, field: keyof ContactDraft, value: string) =>
     setDraft((d) => ({ ...d, contacts: d.contacts.map((c, i) => (i === row ? { ...c, [field]: value } : c)) }))
   const addContact = () => {
-    setSaved(null)
+    setSaved((s) => (s === null ? null : manageClient.afterContactRowsChange(s)))
     setDraft((d) => ({ ...d, contacts: [...d.contacts, { channel: '', value: '' }] }))
   }
   const removeContact = (row: number) => {
-    setSaved(null)
+    setSaved((s) => (s === null ? null : manageClient.afterContactRowsChange(s)))
     setDraft((d) => ({ ...d, contacts: d.contacts.filter((_, i) => i !== row) }))
   }
 

@@ -507,3 +507,31 @@ describe('rejectInput', () => {
     })
   })
 })
+
+// R44-14 (session 44; ui_decomposition.md, D2 commission_form, "Gửi"): which
+// save results make the form offer the clients again is a presentation
+// decision, so it is Services'. Every rejection by the backend does (400, 404,
+// 409, 500: origin 'system'); ok, unreachable, contract_violation and a
+// rejection by the form's own check (origin 'input') do not.
+describe('shouldReloadClients', () => {
+  const rejected = (origin: 'input' | 'system', code: string): ViewResult<{ commissionId: string; message: string }> => ({
+    kind: 'rejected',
+    origin,
+    code,
+    message: 'x',
+    fieldErrors: {},
+  })
+  const cases: [string, ViewResult<{ commissionId: string; message: string }>, boolean][] = [
+    ['rejected by the backend, 400 (ERR_VALIDATION)', rejected('system', 'ERR_VALIDATION'), true],
+    ['rejected by the backend, 404 (ERR_NOT_FOUND)', rejected('system', 'ERR_NOT_FOUND'), true],
+    ['rejected by the backend, 409 (ERR_CONFLICT)', rejected('system', 'ERR_CONFLICT'), true],
+    ['rejected by the backend, 500 (ERR_STORAGE_IO)', rejected('system', 'ERR_STORAGE_IO'), true],
+    ['rejected by the form own check (origin input)', rejected('input', INPUT_FORMAT_CODE), false],
+    ['unreachable', { kind: 'unreachable', message: 'x' }, false],
+    ['contract_violation', { kind: 'contract_violation', message: 'x' }, false],
+    ['ok', { kind: 'ok', view: { commissionId: 'c', message: 'x' } }, false],
+  ]
+  it.each(cases)('%s → %s', (_what, saved, expected) => {
+    expect(servicesOf({}).shouldReloadClients(saved)).toBe(expected)
+  })
+})

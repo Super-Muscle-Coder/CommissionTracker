@@ -2,8 +2,8 @@
 // workflow: main
 // clause: external
 // component: main
-// last_updated_by: coding-agent@2026-10-09#1
-// last_updated_at: 2026-10-09T15:02:55.1327978+07:00
+// last_updated_by: coding-agent@2026-10-16#1
+// last_updated_at: 2026-10-16T15:40:24.5282444+07:00
 //
 // EXPERIENCES:
 //   - id: main-EXP-001
@@ -471,10 +471,11 @@
 //       native_dialogs-EXP-003 của Desktop, không cờ, không sửa Desktop): trả chọn thư mục / hủy / ném lỗi theo lệnh của kiểm thử, và đếm số lần
 //       "mở"; đặt trong tests/tools vì luật R12 cấm globalThis có kiểu trong tests/e2e. walkthrough_lib.mjs thêm makeBackupDir() (thư mục tạm
 //       ct-ui-backup-* cạnh thư mục dữ liệu tạm, spec xóa trong finally) và prepareRestore() (POST /backups/restore-preparations từ công cụ,
-//       không từ UI/src). (5) PHÁT HIỆN NGOÀI PLAN, đã xử lý: .gitignore gốc có "Backup*/" (mẫu của Visual Studio), trên Windows git bỏ qua không
-//       phân biệt hoa thường nên bỏ qua cả UI/src/logic/workflows/backup_data/ và UI/src/screens/pages/backup/ (cùng loại ENV-9 của Backend, nơi
-//       .gitignore gốc đã có "!Backend/workflows/backup_data/"). Tôi không sửa .gitignore gốc (ngoài UI/); thêm hai dòng phủ định vào UI/.gitignore
-//       (nằm trong UI/): git check-ignore -v hết báo bỏ qua, git status thấy hai thư mục. Nếu Project Owner đổi sang sửa tệp gốc thì bỏ hai dòng đó.
+//       không từ UI/src). (5) .gitignore gốc: dòng "Backup*/" (mẫu của Visual Studio) khớp không phân biệt hoa thường trên Windows, nên từng bỏ qua
+//       UI/src/logic/workflows/backup_data/, UI/src/screens/pages/backup/ và UI/evidence/walkthroughs/backup/ (cùng loại ENV-9 của Backend). Phiên 34 vá tạm bằng
+//       hai dòng phủ định trong UI/.gitignore. Orchestrator đã sửa tận gốc ở .gitignore gốc (ENV-9 mở rộng, 2026-10-07: mẫu neo vào /Backup*/, /UI/Backup*/…),
+//       nên phiên 44 pha 2 (UI-21) bỏ hai dòng đó. Kiểm: danh sách tệp của git ls-files UI/evidence UI/tests UI/src, cộng tệp chưa theo dõi, đưa vào
+//       git -c core.ignorecase=true check-ignore -v --no-index --stdin: không tệp nào bị bỏ qua, kể cả UI/evidence/walkthroughs/backup/.
 //       (6) Mục "Sao lưu" làm HỎNG 2 ca e2e ở lượt đầu, KHÔNG phải ngẫu nhiên: getByRole('button', { name: 'Lưu' }) khớp theo chuỗi con không phân biệt
 //       hoa thường nên trùng cả nút "Lưu" lẫn mục "Sao lưu" (strict mode violation) ở client_form (mọi chỗ) và client_list S4. Sửa: thêm exact: true cho
 //       đúng 11 locator 'Lưu' của hai spec đó; không đổi gì khác. Cùng loại với việc thêm ['Sao lưu', null] vào các danh sách mục điều hướng của
@@ -499,42 +500,58 @@
 //       thoát, nên cần --keep (đã báo ở báo cáo đầu phiên). Thử bằng tay không hộp thoại: --keep rồi đóng (taskkill), --reopen thấy 8 khách mẫu còn nguyên, thoát mã 0 thì dọn sạch. (5) folder_dialog_stub.mjs chỉ
 //       sửa chú thích (nay phục vụ cả dialog:open-file; hành vi với spec backup không đổi). (6) Phát hiện: tệp điều khiển còn "down" làm fixture tắt backend ngay sau READY của lần mở lại. (7) Thư mục
 //       %TEMP%\ct-ui-walkthrough-hSqxKR (ngày 2026-10-08 08:31) có từ trước phiên này, không phải của tôi; không xóa.
+//   - id: main-EXP-036
+//     content: >
+//       Chuyển từ NOTES quá hạn (R44-10, phiên 44 pha 2). (1) UI.esproj: StartupCommand = npm run build (giao diện không tự
+//       chạy được: chạy thật là npm run build trong UI/ rồi npm start trong Desktop/), BuildCommand = npm run build,
+//       TestCommand = npm run check, JavaScriptTestRoot = src\, JavaScriptTestFramework giữ Vitest. Kiểm thử Main nằm ở
+//       tests/main/ (kiểm thử cấp layer, CLAUDE.md mục 4), ngoài src\, nên Test Explorer có thể không thấy; chạy bằng npm run
+//       check. (2) npm run e2e và npm run walkthrough:app cần Desktop đã build (Desktop/dist/main.js; trong Desktop/ chạy npm
+//       run build); công cụ báo rõ nếu thiếu; phiên UI không sửa Desktop. (3) Hai cách chạy e2e (UI-8): kiểm hồi quy, mọi
+//       phiên và mọi layer, là npm run e2e KHÔNG đặt CT_WALKTHROUGH_RUNNER, bằng chứng nháp vào UI/test-results/evidence/ và
+//       UI/evidence không đổi; ghi bằng chứng của một phiên giao diện hoặc của Project Owner thì đặt biến trước (PowerShell:
+//       $env:CT_WALKTHROUGH_RUNNER = "coding-agent@<ngày>#<số>"; Git Bash: CT_WALKTHROUGH_RUNNER='Tên' npm run e2e). Chạy tay
+//       kịch bản: npm run walkthrough:app (dữ liệu mẫu D1), -- --commissions (D2), -- --progress (D3), -- --empty (trống). Còn
+//       hai NOTES cũ về việc sửa tests/main/main.test.tsx ở phiên 12 và 16 đã xóa: chúng chỉ ghi lại rằng kiểm thử đổi theo
+//       hành vi mới của plan, không phải nới kiểm thử.
+//   - id: main-EXP-037
+//     content: >
+//       Số đo của ba công cụ chẩn đoán đã xóa ở phiên 44 pha 2 (R44-17): tests/tools/ui11_probe.mjs, ui18_probe.mjs,
+//       ui18_launch_probe.mjs (UI-11, UI-18 đã đóng; tìm tên ba tệp trong toàn UI/ trước khi xóa: chỉ có chú thích trong
+//       checkpoint này và một chú thích trong window_guard.mjs, không package.json, mã, cấu hình hay kiểm thử nào). Chuyển từ
+//       EVIDENCE sang đây vì lệnh đo không còn chạy lại được. (1) UI-11, phiên 27: trong 1119 lần chụp ảnh e2e có trạng thái
+//       cửa sổ, 7 lần hết giờ (30 s) đều ở cửa sổ THU NHỎ (minimized:true), không lần nào ở cửa sổ chỉ bị che hay mất tiêu
+//       điểm; thí nghiệm phiên 25: thu nhỏ 11/20 treo, bị che 0/20. (2) Phiên 28: với cơ chế mở lại cửa sổ
+//       (tests/tools/window_guard.mjs), điều kiện thu nhỏ một lần 0/20 treo, thu nhỏ trước mỗi lần chụp 0/20 treo; tắt cơ chế
+//       thì 6/20 và 12/20 treo; 10 lượt npm run e2e liên tiếp, người dùng dùng máy bình thường, đều 70 passed, 7 lần phải mở
+//       lại cửa sổ ở 4 lượt, 0 lần hết giờ. (3) UI-18, phiên 29: bốn cách đưa cửa sổ thu nhỏ về lại khi một tiến trình khác
+//       giữ nền trước, 20 lần mỗi cách: restore() giành nền trước 18/20, show() và maximize+unmaximize 20/20, showInactive()
+//       0/20 và không treo, nên window_guard.mjs dùng showInactive(). (4) UI-18, phiên 31: cờ --ct-test-show-inactive của
+//       Desktop làm isFocused() lúc khởi động từ 20/20 (không cờ) xuống 2/20 (hai lần muộn 3 đến 5 s, nguồn chưa rõ, xem
+//       main-EXP-031); bỏ cờ khỏi harness làm 2 ca e2e hỏng đúng ở dòng "did not log that it showed the window without focus".
+//       Còn chạy lại được: expectShowInactiveState trong các spec e2e và window_guard.mjs, qua ba lượt npm run e2e ở EVIDENCE
+//       bên dưới.
+//   - id: main-EXP-038
+//     content: >
+//       Phiên 44 pha 2, phần của Main và công cụ. (1) R44-3: Main trao SCAFFOLD_UI_CONFIGS.ipcAddresses cho createIpcBridge
+//       (bước 3), xem scaffold_ui-EXP-004. (2) R44-16: walkthrough_app.mjs đọc đường dẫn thư mục giữ lại (--keep) từ một tệp
+//       rồi xóa đệ quy; nay chỉ xóa khi isOwnDataDir (walkthrough_lib.mjs) cho phép: thư mục nằm NGAY trong os.tmpdir(), tên
+//       bắt đầu bằng ct-ui-walkthrough- và dài hơn tiền tố, đường dẫn đã ghi không có đoạn "..". Không thỏa thì in cảnh báo,
+//       xóa tệp ghi đường dẫn, không xóa gì khác. Hàm thuần (chỉ xét chuỗi) nên có tests/tools/walkthrough_lib.test.ts (8 ca)
+//       trong npm run check. Vì vậy vite.config.ts test.include thêm tests/tools/**/*.test.{ts,tsx} và tsconfig.node.json
+//       include thêm tests/tools/*.test.ts (để typescript-eslint thấy tệp); lý do: tệp kiểm thử này không nằm dưới src\ hay
+//       tests/main. Ca đọc walkthrough_lib.mjs nên cần Desktop/configs/desktop.json (tệp này đọc lúc nạp); phép cắn trên bản
+//       sao phải chép thêm tệp đó. (3) R44-17: main_layout.spec.ts giữ page.waitForTimeout(2000) có chủ đích, kèm comment: ca
+//       chứng minh KHÔNG có thông báo CSP hay lỗi trang, nên không có sự kiện dương để chờ (Electron in cảnh báo bảo mật vào
+//       lúc của riêng nó sau lần tải, không sự kiện nào của trang hay webContents đánh dấu "đáng ra đã có"); không nới hay rút
+//       thời gian. (4) R44-2: bước npm run lint:scope (scripts/check_no_watermark_paths.mjs) là bước thứ bảy của npm run
+//       check, xem screens-EXP-056. (5) package.json và package-lock.json version 1.0.0 (sửa tay hai dòng, không npm version);
+//       lệnh check thêm lint:scope. (6) R44-9: dòng contract của Configs mọi workflow giao diện ghi API Contract 6.2.0 và Data
+//       Schema 10.0.1; sáu kiểm thử đã ghim phiên bản cũ nay ghim phiên bản mới; không có script đọc .contracts/.
 //
 // UNSOLVED_PROBLEMS: []
 //
 // EVIDENCE:
-//   - claim: >
-//       Phiên 37 (chặng F, giao diện): môi trường, mốc và kết quả cuối; mốc %APPDATA% không đổi; mọi tiêu chí kiểm bằng máy đạt.
-//     how: >
-//       node --version; npm --version; git status --short; Backend/env/Scripts/python.exe --version; trong UI/: npm ci; npm run check (mốc và cuối); Desktop: npm run build; CT_WALKTHROUGH_RUNNER=coding-agent@2026-10-09#1
-//       npm run e2e (mốc; rồi 5 lượt liên tiếp bằng script bọc); một lượt không đặt biến với băm SHA-256 UI/evidence; Desktop: npm run dist (ELECTRON_BUILDER_CACHE tạm), npm run test:packaged; tên, kích thước,
-//       giờ ghi, SHA-256 của tệp trong %APPDATA%\CommissionTracker đầu và cuối phiên.
-//     result: >
-//       Node v24.14.1; npm 11.11.0; Python 3.13.12; git status đầu phiên rỗng; npm ci xong (npm audit còn báo lỗ hổng của công cụ phát triển như ENV-7; không chạy npm audit fix). Mốc: check "Tests 1679 passed (1679)",
-//       e2e "75 passed (5.4m)". Cuối: check "Tests 1936 passed (1936)"; e2e 5/5 lượt "83 passed" sau khi sửa ba spec đếm mục điều hướng (lượt đầu hỏng 3 ca, tính hỏng, đếm lại từ đầu); lượt không biến "83 passed", UI/evidence
-//       cùng băm trước và sau; test:packaged "11 passed". %APPDATA%: data.db 114688 byte và data.db.lock 0 byte, cùng giờ ghi 2026-09-28 21:09:42, SHA-256 B1996554… — không đổi (kiểm lại ở cuối phiên). Không eslint-disable, không ngoại lệ
-//       lint mới, không phụ thuộc mới, không sửa Desktop/ hay Backend/, không cờ --ct-test-* mới.
-//     recorded_at: 2026-10-09T15:02:55.1327978+07:00
-//   - claim: >
-//       Phiên 34 (chặng E, giao diện): môi trường, mốc và kết quả cuối; mốc %APPDATA% không đổi; mọi tiêu chí kiểm bằng máy đạt.
-//     how: >
-//       node --version; npm --version; git status --short; trong UI/: npm ci; npm run check (mốc và cuối); npm run build trong Desktop/ rồi
-//       CT_WALKTHROUGH_RUNNER=coding-agent@2026-10-07#3 npm run e2e (mốc; rồi 5 lượt liên tiếp, từng lượt một, bằng script bọc); spec riêng
-//       npx playwright test -c tests/e2e/playwright.config.ts backup_walkthrough (10 lần liên tiếp); một lượt npm run e2e KHÔNG đặt biến, băm
-//       SHA-256 toàn thư mục UI/evidence (sort + sha256sum) trước và sau; trong Desktop/: xóa packaging\stage và release,
-//       ELECTRON_BUILDER_CACHE đặt vào thư mục tạm (npm run dist hỏng EXDEV ở lần đầu, như phiên 33), npm run dist, npm run test:packaged;
-//       tên, kích thước, giờ ghi và SHA-256 của tệp trong %APPDATA%\CommissionTracker đầu và cuối phiên.
-//     result: >
-//       Node v24.14.1; npm 11.11.0; Python của Backend/env (qua fixture); git status đầu phiên rỗng; npm ci xong (npm audit còn báo lỗ hổng của công cụ
-//       phát triển như ENV-7; không chạy npm audit fix). Mốc: check "Tests 1555 passed (1555)", e2e "70 passed (5.4m)". Cuối: check exit 0 (tsc -b,
-//       eslint --max-warnings 0, stylelint, "check_contrast: 19 text pairs >= 4.5:1 and 13 non-text pairs >= 3:1 checked, all pass.", "check_layer: 179
-//       files under src/ checked", "check_e2e_status: no unfiltered text assertion", "Test Files 39 passed (39)", "Tests 1679 passed (1679)"). Spec backup
-//       riêng 10/10 lần "5 passed" (mỗi lần dưới 15 giây). e2e: lượt đầu hỏng 2 ca ("Lưu" trùng "Sao lưu", xem main-EXP-033), sau khi sửa 5/5 lượt liên
-//       tiếp "75 passed" (5,8–6,0 phút; 115 lần chụp ảnh mỗi lượt, lớn nhất 224 ms); lượt không biến "75 passed (5.4m)", UI/evidence giữ 129 tệp và cùng
-//       băm (310cfae630b39275) trước và sau. dist: sau lần EXDEV, với cache tạm, "Commission Tracker Setup 0.1.0.exe" được dựng; test:packaged "9 passed
-//       (1.1m)", sau bộ không còn python.exe của gói. %APPDATA%: data.db 114688 byte và data.db.lock 0 byte, cùng giờ ghi 2026-09-28 21:09:42, cùng băm
-//       B1996554… — không đổi. Không eslint-disable, không ngoại lệ lint mới, không phụ thuộc mới, không sửa Desktop/ hay Backend/.
-//     recorded_at: 2026-10-07T20:44:38.4471702+07:00
 //   - claim: >
 //       Việc 2: hộp thoại thay thế được từ công cụ e2e; câu trả lời của invoke; không hộp thoại thật; message khi hàm thay thế ném lỗi.
 //     how: >
@@ -548,54 +565,6 @@
 //       cửa sổ trước và sau đều 1, options { properties: ["openDirectory"], title: "Chọn thư mục" }. Log của Main: "native_dialogs:
 //       dialog:pick-folder -> chosen …", "-> canceled", "failed: boom from the stub".
 //     recorded_at: 2026-10-07T20:44:38.4471702+07:00
-//   - claim: >
-//       Phiên 25: môi trường, mốc, và kết quả cuối; mốc %APPDATA% không đổi.
-//     how: >
-//       node --version; npm --version; git status --short; trong UI/: npm ci; npm run check (mốc và cuối);
-//       CT_WALKTHROUGH_RUNNER=coding-agent@2026-10-01#1 npm run e2e (mốc; 5 lần liên tiếp cuối); một lần không biến
-//       với SHA-256 UI/evidence trước và sau; node tests/tools/ui11_probe.mjs [--n=20] [--only=...] [--flags=...]
-//       [--label=...]; tên, kích thước, giờ ghi mọi tệp trong %APPDATA%\CommissionTracker đầu (21:12) và cuối phiên
-//       (22:02).
-//     result: >
-//       Node v24.14.1; npm 11.11.0; git status đầu phiên rỗng; npm ci "found 0 vulnerabilities". Mốc: check "Tests
-//       1303 passed (1303)", e2e "59 passed (2.9m)". Cuối: check exit 0 (tsc -b, eslint --max-warnings 0, stylelint,
-//       check_contrast "19 text pairs ... all pass", check_layer "147 files", check_e2e_status, "Test Files 30 passed",
-//       "Tests 1303 passed (1303)"); e2e 5/5 "59 passed" (2,8–2,9 phút), không lần chụp nào hết giờ (87 lần mỗi lượt,
-//       lớn nhất 127 ms); lần không biến "59 passed", UI/evidence không đổi (99 tệp, băm toàn thư mục trước và sau).
-//       %APPDATA%: data.db 114688 byte, data.db.lock 0 byte, cùng giờ ghi 2026-09-28 21:09 — không đổi. UI-12:
-//       StageChange.test.tsx 3/50 hỏng trước khi sửa, 50/50 đạt sau (xem EVIDENCE của screens). Không eslint-disable,
-//       không ngoại lệ lint mới, không phụ thuộc mới. Công cụ ui11_probe.mjs phải sửa một lỗi lint (no-undef
-//       'document') bằng cách đưa biểu thức dạng chuỗi vào page.evaluate.
-//     recorded_at: 2026-10-01T22:04:00+07:00
-//   - claim: >
-//       Phiên 24: môi trường, mốc, và kết quả cuối; mốc %APPDATA% không đổi.
-//     how: >
-//       node --version; npm --version; git status --short; Backend/env/Scripts/python.exe --version; trong UI/: npm ci;
-//       npm run check (mốc và cuối); CT_WALKTHROUGH_RUNNER=coding-agent@2026-09-30#3 npm run e2e (mốc; 5 lần liên tiếp cuối);
-//       một lần không biến với SHA-256 UI/evidence trước và sau; tên, kích thước, giờ ghi, SHA-256 mọi tệp trong
-//       %APPDATA%CommissionTracker đầu (23:20) và cuối phiên (20:17).
-//     result: >
-//       Node v24.14.1; npm 11.11.0; Python 3.13.12; git status đầu phiên rỗng; npm ci "found 0 vulnerabilities". Mốc: check
-//       "Tests 1100 passed (1100)" (lần chạy đầu hỏng 1 ca focus của StageChange.test.tsx:183, không tất định có sẵn, bốn lần
-//       chạy lại đạt; không sửa, ngoài plan), e2e "54 passed (3.5m)". Cuối: check exit 0 (tsc -b, eslint --max-warnings 0,
-//       stylelint, "check_contrast: 19 text pairs >= 4.5:1 and 13 non-text pairs >= 3:1 checked, all pass.", "check_layer: 147
-//       files under src/ checked", "check_e2e_status: no unfiltered text assertion", vitest 1303 đạt); spec income_report
-//       riêng 10/10; e2e 5/5 "59 passed" (mốc 54); lần không biến "59 passed", UI/evidence không đổi (99 tệp).
-//       %APPDATA%: data.db 114688 byte và data.db.lock 0 byte, cùng giờ ghi 2026-09-28 21:09, cùng hash B1996554… — không đổi.
-//       Không eslint-disable, không ngoại lệ lint mới, không phụ thuộc mới. Backend: Backend/env/Scripts/python.exe (qua fixture).
-//     recorded_at: 2026-10-01T20:25:00+07:00
-//   - claim: >
-//       Môi trường và phiên bản công cụ của phiên.
-//     how: >
-//       node --version; npm --version; trong UI/: npm ls --depth=0.
-//     result: >
-//       Node v24.14.1; npm 11.11.0; Windows 11 Home 10.0.26200. Phụ thuộc không
-//       đổi so với phiên 11 (khóa chính xác trong package.json và
-//       package-lock.json): react 19.3.0, react-dom 19.3.0, zod 4.6.5, vite
-//       8.3.1, typescript 6.0.3, vitest 5.0.2, jsdom 29.1.1, eslint 10.11.0,
-//       typescript-eslint 8.70.1, stylelint 17.15.0, @playwright/test 1.63.0.
-//       Backend chạy bằng Backend/env/Scripts/python.exe (Python 3.13.12).
-//     recorded_at: 2026-09-27T11:39:31+07:00
 //   - claim: >
 //       Toàn bộ bằng chứng cắn R1–R14 cũ chạy lại với cấu hình sau khi vá P1–P3,
 //       vẫn cắn đúng: mỗi lỗi chỉ đúng tệp và dòng vi phạm vừa tạo.
@@ -752,17 +721,6 @@
 //       EVIDENCE của screens.
 //     recorded_at: 2026-09-27T12:02:15+07:00
 //   - claim: >
-//       Môi trường và mốc của phiên 16.
-//     how: >
-//       node --version; npm --version; trong UI/: npm ci; npm run check; npm run
-//       e2e; ls "%APPDATA%\CommissionTracker" đầu và cuối phiên.
-//     result: >
-//       Node v24.14.1; npm 11.11.0; npm ci "found 0 vulnerabilities" (không
-//       thêm gói nào). Mốc check: "Tests 65 passed (65)", 46 tệp. Mốc e2e: "4
-//       passed (27.9s)". %APPDATA%\CommissionTracker: không tồn tại, đầu phiên
-//       (10:17) và cuối phiên. Backend: Backend/env/Scripts/python.exe.
-//     recorded_at: 2026-09-28T10:19:30+07:00
-//   - claim: >
 //       UI-3: sau một lần main_layout.spec.ts hỏng có chủ đích, không còn thư mục
 //       ct-ui-e2e-* mới nào.
 //     how: >
@@ -790,71 +748,6 @@
 //       "coding-agent@2026-09-28#1 (Playwright, …)". Lần chạy cuối phiên: mọi bản
 //       ghi của ba trang mang tên coding-agent@2026-09-28#1.
 //     recorded_at: 2026-09-28T10:25:35+07:00
-//   - claim: >
-//       Phép kiểm độ tương phản (bước mới của npm run check) cắn. Chi tiết ở
-//       EVIDENCE của kit.
-//     how: >
-//       --base-gray-400 tạm thành #5a5a5a; npm run check; khôi phục.
-//     result: >
-//       exit 1 ở lint:contrast, "check_contrast: 3 of 18 pair(s) fail WCAG AA
-//       (4.5:1)."; khôi phục thì đạt.
-//     recorded_at: 2026-09-28T10:29:01+07:00
-//   - claim: >
-//       npm run check và npm run e2e đạt với mã cuối phiên 16.
-//     how: >
-//       Trong UI/: npm run check; CT_WALKTHROUGH_RUNNER=coding-agent@2026-09-28#1
-//       npm run e2e.
-//     result: >
-//       check exit 0: tsc -b, eslint --max-warnings 0, stylelint sạch;
-//       "check_contrast: 18 text/background pairs checked, all >= 4.5:1.";
-//       "check_layer: 71 files under src/ checked (ZONES, R2, R10), no
-//       violation."; "Test Files 10 passed (10)", "Tests 225 passed (225)" (lần
-//       chạy cuối, sau khi viết checkpoint). e2e "17 passed (59.7s)", main_layout
-//       "renderer console: []". %APPDATA%\CommissionTracker vẫn không tồn tại.
-//     recorded_at: 2026-09-28T11:01:26+07:00
-//   - claim: >
-//       Môi trường và mốc của phiên 17.
-//     how: >
-//       node --version; npm --version; trong UI/: npm ci; npm run check; npm run
-//       e2e; ls "%APPDATA%\CommissionTracker" đầu và cuối phiên.
-//     result: >
-//       Node v24.14.1; npm 11.11.0; npm ci "found 0 vulnerabilities" (không thêm
-//       gói nào trong phiên). Mốc check: "Tests 225 passed (225)", 71 tệp. Mốc
-//       e2e: "17 passed (1.0m)" (trên máy này UI-4 không lộ ở lần mốc).
-//       %APPDATA%\CommissionTracker: không tồn tại, đầu phiên (11:58:48) và cuối
-//       phiên (12:28:10). Backend: Backend/env/Scripts/python.exe.
-//     recorded_at: 2026-09-28T12:01:10+07:00
-//   - claim: >
-//       npm run check và npm run e2e đạt với mã cuối phiên 17.
-//     how: >
-//       Trong UI/: npm run check (sau khi ghi mọi checkpoint);
-//       CT_WALKTHROUGH_RUNNER=coding-agent@2026-09-28#2 npm run e2e năm lần liên tiếp.
-//     result: >
-//       check exit 0: tsc -b, eslint --max-warnings 0, stylelint sạch;
-//       "check_contrast: 18 text pairs >= 4.5:1 and 11 non-text pairs >= 3:1
-//       checked, all pass."; "check_layer: 71 files under src/ checked (ZONES,
-//       R2, R10), no violation."; "Test Files 10 passed (10)", "Tests 241 passed
-//       (241)". e2e 5/5 lần "17 passed" (chi tiết ở EVIDENCE của screens). Cấu
-//       hình ESLint, stylelint, check_layer không đổi trong phiên, nên bằng chứng
-//       cắn R1–R14 cũ còn hiệu lực; check_contrast đổi và có bằng chứng cắn mới
-//       ở kit. Không có eslint-disable, không ngoại lệ lint mới.
-//     recorded_at: 2026-09-28T12:28:10+07:00
-//   - claim: >
-//       Môi trường và mốc của phiên 19.
-//     how: >
-//       node --version; npm --version; git status --short; trong UI/: npm ci; npm
-//       run check; CT_WALKTHROUGH_RUNNER=coding-agent@2026-09-29#1 npm run e2e (hai
-//       lần); SHA-256 của mọi tệp trong %APPDATA%\CommissionTracker đầu và cuối phiên.
-//     result: >
-//       Node v24.14.1; npm 11.11.0; npm ci "found 0 vulnerabilities" (không thêm gói
-//       nào trong phiên). git status --short đầu phiên: rỗng. Mốc check: "Tests 241
-//       passed (241)", 71 tệp. Mốc e2e: lần 1 "1 failed, 14 passed" (client_detail S4,
-//       "page.screenshot: Timeout 30000ms exceeded", 2 bước sau không chạy), lần 2
-//       "17 passed (1.4m)" không đổi mã (main-EXP-013). %APPDATA%\CommissionTracker
-//       có data.db (114688 byte, SHA-256 B1996554…F390B, ghi 2026-09-28 21:09:42) và
-//       data.db.lock (0 byte) từ trước phiên; lúc 09:2x cuối phiên giống hệt (hash,
-//       kích thước, giờ ghi). Backend: Backend/env/Scripts/python.exe.
-//     recorded_at: 2026-09-29T08:41:11+07:00
 //   - claim: >
 //       UI-8: npm run e2e không đặt CT_WALKTHROUGH_RUNNER không đổi UI/evidence; bằng
 //       chứng nháp vào UI/test-results/evidence với runner "unknown".
@@ -884,172 +777,6 @@
 //       "coding-agent@2026-09-29#1 (Playwright, tests/e2e/<trang>_walkthrough.spec.ts)".
 //     recorded_at: 2026-09-29T09:24:00+07:00
 //   - claim: >
-//       npm run check và npm run e2e đạt với mã cuối phiên 19; e2e 5/5 lần liên tiếp.
-//     how: >
-//       Trong UI/: npm run check (sau khi ghi mọi checkpoint);
-//       CT_WALKTHROUGH_RUNNER=coding-agent@2026-09-29#1, npm run e2e năm lần liên tiếp;
-//       danh sách ct-ui-* trong %TEMP% trước và sau.
-//     result: >
-//       check exit 0: tsc -b, eslint --max-warnings 0, stylelint sạch;
-//       "check_contrast: 19 text pairs >= 4.5:1 and 11 non-text pairs >= 3:1 checked,
-//       all pass."; "check_layer: 95 files under src/ checked (ZONES, R2, R10), no
-//       violation."; "Test Files 16 passed (16)", "Tests 555 passed (555)" (mốc 241).
-//       e2e: lần 1 "32 passed (2.0m)" (09:13:25–09:15:31), lần 2 "32 passed (2.0m)",
-//       lần 3 "32 passed (2.0m)", lần 4 "32 passed (2.0m)", lần 5 "32 passed (1.9m)"
-//       (kết thúc 09:24:00) (mốc 17). ct-ui-* trước và sau giống hệt (sáu thư mục cũ
-//       ngày 27 và 28). Cấu hình ESLint, stylelint, check_layer không đổi trong phiên,
-//       nên bằng chứng cắn R1–R14 cũ còn hiệu lực; check_contrast đổi (FIELDS) và có
-//       bằng chứng cắn mới ở kit. Không có eslint-disable, không ngoại lệ lint mới.
-//     recorded_at: 2026-09-29T09:30:00+07:00
-//   - claim: >
-//       Phiên 20: npm run check và npm run e2e đạt với mã cuối phiên; e2e 5/5 lần liên
-//       tiếp có tên người chạy; một lần không đặt biến để UI/evidence nguyên vẹn; mốc
-//       %APPDATA%\CommissionTracker không đổi.
-//     how: >
-//       Node v24.14.1, npm 11.11.0, npm ci; Backend/env/Scripts/python.exe (qua
-//       fixture). Trong UI/: npm run check (sau khi ghi mọi checkpoint); scratchpad
-//       e2e_final.sh: CT_WALKTHROUGH_RUNNER=coding-agent@2026-09-29#2 npm run e2e năm
-//       lần, rồi SHA-256 mọi tệp dưới UI/evidence, npm run e2e KHÔNG biến, SHA-256 lại và
-//       so. %APPDATA%\CommissionTracker: tên, kích thước, giờ ghi, SHA-256 mọi tệp lúc
-//       11:1x đầu phiên và lúc 18:0x cuối phiên.
-//     result: >
-//       check exit 0: tsc -b, eslint --max-warnings 0, stylelint sạch; "check_contrast:
-//       19 text pairs >= 4.5:1 and 12 non-text pairs >= 3:1 checked, all pass.";
-//       "check_layer: 114 files under src/ checked (ZONES, R2, R10), no violation.";
-//       "Test Files 21 passed (21)", "Tests 780 passed (780)" (mốc 555). e2e năm lần
-//       "42 passed" (17:46:00–17:59:31; mốc 32). Lần không biến "42 passed (2.5m)",
-//       "UI/evidence UNCHANGED (71 files hashed)", runner nháp "unknown (Playwright,
-//       tests/e2e/progress_board_walkthrough.spec.ts)". %APPDATA%: data.db 114688 byte và
-//       data.db.lock 0 byte, cùng giờ ghi 2026-09-28 21:09, cùng hash — "UNCHANGED". Cấu
-//       hình ESLint, stylelint, check_layer không đổi; check_contrast thêm một cặp có
-//       bằng chứng cắn ở kit. Không eslint-disable, không ngoại lệ lint mới.
-//     recorded_at: 2026-09-29T18:10:00+07:00
-//   - claim: >
-//       Phiên 21: npm run check (có lint:e2e) và npm run e2e đạt với mã cuối phiên.
-//     how: >
-//       Node v24.14.1, npm 11.11.1, npm ci "found 0 vulnerabilities". Trong UI/: npm run
-//       check (sau khi ghi checkpoint); CT_WALKTHROUGH_RUNNER=coding-agent@2026-09-29#3 npm
-//       run e2e 5 lần; lần không biến với SHA-256 UI/evidence trước và sau.
-//     result: >
-//       check exit 0, "check_e2e_status: no unfiltered text assertion on
-//       getByRole('status')."; "Tests 780 passed (780)" (bằng mốc). e2e 5/5 "42 passed";
-//       lần không biến "42 passed (2.5m)", UI/evidence không đổi. Phần còn lại (30 lần
-//       commission_form, bằng chứng cắn, %APPDATA%, lỗi chụp ảnh không biến) ở EVIDENCE
-//       của screens. Backend: Backend/env/Scripts/python.exe (qua fixture). Không
-//       eslint-disable, không ngoại lệ lint mới.
-//     recorded_at: 2026-09-29T21:30:29+07:00
-//   - claim: >
-//       Phiên 22: môi trường, mốc, và kết quả cuối; mốc %APPDATA% không đổi.
-//     how: >
-//       node --version; npm --version; git status --short; Backend/env/Scripts/python.exe --version; trong
-//       UI/: npm ci; npm run check (mốc và cuối); CT_WALKTHROUGH_RUNNER=coding-agent@2026-09-30#1 npm run
-//       e2e (mốc; 5 lần liên tiếp cuối); một lần không biến với SHA-256 UI/evidence trước và sau; tên,
-//       kích thước, giờ ghi, SHA-256 mọi tệp trong %APPDATA%\CommissionTracker đầu (07:40) và cuối phiên.
-//     result: >
-//       Node v24.14.1; npm 11.11.0; Python 3.13.12; git status đầu phiên rỗng; npm ci "found 0
-//       vulnerabilities". Mốc: check "Tests 780 passed (780)" (21 tệp), e2e "42 passed (3.1m)". Cuối:
-//       check exit 0 (tsc -b, eslint --max-warnings 0, stylelint, "check_contrast: 19 text pairs >= 4.5:1
-//       and 13 non-text pairs >= 3:1 checked, all pass.", "check_layer: 131 files under src/ checked", "check_e2e_status: no unfiltered
-//       text assertion", "Test Files 26 passed (26)", "Tests 1100 passed (1100)"); e2e 5/5 "54 passed"
-//       (mốc 42); lần không biến "54 passed", UI/evidence không đổi (89 tệp). %APPDATA%: data.db 114688 byte
-//       và data.db.lock 0 byte, cùng giờ ghi 2026-09-28 21:09, cùng hash B1996554… — không đổi. Không
-//       eslint-disable, không ngoại lệ lint mới, không phụ thuộc mới. Backend: Backend/env/Scripts/python.exe
-//       (qua fixture).
-//     recorded_at: 2026-09-30T09:25:00+07:00
-//   - claim: >
-//       Phiên 27: môi trường, mốc đầu phiên và kết quả cuối; mốc %APPDATA% không đổi.
-//     how: >
-//       node --version; npm --version; Backend/env/Scripts/python.exe --version; git status --short; trong UI/: npm ci,
-//       npm run check (mốc và cuối); npm run build trong Desktop/ rồi CT_WALKTHROUGH_RUNNER=coding-agent@2026-10-03#1 npm
-//       run e2e (mốc và cuối); tên, kích thước, giờ ghi mọi tệp trong %APPDATA%\CommissionTracker.
-//     result: >
-//       Node v24.14.1; npm 11.11.0 (npm ci in thêm cảnh báo của npm audit, không còn "0 vulnerabilities" như các phiên
-//       trước; không sửa, ngoài plan); Python 3.13.12; git status đầu phiên sạch. Mốc: check "Tests 1303 passed (1303)"
-//       (30 tệp); e2e mốc 59 test: "54 passed, 3 failed, 2 did not run" — hai lần hết giờ chụp ảnh (client_detail S4,
-//       client_form S5) và một lần locator.click "Tải lại" không thấy (progress_board S4); mốc này chạy TRƯỚC khi có
-//       nhật ký trạng thái cửa sổ nên không có dữ liệu cửa sổ. Cuối: check exit 0 (tsc -b, eslint --max-warnings 0,
-//       stylelint, "check_contrast: 19 text pairs >= 4.5:1 and 13 non-text pairs >= 3:1 checked, all pass.",
-//       "check_layer: 167 files under src/ checked", "check_e2e_status: no unfiltered text assertion", "Test Files 35
-//       passed (35)", "Tests 1550 passed (1550)"); e2e 69 test, xem EVIDENCE của screens. %APPDATA%: data.db 114688
-//       byte, data.db.lock 0 byte, giờ ghi 2026-09-28 21:09, không đổi.
-//     recorded_at: 2026-10-03T10:42:22.0487385+07:00
-//   - claim: >
-//       UI-11, dữ liệu của phiên 27: mọi lần hết giờ chụp ảnh xảy ra khi cửa sổ Electron bị THU NHỎ.
-//     how: >
-//       Gộp mọi nhật ký test-results/screenshot-timing.log của các lượt có trạng thái cửa sổ (20 lượt riêng từng spec, 6
-//       lượt đầy đủ có runner, 3 lượt không runner; không tính hai lượt chạy chồng nhau), script scratchpad agg.mjs.
-//     result: >
-//       1119 lần chụp có trạng thái cửa sổ. Lần chụp thành công (1112): trung bình 122 ms, lâu nhất 2859 ms, không lần
-//       nào quá 5 s. Riêng 134 lần lúc backend tắt: trung bình 349 ms (gồm một lần hết giờ), lâu nhất 30005 ms. Hết giờ
-//       (30 s): 7 lần — reminder_list-S1-list (2 lần), income_report-S1, payment_form-S6, commission_form-S1,
-//       commission_list-S3-unreachable (backend tắt), progress_board-S4 — và CẢ BẢY lần, đọc trước lệnh chụp, đều là
-//       "minimized:true, visible:false, focused:false, visibility:visible". Trạng thái của các lần thành công: 1096
-//       bình thường (không thu nhỏ, có tiêu điểm), 11 không thu nhỏ nhưng mất tiêu điểm, 5 minimized:true (chụp vẫn
-//       xong: cửa sổ được mở lại giữa lúc đọc và lúc chụp). Không lần hết giờ nào ở cửa sổ không bị thu nhỏ. Cùng cơ
-//       chế với thí nghiệm phiên 25 (thu nhỏ: 11/20 treo; bị che, mất tiêu điểm: 0/20). Trace của các lượt hỏng (thêm ba
-//       lượt của mốc đầu phiên, chưa có dữ liệu cửa sổ) ở UI/test-results/ui11_traces/ với INDEX.txt; thư mục nằm trong
-//       test-results nên git bỏ qua và lượt e2e kế tiếp xóa nó: chép đi nếu cần giữ. Việc tiếp (4 của UI-11) thuộc
-//       Project Owner: quyết harness có tự restore() hay chỉ dựa vào quy ước không thu nhỏ khi e2e chạy. Trong phiên này
-//       tôi không thu nhỏ cửa sổ nào, nhưng cửa sổ vẫn bị thu nhỏ nhiều lần (nguồn chưa rõ: có thể Windows hoặc ứng dụng
-//       khác khi máy đang dùng); người vận hành nên đối chiếu.
-//     recorded_at: 2026-10-03T10:42:22.0487385+07:00
-//   - claim: >
-//       UI-11 bước (4): với cơ chế mở lại cửa sổ, probe điều kiện "thu nhỏ" 0/20 treo; tắt cơ chế thì treo trở lại.
-//     how: >
-//       Trong UI/ (Windows 11, Electron 44.4.5, Chromium 152.0.7977.130, giới hạn mỗi lệnh 10 s, 20 lần mỗi điều kiện):
-//       node tests/tools/ui11_probe.mjs --guard=on --only=normal,minimized,reminimized --label=guard_on; rồi cùng lệnh với
-//       --guard=off --label=guard_off (phép cắn). Bản ghi từng lần: test-results/ui11_probe/guard_on.jsonl, guard_off.jsonl.
-//     result: >
-//       CÓ cơ chế: normal 0 treo (lớn nhất 84 ms); minimized (thu nhỏ một lần, nghỉ 1 s) 0/20 treo, 1 lần mở lại, lớn nhất
-//       87 ms; reminimized (thu nhỏ trước MỖI lần chụp) 0/20 treo, 20 lần mở lại, lớn nhất 85 ms. TẮT cơ chế: normal 0;
-//       minimized 6/20 treo (lớn nhất 10017 ms); reminimized 12/20 treo (trung vị 10004 ms). (Phiên 25, không cơ chế:
-//       minimized 11/20; số treo mỗi lần chạy thay đổi, nhưng luôn > 0 khi tắt và luôn 0 khi bật.)
-//     recorded_at: 2026-10-03T22:33:18.0540800+07:00
-//   - claim: >
-//       UI-11, tiêu chí đóng: 10 lượt npm run e2e liên tiếp đạt, không đặt CT_WALKTHROUGH_RUNNER, trong lúc người vận hành dùng
-//       máy bình thường (có thu nhỏ cửa sổ); số lần công cụ phải mở lại cửa sổ.
-//     how: >
-//       Desktop đã build. Trong UI/: tập lệnh chạy 10 lần "npm run e2e", từng lượt một, dừng ở lần hỏng đầu; sau mỗi lượt
-//       chép test-results/window-restore.log và screenshot-timing.log ra ngoài. Lượt 1 bắt đầu 2026-10-03T21:40:47+07:00,
-//       lượt 10 kết thúc 22:32:33+07:00.
-//     result: >
-//       Cả 10 lượt "70 passed" (69 test cũ + reminder_seed_ticker), lượt nào cũng 107 lần chụp, 0 lần chụp lỗi hay hết giờ,
-//       0 lần chụp ghi minimized:true. Số lần mở lại cửa sổ: lượt 1-3: 0; lượt 4: 1 (income_report-S1); lượt 5: 4
-//       (income_report-S1; reminder_list lúc đóng, hai lần liền cách nhau 2 s; reminder_settings-S5-unreachable); lượt 6: 1
-//       (commission_detail-S1); lượt 7-8: 0; lượt 9: 1 (commission_form-S3); lượt 10: 0. TỔNG 7 lần ở 4 lượt trên 10,
-//       mỗi lần cửa sổ được mở lại thì bước đó vẫn đạt, không lần chụp nào hết giờ. Trước đó (không phải lượt tính): reminder_list_walkthrough chạy riêng 10/10 đạt
-//       (0 lần mở lại); mốc đầu phiên 69/69 đạt, không có cơ chế, không có lần hết giờ.
-//     recorded_at: 2026-10-03T22:33:18.0540800+07:00
-//   - claim: >
-//       Môi trường, mốc, và điều kiện cuối phiên 28; mốc %APPDATA% và UI/evidence không đổi.
-//     how: >
-//       node --version; npm --version; npm ci; npm run check (mốc và cuối); git status --short; SHA-256 từng tệp
-//       UI/evidence trước và sau (120 tệp); tên, kích thước, giờ ghi tệp trong %APPDATA%\CommissionTracker đầu (21:03) và
-//       cuối phiên (22:32).
-//     result: >
-//       Node v24.14.1; npm 11.11.0; git status đầu phiên trống. Mốc check "Tests 1550 passed (1550)", e2e 69 passed (5,3
-//       phút). Cuối: check "Tests 1555 passed (1555)" (+5: hai kiểm thử trang và ba kiểm thử Services của UI-13); 120 tệp
-//       UI/evidence, so sánh từng SHA-256 với mốc: 0 khác biệt; data.db 114688 byte và data.db.lock 0 byte, giờ ghi
-//       2026-09-28 21:09, không đổi. Không eslint-disable, không ngoại lệ lint mới, không phụ thuộc mới.
-//       LƯU Ý (xem main-EXP-028, đã vá ở phiên 29): npm run check hỏng ngắt quãng ở một ca của tests/main/main.test.tsx do hết 5 s khi máy đang tải.
-//     recorded_at: 2026-10-03T22:33:18.0540800+07:00
-//   - claim: >
-//       UI-18: bảng số đo bốn cách đưa cửa sổ đang thu nhỏ về lại, với một TIẾN TRÌNH khác giữ nền trước; cách chọn.
-//     how: >
-//       Trong UI/: node tests/tools/ui18_probe.mjs --n=20 --label=ui18_run1 (Electron 44.4.5, Windows 11, người dùng
-//       dùng máy bình thường lúc đó). Mỗi lần: một tiến trình PowerShell xin nền trước; thu nhỏ cửa sổ chính; áp cách đo;
-//       đọc isMinimized, isFocused, chủ nền trước của hệ điều hành (GetForegroundWindow); click + chụp ảnh với hạn 10 s.
-//       Bản ghi từng lần: UI/test-results/ui18_probe/ui18_run1.jsonl (git bỏ qua). Kiểm cơ chế thật: node
-//       tests/tools/ui11_probe.mjs --guard=on --only=reminimized --n=20 --label=guard_s29.
-//     result: >
-//       cách / số lần hợp lệ / còn thu nhỏ / ứng dụng giành nền trước / Electron isFocused / treo:
-//       restore 20 / 0 / 18 / 18 / 0; showInactive 20 / 0 / 0 / 0 / 0; show 20 / 0 / 20 / 20 / 0; maximize+unmaximize
-//       20 / 0 / 20 / 20 / 0. CHỌN showInactive (đạt cả ba, 20/20), đã áp vào window_guard.mjs. Cơ chế thật với
-//       showInactive: ui11_probe reminimized 20 lần thu nhỏ trước mỗi lần chụp, 20 lần mở lại, 0 treo, trung vị 100 ms,
-//       lớn nhất 116 ms, focused:false sau mỗi lần. Trong 10 lượt e2e cuối phiên: 2 lần mở lại (lượt 4,
-//       commission_form-S1-filled; lượt 5, reminder_settings-S5-unreachable), cả hai "way=showInactive focused_after=false".
-//     recorded_at: 2026-10-04T12:56:44.6836972+07:00
-//   - claim: >
 //       UI-16: số đo trước và sau, phép cắn.
 //     how: >
 //       Trước: npm run check ×5 đầu phiên; npx vitest run tests/main --reporter=verbose ×3. Sau: cùng lệnh. Phép cắn:
@@ -1060,53 +787,6 @@
 //       cũ "no bridge on the global object 5018ms" hỏng (và các ca theo sau), tệp mới "Tests 17 passed (17)". npm run
 //       check 10 lần liên tiếp đạt ("Tests 1555 passed (1555)" mỗi lần, lần hỏng đầu tiên của vòng: không có).
 //     recorded_at: 2026-10-04T12:56:44.6836972+07:00
-//   - claim: >
-//       Điều kiện cuối phiên 29.
-//     how: >
-//       npm run e2e KHÔNG đặt CT_WALKTHROUGH_RUNNER, 10 lượt liên tiếp từng lượt một; SHA-256 từng tệp UI/evidence (120 tệp)
-//       và tên, kích thước, giờ ghi tệp trong %APPDATA%\CommissionTracker, trước và sau; git status --short.
-//     result: >
-//       Mốc đầu phiên: Node v24.14.1, npm 11.11.0, e2e 70 passed (5,4 phút). 10 lượt: "70 passed" mỗi lượt (4,8-5,9 phút),
-//       0 lần hỏng, 2 lần mở lại cửa sổ trong tổng 700 ca. UI/evidence: 0 khác biệt. data.db 114688 byte, data.db.lock 0
-//       byte, giờ ghi 2026-09-28 21:09, không đổi. git status chỉ có tệp trong UI/. Không eslint-disable, không ngoại lệ
-//       lint mới, không phụ thuộc mới. Câu trả lời của Project Owner về tiêu điểm (sau 10 lượt): CÒN bị giành tiêu điểm và chiếm phím, dù chỉ 2 lần mở lại trong 10 lượt. UI-18 CHƯA đạt tiêu chí cuối (xem NOTES).
-//     recorded_at: 2026-10-04T12:56:44.6836972+07:00
-//   - claim: >
-//       Phiên 31, môi trường và mốc đầu phiên; mốc %APPDATA% và UI/evidence không đổi suốt phiên.
-//     how: >
-//       node --version; npm --version; Backend/env/Scripts/python.exe --version; git status --short; trong UI/: npm ci;
-//       npm run check ×5; trong Desktop/: npm run build; trong UI/: npm run e2e KHÔNG đặt CT_WALKTHROUGH_RUNNER; PowerShell:
-//       SHA-256 từng tệp UI/evidence (120 tệp); tên, kích thước, giờ ghi, SHA-256 mọi tệp trong %APPDATA%\CommissionTracker, ở
-//       đầu phiên (20:5x) và cuối phiên (22:3x), so từng dòng.
-//     result: >
-//       Node v24.14.1; npm 11.11.0; Python 3.13.12; git status đầu phiên trống; npm ci có "5 high severity vulnerabilities" (ENV-7,
-//       không chạy npm audit fix). Mốc: check 5/5 đạt, "Tests 1555 passed (1555)" mỗi lần (35 tệp), UI-19 hỏng 0/5; e2e "70 passed
-//       (5.4m)", 107 lần chụp, 0 lần chụp lỗi, 1 lần mở lại cửa sổ (progress_board-S4-unreachable). UI/evidence: 120 tệp, 0 khác
-//       biệt đầu so với cuối. %APPDATA%\CommissionTracker: data.db 114688 byte, data.db.lock 0 byte, giờ ghi 2026-09-28
-//       14:09:42 UTC, cùng SHA-256: 0 khác biệt; thư mục "Commission Tracker" (hồ sơ Chromium) giờ ghi 2026-10-05 03:45 UTC, không đổi.
-//     recorded_at: 2026-10-05T22:42:13.1836006+07:00
-//   - claim: >
-//       UI-18: bảng đo hai cách khởi động ứng dụng (không cờ / có --ct-test-show-inactive) khi một tiến trình khác giữ nền
-//       trước; kiểm tự động việc truyền cờ; phép cắn.
-//     how: >
-//       Trong UI/: node tests/tools/ui18_launch_probe.mjs --runs=20 (mốc đo bằng bản probe cũ, rồi bản mới không cờ), rồi
-//       node tests/tools/ui18_launch_probe.mjs --runs=20 --show-inactive. Mỗi lần: tiến trình PowerShell xin nền trước, mở ứng
-//       dụng như harness e2e, đọc chủ nền trước (GetForegroundWindow) và win.isFocused() mỗi 150 ms trong 12 s. Máy đang có
-//       người dùng. Kiểm tự động: npx playwright test -c tests/e2e/playwright.config.ts main_layout client_list_walkthrough
-//       (khẳng định expectShowInactiveState). Phép cắn: tạm sửa harness thành showInactive: false và bỏ cờ khỏi mảng tham số
-//       của main_layout.spec.ts (bản sao lưu ở thư mục tạm, đã khôi phục), chạy lại cùng lệnh.
-//     result: >
-//       cách / số lần / ứng dụng vào nền trước / isFocused() true: mốc bản probe cũ (không cờ) 20 / 1 (lần 18, sau 4379 ms) /
-//       không đo; không cờ (probe mới) 20 / 0 / 20 (lần đầu ở 1917-2366 ms); có cờ 20 / 2 (lần 5 sau 4935 ms, lần 6 sau 3054 ms)
-//       / 2 (4939 ms, 3056 ms). Lần thử một-lần trước đó (không tính vào bảng, để kiểm probe chạy khi bỏ -ExecutionPolicy Bypass):
-//       có cờ, vào nền trước và isFocused() ở 7679 ms và 7693 ms. Đọc số: cờ chặn việc kích hoạt lúc hiện cửa sổ (isFocused()
-//       từ 20/20 xuống 2/20, hai lần còn lại muộn 3-8 s, không phải lúc hiện cửa sổ; nguồn chưa rõ, xem main-EXP-031). Số đo nền
-//       trước của hệ điều hành một mình cắn yếu (mốc chỉ 1/20) nên cột isFocused() là chỉ báo chính. Kiểm tự động dương tính:
-//       "6 passed (35.3s)" (main_layout và các ca của client_list_walkthrough). Phép cắn: "2 failed", cả hai hỏng đúng ở "the
-//       desktop Main did not log that it showed the window without focus" sau 30 s (client_list S1 và main_layout); báo cáo chỉ
-//       có dòng "2 failed" (không kiểm các ca còn lại của client_list_walkthrough có chạy hay không); lần đo probe không cờ ở trên chính là mức
-//       mốc mà việc bỏ cờ đưa về. Mảng tham số của hai nơi đã khôi phục (đối chiếu bằng grep).
-//     recorded_at: 2026-10-05T22:42:13.1836006+07:00
 //   - claim: >
 //       UI-19: số đo 50 lần trước và sau, phép cắn tất định.
 //     how: >
@@ -1119,60 +799,52 @@
 //       "9 passed (9)" 3/3 lần. Đã xóa hai bản tạm (git status chỉ còn tệp phiên này).
 //     recorded_at: 2026-10-05T22:42:13.1836006+07:00
 //   - claim: >
-//       Điều kiện cuối phiên 31: check 10 lần, e2e 10 lượt trong lúc Project Owner dùng máy, UI/evidence và %APPDATA% không đổi.
+//       Phiên 44 pha 2: môi trường, mốc và kết quả cuối. Hợp đồng Data Schema 10.0.1 và API Contract 6.2.0, cả hai approved;
+//       không đổi so với pha 1.
 //     how: >
-//       Trong UI/: tập lệnh chạy npm run check 10 lần liên tiếp (dừng ở lần hỏng đầu), rồi 10 lần npm run e2e KHÔNG đặt
-//       CT_WALKTHROUGH_RUNNER, từng lượt một, dừng ở lượt hỏng đầu, chép test-results/screenshot-timing.log và
-//       window-restore.log của từng lượt ra ngoài. Lượt e2e 1 bắt đầu 2026-10-05T21:38:20+07:00, lượt 10 kết thúc 22:31:34+07:00.
-//       Hỏi Project Owner sau 10 lượt. SHA-256 UI/evidence và tệp %APPDATA%\CommissionTracker so với mốc.
+//       Trong UI/ (Node 24.14.1, npm 11.11.0; react 19.3.0, zod 4.6.5, vite 8.3.1, vitest 5.0.2, typescript 6.0.3, eslint
+//       10.11.0, stylelint 17.15.0, @playwright/test 1.63.0): npm run check ba lượt liên tiếp; trong Desktop/: npm run build;
+//       trong UI/: npm run e2e ba lượt liên tiếp, không đặt CT_WALKTHROUGH_RUNNER, trong lúc Project Owner dùng máy bình
+//       thường, từng lượt một. Không npm ci, npm install, npm version.
 //     result: >
-//       check 10/10 đạt, "Tests 1555 passed (1555)" mỗi lần, từ 21:30:02 đến 21:37:14. e2e 10/10 "70 passed" (4,8-5,9 phút), mỗi
-//       lượt 107 lần chụp: 0 lần chụp lỗi hay hết giờ (lớn nhất 191 ms), 0 lần chụp ghi minimized:true (người dùng không thu nhỏ
-//       cửa sổ trong lượt nào), 0 lần công cụ phải mở lại cửa sổ (window-restore.log không có dòng), 1 lần ghi focused:true trên
-//       1070 lần chụp (lượt 10, payment_form-S6; nguyên nhân chưa rõ). Mọi lần hết giờ chụp ảnh: không có, nên không có trạng
-//       thái cửa sổ nào để ghi. UI/evidence 120 tệp, 0 khác biệt; %APPDATA%\CommissionTracker 0 khác biệt. Câu trả lời của
-//       Project Owner về tiêu điểm (hỏi sau 10 lượt, chọn trong hộp thoại): "Không còn bị giành". UI-18 đạt tiêu chí cuối.
-//       Không eslint-disable, không ngoại lệ lint mới, không phụ thuộc mới.
-//     recorded_at: 2026-10-05T22:42:13.1836006+07:00
+//       npm run check ba lượt liên tiếp, đều exit 0, mỗi lượt "Test Files 44 passed (44)", "Tests 2043 passed (2043)" (mốc pha
+//       1: 1936); lượt 1 15:19:09 đến 15:19:57, lượt 2 15:19:57 đến 15:20:44, lượt 3 15:20:45 đến 15:21:33 (2026-10-16,
+//       +07:00); mỗi lượt qua đủ typecheck, lint, lint:style, lint:contrast, lint:layer, lint:e2e, lint:scope, test.. Desktop
+//       npm run build: exit 0. npm run e2e: lượt 1 (15:21:58 đến 15:27:50) HỎNG: "1 failed, 3 did not run, 79 passed (5.7m)";
+//       ca hỏng testse2eclient_list_walkthrough.spec.ts:38 (S2, CSDL trống) chờ 30 s dòng "Chưa có khách hàng nào." mà không
+//       thấy, ở walkthrough_harness.ts:90, trong khi nhật ký Desktop của đúng ca ghi "reminder check #1 failed: no answer
+//       within 10000 ms" (backend đã in READY nhưng không trả lời Desktop trong 10 s); chưa tìm ra nguyên nhân, trace đã bị
+//       lượt sau xóa nên không đọc thêm được; ba ca sau nó (client_list S3, S4, S5) không chạy. Lượt 2 (15:27:52 đến
+//       15:33:47): 83 passed (5.7m). Lượt 3 (15:33:49 đến 15:39:48): 83 passed (5.8m). Mốc 83/83 ở mỗi lượt KHÔNG đạt ở lượt
+//       1. Mốc UI/evidence: tổng băm 140 tệp trước và sau từng lượt giống nhau (sha1
+//       698a810eb99c79158c546f3800abe37085a0932f). git status --short chỉ có tệp trong UI/. %APPDATA%\CommissionTracker:
+//       data.db 114688 byte, data.db.lock 0 byte, giờ ghi 2026-09-28 21:09, không đổi; %APPDATA%\Commission Tracker giữ mốc
+//       2026-10-15 10:33:25.
+//     recorded_at: 2026-10-16T15:40:24.5282444+07:00
+//   - claim: >
+//       R44-16: walkthrough_app.mjs không xóa đệ quy một đường dẫn đọc từ tệp trừ khi đó là thư mục do chính công cụ tạo.
+//     how: >
+//       Trong UI/: npx vitest run tests/tools (8 ca của isOwnDataDir: hợp lệ, ngoài thư mục tạm, tiền tố sai, chỉ có tiền tố,
+//       đoạn "..", lồng sâu hơn một cấp, không phải chuỗi). Phép cắn trên bản sao %TEMP%\ct_review_ui\UI (có thêm
+//       Desktop/configs/desktop.json): đổi điều kiện tên thành true.
+//     result: >
+//       8 ca đạt trong npm run check. Phép cắn: "Tests 2 failed | 6 passed (8)" (hai ca tiền tố sai và chỉ có tiền tố); khôi
+//       phục (so băm) rồi chạy lại: 8 passed. Không chạy walkthrough:app.
+//     recorded_at: 2026-10-16T15:40:24.5282444+07:00
+//   - claim: >
+//       UI-21: sau khi .gitignore gốc được sửa, hai dòng phủ định của UI/.gitignore là thừa và đã bỏ; không tệp nào của UI/ bị
+//       git bỏ qua.
+//     how: >
+//       Trong E:\CommissionTracker: (git ls-files UI/evidence UI/tests UI/src; git ls-files --others --exclude-standard UI) |
+//       git -c core.ignorecase=true check-ignore -v --no-index --stdin, chạy trước và sau khi bỏ hai dòng
+//       !src/logic/workflows/backup_data/ và !src/screens/pages/backup/.
+//     result: >
+//       Trước (danh sách git ls-files UI/evidence UI/tests, 172 tệp): exit 1, không dòng nào (không tệp nào bị bỏ qua). Sau
+//       (danh sách rộng hơn): exit 1, không dòng nào, gồm UI/evidence/walkthroughs/backup/ (git ls-files thấy backup-S1.png và
+//       các ảnh khác của thư mục đó). Giữ hai dòng không cần.
+//     recorded_at: 2026-10-16T15:40:24.5282444+07:00
 //
 // NOTES:
-//   - content: >
-//       UI.esproj: StartupCommand = npm run build (giao diện không tự chạy được;
-//       chạy thật là npm run build trong UI/ rồi npm start trong Desktop/),
-//       BuildCommand = npm run build, TestCommand = npm run check,
-//       JavaScriptTestRoot = src\, JavaScriptTestFramework giữ Vitest. Kiểm thử
-//       Main nằm ở tests/main/ (kiểm thử cấp layer, CLAUDE.md mục 4), ngoài
-//       src\, nên Test Explorer có thể không thấy; chạy bằng npm run check.
-//     written_at: 2026-09-27
-//   - content: >
-//       npm run e2e, npm run walkthrough:app cần Desktop đã được build
-//       (Desktop/dist/main.js); công cụ báo rõ nếu thiếu. Phiên UI không build
-//       Desktop.
-//     written_at: 2026-09-27
-//   - content: >
-//       Cách chạy e2e từ phiên 19 (UI-8). Kiểm hồi quy (mọi phiên, mọi layer): trong
-//       UI/, npm run e2e KHÔNG đặt CT_WALKTHROUGH_RUNNER; bằng chứng nháp vào
-//       UI/test-results/evidence/, UI/evidence không đổi. Ghi bằng chứng của một phiên
-//       giao diện hoặc của Project Owner: đặt biến trước, PowerShell
-//       $env:CT_WALKTHROUGH_RUNNER = "coding-agent@<ngày>#<số>"; npm run e2e (Git Bash:
-//       CT_WALKTHROUGH_RUNNER='Tên' npm run e2e); bằng chứng vào UI/evidence/ với đúng
-//       tên người chạy. Chạy tay kịch bản: npm run walkthrough:app (dữ liệu mẫu D1),
-//       -- --commissions (D2), -- --progress (D3, từ phiên 20), -- --empty (trống).
-//     written_at: 2026-09-29
-//   - content: >
-//       Phiên 12 sửa tests/main/main.test.tsx: ca "valid launch value → main
-//       frame" trước khẳng định không có lời gọi nào lúc khởi động. Nay trang
-//       mặc định client_list tải danh sách khi mở, nên ca này khẳng định đúng
-//       một lời gọi GET <backendBaseUrl>/clients. Đây là hành vi mới theo plan
-//       việc 5, không phải nới kiểm thử.
-//     written_at: 2026-09-27
-//   - content: >
-//       Phiên 16 sửa tests/main/main.test.tsx: ca "valid launch value" nay chờ
-//       "Chưa có khách hàng nào." (trạng thái rỗng của D1) thay cho câu rỗng của
-//       nhóm cũ, và khẳng định có vùng điều hướng "Điều hướng chính". Vẫn đúng
-//       một lời gọi GET <backendBaseUrl>/clients. Hành vi mới theo plan việc 4 và
-//       7, không phải nới kiểm thử.
-//     written_at: 2026-09-28
 //   - content: >
 //       Phiên 34 sửa tests/main/main.test.tsx: mọi bridge giả có thêm khóa invoke (hàm) vì invoke nay bắt buộc; ca "bridge không có backendBaseUrl" nay
 //       là { invoke } để chỉ có một lỗi. Hành vi mới theo plan việc 3, không phải nới kiểm thử. Phiên 34 cũng sửa e2e: thêm exact: true cho 11
@@ -1285,7 +957,7 @@ if (!launch.ok) {
   // Step 3. Foundation workflow scaffold_ui: the http_client resource, and (from
   // session 34) the ipc_bridge resource built from the invoke function read in step 1.
   const httpClient = createHttpClient(launch.backendBaseUrl, SCAFFOLD_UI_CONFIGS.timeoutMs)
-  const ipcBridge = createIpcBridge(launch.invoke)
+  const ipcBridge = createIpcBridge(launch.invoke, SCAFFOLD_UI_CONFIGS.ipcAddresses)
 
   // Step 4. Wire each interface workflow, in the order of
   // .design/ui_decomposition.md §2:

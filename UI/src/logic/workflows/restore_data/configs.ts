@@ -5,7 +5,7 @@
  */
 export const RESTORE_DATA_CONFIGS = {
   // [CONTRACT] Versions of the supreme contract these values realize.
-  contract: { apiContract: '5.0.0', dataSchema: '10.0.1' },
+  contract: { apiContract: '6.2.0', dataSchema: '10.0.1' },
 
   // Every ipc entry this workflow calls (.design/ui_decomposition.md, "Chặng F",
   // table of calls), as declared in api_contract.yaml 5.0.0 clause_d_desktop.restore_data.

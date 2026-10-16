@@ -73,8 +73,25 @@ export function electronBinary() {
   return createRequire(path.join(DESKTOP_ROOT, 'package.json'))('electron')
 }
 
+export const DATA_DIR_PREFIX = 'ct-ui-walkthrough-'
 export function makeDataDir() {
-  return fs.mkdtempSync(path.join(os.tmpdir(), 'ct-ui-walkthrough-'))
+  return fs.mkdtempSync(path.join(os.tmpdir(), DATA_DIR_PREFIX))
+}
+
+// R44-16 (session 44): may this tool delete this folder recursively? The path
+// of a folder kept by --keep is read from a file (KEPT_FILE), so it is not
+// trusted: it is deleted only when it is a folder this tool made, i.e. directly
+// inside the system temp folder (not deeper, not elsewhere, no ".." segment in
+// what was written) and named with the prefix of makeDataDir plus a suffix.
+// Pure: it looks at the strings only, touches no file.
+export function isOwnDataDir(candidate, tmpdir = os.tmpdir()) {
+  if (typeof candidate !== 'string' || candidate === '') return false
+  if (candidate.split(/[\\/]+/).includes('..')) return false
+  const folded = (p) => (process.platform === 'win32' ? p.toLowerCase() : p)
+  const resolved = path.resolve(candidate)
+  if (folded(path.dirname(resolved)) !== folded(path.resolve(tmpdir))) return false
+  const name = path.basename(resolved)
+  return name.startsWith(DATA_DIR_PREFIX) && name.length > DATA_DIR_PREFIX.length
 }
 
 // Arguments of the Electron binary: the desktop app, with the fixture as backend.

@@ -5,7 +5,7 @@
  */
 export const MANAGE_CLIENT_CONFIGS = {
   // [CONTRACT] Versions of the supreme contract these values realize.
-  contract: { apiContract: '4.0.0', dataSchema: '7.0.0' },
+  contract: { apiContract: '6.2.0', dataSchema: '10.0.1' },
 
   // Every endpoint of clause_b_backend.manage_client that has external in
   // called_by (api_contract.yaml 4.0.0). labels: every declared result label

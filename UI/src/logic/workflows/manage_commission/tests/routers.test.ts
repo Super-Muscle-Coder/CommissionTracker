@@ -286,3 +286,35 @@ describe('operations without typed input go straight to Services', () => {
     expect(services.reloadClientChoices).toHaveBeenCalledWith(null, KID)
   })
 })
+
+// R44-6 (session 44): Routers checks what `type` writes (client chosen, title
+// not blank and at most 200 code points, amount, currency, date) and nothing
+// else. A free text with digits, an emoji or special characters reaches
+// Services unchanged. The fields come from this table; one more free text
+// field of the form adds one row. Reference links are one per line: a value
+// is one line.
+const AWKWARD_TEXTS = [
+  'Chân dung 2 nhân vật',
+  '2024',
+  'Mai 😀 Lan',
+  'Lê "Hoa" <b>&amp;</b>',
+  "O'Brien; DROP TABLE commissions;--",
+  'a/b\\c%20#?=&',
+  '★ 星 ✓ №',
+]
+const FREE_TEXT_FIELDS: [string, (v: string) => Partial<CommissionFormDraft>, (input: CommissionInput) => unknown][] = [
+  ['title', (v) => ({ title: v }), (input) => input.title],
+  ['commissionType', (v) => ({ commissionType: v }), (input) => input.commission_type],
+  ['description', (v) => ({ description: v }), (input) => input.description],
+  ['referenceLinks', (v) => ({ referenceLinks: v }), (input) => input.reference_links],
+]
+describe('saveCommission — a free text with digits, emoji or special characters still passes (R44-6)', () => {
+  for (const [field, toDraft, read] of FREE_TEXT_FIELDS) {
+    it.each(AWKWARD_TEXTS)(`${field}: %s`, async (text) => {
+      const { sent, errors } = await save(toDraft(text))
+      expect(errors).toBeNull()
+      expect(sent).not.toBeNull()
+      expect(read(sent as CommissionInput)).toEqual(field === 'referenceLinks' ? [text] : text)
+    })
+  }
+})

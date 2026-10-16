@@ -115,3 +115,32 @@ describe('with the real Services (fake Adapters): no stage chosen → the field 
     expect(changeStage).not.toHaveBeenCalled()
   })
 })
+
+// R44-6 (session 44): Routers checks the one thing `type` writes (a stage is
+// chosen) and nothing else. A note with digits, an emoji or special characters
+// reaches Services unchanged. The fields come from this table; one more free
+// text field of the form adds one row.
+const AWKWARD_TEXTS = [
+  'Đã gửi bản phác 2',
+  '2024',
+  'Xong 😀',
+  'Lê "Hoa" <b>&amp;</b>',
+  "O'Brien; DROP TABLE stages;--",
+  'a/b\\c%20#?=&',
+  '★ 星 ✓ №',
+]
+const FREE_TEXT_FIELDS: [string, (v: string) => { toStage: string; note: string }, (input: unknown) => unknown][] = [
+  ['note', (v) => ({ toStage: 'sketching', note: v }), (input) => (input as { note: string }).note],
+]
+describe('saveStageChange — a free text with digits, emoji or special characters still passes (R44-6)', () => {
+  for (const [field, toDraft, read] of FREE_TEXT_FIELDS) {
+    it.each(AWKWARD_TEXTS)(`${field}: %s`, async (text) => {
+      const { services, routers } = fakeServices()
+      await routers.saveStageChange(TARGET, toDraft(text), false)
+      expect(services.rejectInput).not.toHaveBeenCalled()
+      expect(services.saveStageChange).toHaveBeenCalledTimes(1)
+      const sent = (services.saveStageChange.mock.calls[0] as unknown as [unknown, unknown, boolean])[1]
+      expect(read(sent)).toBe(text)
+    })
+  }
+})

@@ -2,8 +2,8 @@
 // workflow: view_income_report
 // clause: external
 // component: services
-// last_updated_by: coding-agent@2026-10-01#1
-// last_updated_at: 2026-10-01T22:02:30+07:00
+// last_updated_by: coding-agent@2026-10-16#1
+// last_updated_at: 2026-10-16T15:40:27.5001474+07:00
 //
 // EXPERIENCES:
 //   - id: view_income_report-EXP-001
@@ -67,6 +67,13 @@
 //       "Đến ngày" ("Ngày kết thúc phải bằng hoặc sau ngày bắt đầu"); hai ngày bằng nhau hợp lệ. Khi một ô đã sai
 //       hoặc rỗng thì KHÔNG xét thứ tự (chỉ báo ô đó). So sánh thứ tự bằng so sánh chuỗi, đúng vì hai bên đều là
 //       ngày có thật với năm bốn chữ số.
+//   - id: view_income_report-EXP-006
+//     content: >
+//       Chuyển từ NOTE quá hạn (R44-10, phiên 44 pha 2). Năm 0000 bị coi là ngày không có thật cả ở Routers lẫn Adapters:
+//       Python date không có năm 0 (MINYEAR = 1), backend sẽ trả 400. Hợp đồng chỉ ghi "ISO 8601 calendar date"; đây là cách
+//       đọc hẹp có chủ đích để lỗi hiện ở ô thay vì thành "Máy chủ không nhận". Không ảnh hưởng người dùng thật. Hai NOTE kia
+//       (câu hỏi về luật thứ tự ngày và câu trả lời CT-5) đã xóa: luật nay nằm trong type của period_to (Data Schema 9.0.2) và
+//       Configs, Routers trích đúng nguồn đó.
 //
 // UNSOLVED_PROBLEMS: []
 //
@@ -124,26 +131,17 @@
 //       "Tests 1303 passed (1303)" (không đổi: chỉ đổi giá trị mong đợi của ca "Configs name Data Schema 9.0.2 and API
 //       Contract 4.0.0"); e2e income_report vẫn đạt trong 59 ca. Không đổi logic nào của Routers, Services, Adapters.
 //     recorded_at: 2026-10-01T22:02:30+07:00
+//   - claim: >
+//       R44-9: Configs ghi API Contract 6.2.0 và Data Schema 10.0.1; kiểm thử so khớp.
+//     how: >
+//       Trong UI/: npx vitest run src/logic/workflows/view_income_report (tests/adapters.test.ts, ca "Configs name Data Schema
+//       … and API Contract …").
+//     result: >
+//       Đạt trong npm run check. Bảng nhãn của một lời gọi khớp api_contract.yaml từng dòng như trước (6.2.0 không đổi gì ở
+//       phía giao diện).
+//     recorded_at: 2026-10-16T15:40:27.5001474+07:00
 //
-// NOTES:
-//   - content: >
-//       TRẢ LỜI câu hỏi bên dưới (CT-5, phiên 25): Orchestrator đã chọn phương án A, Data Schema 9.0.2 đưa luật vào
-//       `type` của period_to ("date (on or after period_from)"). Luật nay là ràng buộc trong ngoặc của `type`, giao
-//       diện được phép kiểm (iWCA §5, nhãn [CONTRACT]); Configs, Routers (readDraft) trích đúng nguồn mới.
-//     written_at: 2026-10-01
-//   - content: >
-//       Câu hỏi cho Orchestrator (không chặn): luật "ngày bắt đầu sau ngày kết thúc" nằm ở phần description của
-//       view_income_report trong data_schema.yaml 9.0.1 ("period_from after period_to is invalid"), không nằm
-//       trong `type` của đầu vào; iWCA §5 chỉ cho kiểm điều viết trong `type`. Tôi theo D5 (đặc tả ghi rõ đây là
-//       "bản sao của luật hợp đồng, không phải [UI-ONLY]"). Nếu Orchestrator muốn coi đó là kiểm ngoài `type`, cần
-//       chốt lại ở D5 hoặc thêm vào `type`; backend đã trả 400 ERR_VALIDATION cho đúng ca này (đo thật), nên
-//       nếu bỏ luật ở giao diện thì người dùng vẫn thấy một câu lỗi ("Máy chủ không nhận khoảng thời gian này.").
-//     written_at: 2026-09-30
-//   - content: >
-//       Năm 0000 bị coi là ngày không có thật cả ở Routers lẫn Adapters: Python date không có năm 0 (MINYEAR = 1),
-//       backend sẽ trả 400. Hợp đồng chỉ ghi "ISO 8601 calendar date"; đây là cách đọc hẹp có chủ đích để lỗi
-//       hiện ở ô thay vì thành "Máy chủ không nhận". Không ảnh hưởng người dùng thật.
-//     written_at: 2026-09-30
+// NOTES: []
 // ===WCA-CHECKPOINT-END===
 /**
  * Services of the interface workflow view_income_report: the only place of the

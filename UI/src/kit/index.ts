@@ -2,8 +2,8 @@
 // workflow: kit
 // clause: external
 // component: kit
-// last_updated_by: coding-agent@2026-10-09#1
-// last_updated_at: 2026-10-09T15:02:03.5476248+07:00
+// last_updated_by: coding-agent@2026-10-16#1
+// last_updated_at: 2026-10-16T15:40:25.0953099+07:00
 //
 // EXPERIENCES:
 //   - id: kit-EXP-001
@@ -260,25 +260,32 @@
 //       spec chặng F bảo dùng ConfirmPanel; hai thuộc tính CSS không mang khái niệm nghiệp vụ. Không đổi hành vi của stage_change và payment_list
 //       (text của chúng không có dấu xuống dòng, không có từ dài; ảnh evidence của chúng giữ nguyên trong 5 lượt e2e). check_contrast không đổi
 //       (không cặp màu nào đổi). Dùng ở trang restore.
+//   - id: kit-EXP-023
+//     content: >
+//       Phiên 44 pha 2, ba luật máy cho kit. (1) R44-1: eslint.config.js, MATRIX.R7_kit, ngoài cấm prop style, cấm trong
+//       .ts/.tsx của src/kit một giá trị trình bày thô viết thành literal: mã màu hex (#rgb, #rgba, #rrggbb, #rrggbbaa), hàm
+//       màu (rgb, rgba, hsl, hsla, hwb, lab, lch, oklab, oklch) và độ dài tuyệt đối (px, pt, cm, mm, in), trong chuỗi,
+//       template và giá trị thuộc tính JSX; và tên màu CSS (148 tên) ở thuộc tính JSX mang màu (fill, stroke, color,
+//       stopColor, floodColor, lightingColor, background*). Viết bằng no-restricted-syntax với selector AST (Literal,
+//       TemplateElement, JSXAttribute), không plugin. "none" và "currentColor" không phải tên màu nên vẫn dùng được.
+//       tokens.css không bị ảnh hưởng (luật chỉ áp .ts/.tsx; stylelint giữ CSS). Tệp kit hiện có đều đạt. (2) R44-5:
+//       stylelint.config.js, luật declaration-property-value-disallowed-list cấm var(--base-*) ở mọi tệp CSS dưới src/ trừ
+//       tokens.css (token nền chỉ được token vai trò đọc). (3) R44-4: scripts/check_contrast.mjs đọc thêm MỌI tệp CSS của kit
+//       và đòi mỗi khai báo color (chữ) dùng token --color-* là chữ của một cặp TEXT_PAIRS, mỗi khai báo border* hay outline*
+//       dùng token --color-* là phần của một cặp NON_TEXT_PAIRS. Chọn cách suy theo token, không suy theo nền: nền của một quy
+//       tắc phụ thuộc phần tử cha nên suy cặp từ CSS phải đoán; luật theo token không đoán mà vẫn chặn một token chưa ai đo
+//       (Caption đổi sang --color-action-text-disabled, khoảng 3,2:1, từng lọt). Giới hạn: luật giữ token chứ không giữ nền nó
+//       rơi vào; chỗ cần đúng nền vẫn do CSS ghim của cặp phi văn bản giữ. Ngoại lệ ghi trong EXEMPT theo (tệp CSS, danh sách
+//       selector của quy tắc, token, lý do): 22 mục, gồm hai chỗ chữ của nút vô hiệu (Button.module.css và
+//       ConfirmPanel.module.css, WCAG 2.1 1.4.3 miễn thành phần không hoạt động), viền nút vô hiệu, viền trang trí của khung
+//       và danh sách (--color-border, --color-border-danger, --color-border-success), viền nút chính bằng màu nền của nó, và
+//       viền nút phụ (--color-border ở Button, ConfirmPanel, EmptyState: nút nhận ra nhờ chữ và nền, giữ ngoài nhóm phi văn
+//       bản như quyết định cũ). Miễn trừ theo token cho mọi nơi là không được: một mục ngoại lệ không còn khớp khai báo nào
+//       thì cũng làm lệnh hỏng.
 //
 // UNSOLVED_PROBLEMS: []
 //
 // EVIDENCE:
-//   - claim: >
-//       Token tối đặt xong; mọi cặp chữ/nền kit dùng đạt WCAG AA (>= 4.5:1); style
-//       của kit sạch với R7; kit không import logic, screens hay Main.
-//     how: >
-//       Trong UI/: npm run check (stylelint, lint:contrast, eslint). node
-//       scripts/check_contrast.mjs in từng cặp.
-//     result: >
-//       "check_contrast: 18 text/background pairs checked, all >= 4.5:1."
-//       Các tỷ lệ: chữ trên nền trang 13.65, trên header và bề mặt nổi 12.28,
-//       trên hover và ô nhập 11.03, trên mục chọn 9.68, trên nền lỗi 11.56; chữ
-//       phụ 7.17 (trang), 6.45 (bề mặt nổi); chữ lỗi 7.90 (trang), 6.69 (nền
-//       lỗi); chữ thành công 7.09; nút chính 5.60 và 6.78 (hover); nút phụ 9.68
-//       và 7.68 (hover). stylelint --max-warnings 0 sạch (tokens.css, global.css,
-//       16 CSS module); eslint sạch.
-//     recorded_at: 2026-09-28T10:56:10+07:00
 //   - claim: >
 //       Phép kiểm độ tương phản cắn: một giá trị tương phản thấp làm npm run
 //       check hỏng.
@@ -303,19 +310,6 @@
 //       SuccessNotice), client_form/client_form-S2-errors.png (TextField có lỗi,
 //       FieldGroup, Inline, TextArea, InlineAlert), client_form-S5-unreachable.png.
 //     recorded_at: 2026-09-28T10:54:37+07:00
-//   - claim: >
-//       Phiên 17: nhóm chữ vẫn >= 4.5:1, nhóm phi văn bản >= 3:1, và CSS đặt từng
-//       phần phi văn bản đúng chỗ đã khai.
-//     how: >
-//       Trong UI/: node scripts/check_contrast.mjs (cũng là bước lint:contrast
-//       của npm run check).
-//     result: >
-//       "check_contrast: 18 text pairs >= 4.5:1 and 11 non-text pairs >= 3:1
-//       checked, all pass." Phi văn bản: viền ô 3.73 (nền ô), 4.62 (trang); viền
-//       ô lỗi 3.83, 4.74; vòng focus 7.74 (trang), 6.97 (EmptyState, bề mặt nổi),
-//       6.26 (hover), 5.49 (mục chọn); vạch điều hướng 5.49 (mục chọn), 6.97 (vùng
-//       điều hướng). Nhóm chữ không đổi (thấp nhất 5.60).
-//     recorded_at: 2026-09-28T12:10:30+07:00
 //   - claim: >
 //       Phép kiểm phi văn bản cắn cả tỷ lệ lẫn vị trí.
 //     how: >
@@ -343,37 +337,6 @@
 //       và viền ô lỗi nhìn rõ trên nền tối.
 //     recorded_at: 2026-09-28T12:24:05+07:00
 //   - claim: >
-//       Phiên 19: tương phản phủ SelectField, DateField và dòng phụ của ItemList:
-//       viền, viền lỗi, vòng focus của hai ô mới được kiểm theo đúng vị trí thật
-//       trong CSS; cả nhóm chữ vẫn >= 4.5:1.
-//     how: >
-//       Trong UI/: node scripts/check_contrast.mjs (bước lint:contrast của npm run
-//       check). FIELDS trong script liệt kê bốn CSS module ô nhập; mỗi cặp phi văn
-//       bản của ô nhập kiểm .input, .inputError, :focus-visible của cả bốn.
-//     result: >
-//       "check_contrast: 19 text pairs >= 4.5:1 and 11 non-text pairs >= 3:1
-//       checked, all pass." Cặp chữ mới: --color-text-muted trên
-//       --color-surface-hover 5.79:1 (dòng phụ ItemList khi rê chuột). Các cặp cũ
-//       nay ghi thêm SelectField, DateField: viền ô 3.73 (nền ô), 4.62 (trang); viền
-//       lỗi 3.83, 4.74; vòng focus 7.74; chữ trong ô 11.03; chữ vô hiệu 5.79.
-//     recorded_at: 2026-09-29T09:13:30+07:00
-//   - claim: >
-//       Phép kiểm vị trí cắn với hai component mới.
-//     how: >
-//       Tạm đổi border của .input trong SelectField.module.css sang
-//       var(--color-border) (viền trang trí), và outline-offset của .input:focus-visible,
-//       .inputError:focus-visible trong DateField.module.css sang calc(-1 *
-//       var(--border-width-focus)); node scripts/check_contrast.mjs; khôi phục; chạy lại.
-//     result: >
-//       exit 1: "place [non-text >= 3:1] 3.73:1 --color-border-field … the CSS no
-//       longer puts it there: SelectField/SelectField.module.css .input ends with
-//       border: var(--border-width-panel) solid var(--color-border) (expected …
-//       var(--color-border-field))" (hai cặp viền), và "place … 7.74:1
-//       --color-focus-ring … DateField/DateField.module.css .input:focus-visible ends
-//       with outline-offset: calc(-1 * var(--border-width-focus)) (expected 0)";
-//       "check_contrast: 3 of 30 pair(s) fail". Khôi phục: exit 0, "all pass".
-//     recorded_at: 2026-09-29T09:13:10+07:00
-//   - claim: >
 //       Phiên 20: ConfirmPanel được phép kiểm tương phản phủ, và phép kiểm cắn khi
 //       vòng focus của nó bị dời vào trong; focus tự tới nút xác nhận.
 //     how: >
@@ -389,33 +352,6 @@
 //       Trên ứng dụng thật: stage_change S3 toBeFocused ở "Xác nhận", ảnh
 //       UI/evidence/walkthroughs/stage_change/stage_change-S3-confirm.png.
 //     recorded_at: 2026-09-29T17:45:30+07:00
-//   - claim: >
-//       Phiên 22: DateTimeField, hành động của ItemList và hint của SelectField được phép kiểm
-//       tương phản phủ; nhóm chữ vẫn >= 4.5:1, nhóm phi văn bản >= 3:1 (13 cặp).
-//     how: >
-//       Trong UI/: node scripts/check_contrast.mjs (bước lint:contrast của npm run check).
-//       FIELDS thêm DateTimeField/DateTimeField.module.css; NON_TEXT_PAIRS thêm cặp vòng focus
-//       của nút hành động trong hàng ItemList; TEXT_PAIRS ghi thêm nơi dùng (DateTimeField,
-//       hint của SelectField, nút hành động của ItemList).
-//     result: >
-//       "check_contrast: 19 text pairs >= 4.5:1 and 13 non-text pairs >= 3:1 checked, all
-//       pass." (mốc phiên 21: 12 cặp phi văn bản). Cặp mới: 6.97:1 --color-focus-ring
-//       (#8fb0e8) on --color-surface-raised (#252525) — vòng focus của nút hành động trong hàng
-//       ItemList, ngoài nút. Các cặp viền ô, viền lỗi, vòng focus của ô nay ghi thêm
-//       DateTimeField: 3.73 và 4.62 (viền), 3.83 và 4.74 (viền lỗi), 7.74 (vòng focus).
-//     recorded_at: 2026-09-30T08:24:00+07:00
-//   - claim: >
-//       Phép kiểm cắn với hai phần mới: đổi CSS khỏi chỗ đã khai thì check hỏng.
-//     how: >
-//       Tạm đổi border của .input trong DateTimeField.module.css sang var(--color-border) (viền
-//       trang trí), và background của .list trong ItemList.module.css sang
-//       var(--color-surface-hover); node scripts/check_contrast.mjs; khôi phục cả hai; chạy lại.
-//     result: >
-//       exit 1, "place [non-text >= 3:1] 3.73:1 --color-border-field (#858585) on
-//       --color-surface-field … the CSS no longer puts it there" và "… 4.62:1 … outer edge",
-//       "place … 6.97:1 --color-focus-ring … focus ring of the action button of an ItemList row",
-//       "check_contrast: 3 of 32 pair(s) fail". Khôi phục: "all pass", 13 cặp phi văn bản.
-//     recorded_at: 2026-09-30T08:24:30+07:00
 //   - claim: >
 //       Ba component mới hoặc mở rộng dựng đúng trên ứng dụng thật, nền tối, và ba trang cũ dùng
 //       ItemList, SelectField không đổi.
@@ -440,30 +376,6 @@
 //       Không có thay đổi cấu hình ESLint, stylelint, check_layer.
 //     recorded_at: 2026-10-01T20:22:00+07:00
 //   - claim: >
-//       Phiên 27: TimeField và CheckboxField được phép kiểm tương phản phủ; nhóm chữ vẫn >= 4.5:1, nhóm phi văn
-//       bản >= 3:1.
-//     how: >
-//       Trong UI/: node scripts/check_contrast.mjs (bước lint:contrast của npm run check). FIELDS thêm
-//       TimeField/TimeField.module.css; CSS.checkboxRingOutside đưa vòng focus của CheckboxField vào cặp vòng
-//       focus trên nền trang; TEXT_PAIRS và NON_TEXT_PAIRS ghi thêm nơi dùng.
-//     result: >
-//       "check_contrast: 19 text pairs >= 4.5:1 and 13 non-text pairs >= 3:1 checked, all pass." (số cặp bằng mốc
-//       phiên 24: cả hai component dùng lại cặp đã có). Viền ô, viền lỗi, vòng focus của TimeField: 3.73 và
-//       4.62, 3.83 và 4.74, 7.74. Vòng focus của CheckboxField trên nền trang 7.74:1.
-//     recorded_at: 2026-10-03T10:42:22.0487385+07:00
-//   - claim: >
-//       Phép kiểm vị trí cắn với hai component mới.
-//     how: >
-//       (a) Tạm đổi outline-offset của .input:focus-visible trong CheckboxField.module.css sang 0; (b) tạm đổi
-//       border của .input trong TimeField.module.css sang var(--color-border); node scripts/check_contrast.mjs;
-//       khôi phục từng cái (sao lưu và chép lại nguyên byte); chạy lại.
-//     result: >
-//       (a) exit 1: "the CSS no longer puts it there: CheckboxField/CheckboxField.module.css .input:focus-visible
-//       ends with outline-offset: 0 (expected var(--border-width-focus))", "1 of 32 pair(s) fail". (b) exit 1:
-//       "TimeField/TimeField.module.css .input ends with border: var(--border-width-panel) solid
-//       var(--color-border) (expected …var(--color-border-field))", "2 of 32 pair(s) fail". Khôi phục: "all pass".
-//     recorded_at: 2026-10-03T10:42:22.0487385+07:00
-//   - claim: >
 //       Hai component mới dựng đúng trên ứng dụng thật, nền tối.
 //     how: >
 //       npm run e2e có runner (ảnh chụp các kịch bản bấm thử); npm run check (ReminderSettings.test.tsx 27 ca).
@@ -472,23 +384,53 @@
 //       ô giờ "Vào lúc" 09:00, ô chọn thứ), reminder_settings-S4-errors.png (lỗi cạnh ô số của mốc và ô "Mỗi").
 //       Kiểm thử dựng trang: ô giờ là input type time, ô bật là checkbox, các ô vô hiệu khi đang lưu.
 //     recorded_at: 2026-10-03T10:42:22.0487385+07:00
+//   - claim: >
+//       Phiên 44 pha 2, tương phản hiện tại: 19 cặp chữ >= 4,5:1 và 13 cặp phi văn bản >= 3:1 đạt; mọi khai báo màu của CSS
+//       kit có cặp hoặc nằm trong 22 ngoại lệ có lý do.
+//     how: >
+//       Trong UI/: node scripts/check_contrast.mjs (bước lint:contrast của npm run check).
+//     result: >
+//       "check_contrast: 19 text pairs >= 4.5:1 and 13 non-text pairs >= 3:1 checked, all pass; 97 colour declarations of the
+//       kit CSS have a pair or one of 22 exemptions." ở cả ba lượt npm run check. Thay thế các mục EVIDENCE cũ ghi số cặp từng
+//       phiên (11, 12, 19...).
+//     recorded_at: 2026-10-16T15:40:25.0953099+07:00
+//   - claim: >
+//       R44-1: luật R7 cho .ts/.tsx của kit cắn cả ba dạng của pha 1 và cả tên màu; "currentColor" và "none" vẫn qua.
+//     how: >
+//       Trên bản sao %TEMP%\ct_review_ui\UI, tạo src/kit/_v.tsx rồi chạy npm run lint, mỗi dạng một lần: fill="#ff0000";
+//       width="16px"; chuỗi "rgb(1,2,3)"; template `${n}px solid #fff`; fill="red"; fill="currentColor" stroke="none". Rồi npm
+//       run check đầy đủ với fill="#ff0000". Xóa _v.tsx (so băm) và chạy lại.
+//     result: >
+//       exit 1 ở năm dạng đầu, mỗi lần một lỗi ở đúng _v.tsx: "R7: no raw colour or absolute length in a kit .ts/.tsx file;
+//       use a role token from the CSS module" (hex, px, rgb, template) và "R7: no CSS colour name in a colour attribute of a
+//       kit file" (red). currentColor và none: exit 0. npm run check đầy đủ: exit 1 ở bước lint. Khôi phục: exit 0 mọi lần.
+//       npm run lint trên repo thật: sạch, nghĩa là mọi tệp kit hiện có đạt.
+//     recorded_at: 2026-10-16T15:40:25.0953099+07:00
+//   - claim: >
+//       R44-5: component không dùng token nền; tokens.css vẫn được.
+//     how: >
+//       Trên bản sao: Caption.module.css đổi color sang var(--base-gray-600); npm run lint:style. Rồi khôi phục và chạy lại
+//       (chiều ngược: tokens.css và mọi CSS còn lại đạt).
+//     result: >
+//       exit 2, "R7: no base token (--base-*) outside src/kit/tokens/tokens.css; use a role token." tại Caption.module.css
+//       3:10. Khôi phục: exit 0 (tokens.css đạt).
+//     recorded_at: 2026-10-16T15:40:25.0953099+07:00
+//   - claim: >
+//       R44-4: máy đo tương phản bắt token màu chưa có cặp (hai phép cắn của plan và một phép thêm).
+//     how: >
+//       Trên bản sao: (a) Caption.module.css color đổi sang var(--color-action-text-disabled); (b) TextField.module.css,
+//       border của .input, đổi sang var(--color-border) (viền ô nhập chưa có cặp); (c) thêm quy tắc .input:hover {
+//       border-color: var(--color-border); } vào TextField.module.css. Mỗi lần: npm run lint:contrast, rồi khôi phục (so băm)
+//       và chạy lại.
+//     result: >
+//       (a) exit 1: "unlisted components/Caption/Caption.module.css .caption { color: var(--color-action-text-disabled) }: …
+//       is the foreground of no text pair". (b) exit 1: "unlisted components/TextField/TextField.module.css .input,
+//       .inputError { border: … var(--color-border) }: … no non-text pair". (c) exit 1: "unlisted … .input:hover {
+//       border-color: var(--color-border) }". Khôi phục: exit 0 mọi lần. Hai chỗ chữ của nút vô hiệu đạt nhờ hai mục EXEMPT
+//       theo tệp và selector.
+//     recorded_at: 2026-10-16T15:40:25.0953099+07:00
 //
-// NOTES:
-//   - content: >
-//       Cho Orchestrator (không chặn, không phải việc của giao diện): ô ngày gốc
-//       (DateField, "Hạn giao") hiện ngày theo ngôn ngữ của Electron, hiện là en-US
-//       (11/30/2026, tháng trước ngày), khác cách viết dd/mm/yyyy ở mọi chỗ khác
-//       của giao diện. Thuộc tính lang của trang không đổi được điều này; muốn đổi
-//       thì desktop Main đặt ngôn ngữ của ứng dụng (ví dụ app.commandLine
-//       appendSwitch('lang', 'vi') trước ready). Phiên giao diện không sửa Desktop/.
-//     written_at: 2026-09-29
-//   - content: >
-//       Cho Orchestrator (không chặn, không phải việc của giao diện; DSK-15): từ phiên 22, ô ngày
-//       giờ gốc (DateTimeField, "Ngày giờ nhận tiền") cũng hiện theo ngôn ngữ của Electron
-//       (en-US: tháng/ngày/năm, giờ AM/PM), khác cách viết HH:mm dd/mm/yyyy ở mọi chỗ khác. Giá
-//       trị của ô luôn là YYYY-MM-DDTHH:mm, nên logic không bị ảnh hưởng; chỉ cách hiện. Không sửa
-//       ở phiên này (Desktop/).
-//     written_at: 2026-09-30
+// NOTES: []
 // ===WCA-CHECKPOINT-END===
 /**
  * Public entry of the kit zone — the only path the screens zone may import

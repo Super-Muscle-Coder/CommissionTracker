@@ -321,3 +321,21 @@ describe('rejectInput', () => {
     )
   })
 })
+
+// R44-14 (session 44): which of the last save's result stays after the contact
+// rows change is a presentation decision, so it is Services'. The errors are
+// keyed by row (contacts.<row>.…), the rows shift, and the result of the last
+// save describes a draft no longer on the screen: it goes whole, whatever it was.
+describe('afterContactRowsChange', () => {
+  const rejectedInput = servicesOf({}).rejectInput({ displayName: 'required', 'contacts.1.value': 'required' })
+  const results: [string, ViewResult<{ clientId: string; message: string }>][] = [
+    ['rejected, origin input (summary and field errors)', rejectedInput as ViewResult<{ clientId: string; message: string }>],
+    ['rejected, origin system', { kind: 'rejected', origin: 'system', code: 'ERR_VALIDATION', message: 'x', fieldErrors: {} }],
+    ['unreachable', { kind: 'unreachable', message: 'x' }],
+    ['contract_violation', { kind: 'contract_violation', message: 'x' }],
+    ['ok', { kind: 'ok', view: { clientId: ID, message: 'x' } }],
+  ]
+  it.each(results)('%s → dropped (null)', (_what, saved) => {
+    expect(servicesOf({}).afterContactRowsChange(saved)).toBeNull()
+  })
+})

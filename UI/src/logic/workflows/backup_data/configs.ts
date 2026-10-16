@@ -5,7 +5,7 @@
  */
 export const BACKUP_DATA_CONFIGS = {
   // [CONTRACT] Versions of the supreme contract these values realize.
-  contract: { apiContract: '4.0.0', dataSchema: '9.0.3' },
+  contract: { apiContract: '6.2.0', dataSchema: '10.0.1' },
 
   // Every http endpoint this workflow calls (.design/ui_decomposition.md,
   // "Chặng E", table of calls), as declared in api_contract.yaml 4.0.0.

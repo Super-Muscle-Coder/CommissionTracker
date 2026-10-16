@@ -2,8 +2,8 @@
 // workflow: update_progress
 // clause: external
 // component: services
-// last_updated_by: coding-agent@2026-09-29#2
-// last_updated_at: 2026-09-29T18:10:00+07:00
+// last_updated_by: coding-agent@2026-10-16#1
+// last_updated_at: 2026-10-16T15:40:27.1189940+07:00
 //
 // EXPERIENCES:
 //   - id: update_progress-EXP-001
@@ -78,6 +78,13 @@
 //       được từ list_stages; backend trả 400 nếu sai). [UI-ONLY]: ghi chú trim của JS
 //       (ASCII, U+00A0, U+3000, U+FEFF…), rỗng → null. Routers không nhận giá trị
 //       Configs nào, nên Main không trao rules. Không đọc error_body.details.
+//   - id: update_progress-EXP-006
+//     content: >
+//       Chuyển từ NOTE quá hạn (R44-10, phiên 44 pha 2) và R44-6. (1) Đặc tả D3 viết "Đơn đã <tên giai đoạn>, không đổi giai
+//       đoạn được nữa."; với bảng tên của chính đặc tả câu thành "Đơn đã Đã giao, …". Phiên 20 dùng mẫu 'Đơn đang ở giai đoạn
+//       "{name}", không đổi giai đoạn được nữa.' ở configs.texts.closed (một chỗ); nếu cần đổi câu, chỉ sửa dòng đó, hai kiểm
+//       thử services và ba spec e2e có câu này. (2) R44-6: routers.test.ts thêm bảng trường chữ tự do (ghi chú) x bảy giá trị
+//       có chữ số, emoji, ký tự đặc biệt: Routers chỉ kiểm giai đoạn đã chọn.
 //
 // UNSOLVED_PROBLEMS: []
 //
@@ -145,16 +152,16 @@
 //       S4; needs_confirmation rồi Quay lại, không gửi S3; xác nhận rồi change_stage
 //       tới delivered S5.
 //     recorded_at: 2026-09-29T17:59:31+07:00
+//   - claim: >
+//       R44-6 cho update_progress: ghi chú có chữ số, emoji, ký tự đặc biệt vẫn tới Services.
+//     how: >
+//       Trong UI/: npx vitest run src/logic/workflows/update_progress. Phép cắn trên bản sao: Routers trả lỗi to_stage khi ghi
+//       chú có chữ số.
+//     result: >
+//       7 ca bảng đạt. Phép cắn: "3 failed" ở routers.test.ts. Khôi phục: pass.
+//     recorded_at: 2026-10-16T15:40:27.1189940+07:00
 //
-// NOTES:
-//   - content: >
-//       Cho Orchestrator (không chặn): đặc tả D3 viết "Đơn đã <tên giai đoạn>, không
-//       đổi giai đoạn được nữa." (commission_detail và stage_change). Với bảng tên
-//       của chính đặc tả, câu thành "Đơn đã Đã giao, …", "Đơn đã Đã hủy, …". Phiên
-//       20 dùng mẫu 'Đơn đang ở giai đoạn "{name}", không đổi giai đoạn được nữa.'
-//       ở configs.texts.closed (một chỗ). Nếu Orchestrator chốt câu khác, chỉ sửa
-//       dòng đó và hai kiểm thử services, ba spec e2e có câu này.
-//     written_at: 2026-09-29
+// NOTES: []
 // ===WCA-CHECKPOINT-END===
 /**
  * Services of the interface workflow update_progress: the only place of the

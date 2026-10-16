@@ -2,8 +2,8 @@
 // workflow: screens
 // clause: external
 // component: screens
-// last_updated_by: coding-agent@2026-10-09#1
-// last_updated_at: 2026-10-09T15:41:37.5276593+07:00
+// last_updated_by: coding-agent@2026-10-16#1
+// last_updated_at: 2026-10-16T15:41:12.1328848+07:00
 //
 // EXPERIENCES:
 //   - id: screens-EXP-001
@@ -125,9 +125,8 @@
 //       API Contract 4.0.0 approved; đã đọc changelog v7.0.0; Configs trỏ api
 //       4.0.0, data 7.0.0; bảng nhãn năm điểm giao tiếp khớp từng dòng (API không
 //       đổi); luật not blank của client_input là bản sao có chú thích [CONTRACT];
-//       tìm trong src và tests (grep) không có lời gọi tới /watermark-profiles,
-//       /watermark-strengths, /artworks, /verifications, /reminders/checks (chỉ
-//       khớp trong chú thích checkpoint); chỉ gọi /clients, /clients/{client_id},
+//       không có lời gọi tới các đường dẫn watermark (do scripts/check_no_watermark_paths.mjs
+//       kiểm trong npm run check) và không tới /reminders/checks; chỉ gọi /clients, /clients/{client_id},
 //       /clients/{client_id}/archived. RANH GIỚI: npm run check đạt (R1–R14);
 //       Services chỉ quyết định trình bày; Routers kiểm đúng type (not blank,
 //       1..120) cộng ba luật [UI-ONLY] ghi ở ui_decomposition §5; ba hook viết lại
@@ -259,8 +258,8 @@
 //       4.0.0 approved, manage_commission đã_hoàn_thiện; Configs trỏ data 8.0.1, api
 //       4.0.0; bảng nhãn bảy lời gọi khớp từng dòng (có kiểm thử so nguyên bảng);
 //       commission_input gửi đúng bảy khóa; mọi mã có câu (duyệt từ Configs). Tìm
-//       trong src và tests: không có /watermark-profiles, /watermark-strengths,
-//       /artworks, /verifications, /reminders/checks, /payments, /progress,
+//       trong src và tests: không có đường dẫn watermark (script kiểm của npm run check),
+//       không có /reminders/checks, /payments, /progress,
 //       /commissions/{…}/stage ngoài chú thích; lời gọi mới chỉ tới /commissions,
 //       /commissions/{commission_id}, /currencies, /clients, /clients/{client_id}.
 //       RANH GIỚI: npm run check đạt (R1–R14); Services chỉ quyết định trình bày
@@ -353,8 +352,8 @@
 //       API Contract 4.0.0 approved, update_progress và manage_commission
 //       đã_hoàn_thiện; Configs của hai workflow trỏ data 8.0.1, api 4.0.0; bảng nhãn
 //       13 lời gọi khớp từng dòng (hai kiểm thử so nguyên bảng); stage_change gửi đúng
-//       hai khóa. Tìm trong src và tests: không lời gọi tới /watermark-profiles,
-//       /watermark-strengths, /artworks, /verifications, /reminders, /payments,
+//       hai khóa. Tìm trong src và tests: không lời gọi tới đường dẫn watermark (script kiểm
+//       của npm run check), không tới /reminders, /payments,
 //       /reports, /backups; đường dẫn trong Configs chỉ /clients…, /commissions…,
 //       /commissions/{commission_id}/stage(/history), /currencies, /progress/board,
 //       /progress/stages; không có confirm(, alert(, prompt( trong src. RANH GIỚI:
@@ -519,8 +518,8 @@
 //       trỏ data 9.0.0, api 4.0.0; bảng nhãn bốn lời gọi khớp từng dòng (kiểm thử so nguyên bảng, hai
 //       nhãn 409 phân biệt theo lời gọi); payment_input gửi đúng sáu khóa; luật phương thức
 //       not blank là bản sao [CONTRACT] (phiên 22 giao diện chặn trước khi gửi, không dựa vào việc
-//       backend từ chối). Tìm trong src và tests: không có lời gọi tới /watermark-profiles,
-//       /watermark-strengths, /artworks, /verifications, /reminders, /reports, /backups; đường dẫn
+//       backend từ chối). Tìm trong src và tests: không có lời gọi tới đường dẫn watermark (script
+//       kiểm của npm run check), không tới /reminders, /reports, /backups; đường dẫn
 //       mới chỉ /payments, /payments/balance/{commission_id}, /payments/{payment_id}/void; không có
 //       confirm(, alert(, prompt( trong src. RANH GIỚI: npm run check đạt (R1–R14); Services chỉ
 //       quyết định trình bày (record_payment-EXP-003: tự không cộng trừ số nào, số dư là số của
@@ -587,8 +586,8 @@
 //       Tự kiểm I6 phiên 24, trang income_report, năm góc. HỢP ĐỒNG: Data Schema 9.0.1, API Contract 4.0.0
 //       approved, view_income_report đã_hoàn_thiện; Configs ghi data 9.0.1, api 4.0.0; bảng nhãn một lời gọi
 //       khớp từng dòng (kiểm thử so nguyên bảng); đầu vào gửi đúng hai khóa trên query. Tìm trong src và tests
-//       (grep): không có đường dẫn nào ngoài /reports/income cho workflow mới; không /watermark-profiles,
-//       /watermark-strengths, /artworks, /verifications, /reminders, /backups; không confirm(, alert(, prompt(.
+//       (grep): không có đường dẫn nào ngoài /reports/income cho workflow mới; không có đường dẫn
+//       watermark (script kiểm của npm run check), không /reminders, /backups; không confirm(, alert(, prompt(.
 //       RANH GIỚI: npm run check đạt (R1–R14, không ngoại lệ lint mới); Services chỉ quyết định trình bày
 //       (view_income_report-EXP-003, không cộng số, không cộng đơn vị tiền); Routers chỉ kiểm ngày (formats.date
 //       và luật thứ tự chép từ hợp đồng, xem NOTE ở view_income_report); hook viết lại được bằng gọi, giữ,
@@ -669,7 +668,7 @@
 //       Tự kiểm I6 cho reminder_list và reminder_settings (năm góc). (1) Hợp đồng: bảng nhãn của bốn lời gọi
 //       khớp api_contract.yaml 4.0.0 từng dòng (kiểm thử so nguyên bảng), Configs ghi 9.0.2 và 4.0.0, 6 cặp
 //       (lời gọi, mã) có câu; mọi lời gọi nằm trong bảng D6; tìm trong UI/src: không có lời gọi tới đường dẫn của
-//       check_due, tới /watermark-profiles, /watermark-strengths, không confirm(, alert(, prompt(. (2) Ranh giới:
+//       check_due, tới đường dẫn watermark (script kiểm của npm run check), không confirm(, alert(, prompt(. (2) Ranh giới:
 //       lệnh check đạt (R1–R14); Services chỉ có quyết định trình bày (dòng chữ, mốc, ngày, câu lỗi, mặc định của
 //       bản nháp); Routers chỉ kiểm điều reminder_settings_record viết trong type (luật bản sao), ngoài ra là chữ
 //       (câu "Nhập thời gian nhắc trước" cho mốc để trống) và cách tách mã lỗi (send_reminder-EXP-004); hook chỉ
@@ -797,6 +796,28 @@
 //       có tiêu điểm (Enter đóng được), rồi ứng dụng mở, dữ liệu đúng bản sao lưu (khách thêm sau đã mất). Lần mở lại bằng --reopen (từ dòng lệnh) cũng hiện hộp thoại đúng chữ. CHECKPOINT: restore_data (mới), kit,
 //       screens, main. BẰNG CHỨNG: đủ ba loại. ĐỀ XUẤT: restore -> hoan_tat sau khi Orchestrator audit (Project Owner đã chạy tay xong).
 //       Không đảo thứ tự việc nào của plan; việc thêm ngoài plan: không có (cờ --keep cho công cụ chạy tay là cách thực hiện --reopen của plan, xem main-EXP-035).
+//   - id: screens-EXP-056
+//     content: >
+//       R44-2 = UI-23 (phiên 44 pha 2): ràng buộc "giao diện V1 không có màn hình hồ sơ quyền sở hữu" nay do máy giữ.
+//       scripts/check_no_watermark_paths.mjs, bước npm run lint:scope của npm run check, làm lệnh hỏng khi bất kỳ tệp văn bản
+//       nào dưới UI/src/ hay UI/tests/ chứa một trong bốn chuỗi đường dẫn của watermark (profiles, strengths, artworks,
+//       verifications, mỗi chuỗi đứng sau dấu gạch chéo); báo tệp, dòng và chuỗi. Không có danh sách miễn trừ: comment và
+//       checkpoint cũng bị quét, nên mọi chỗ trong checkpoint này từng ghi nguyên văn các đường dẫn đó (bảy chỗ trong EVIDENCE
+//       của khối này) đã viết lại thành một câu trỏ tới script. Script nằm ở scripts/, ngoài hai thư mục bị quét. Các EVIDENCE
+//       cũ về "grep không có lời gọi tới…" của khối này vẫn đúng và nay có máy giữ; EVIDENCE mới ghi phép cắn.
+//   - id: screens-EXP-057
+//     content: >
+//       R44-14 và R44-7 (phiên 44 pha 2). (1) use_client_form.ts: sau khi thêm hoặc bỏ một hàng liên hệ, hook không còn tự
+//       quyết bỏ kết quả lưu trước (setSaved(null)); nó gọi manageClient.afterContactRowsChange(s) (Services quyết, hiện luôn
+//       trả null: lỗi gắn theo vị trí hàng, và cả câu tổng của lần lưu trước, mô tả một bản nháp không còn trên màn hình) và
+//       giữ kết quả. Hành vi không đổi. (2) use_commission_form.ts: hook không còn tự quyết "kết quả lưu nào thì tải lại danh
+//       sách khách"; nó gọi manageCommission.shouldReloadClients(r) (Services quyết: mọi rejected có origin system, 400, 404,
+//       409, 500; ok, unreachable, contract_violation và rejected origin input thì không), đúng mục commission_form của D2 đã
+//       sửa 2026-10-16. Hành vi không đổi. fake_logic.tsx cho hai hàm đồng bộ này một bản mặc định cùng luật và không đếm
+//       chúng là "lời gọi tải". (3) Tám ô thiếu của ma trận I5 (phép cắn nhánh kind ở pha 1) nay có ca: commission_form, tải
+//       lại danh sách khách bị từ chối hay vi phạm hợp đồng (trang CommissionForm.tsx và hook); payment_list, lần đọc lại lặng
+//       lẽ sau khi hủy khoản thất bại không tới được hay vi phạm hợp đồng; reminder_list, như thế sau "Đã xem". Mỗi ca khẳng
+//       định điều người dùng thấy: một hộp báo riêng, danh sách giữ nguyên, không thêm hộp báo nào.
 //
 // UNSOLVED_PROBLEMS: []
 //
@@ -1218,38 +1239,6 @@
 //       (mốc 8; năm mục điều hướng, 13 trang, ca D6). Tổng "Tests 1550 passed (1550)" (mốc 1303).
 //     recorded_at: 2026-10-03T10:42:22.0487385+07:00
 //   - claim: >
-//       Mỗi spec e2e mới chạy riêng đạt 10 lần liên tiếp.
-//     how: >
-//       Scratchpad loop10.sh: npx playwright test -c tests/e2e/playwright.config.ts reminder_settings, rồi
-//       reminder_list, mỗi spec 10 lần, từng lượt một (không đặt runner: bằng chứng nháp vào test-results).
-//     result: >
-//       reminder_settings 10/10 "5 passed" (khoảng 14 s mỗi lượt), reminder_list 10/10 "5 passed" (khoảng 1,2 phút mỗi
-//       lượt, phần lớn là chờ phút của nhắc việc tổng hợp). Không lần nào hết giờ chụp ảnh.
-//     recorded_at: 2026-10-03T10:42:22.0487385+07:00
-//   - claim: >
-//       npm run e2e đạt 5 lần, từng lượt một, có CT_WALKTHROUGH_RUNNER=coding-agent@2026-10-03#1; lần hỏng duy nhất vì
-//       chụp ảnh hết giờ (UI-11) không tính.
-//     how: >
-//       Scratchpad full5.sh (một tiến trình, dừng khi đủ 5 lượt đạt), sau npm run build trong UI/ và Desktop/.
-//     result: >
-//       Sáu lượt: 1 "69 passed (4.1m)"; 2 "1 failed, 64 passed" (reminder_list-S1-list hết giờ chụp ảnh 30 s, cửa sổ
-//       minimized:true, trace ở UI/test-results/ui11_traces/); 3, 4, 5, 6 mỗi lượt "69 passed" (3.9–4.6 phút). Tức 5
-//       lượt đạt, bốn lượt cuối liên tiếp (số e2e 69, mốc 59). Còn hai lượt chạy trước đó bị bỏ, không tính, không dùng:
-//       tôi dừng nhầm tập lệnh bằng TaskStop mà vòng lặp bên trong vẫn chạy nên hai lượt Playwright chồng nhau (lỗi cách
-//       làm của tôi, không phải của sản phẩm). Lượt đầu của vòng đó cũng làm lộ một chỗ tôi quên: spec progress_board
-//       còn đếm bốn mục điều hướng (đã thêm ['Nhắc việc', null], hai chỗ).
-//     recorded_at: 2026-10-03T10:42:22.0487385+07:00
-//   - claim: >
-//       Lần chạy không đặt biến để UI/evidence nguyên vẹn.
-//     how: >
-//       SHA-256 mọi tệp dưới UI/evidence (120 tệp) trước và sau từng lần npm run e2e không đặt CT_WALKTHROUGH_RUNNER.
-//     result: >
-//       Ba lần chạy không biến: "63 passed, 2 failed, 4 did not run", "64 passed, 1 failed, 4 did not run", "59 passed,
-//       3 failed, 7 did not run"; MỌI lỗi là hết giờ chụp ảnh (page.screenshot 30 s) lúc cửa sổ bị thu nhỏ (xem EVIDENCE
-//       của main). Sau từng lần: UI/evidence UNCHANGED (120 tệp, so SHA-256). Chưa có lần không biến nào đạt đủ vì
-//       UI-11, nên chưa có "69 passed" không biến; điều kiện "evidence nguyên vẹn" đạt.
-//     recorded_at: 2026-10-03T10:42:22.0487385+07:00
-//   - claim: >
 //       Việc 7: ảnh có ô ngày sau khi DSK-15 đổi ngôn ngữ ứng dụng sang vi.
 //     how: >
 //       Mở ảnh sinh bởi lượt e2e có runner số 6, và một ảnh chụp riêng của ô ngày giờ (script tạm trong tests/tools,
@@ -1262,13 +1251,38 @@
 //       HH:mm ở chỗ khác). Không sửa (plan việc 7).
 //     recorded_at: 2026-10-03T10:42:22.0487385+07:00
 //   - claim: >
-//       Mốc %APPDATA% và các điều kiện cuối phiên.
+//       R44-2: thêm một đường dẫn watermark vào mã hay kiểm thử thì npm run check hỏng; bỏ đi thì đạt.
 //     how: >
-//       Tên, kích thước, giờ ghi của mọi tệp trong %APPDATA%\CommissionTracker lúc đầu và cuối phiên; git status.
+//       Trên bản sao %TEMP%\ct_review_ui\UI: (a) thêm vào manage_client/adapters.ts một dòng export const _bite = ['GET',
+//       <đường dẫn thứ nhất trong bốn đường dẫn của script>] rồi npm run check đầy đủ; (b) tạo tests/main/_bite.ts chứa đường dẫn
+//       thứ ba rồi npm run lint:scope. Khôi phục (so băm) và chạy lại cả hai.
 //     result: >
-//       data.db 114688 byte và data.db.lock 0 byte, giờ ghi 2026-09-28 21:09, không đổi. Không kiểm thử nào đụng
-//       %APPDATA%. git status chỉ có tệp trong UI/. Không eslint-disable, không ngoại lệ lint mới, không phụ thuộc mới.
-//     recorded_at: 2026-10-03T10:42:22.0487385+07:00
+//       (a) exit 1 ở bước lint:scope: "WATERMARK src/logic/workflows/manage_client/adapters.ts:156: contains …" kèm đúng chuỗi.
+//       (b) exit 1: "WATERMARK tests/main/_bite.ts:1: contains …" kèm đúng chuỗi. Khôi phục: exit 0 (npm run check đầy đủ đạt
+//       ở (a); script báo "221 text files under src/ and tests/, none names a watermark address").
+//     recorded_at: 2026-10-16T15:40:25.5021892+07:00
+//   - claim: >
+//       R44-7: tám ô của ma trận I5 có ca; đổi nhãn case của từng nhánh thì ít nhất một ca (hoặc lượt chạy) hỏng.
+//     how: >
+//       Trên bản sao: lần lượt đổi nhãn thành "<nhãn>_mutated" ở CommissionForm.tsx:259 (rejected) và :263
+//       (contract_violation); use_commission_form.ts:123 (rejected) và :125 (contract_violation); use_payment_list.ts:78
+//       (unreachable) và :79 (contract_violation); use_reminder_list.ts:68 (unreachable) và :69 (contract_violation); mỗi lần
+//       chạy kiểm thử của đúng trang; khôi phục.
+//     result: >
+//       Hai nhánh của trang commission_form: "1 failed" ở CommissionForm.test.tsx. Sáu nhánh của hook: lượt chạy hỏng (exit 1)
+//       với lỗi chưa xử lý (assertNever) ném trong đúng ca mới ("The last test to run before this error was …"), vì nhánh bị
+//       đổi nhãn rơi vào default. Khôi phục: mọi lần pass.
+//     recorded_at: 2026-10-16T15:40:25.5021892+07:00
+//   - claim: >
+//       R44-14: quyết định ra khỏi hook, hành vi không đổi.
+//     how: >
+//       Ca của Services (afterContactRowsChange 5 ca, shouldReloadClients 8 ca) và ca dựng trang cũ của client_form,
+//       commission_form trong npm run check. Phép cắn trên bản sao: (a) trong shouldReloadClients cho unreachable cũng trả
+//       true; (b) afterContactRowsChange trả lại saved thay vì null.
+//     result: >
+//       Ca dựng trang cũ đạt không sửa (chỉ fake_logic.tsx thêm hai hàm mặc định). (a) "1 failed" ở services.test.ts của
+//       manage_commission (ca unreachable). (b) "5 failed" ở services.test.ts của manage_client. Khôi phục: pass.
+//     recorded_at: 2026-10-16T15:40:25.5021892+07:00
 //
 // NOTES: []
 // ===WCA-CHECKPOINT-END===

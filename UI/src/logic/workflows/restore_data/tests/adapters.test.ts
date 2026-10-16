@@ -44,7 +44,7 @@ afterEach(() => {
 
 describe('the configuration realizes the contract', () => {
   it('versions, addresses and the label table of each entry, line by line', () => {
-    expect(cfg.contract).toEqual({ apiContract: '5.0.0', dataSchema: '10.0.1' })
+    expect(cfg.contract).toEqual({ apiContract: '6.2.0', dataSchema: '10.0.1' })
     expect(cfg.ipc.getRestoreStatus).toEqual({ address: 'restore:status', labels: { '200': 'ok', '500': 'ERR_STORAGE_IO' } })
     expect(cfg.ipc.requestRestore).toEqual({
       address: 'restore:prepare',

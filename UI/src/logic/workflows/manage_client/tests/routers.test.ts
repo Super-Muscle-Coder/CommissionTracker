@@ -23,6 +23,7 @@ function setup() {
     saveClient: vi.fn(async () => SAVED),
     setClientArchived: vi.fn(),
     rejectInput: vi.fn(() => REJECTED),
+    afterContactRowsChange: vi.fn(() => null),
   }
   return { services, routers: createManageClientRouters(services, MANAGE_CLIENT_CONFIGS.limits) }
 }
@@ -149,4 +150,30 @@ describe('operations without typed input reach Services unchanged', () => {
     expect(services.setClientArchived).toHaveBeenCalledExactlyOnceWith(ID, true)
     expect(services.rejectInput).not.toHaveBeenCalled()
   })
+})
+
+// R44-6 (session 44): Routers checks what `type` writes (not blank, at most 120
+// code points) and nothing else. A free text with digits, an emoji or special
+// characters is a name, a channel, a value or a note like any other, and must
+// reach Services unchanged. The fields come from this table; one more free
+// text field of the form adds one row.
+const AWKWARD_TEXTS = [
+  'Ánh 123',
+  '2024',
+  'Mai 😀 Lan',
+  'Lê "Hoa" <b>&amp;</b>',
+  "O'Brien; DROP TABLE clients;--",
+  'a/b\\c%20#?=&',
+  '★ 星 ✓ №',
+]
+const FREE_TEXT_FIELDS: [string, (v: string) => Partial<ClientFormDraft>, (v: string) => unknown][] = [
+  ['displayName', (v) => ({ displayName: v }), (v) => ({ display_name: v, contacts: [], note: null })],
+  ['contacts[].channel', (v) => ({ contacts: [{ channel: v, value: 'x' }] }), (v) => ({ display_name: 'An', contacts: [{ channel: v, value: 'x' }], note: null })],
+  ['contacts[].value', (v) => ({ contacts: [{ channel: 'x', value: v }] }), (v) => ({ display_name: 'An', contacts: [{ channel: 'x', value: v }], note: null })],
+  ['note', (v) => ({ note: v }), (v) => ({ display_name: 'An', contacts: [], note: v })],
+]
+describe('saveClient — a free text with digits, emoji or special characters still passes (R44-6)', () => {
+  for (const [field, toDraft, toInput] of FREE_TEXT_FIELDS) {
+    it.each(AWKWARD_TEXTS)(`${field}: %s`, (text) => expectSent(CREATE, draft(toDraft(text)), toInput(text)))
+  }
 })

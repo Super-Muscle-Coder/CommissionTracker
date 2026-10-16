@@ -85,6 +85,11 @@ test('the desktop app loads UI/dist: main frame, no startup error, no CSP violat
       expect(csp).toBe("default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src http://127.0.0.1:*")
 
       // Electron prints its security warnings shortly after load; give them time.
+      // R44-17 (session 44): the fixed wait is kept on purpose. This case proves
+      // that NO CSP or page error message appears, so there is no positive event
+      // to wait for: Electron emits the warning (or not) at a time of its own
+      // after the load, and no page or webContents event marks "the warning
+      // would have come by now". The time is neither lengthened nor shortened.
       await page.waitForTimeout(2000)
       fs.mkdirSync(path.dirname(SCREENSHOT), { recursive: true })
       await timedScreenshot(page, 'tests/e2e/main_layout.spec.ts', 'main_layout', SCREENSHOT, app)

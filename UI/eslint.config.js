@@ -45,6 +45,31 @@ const HOST_GLOBAL_OBJECTS = ['window', 'globalThis', 'self', 'top', 'parent', 'f
 const HOST_GLOBAL_PROPERTIES = 'defaultView|contentWindow|parentWindow|getOwnPropertyDescriptors?|__lookupGetter__'
 const STYLE_FILES = ['**/*.css', '**/*.scss', '**/*.sass', '**/*.less']
 
+// Raw presentation values (R7 in the kit's .ts/.tsx files). Patterns are
+// written for esquery attribute regexes: no '/' inside, no flags.
+const RAW_HEX = String.raw`(^|[^\w&])#([0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{3,4})($|[^\w])`
+const RAW_COLOR_FUNCTION = String.raw`\b(rgb|rgba|hsl|hsla|hwb|lab|lch|oklab|oklch)\(`
+const RAW_ABSOLUTE_LENGTH = String.raw`(^|[^\w.])-?[0-9]*\.?[0-9]+(px|pt|cm|mm|in)($|[^\w])`
+const COLOUR_ATTRIBUTES = String.raw`^(fill|stroke|color|stopColor|floodColor|lightingColor|background.*)$`
+const CSS_COLOUR_NAMES = ['aliceblue', 'antiquewhite', 'aqua', 'aquamarine', 'azure', 'beige', 'bisque', 'black',
+  'blanchedalmond', 'blue', 'blueviolet', 'brown', 'burlywood', 'cadetblue', 'chartreuse', 'chocolate', 'coral',
+  'cornflowerblue', 'cornsilk', 'crimson', 'cyan', 'darkblue', 'darkcyan', 'darkgoldenrod', 'darkgray', 'darkgreen',
+  'darkgrey', 'darkkhaki', 'darkmagenta', 'darkolivegreen', 'darkorange', 'darkorchid', 'darkred', 'darksalmon',
+  'darkseagreen', 'darkslateblue', 'darkslategray', 'darkslategrey', 'darkturquoise', 'darkviolet', 'deeppink',
+  'deepskyblue', 'dimgray', 'dimgrey', 'dodgerblue', 'firebrick', 'floralwhite', 'forestgreen', 'fuchsia',
+  'gainsboro', 'ghostwhite', 'gold', 'goldenrod', 'gray', 'green', 'greenyellow', 'grey', 'honeydew', 'hotpink',
+  'indianred', 'indigo', 'ivory', 'khaki', 'lavender', 'lavenderblush', 'lawngreen', 'lemonchiffon', 'lightblue',
+  'lightcoral', 'lightcyan', 'lightgoldenrodyellow', 'lightgray', 'lightgreen', 'lightgrey', 'lightpink',
+  'lightsalmon', 'lightseagreen', 'lightskyblue', 'lightslategray', 'lightslategrey', 'lightsteelblue',
+  'lightyellow', 'lime', 'limegreen', 'linen', 'magenta', 'maroon', 'mediumaquamarine', 'mediumblue',
+  'mediumorchid', 'mediumpurple', 'mediumseagreen', 'mediumslateblue', 'mediumspringgreen', 'mediumturquoise',
+  'mediumvioletred', 'midnightblue', 'mintcream', 'mistyrose', 'moccasin', 'navajowhite', 'navy', 'oldlace',
+  'olive', 'olivedrab', 'orange', 'orangered', 'orchid', 'palegoldenrod', 'palegreen', 'paleturquoise',
+  'palevioletred', 'papayawhip', 'peachpuff', 'peru', 'pink', 'plum', 'powderblue', 'purple', 'rebeccapurple',
+  'red', 'rosybrown', 'royalblue', 'saddlebrown', 'salmon', 'sandybrown', 'seagreen', 'seashell', 'sienna',
+  'silver', 'skyblue', 'slateblue', 'slategray', 'slategrey', 'snow', 'springgreen', 'steelblue', 'tan', 'teal',
+  'thistle', 'tomato', 'turquoise', 'violet', 'wheat', 'white', 'whitesmoke', 'yellow', 'yellowgreen']
+
 // --- local type-aware rule (R12) -------------------------------------------------
 // R12 forbids reading launch values from the host environment outside Main.
 // Banning the names of the global object is not enough: a DOM object leads
@@ -118,10 +143,23 @@ const MATRIX = {
         'R6: the kit zone must not import the logic zone, the screens zone or Main.'),
     ],
   },
+  // R7 in the kit's .ts/.tsx files (R44-1): the CSS files are held by stylelint
+  // (stylelint.config.js); here a raw presentation value written as a literal
+  // in a string, a template or a JSX attribute (an SVG fill="#ff0000", a
+  // width="16px", "rgb(1,2,3)") is forbidden too. Raw values live in the
+  // token file only. A CSS colour NAME is forbidden in the JSX attributes that
+  // carry a colour (fill, stroke, color, stopColor, background*), where it is
+  // a colour for certain; 'none' and 'currentColor' are not colour names.
   R7_kit: {
     syntax: [
       syntax("JSXAttribute[name.name='style']",
         'R7: no inline style in the kit; put style in the component CSS module, with role tokens only.'),
+      ...[RAW_HEX, RAW_COLOR_FUNCTION, RAW_ABSOLUTE_LENGTH].flatMap((re) => [
+        syntax(`Literal[value=/${re}/]`, 'R7: no raw colour or absolute length in a kit .ts/.tsx file; use a role token from the CSS module.'),
+        syntax(`TemplateElement[value.cooked=/${re}/]`, 'R7: no raw colour or absolute length in a kit .ts/.tsx file; use a role token from the CSS module.'),
+      ]),
+      syntax(`JSXAttribute[name.name=/${COLOUR_ATTRIBUTES}/] Literal[value=/^\\s*(${CSS_COLOUR_NAMES.join('|')})\\s*$/]`,
+        'R7: no CSS colour name in a colour attribute of a kit file; use a role token from the CSS module.'),
     ],
   },
   R8: {

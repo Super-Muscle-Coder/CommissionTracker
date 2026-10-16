@@ -2,8 +2,8 @@
 // workflow: restore_data
 // clause: external
 // component: services
-// last_updated_by: coding-agent@2026-10-09#1
-// last_updated_at: 2026-10-09T15:01:21.2244322+07:00
+// last_updated_by: coding-agent@2026-10-16#1
+// last_updated_at: 2026-10-16T15:40:28.6967888+07:00
 //
 // EXPERIENCES:
 //   - id: restore_data-EXP-001
@@ -86,6 +86,15 @@
 //       "backend child … READY on port N", "restore_data: apply -> restored"; GET /clients = Khach A, Khach B; không còn restore-pending.json; restore-previous 1 tệp; restore:status
 //       trả pending null; hai lần thoát mã 0. (c) 5/5 lần: dialogLineCount 1, cùng kết quả. (d) GET /clients bị ECONNREFUSED: fixture tắt backend ngay sau READY.
 //     recorded_at: 2026-10-09T15:01:21.2244322+07:00
+//   - claim: >
+//       R44-9: Configs ghi API Contract 6.2.0 (trước đó 5.0.0) và Data Schema 10.0.1; kiểm thử so khớp.
+//     how: >
+//       Trong UI/: npx vitest run src/logic/workflows/restore_data (tests/adapters.test.ts, ca "versions, addresses and the
+//       label table of each entry, line by line").
+//     result: >
+//       Đạt trong npm run check. Địa chỉ ipc và bảng nhãn khớp API Contract 6.2.0 như trước; ba địa chỉ restore:* nằm trong
+//       danh sách của ipc_bridge (scaffold_ui-EXP-004).
+//     recorded_at: 2026-10-16T15:40:28.6967888+07:00
 //
 // NOTES: []
 // ===WCA-CHECKPOINT-END===

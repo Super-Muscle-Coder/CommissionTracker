@@ -51,6 +51,8 @@ export function fakeManageClient(over: Partial<ManageClientRouters>): ManageClie
     openClientForm: unexpected('openClientForm'),
     saveClient: unexpected('saveClient'),
     setClientArchived: unexpected('setClientArchived'),
+    // R44-14: once the contact rows change, the whole result of the last save goes.
+    afterContactRowsChange: vi.fn(() => null),
     ...over,
   }
 }
@@ -62,6 +64,8 @@ export function fakeManageCommission(over: Partial<ManageCommissionRouters>): Ma
     openCommissionForm: unexpected('openCommissionForm'),
     saveCommission: unexpected('saveCommission'),
     reloadClientChoices: unexpected('reloadClientChoices'),
+    // R44-14: the clients are offered again after a refusal by the backend (rejected, origin 'system').
+    shouldReloadClients: vi.fn((saved) => saved.kind === 'rejected' && saved.origin === 'system'),
     ...over,
   }
 }
@@ -200,8 +204,13 @@ export function renderFirstCommit(
   const logic = logicOf(manageClient, manageCommission, updateProgress, recordPayment, viewIncomeReport, sendReminder, backupData, restoreData)
   const calls = () =>
     [
-      ...Object.values(logic.manageClient),
-      ...Object.values(logic.manageCommission),
+      // afterContactRowsChange and shouldReloadClients decide about a result already held: synchronous, not calls that load.
+      ...Object.entries(logic.manageClient)
+        .filter(([name]) => name !== 'afterContactRowsChange')
+        .map(([, fn]) => fn),
+      ...Object.entries(logic.manageCommission)
+        .filter(([name]) => name !== 'shouldReloadClients')
+        .map(([, fn]) => fn),
       ...Object.values(logic.updateProgress),
       ...Object.values(logic.recordPayment),
       ...Object.values(logic.backupData),

@@ -13,7 +13,9 @@ export declare const RUNNER_VARIABLE: string
 export declare function walkthroughRunner(): string
 export declare function evidenceRoot(): string
 export declare function electronBinary(): string
+export declare const DATA_DIR_PREFIX: string
 export declare function makeDataDir(): string
+export declare function isOwnDataDir(candidate: unknown, tmpdir?: string): boolean
 export declare function launchArgs(dataDir: string, options: { noDialog: boolean; showInactive?: boolean }): string[]
 export declare function showInactiveForRun(): boolean
 export declare const SHOW_INACTIVE_LOG_LINE: string

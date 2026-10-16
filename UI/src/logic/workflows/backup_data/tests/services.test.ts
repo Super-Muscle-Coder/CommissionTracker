@@ -244,7 +244,7 @@ describe('the size of the archive (rounded to the nearest tenth, a tie going up;
 
 describe('the configuration realizes the decisions of the contract and the specification', () => {
   it('the contract versions and the fixed purpose', () => {
-    expect(cfg.contract).toEqual({ apiContract: '4.0.0', dataSchema: '9.0.3' })
+    expect(cfg.contract).toEqual({ apiContract: '6.2.0', dataSchema: '10.0.1' })
     expect(cfg.purpose).toBe('manual')
     expect(cfg.dialogs.pickFolder.address).toBe('dialog:pick-folder')
     expect(cfg.endpoints.createBackup).toMatchObject({ method: 'POST', path: '/backups' })

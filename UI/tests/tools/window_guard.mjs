@@ -18,7 +18,7 @@
 // isMinimized() (line 3036). A window already minimized when the listener goes
 // in has emitted its event already: it is checked once at installation.
 // UI-18 (session 29): the way back is showInactive() ("Shows the window but doesn't
-// focus on it", line 3632), not restore() (line 3153): measured by tests/tools/ui18_probe.mjs
+// focus on it", line 3632), not restore() (line 3153): measured by the UI-18 probe tool of session 29 (since removed)
 // with another PROCESS holding the foreground, 20 trials per way: restore() took the foreground
 // 18/20; showInactive() left the window not minimized, never took the foreground, no hang, 20/20.
 // No focus(), no moveTop(), no setAlwaysOnTop(), no resize.

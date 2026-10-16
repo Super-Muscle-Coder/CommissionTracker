@@ -241,6 +241,24 @@ describe('page reminder_list: "Đã xem"', () => {
     expect(statusTexts()).toEqual([])
   })
 
+  // R44-7 (session 44): after a refused acknowledgement (500) the list is read
+  // again quietly; when that reading fails by "not reachable" or by a violated
+  // contract, it changes nothing on screen and says nothing more.
+  it.each([
+    ['unreachable', { kind: 'unreachable', message: 'Không kết nối được tới phần xử lý.' } as Loaded],
+    ['contract_violation', { kind: 'contract_violation', message: 'Ứng dụng nhận được một phản hồi không mong đợi.' } as Loaded],
+  ])('500, then the quiet reading is %s: the list as it was, only the one alert', async (_, secondReading) => {
+    const { loadPending } = renderWith([LIST_OK, secondReading], [rejectedAck('ERR_STORAGE_IO', 'Không ghi được dữ liệu nhắc việc trên máy.')])
+    await screen.findByRole('list', { name: 'Nhắc việc đang chờ' })
+    fireEvent.click(ackButtons()[0])
+    expect((await screen.findByRole('alert')).textContent).toContain('Không ghi được dữ liệu nhắc việc trên máy.')
+    await waitFor(() => expect(loadPending).toHaveBeenCalledTimes(2))
+    await act(async () => {})
+    expect(items()).toHaveLength(2)
+    expect(screen.getAllByRole('alert')).toHaveLength(1)
+    expect(statusTexts()).toEqual([])
+  })
+
   it('unreachable: "Không kết nối được", the list as it was, no second reading', async () => {
     const { loadPending } = renderWith([LIST_OK], [{ kind: 'unreachable', message: 'Không kết nối được tới phần xử lý của ứng dụng. Vui lòng thử lại.' }])
     await screen.findByRole('list', { name: 'Nhắc việc đang chờ' })

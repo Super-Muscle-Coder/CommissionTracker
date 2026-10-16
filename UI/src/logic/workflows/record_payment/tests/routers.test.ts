@@ -375,3 +375,31 @@ describe('the other operations go straight to Services', () => {
     ])
   })
 })
+
+// R44-6 (session 44): Routers checks what `type` writes (direction and kind from
+// their lists, amount, method not blank, timestamp) and nothing else. A free
+// text with digits, an emoji or special characters reaches Services unchanged.
+// The fields come from this table; one more free text field of the form adds
+// one row.
+const AWKWARD_TEXTS = [
+  'Chuyển khoản 2 lần',
+  '2024',
+  'MoMo 😀',
+  'Lê "Hoa" <b>&amp;</b>',
+  "O'Brien; DROP TABLE payments;--",
+  'a/b\\c%20#?=&',
+  '★ 星 ✓ №',
+]
+const FREE_TEXT_FIELDS: [string, (v: string) => Partial<PaymentFormDraft>, (input: PaymentInput) => unknown][] = [
+  ['method', (v) => ({ method: v }), (input) => input.method],
+  ['note', (v) => ({ note: v }), (input) => input.note],
+]
+describe('savePayment — a free text with digits, emoji or special characters still passes (R44-6)', () => {
+  for (const [field, toDraft, read] of FREE_TEXT_FIELDS) {
+    it.each(AWKWARD_TEXTS)(`${field}: %s`, async (text) => {
+      const { sent } = await save(VND, draft(toDraft(text)))
+      expect(sent).not.toBeNull()
+      expect(read((sent as unknown as [string, PaymentInput])[1])).toBe(text)
+    })
+  }
+})

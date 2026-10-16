@@ -2,8 +2,8 @@
 // workflow: record_payment
 // clause: external
 // component: services
-// last_updated_by: coding-agent@2026-09-30#1
-// last_updated_at: 2026-09-30T09:00:00+07:00
+// last_updated_by: coding-agent@2026-10-16#1
+// last_updated_at: 2026-10-16T15:40:27.9261584+07:00
 //
 // EXPERIENCES:
 //   - id: record_payment-EXP-001
@@ -161,6 +161,16 @@
 //       lại). Số dư "Đã thu dư 2,50 USD" (payment_list S4), "Đã thu đủ" (payment_form S6). Backend thật
 //       hiện chưa từ chối phương thức trống (BE-7): giao diện đã chặn trước (payment_form S1).
 //     recorded_at: 2026-09-30T09:12:00+07:00
+//   - claim: >
+//       R44-6 và R44-9 cho record_payment: ghi chú và phương thức có chữ số, emoji, ký tự đặc biệt vẫn tới Services; Configs
+//       ghi 6.2.0 và 10.0.1.
+//     how: >
+//       Trong UI/: npx vitest run src/logic/workflows/record_payment. Phép cắn trên bản sao: thêm || /[0-9]/.test(method) vào
+//       điều kiện "required" của phương thức trong routers.ts.
+//     result: >
+//       14 ca bảng (2 trường x 7 giá trị) và ca ghim phiên bản hợp đồng đạt trong npm run check. Phép cắn: "3 failed" ở
+//       routers.test.ts. Khôi phục: pass.
+//     recorded_at: 2026-10-16T15:40:27.9261584+07:00
 //
 // NOTES: []
 // ===WCA-CHECKPOINT-END===

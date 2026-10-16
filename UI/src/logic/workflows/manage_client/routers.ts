@@ -89,6 +89,12 @@ export function createManageClientRouters(services: ManageClientServices, limits
       return services.saveClient(target, read.input)
     },
 
+    // Page client_form, once a contact row is added or removed: what is left of
+    // the last save result (the decision is Services').
+    afterContactRowsChange(saved: ViewResult<SavedClientView>): ViewResult<SavedClientView> | null {
+      return services.afterContactRowsChange(saved)
+    },
+
     // Page client_detail: archive (true) or unarchive (false). No typed input.
     setClientArchived(clientId: string, archived: boolean): Promise<ViewResult<ArchivedClientView>> {
       return services.setClientArchived(clientId, archived)

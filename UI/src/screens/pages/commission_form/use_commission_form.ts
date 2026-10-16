@@ -149,12 +149,11 @@ export function useCommissionForm(params: PageParams['commission_form'], onSaved
         onSaved(r.view)
         break
       case 'rejected':
-        // when: after the backend refused the save (e.g. the chosen client was
-        // archived meanwhile, 409, or is gone, 404), offer the clients again.
-        if (r.origin === 'system') void reloadClients(draft.clientId)
-        break
       case 'unreachable':
       case 'contract_violation':
+        // when: Services says so (after the backend refused the save: the chosen
+        // client may have been archived meanwhile, 409, or be gone, 404).
+        if (manageCommission.shouldReloadClients(r)) void reloadClients(draft.clientId)
         break
       default:
         assertNever(r)

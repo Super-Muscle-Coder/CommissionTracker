@@ -2,8 +2,8 @@
 // workflow: manage_client
 // clause: external
 // component: services
-// last_updated_by: coding-agent@2026-09-28#2
-// last_updated_at: 2026-09-28T12:30:00+07:00
+// last_updated_by: coding-agent@2026-10-16#1
+// last_updated_at: 2026-10-16T15:40:26.3260349+07:00
 //
 // EXPERIENCES:
 //   - id: manage_client-EXP-001
@@ -127,6 +127,14 @@
 //       rỗng thành null) là quyết định trình bày, ghi ở ui_decomposition §5.
 //       manage_client của hợp đồng đang đang_triển_khai: việc của backend (BE-5),
 //       API Contract không đổi, nhãn và mã lỗi giữ nguyên.
+//   - id: manage_client-EXP-010
+//     content: >
+//       Phiên 44 pha 2. (1) R44-14: Services thêm afterContactRowsChange(saved) (Routers chuyển tiếp): sau khi thêm hay bỏ một
+//       hàng liên hệ, kết quả lưu trước bị bỏ hoàn toàn (trả null), như trang vẫn làm; trước đó quyết định này nằm ở
+//       use_client_form.ts. Hàm thuần. (2) R44-6: routers.test.ts thêm bảng trường chữ tự do (tên, kênh liên hệ, giá trị liên
+//       hệ, ghi chú) x bảy giá trị có chữ số, emoji, ký tự đặc biệt: Routers không được kiểm điều ngoài type (không rỗng, tối
+//       đa 120 ký tự), nên mọi giá trị đó phải tới Services nguyên vẹn. Thêm một trường chữ tự do vào form thì thêm một hàng
+//       vào bảng.
 //
 // UNSOLVED_PROBLEMS: []
 //
@@ -203,6 +211,16 @@
 //       set_client_archived: client_detail S2, S3, S4. rejected_input không gửi
 //       gì: client_form S2 (tên ba dấu cách), S4.
 //     recorded_at: 2026-09-28T12:24:05+07:00
+//   - claim: >
+//       R44-6 và R44-14 cho manage_client: ca bảng trường chữ tự do, ca Services của afterContactRowsChange.
+//     how: >
+//       Trong UI/: npx vitest run src/logic/workflows/manage_client. Phép cắn trên bản sao: (a) thêm ||
+//       /[0-9]/.test(displayName) vào điều kiện "required" của tên trong routers.ts; (b) afterContactRowsChange trả saved thay
+//       vì null.
+//     result: >
+//       28 ca bảng (4 trường x 7 giá trị) và 5 ca afterContactRowsChange đạt. (a) "3 failed" ở routers.test.ts (các giá trị có
+//       chữ số). (b) "5 failed" ở services.test.ts. Khôi phục: pass.
+//     recorded_at: 2026-10-16T15:40:26.3260349+07:00
 //
 // NOTES: []
 // ===WCA-CHECKPOINT-END===
@@ -335,6 +353,16 @@ export function createManageClientServices(
         // Presentation decision: say what archiving changes (see configs.notices).
         message: c.is_archived ? cfg.notices.archived : cfg.notices.unarchived,
       }))
+    },
+
+    // Presentation decision (R44-14, session 44): the errors of the last save
+    // are keyed by the row of the contact (contacts.<row>.channel / .value).
+    // Once a row is added or removed the rows shift, and the result of the last
+    // save, its summary included, describes a draft that is no longer on the
+    // screen: the whole result is dropped (null), as the page always did. Pure.
+    afterContactRowsChange(saved: ViewResult<SavedClientView>): ViewResult<SavedClientView> | null {
+      void saved
+      return null
     },
 
     // The fixed rejection function for Routers (i3-logic.md, Step I3.4):

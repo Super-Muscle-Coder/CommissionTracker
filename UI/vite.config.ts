@@ -17,6 +17,6 @@ export default defineConfig({
     // Logic zone tests run without a DOM; a test that needs one says so
     // with a `// @vitest-environment jsdom` comment.
     environment: 'node',
-    include: ['src/**/*.test.{ts,tsx}', 'tests/main/**/*.test.{ts,tsx}'],
+    include: ['src/**/*.test.{ts,tsx}', 'tests/main/**/*.test.{ts,tsx}', 'tests/tools/**/*.test.{ts,tsx}'],
   },
 })

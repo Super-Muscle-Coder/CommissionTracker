@@ -18,5 +18,5 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["vite.config.ts", "tests/e2e"]
+  "include": ["vite.config.ts", "tests/e2e", "tests/tools/*.test.ts"]
 }

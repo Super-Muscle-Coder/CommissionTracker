@@ -17,6 +17,13 @@ const R7 = {
     ['px', 'cm', 'mm', 'q', 'in', 'pt', 'pc', 's', 'ms'],
     { message: 'R7: no absolute length or duration outside src/kit/tokens/tokens.css; use a role token.' },
   ],
+  // Two levels of tokens (i4-kit.md, Step I4.2; R44-5): a component uses role
+  // tokens (--color-*, --space-*, ...) only; a base token (--base-*) is read
+  // by the role tokens in the token file and by nothing else.
+  'declaration-property-value-disallowed-list': [
+    { '/.*/': ['/var\\(\\s*--base-/'] },
+    { message: 'R7: no base token (--base-*) outside src/kit/tokens/tokens.css; use a role token.' },
+  ],
 }
 
 const OFF = Object.fromEntries(Object.keys(R7).map((rule) => [rule, null]))
