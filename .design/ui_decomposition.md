@@ -268,6 +268,7 @@ Một thao tác cần hai lời gọi (danh sách đơn cùng danh sách khách;
   - 404 khi tạo: "Không tìm thấy khách hàng đã chọn. Hãy chọn lại." và tải lại danh sách khách. 404 khi sửa: "Không tìm thấy đơn hàng hoặc khách hàng đã chọn." Hai mã lỗi như nhau (`ERR_NOT_FOUND`) nên giao diện không phân biệt; trong dùng bình thường không xảy ra, vì không có thao tác xóa.
   - 409: "Khách hàng đã chọn đã được lưu trữ. Hãy chọn khách khác." và tải lại danh sách khách. Hợp đồng còn trả 409 khi đổi đơn vị tiền, nhưng form không cho đổi, nên đường bình thường không gây ra.
   - 500, không tới được: thông báo, giữ nguyên dữ liệu, cho gửi lại.
+  - **Tải lại danh sách khách** (sửa 2026-10-16, chặng H, R44-14): sau **mọi** lần phía sau từ chối việc lưu (400, 404, 409, 500), form tải lại danh sách khách, giữ khách đang chọn nếu khách đó còn trong danh sách. Hai câu ở mục 404 và 409 trên chỉ là hai trường hợp có lý do rõ nhất. Tải lại thêm ở 400 và 500 vô hại; không tới được và vi phạm hợp đồng thì không tải lại.
 - **Nhãn phải xử lý:** `create_commission`: 201, 400, 404, 409, 500; `edit_commission`: 200, 400, 404, 409, 500; `get_commission`: như `commission_detail`; `list_clients`: 200, 500; `list_currencies`: 200; mọi lời gọi: không tới được, vi phạm hợp đồng.
 - Tiêu đề trùng được phép. V1 không chặn rời form khi có thay đổi chưa lưu (V2).
 
@@ -920,7 +921,19 @@ Kịch bản bấm thử và audit kiểm các điều sau.
 
 **Không làm ở V1:** animation, transition, hiệu ứng trang trí, component lấy từ nguồn ngoài (React Bits…), giao diện sáng, tùy chỉnh giao diện.
 
+## 8. Ngoại lệ có chủ đích của iWCA (chặng H, 2026-10-16)
+
+Phiên kiểm độc lập 44 tìm ra ba chỗ đúng về chữ của iWCA nhưng là hành vi do chính đặc tả này yêu cầu, hoặc do Orchestrator đã chấp nhận ở các audit trước, mà chưa ghi lý do. Project Owner duyệt ghi chúng thành ngoại lệ ngày 2026-10-16 (`.reviews/audits/ui/audit_ui_session44_phase1.md` §3.2). Mã không đổi. Phiên sau không coi ba chỗ dưới đây là vi phạm, nhưng cũng không mở rộng chúng ra chỗ khác mà không có quyết định mới ghi vào mục này.
+
+| Mã | Chỗ lệch so với iWCA | Phạm vi được chấp nhận | Lý do |
+|---|---|---|---|
+| R44-8 | Services "suy ra thao tác hợp lệ" từ dữ liệu phía sau trả về (iWCA §5: phía sau là nơi phán quyết) | Đúng ba chỗ: (1) danh sách chọn khách của `commission_form` ẩn khách đã lưu trữ; (2) nút đổi giai đoạn và form của `stage_change` bị khóa khi đơn ở `finished` hoặc `cancelled`; (3) nút hủy khoản bị ẩn ở khoản đã hủy | Không mời người dùng làm một việc chắc chắn hỏng (§7.2, nguyên tắc 4 và 6). Phía sau vẫn phán quyết bằng 409, và giao diện vẫn hiện đúng phán quyết đó khi nó xảy ra (kiểm thử dựng trang I5). Cả ba luật nằm trong `description` của hợp đồng, nên phía sau không đổi được chúng mà không đổi hợp đồng; giao diện đổi theo khi hợp đồng đổi |
+| R44-13 | Lỗi `IPC_FAILED` và `DIALOG_FAILED` đi vào kết quả `rejected` (origin `system`) thay vì `unreachable` | Chỉ hai mã riêng của giao diện này, ở `backup_data` và `restore_data` | Đã chấp nhận ở audit phiên 34 và 37. `unreachable` của dự án nghĩa là "phía sau không tới được, thử lại sau"; một lời gọi `ipc` hỏng hay một hộp thoại không mở được không mang nghĩa đó, và câu hiện cho người dùng là câu riêng của trang |
+| R44-15 | Trang `commission_detail` có ba hook (iWCA khuyên một hook cho một trang) | Chỉ `commission_detail`: một hook cho thông tin đơn, một cho phần Tiến độ (D3), một cho phần Thanh toán (D4) | Plan phiên 20 và 22 chọn: ba phần gọi ba workflow giao diện khác nhau, tải và hỏng độc lập (lỗi của phần Tiến độ không ảnh hưởng phần thông tin đơn, mục D3). Gộp thành một hook sẽ gộp ba vòng đời khác nhau |
+
 ## Lịch sử cập nhật
+
+- 2026-10-16: sau audit phiên 44 pha 1 (chặng H, `.reviews/audits/ui/audit_ui_session44_phase1.md`), Project Owner duyệt: thêm §8, ba ngoại lệ có chủ đích của iWCA (R44-8, R44-13, R44-15), mã không đổi; mục `commission_form` (D2) ghi rõ danh sách khách được tải lại sau mọi lần phía sau từ chối việc lưu, khớp mã (R44-14). Không trang nào đổi trạng thái.
 
 - 2026-10-09: `restore` → `hoàn_tất`. Audit phiên 37 đạt (`.reviews/audits/ui/audit_ui_session37.md`); Project Owner chạy tay kịch bản với hộp thoại thật (tiêu đề "Chọn tệp"; xác nhận, "Quay lại", câu "sẽ được thay", hủy không hỏi, 409 với tệp giả, 503 khi backend tắt, đóng rồi mở lại thì dữ liệu về đúng tệp sao lưu) và đo DSK-25 trên bản đóng gói mở bằng lối tắt. Chấp nhận các chỗ agent tự quyết: `--keep` và `--reopen` cho `walkthrough_app`; nút "Chọn tệp sao lưu" vẫn dùng được khi đọc trạng thái bị từ chối hay vi phạm hợp đồng; dòng chỉ báo "Đang hủy lần khôi phục đang chờ…"; `ConfirmPanel` xuống dòng giữa các câu và ngắt đường dẫn dài (CSS, không đổi màu). Phía giao diện của chặng F xong.
 

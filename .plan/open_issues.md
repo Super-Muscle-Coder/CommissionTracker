@@ -388,6 +388,8 @@ Sau `npm ci` trong `Desktop/`, `node_modules/electron/dist` biến mất, và b�
 
 ### UI-22 — NOTES của khối `main` giao diện sắp hết hạn (thấp; audit phiên 37 §5.2)
 
+> **Gộp vào R44-10** (2026-10-16): 11 NOTES quá hạn ở `main` (5), `kit` (2), `update_progress` (1), `view_income_report` (3). Làm ở phiên 44 pha 2; đóng khi pha 2 audit đạt.
+
 > **Chặng H, phiên vá giao diện** (quyết 2026-10-12, Project Owner duyệt 2026-10-12, `.reviews/stage_h/h1_inventory.md` §2.2). Máy quét 2026-10-12: ba NOTES ngày 2026-09-27 ở `UI/src/main.tsx` đã quá hạn; là chỗ quá hạn duy nhất trong 28 khối checkpoint.
 
 Khối checkpoint `main` (`UI/src/main.tsx`) còn sáu NOTES ghi ngày 2026-09-27 (ba), 09-28, 09-29, 10-07; ba NOTES ngày 09-27 hết hạn 14 ngày vào 2026-10-11 (`CLAUDE.md` mục 5). **Việc:** phiên giao diện kế tiếp, hoặc chặng H, xem lại từng NOTE: chuyển thành EXPERIENCES nếu còn giá trị, xóa nếu không.
@@ -420,6 +422,8 @@ Phiên 32 cho `app_version` là tham số từ khóa tùy chọn, vì 20 chỗ g
 
 ### UI-23 — Ràng buộc "không có màn hình hồ sơ quyền sở hữu" chưa được kiểm bằng máy (cao; H-2)
 
+> **Gộp vào R44-2** (2026-10-16, phiên 44 pha 1 tìm lại độc lập; phép cắn thêm `GET /watermark-profiles` vào `manage_client/adapters.ts` không bị bắt). Làm ở phiên 44 pha 2; đóng khi pha 2 audit đạt.
+
 Hiện chỉ được kiểm bằng grep do agent tự chạy rồi ghi vào EVIDENCE của `UI/src/screens/navigation.ts`. Lộ trình chặng H đòi kiểm bằng máy. **Việc (phiên vá giao diện chặng H):** thêm vào `npm run check` một bước làm hỏng lệnh khi mã nguồn hay kiểm thử của `UI/` chứa `/watermark-profiles`, `/watermark-strengths`, `/artworks`, `/verifications`; kèm phép cắn (thêm một chuỗi như vậy thì `check` hỏng, bỏ đi thì đạt).
 
 ### BE-12 — Starlette 1.0.0 trong bản đóng gói có năm lỗ hổng đã công bố (trung bình; H-4)
@@ -433,6 +437,8 @@ Hiện chỉ được kiểm bằng grep do agent tự chạy rồi ghi vào EVI
 Đo một lần ở phiên 13 (371 MB, trần 400 MB). Đo lại trên bản đóng gói cuối ở chặng H bước 3.
 
 ### H-6 — Phép cắn R1–R14 của `UI/` chưa chạy lại từ phiên 11–12 (trung bình)
+
+> **ĐÃ ĐÓNG 2026-10-16, phiên 44 pha 1** (`.reviews/audits/ui/audit_ui_session44_phase1.md` §5). Phiên kiểm độc lập làm lại phép cắn cho cả R1 → R14 và chiều ngược của R5, R7, R12, R14 trên bản sao ngoài kho. Chỗ hở duy nhất: R7 ở tệp `.ts`/`.tsx` của kit (R44-1, sửa ở pha 2).
 
 Giao cho phiên kiểm độc lập của `UI/` (chặng H, câu hỏi 4).
 
@@ -557,6 +563,32 @@ Máy tắt đúng giữa bước 5 và 6 của khôi phục thì lần mở sau 
 Main chọn câu báo lỗi theo hai khóa `details.rollback_stage` và `details.previous_database_path` của `apply_pending_restore` 500, nhưng hợp đồng chỉ khai `details: object|null`. Phụ thuộc mềm: thiếu hay sai khóa thì Main dùng câu chung, không nói sai về chỗ dữ liệu.
 - **Hướng A (Orchestrator đề xuất):** cho nhãn lỗi một trường `details` tùy chọn trong khuôn hợp đồng, rồi khai `details` của `apply_pending_restore` 500. Mở rộng, gộp vào **6.2.0**. Pha 2: Main tự khai kiểu của hai khóa, không nhập từ Entities của `restore_data`.
 - **Hướng B:** giữ như hiện tại, ghi lý do vào checkpoint Main; pha 2 chỉ bỏ việc nhập kiểu từ Entities.
+
+## Chặng H — phiên kiểm độc lập giao diện (phiên 44)
+
+Báo cáo pha 1 và đánh giá: `.reviews/audits/ui/audit_ui_session44_phase1.md` (2026-10-16, pha 1 đạt). Một phát hiện mức cao do agent đặt (R44-1), một do Orchestrator nâng cho khớp UI-23 (R44-2). **Project Owner duyệt 2026-10-16:** cả bảng dưới đây; R44-8, R44-13, R44-15 ghi thành ngoại lệ có chủ đích (`.design/ui_decomposition.md` §8, Orchestrator đã ghi, mã không đổi); `UI/package.json` đổi `version` thành `1.0.0` ở pha 2. Pha 2: `.plan/ui_plan.md` (2026-10-16), cùng phiên 44, gồm cả UI-21, UI-22 (trong R44-10), UI-23 (trong R44-2). H-6 đóng ở pha 1.
+
+| Mã | Mức | Nội dung | Quyết định |
+|---|---|---|---|
+| R44-1 | **cao** | Luật R7 không được máy giữ ở tệp `.ts`/`.tsx` của kit: `fill="#ff0000"`, `width="16px"`, `rgb(1,2,3)` trong `kit/` qua cả typecheck, lint, lint:style, lint:layer | pha 2: luật lint cấm literal màu và đơn vị độ dài tuyệt đối trong `kit/**/*.{ts,tsx}` |
+| R44-2 | **cao** (= UI-23) | Ràng buộc "không có màn hình hồ sơ quyền sở hữu" chỉ nằm trong tài liệu: thêm `GET /watermark-profiles` vào Adapters thì `npm run check` vẫn đạt | pha 2: bước kiểm trong `npm run check` |
+| R44-3 | trung bình | `createIpcBridge` chuyển tiếp mọi địa chỉ `ipc`, kể cả địa chỉ hợp đồng không khai (iWCA §4) | pha 2: danh sách `[CONTRACT]` năm địa chỉ trong `SCAFFOLD_UI_CONFIGS`; ngoài danh sách thì Promise bị từ chối |
+| R44-4 | trung bình | `check_contrast.mjs` chỉ đo danh sách cặp gõ tay; token chữ chưa liệt kê dưới 4,5:1 không bị bắt | pha 2: báo lỗi khi module dùng token màu chưa có trong danh sách cặp |
+| R44-5 | trung bình | Không máy nào cấm component dùng token nền `var(--base-*)` | pha 2: luật stylelint |
+| R44-6 | trung bình | Thiếu ca âm khẳng định Routers không kiểm điều ngoài `type` (cắn "tên không có chữ số" không bị bắt) | pha 2: ca "chữ số, emoji, ký tự đặc biệt vẫn qua" cho mỗi trường chữ tự do |
+| R44-7 | trung bình | Tám ô của ma trận I5 thiếu ca | pha 2 |
+| R44-8 | trung bình | Services suy ra thao tác hợp lệ từ dữ liệu (ẩn khách lưu trữ, khóa đổi giai đoạn, ẩn nút hủy khoản) | **ngoại lệ có chủ đích**, `ui_decomposition.md` §8; mã không đổi |
+| R44-9 | thấp | Configs ghi phiên bản hợp đồng cũ (API 4.0.0, `restore_data` 5.0.0) | pha 2: ghi `6.2.0`, `10.0.1`; không thêm script đọc `.contracts/` |
+| R44-10 | thấp (gồm UI-22) | 11 NOTES quá hạn | pha 2 |
+| R44-11 | thấp | EVIDENCE của `main`, `screens`, `kit` cộng dồn lịch sử | pha 2: gộp thành mục bản mới nhất |
+| R44-12 | thấp | EVIDENCE chạy thật của `backup_data` không ghi trang và id bước, số liệu cũ | pha 2 |
+| R44-13 | thấp | `IPC_FAILED`, `DIALOG_FAILED` đi vào `rejected` thay vì `unreachable` | **ngoại lệ có chủ đích**, `ui_decomposition.md` §8; mã không đổi |
+| R44-14 | thấp | Hook quyết định lỗi nào còn sau khi đổi số hàng; hook tải lại danh sách khách sau mọi từ chối `system` trong khi đặc tả D2 chỉ nêu 404, 409 | pha 2: quyết định vào Services; phần tải lại: Orchestrator sửa đặc tả D2 cho khớp mã (2026-10-16) |
+| R44-15 | thấp | `commission_detail` có ba hook; sơ đồ `CLAUDE.md` mục 4 thiếu `tests/main/`, `tests/tools/`, `tests/fixtures/` | hook: **ngoại lệ có chủ đích**, `ui_decomposition.md` §8; sơ đồ: Orchestrator sửa `CLAUDE.md` (2026-10-16) |
+| R44-16 | thấp | `walkthrough_app.mjs` xóa đệ quy đường dẫn đọc từ tệp, không kiểm thư mục cha và tiền tố | pha 2 |
+| R44-17 | thấp | `main_layout.spec.ts:88` ngủ cố định 2 s; ba công cụ chẩn đoán của UI-11, UI-18 (đã đóng) còn trong kho | pha 2: chờ theo một điều kiện dương nếu có; không có thì giữ và ghi lý do (ca đợi để chứng minh *không có* thông báo; đính chính của Orchestrator so với audit §3.1); xóa ba công cụ sau khi kiểm không nơi nào dùng |
+
+Ghi nhận không mở mục: phép cắn hành vi B2, B3 chỉ bị bắt nhờ dữ liệu mẫu tình cờ (audit §3.3). R44-6 che phần Routers; phần Services đã có ma trận I3.
 
 ## Hợp đồng — chờ Project Owner duyệt
 
@@ -1015,6 +1047,8 @@ Không ảnh hưởng điều kiện của UI-18: e2e do agent khởi chạy, Pr
 ## Layer giao diện — sau audit phiên 34
 
 ### UI-21 — Dọn sau khi sửa `.gitignore` gốc (thấp; audit phiên 34 §5.1, §5.3) — làm ở phiên giao diện kế tiếp
+
+> **Giao cho phiên 44 pha 2** (`.plan/ui_plan.md`, 2026-10-16). Đóng khi pha 2 audit đạt.
 
 > **Chặng H, phiên vá giao diện** (quyết 2026-10-12, Project Owner duyệt 2026-10-12, `.reviews/stage_h/h1_inventory.md` §2.2).
 
