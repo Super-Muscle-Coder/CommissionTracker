@@ -388,7 +388,9 @@ Sau `npm ci` trong `Desktop/`, `node_modules/electron/dist` biến mất, và b�
 
 ### UI-22 — NOTES của khối `main` giao diện sắp hết hạn (thấp; audit phiên 37 §5.2)
 
-> **Gộp vào R44-10** (2026-10-16): 11 NOTES quá hạn ở `main` (5), `kit` (2), `update_progress` (1), `view_income_report` (3). Làm ở phiên 44 pha 2; đóng khi pha 2 audit đạt.
+> **ĐÃ ĐÓNG 2026-10-16, phiên 44 pha 2**: 11 NOTES quá hạn đã được chuyển thành EXPERIENCES hoặc xóa; không còn NOTE nào quá 14 ngày.
+
+> **Gộp vào R44-10** (2026-10-16): 11 NOTES quá hạn ở `main` (5), `kit` (2), `update_progress` (1), `view_income_report` (3).
 
 > **Chặng H, phiên vá giao diện** (quyết 2026-10-12, Project Owner duyệt 2026-10-12, `.reviews/stage_h/h1_inventory.md` §2.2). Máy quét 2026-10-12: ba NOTES ngày 2026-09-27 ở `UI/src/main.tsx` đã quá hạn; là chỗ quá hạn duy nhất trong 28 khối checkpoint.
 
@@ -422,7 +424,9 @@ Phiên 32 cho `app_version` là tham số từ khóa tùy chọn, vì 20 chỗ g
 
 ### UI-23 — Ràng buộc "không có màn hình hồ sơ quyền sở hữu" chưa được kiểm bằng máy (cao; H-2)
 
-> **Gộp vào R44-2** (2026-10-16, phiên 44 pha 1 tìm lại độc lập; phép cắn thêm `GET /watermark-profiles` vào `manage_client/adapters.ts` không bị bắt). Làm ở phiên 44 pha 2; đóng khi pha 2 audit đạt.
+> **ĐÃ ĐÓNG 2026-10-16, phiên 44 pha 2** (`.reviews/audits/ui/audit_ui_session44_phase2.md`): bước `lint:scope` (`UI/scripts/check_no_watermark_paths.mjs`) trong `npm run check`, không có danh sách miễn trừ; Orchestrator cắn bằng một chuỗi trong `src/` và một trong `tests/`, đều bị bắt.
+
+> **Gộp vào R44-2** (2026-10-16, phiên 44 pha 1 tìm lại độc lập; phép cắn thêm `GET /watermark-profiles` vào `manage_client/adapters.ts` không bị bắt).
 
 Hiện chỉ được kiểm bằng grep do agent tự chạy rồi ghi vào EVIDENCE của `UI/src/screens/navigation.ts`. Lộ trình chặng H đòi kiểm bằng máy. **Việc (phiên vá giao diện chặng H):** thêm vào `npm run check` một bước làm hỏng lệnh khi mã nguồn hay kiểm thử của `UI/` chứa `/watermark-profiles`, `/watermark-strengths`, `/artworks`, `/verifications`; kèm phép cắn (thêm một chuỗi như vậy thì `check` hỏng, bỏ đi thì đạt).
 
@@ -568,6 +572,8 @@ Main chọn câu báo lỗi theo hai khóa `details.rollback_stage` và `details
 
 Báo cáo pha 1 và đánh giá: `.reviews/audits/ui/audit_ui_session44_phase1.md` (2026-10-16, pha 1 đạt). Một phát hiện mức cao do agent đặt (R44-1), một do Orchestrator nâng cho khớp UI-23 (R44-2). **Project Owner duyệt 2026-10-16:** cả bảng dưới đây; R44-8, R44-13, R44-15 ghi thành ngoại lệ có chủ đích (`.design/ui_decomposition.md` §8, Orchestrator đã ghi, mã không đổi); `UI/package.json` đổi `version` thành `1.0.0` ở pha 2. Pha 2: `.plan/ui_plan.md` (2026-10-16), cùng phiên 44, gồm cả UI-21, UI-22 (trong R44-10), UI-23 (trong R44-2). H-6 đóng ở pha 1.
 
+> **ĐÃ ĐÓNG 2026-10-16, phiên 44 pha 2** (`.reviews/audits/ui/audit_ui_session44_phase2.md`): mọi mục trong bảng dưới đây (sửa, hoặc ghi thành ngoại lệ ở `.design/ui_decomposition.md` §8). `npm run check` 2043 ca. E2e trên máy Project Owner đạt 2 trong 3 lượt; trên Linux đạt 3/3. Project Owner chấp nhận và mở ENV-11. Mở thêm UI-24 (thấp).
+
 | Mã | Mức | Nội dung | Quyết định |
 |---|---|---|---|
 | R44-1 | **cao** | Luật R7 không được máy giữ ở tệp `.ts`/`.tsx` của kit: `fill="#ff0000"`, `width="16px"`, `rgb(1,2,3)` trong `kit/` qua cả typecheck, lint, lint:style, lint:layer | pha 2: luật lint cấm literal màu và đơn vị độ dài tuyệt đối trong `kit/**/*.{ts,tsx}` |
@@ -589,6 +595,14 @@ Báo cáo pha 1 và đánh giá: `.reviews/audits/ui/audit_ui_session44_phase1.m
 | R44-17 | thấp | `main_layout.spec.ts:88` ngủ cố định 2 s; ba công cụ chẩn đoán của UI-11, UI-18 (đã đóng) còn trong kho | pha 2: chờ theo một điều kiện dương nếu có; không có thì giữ và ghi lý do (ca đợi để chứng minh *không có* thông báo; đính chính của Orchestrator so với audit §3.1); xóa ba công cụ sau khi kiểm không nơi nào dùng |
 
 Ghi nhận không mở mục: phép cắn hành vi B2, B3 chỉ bị bắt nhờ dữ liệu mẫu tình cờ (audit §3.3). R44-6 che phần Routers; phần Services đã có ma trận I3.
+
+### UI-24 — Việc nhỏ của giao diện sau phiên 44 (thấp; audit phiên 44 pha 2 §5, §6)
+
+Làm khi một phiên giao diện chạm lại các tệp này; không mở phiên riêng. Không có phiên giao diện nào trước khi phát hành thì để V2.
+1. `use_commission_form.ts` chỉ gọi `shouldReloadClients` trong nhánh `rejected`, nên nếu Services đổi quyết định thì hook không theo. Gọi hàm này với mọi kết quả lưu.
+2. Mười comment bảng lời gọi trong Configs của tám workflow còn ghi "as declared in api_contract.yaml 4.0.0" (hay 5.0.0). Ghi phiên bản hiện hành.
+3. Luật R7 của kit không bắt đơn vị đứng sau biểu thức trong template (`` `${n}px` ``). Bắt cả trường hợp này, hoặc ghi giới hạn vào EXPERIENCES của `kit`.
+4. `walkthrough_lib.mjs` đọc `Desktop/configs/desktop.json` ngay khi nạp, nên `npm run check` (qua `walkthrough_lib.test.ts`) phụ thuộc một tệp của layer khác. Chỉ đọc khi cần.
 
 ## Hợp đồng — chờ Project Owner duyệt
 
@@ -1048,7 +1062,9 @@ Không ảnh hưởng điều kiện của UI-18: e2e do agent khởi chạy, Pr
 
 ### UI-21 — Dọn sau khi sửa `.gitignore` gốc (thấp; audit phiên 34 §5.1, §5.3) — làm ở phiên giao diện kế tiếp
 
-> **Giao cho phiên 44 pha 2** (`.plan/ui_plan.md`, 2026-10-16). Đóng khi pha 2 audit đạt.
+> **ĐÃ ĐÓNG 2026-10-16, phiên 44 pha 2**: `main-EXP-033` đã viết lại; hai dòng phủ định đã bỏ khỏi `UI/.gitignore`. Orchestrator kiểm `check-ignore --no-index` trên 377 tệp được theo dõi dưới `UI/`: không tệp nào bị bỏ qua.
+
+> **Giao cho phiên 44 pha 2** (`.plan/ui_plan.md`, 2026-10-16).
 
 > **Chặng H, phiên vá giao diện** (quyết 2026-10-12, Project Owner duyệt 2026-10-12, `.reviews/stage_h/h1_inventory.md` §2.2).
 
@@ -1079,6 +1095,11 @@ Không ảnh hưởng điều kiện của UI-18: e2e do agent khởi chạy, Pr
   - Desktop: 8 lỗ hổng mức high (ví dụ `http-cache-semantics`, GHSA-ch52-4w7c-c8xp).
   - `npm audit --omit=dev` ở cả hai layer: 0. `package-lock.json` không đổi từ phiên trước: đây là cảnh báo mới được công bố, không phải phụ thuộc mới.
   - Không chạy `npm audit fix --force` (đổi phiên bản phá vỡ, ví dụ hạ `stylelint`). Rà lại trước chặng G; nếu khi đó có bản vá không phá vỡ thì đưa vào một phiên riêng.
+
+### ENV-11 — Backend không trả lời quá 10 s ngay sau READY trong e2e trên máy Project Owner (trung bình; audit phiên 44 pha 2 §4)
+
+Phiên 44 pha 2, e2e lượt 1 (2026-10-16 15:21): ca `client_list` S2 (khởi động mới, thư mục dữ liệu mới) chờ 30 s không thấy trang. Log Desktop: backend in READY, rồi "reminder check #1 failed: no answer within 10000 ms". Hai lượt sau đạt 83/83; trên Linux ba lượt đều đạt. Máy bật cả AVG lẫn RAV. Giả thuyết chưa chứng minh: antivirus quét tiến trình python mới (giống DSK-3). Trace đã bị lượt sau ghi đè.
+**Việc:** ở chặng H bước 3, chạy `npm run e2e` của `UI/` ba lượt, mỗi lượt giữ thư mục kết quả riêng (`npm run e2e -- --output=test-results/run<N>`). Nếu lặp lại, đọc log backend của đúng ca đó trước khi kết luận. Từ nay, plan nào đòi chạy nhiều lượt để kiểm ổn định đều ghi rõ việc giữ thư mục kết quả riêng cho mỗi lượt.
 
 ## Rà soát toàn bộ checkpoint — 2026-09-28 (trước phiên 18)
 
